@@ -1,0 +1,23 @@
+[
+    {
+ "iconUrl": "https://play-lh.googleusercontent.com/TOTj0uMWp7cXkjXDXkcTZnPigUmpLRRiH956lHRJxStlY7ucxmtwMs_Kr2wOWYm0fSY=w240-h480-rw",
+        "apiVersion": 1,
+        "repositoryUrl": "https://t.me/cloudstream_extension_vn",
+        "fileSize": 61589,
+        "status": 1,
+        "authors": [
+            "anhdadendaden"
+        ],
+        "tvTypes": [
+            "AsianDrama",
+            "Anime",
+            "TvSeries",
+            "Movie"
+        ],
+        "version": 12,
+        "internalName": "FshareProvider",
+        "description": "C\u1ea7n \u0111\u0103ng nh\u1eadp t\u00e0i kho\u1ea3n Fshare Vip v\u00e0 d\u00f9ng VLC \u0111\u1ec3 ph\u00e1t",
+        "url": "https://abyss-api-two.vercel.app/download?folder=movie&file=FshareProvider_1728784018.cs3",
+        "name": "FshareProvider"
+    }
+]
