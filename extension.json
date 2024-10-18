@@ -19,5 +19,22 @@
         "description": "C\u1ea7n \u0111\u0103ng nh\u1eadp t\u00e0i kho\u1ea3n Fshare Vip v\u00e0 d\u00f9ng VLC \u0111\u1ec3 ph\u00e1t",
         "url": "https://abyss-api-two.vercel.app/download?folder=movie&file=FshareProvider_1728784018.cs3",
         "name": "FshareProvider"
+    },
+    {
+        "apiVersion": 1,
+        "repositoryUrl": "https://t.me/cloudstream_extension_vn",
+        "fileSize": 29043,
+        "status": 1,
+        "authors": [
+            "anhdadendaden"
+        ],
+        "tvTypes": [
+            "Live"
+        ],
+        "version": 4,
+        "internalName": "IPTVProvider",
+        "description": "C\u1ea7n nh\u1eadp link iptv \u0111\u1ec3 xem",
+        "url": "https://abyss-api-two.vercel.app/download?folder=movie&file=IPTVProvider_1728784018.cs3",
+        "name": "IPTVProvider"
     }
 ]
