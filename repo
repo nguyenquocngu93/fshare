@@ -1,0 +1,8 @@
+{
+    "name": "Vietnamese Extension",
+    "description": "https://t.me/cloudstream_extension_vn",
+    "manifestVersion": 1,
+    "pluginLists": [
+      "https://raw.githubusercontent.com/nguyenquocngu93/fshare/refs/heads/main/extension.json?token=GHSAT0AAAAAACY4B766K4566CTCRGVUXJZUZYR5TMA"
+    ]
+}
