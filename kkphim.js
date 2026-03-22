@@ -304,19 +304,22 @@
     // =====================================================================
     // INJECT: NUT TAP PHIM
     // =====================================================================
-    function injectPlayButtons(card) {
+    // $ctx: container cua trang full hien tai (de tranh truy van sai trang cu)
+    function injectPlayButtons(card, $ctx) {
         if (!card || card.source !== SOURCE_NAME) return;
         var slug = card.kkphim_slug || card.id;
         if (!slug) return;
 
         setTimeout(function () {
-            if ($('.kkp-play-wrap[data-slug="' + slug + '"]').length) return;
-            $('.kkp-play-wrap').remove();
+            // Chi inject vao dung container hien tai
+            if ($ctx.find('.kkp-play-wrap').length) return;
 
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/phim/' + slug, function (res) {
                 var eps = res.episodes || [];
                 if (!eps.length) return;
+                // Kiem tra lai container con ton tai khong (user co the da back)
+                if (!$ctx.closest('body').length) return;
 
                 var $wrap = $('<div class="kkp-play-wrap" data-slug="' + slug + '" style="padding:.5em 1.5em 1em;"></div>');
                 eps.forEach(function (server) {
@@ -341,9 +344,9 @@
                     $wrap.append($row);
                 });
 
-                var $t = $('.full-descr').first();
+                var $t = $ctx.find('.full-descr');
                 if ($t.length) $t.after($wrap);
-                else $('.full-start').first().append($wrap);
+                else $ctx.find('.full-start').append($wrap);
             });
         }, 500);
     }
@@ -371,9 +374,10 @@
         return null;
     }
 
-    var _similarLoadingSlug = null;
+    // Track slug da inject de tranh trung lap - dung object thay vi bien don
+    var _injectedMap = {};
 
-    function injectSimilarMovies(card) {
+    function injectSimilarMovies(card, $ctx) {
         if (!card || card.source !== SOURCE_NAME) return;
         var genreInfo = getGenreSlug(card);
         if (!genreInfo) return;
@@ -381,17 +385,17 @@
         var genreSlug = genreInfo.slug;
         var cardSlug  = card.kkphim_slug || card.id;
 
-        // Neu slug nay dang duoc load roi thi bo qua
-        if (_similarLoadingSlug === cardSlug) return;
+        // Da inject cho slug nay roi -> bo qua
+        if (_injectedMap[cardSlug]) return;
+        _injectedMap[cardSlug] = true;
 
         setTimeout(function () {
-            // Check lai lan nua sau delay
-            if (_similarLoadingSlug === cardSlug && $('.kkp-similar-wrap[data-slug="' + cardSlug + '"]').length) return;
-            _similarLoadingSlug = cardSlug;
-            $('.kkp-similar-wrap').remove();
+            // Neu container khong con (user da back) -> huy
+            if (!$ctx.closest('body').length) return;
+            // Neu da co wrap trong container nay roi -> bo qua
+            if ($ctx.find('.kkp-similar-wrap').length) return;
 
             var net1 = new Lampa.Reguest();
-            // Buoc 1: lay trang 1 de biet totalPages
             net1.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=1', function (firstData) {
                 var totalPages = 1;
                 try {
@@ -399,16 +403,17 @@
                     totalPages = (pag && pag.totalPages) || 1;
                 } catch (e) {}
 
-                // Buoc 2: chon trang ngau nhien
                 var randomPage = Math.floor(Math.random() * totalPages) + 1;
                 var net2 = new Lampa.Reguest();
                 net2.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=' + randomPage, function (data) {
+                    // Kiem tra container con ton tai
+                    if (!$ctx.closest('body').length) return;
+
                     var items = [];
                     try {
                         items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : [];
                     } catch (e) { return; }
 
-                    // Loc phim dang xem, xao tron, lay 20 phim
                     items = items.filter(function (i) { return i.id !== cardSlug; });
                     items = items.sort(function () { return Math.random() - 0.5; }).slice(0, 20);
                     if (!items.length) return;
@@ -444,13 +449,13 @@
                         $row.append($c);
                     });
 
-                    // Cho play buttons inject xong roi moi them similar
+                    // Inject vao dung container hien tai
                     setTimeout(function () {
-                        var $after = $('.kkp-play-wrap[data-slug="' + cardSlug + '"]');
-                        if (!$after.length) $after = $('.full-descr').first();
-                        if ($after.length) $after.after($wrap);
-                        else $('.full-start').first().append($wrap);
-                        _similarLoadingSlug = null;
+                        if (!$ctx.closest('body').length) return;
+                        var $after = $ctx.find('.kkp-play-wrap');
+                        if (!$after.length) $after = $ctx.find('.full-descr');
+                        if ($after.length) $after.last().after($wrap);
+                        else $ctx.find('.full-start').append($wrap);
                     }, 200);
                 });
             });
@@ -469,10 +474,18 @@
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
         Lampa.Listener.follow('full', function (e) {
+            // Reset map khi roi trang full
+            if (e.type === 'destroy') {
+                var destroySlug = e.object && e.object.card && (e.object.card.kkphim_slug || e.object.card.id);
+                if (destroySlug) delete _injectedMap[destroySlug];
+                return;
+            }
             if (e.type !== 'complite') return;
             var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
-            injectPlayButtons(card);
-            injectSimilarMovies(card);
+            // Lay container cua component hien tai de scope cac selector
+            var $ctx = (e.object && e.object.render) ? e.object.render() : $('body');
+            injectPlayButtons(card, $ctx);
+            injectSimilarMovies(card, $ctx);
         });
 
         injectViewMore();
