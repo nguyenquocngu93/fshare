@@ -371,6 +371,8 @@
         return null;
     }
 
+    var _similarLoadingSlug = null;
+
     function injectSimilarMovies(card) {
         if (!card || card.source !== SOURCE_NAME) return;
         var genreInfo = getGenreSlug(card);
@@ -379,8 +381,13 @@
         var genreSlug = genreInfo.slug;
         var cardSlug  = card.kkphim_slug || card.id;
 
+        // Neu slug nay dang duoc load roi thi bo qua
+        if (_similarLoadingSlug === cardSlug) return;
+
         setTimeout(function () {
-            if ($('.kkp-similar-wrap[data-slug="' + cardSlug + '"]').length) return;
+            // Check lai lan nua sau delay
+            if (_similarLoadingSlug === cardSlug && $('.kkp-similar-wrap[data-slug="' + cardSlug + '"]').length) return;
+            _similarLoadingSlug = cardSlug;
             $('.kkp-similar-wrap').remove();
 
             var net1 = new Lampa.Reguest();
@@ -443,6 +450,7 @@
                         if (!$after.length) $after = $('.full-descr').first();
                         if ($after.length) $after.after($wrap);
                         else $('.full-start').first().append($wrap);
+                        _similarLoadingSlug = null;
                     }, 200);
                 });
             });
