@@ -1,119 +1,150 @@
 (function () {
     'use strict';
 
-    // ==========================================
-    // PLUGIN KKPHIM CHO LAMPA
-    // API: https://phimapi.com
-    // ==========================================
+    // Tránh load plugin 2 lần
+    if (window.kkphim_plugin) return;
+    window.kkphim_plugin = true;
 
     var BASE_URL = 'https://phimapi.com';
     var IMG_URL  = 'https://phimimg.com/';
 
-    // --- Helper: gọi API ---
-    function fetchAPI(url, callback) {
-        Lampa.Network.silent(url, function (data) {
-            callback(null, data);
-        }, function (err) {
-            callback(err);
-        });
-    }
-
-    // --- Chuyển đổi dữ liệu phim sang định dạng Lampa ---
-    function convertMovie(item) {
-        return {
-            id:           item.slug,
-            title:        item.name,
-            original_title: item.origin_name || item.name,
-            poster:       IMG_URL + item.poster_url,
-            poster_path:  IMG_URL + item.poster_url,
-            thumb_url:    IMG_URL + item.thumb_url,
-            year:         item.year,
-            type:         item.type === 'series' ? 'tv' : 'movie',
-            kkphim_slug:  item.slug,  // lưu slug để lấy chi tiết sau
-        };
-    }
-
     // ==========================================
-    // SOURCE: Danh sách phim mới cập nhật
+    // BALANCER: interface nguồn phim cho Lampa
     // ==========================================
-    Lampa.Source.add('kkphim', {
-        title: 'KKPhim',
+    function KKPhimBalancer() {
+        var self   = this;
+        this.name  = 'KKPhim';
+        this.title = 'KKPhim';
 
-        // Lampa gọi hàm này để lấy danh sách phim
-        list: function (params, oncomplete, onerror) {
-            var page = params.page || 1;
-            var url  = BASE_URL + '/danh-sach/phim-moi-cap-nhat?page=' + page;
+        // Tìm kiếm phim theo tên/năm
+        this.search = function (movie, callback) {
+            var query = movie.title || movie.original_title || '';
+            var url   = BASE_URL + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(query);
 
-            fetchAPI(url, function (err, data) {
-                if (err) return onerror(err);
-
-                var items = (data.items || []).map(convertMovie);
-
-                oncomplete({
-                    results:       items,
-                    total_pages:   data.pagination ? data.pagination.totalPages : 1,
-                    total_results: data.pagination ? data.pagination.totalItems : items.length,
-                });
-            });
-        },
-
-        // Lampa gọi hàm này khi tìm kiếm
-        search: function (params, oncomplete, onerror) {
-            var keyword = params.query || '';
-            var url = BASE_URL + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(keyword);
-
-            fetchAPI(url, function (err, data) {
-                if (err) return onerror(err);
-
-                var items = [];
-                if (data.data && data.data.items) {
-                    items = data.data.items.map(convertMovie);
+            Lampa.Network.silent(url, function (data) {
+                var results = [];
+                if (data && data.data && data.data.items) {
+                    data.data.items.forEach(function (item) {
+                        results.push({
+                            title:    item.name,
+                            slug:     item.slug,
+                            year:     item.year,
+                            poster:   IMG_URL + item.poster_url,
+                            type:     item.type,
+                        });
+                    });
                 }
-
-                oncomplete({ results: items });
+                callback(results);
+            }, function () {
+                callback([]);
             });
-        },
+        };
 
-        // Lampa gọi hàm này để lấy chi tiết + link xem phim
-        full: function (params, oncomplete, onerror) {
-            var slug = params.kkphim_slug || params.id;
-            var url  = BASE_URL + '/phim/' + slug;
+        // Lấy danh sách tập/link xem
+        this.get = function (item, callback) {
+            var url = BASE_URL + '/phim/' + item.slug;
 
-            fetchAPI(url, function (err, data) {
-                if (err) return onerror(err);
-
-                var movie   = data.movie || {};
+            Lampa.Network.silent(url, function (data) {
+                var videos = [];
                 var episodes = data.episodes || [];
 
-                // Lấy link xem (m3u8) từ episodes
-                var videos = [];
                 episodes.forEach(function (server) {
                     (server.server_data || []).forEach(function (ep) {
                         videos.push({
-                            title:  ep.name || 'Tập ' + ep.slug,
-                            url:    ep.link_m3u8 || ep.link_embed,
+                            title: ep.name || 'Tập ' + ep.slug,
+                            url:   ep.link_m3u8 || ep.link_embed,
                         });
                     });
                 });
 
-                oncomplete({
-                    movie:  convertMovie(movie),
-                    videos: videos,
-                });
+                callback(videos);
+            }, function () {
+                callback([]);
             });
-        },
+        };
+    }
+
+    // ==========================================
+    // COMPONENT: màn hình hiển thị trong Lampa
+    // ==========================================
+    Lampa.Component.add('kkphim_catalog', function () {
+        var network = new Lampa.Reguest();
+        var scroll  = new Lampa.Scroll({ mask: true, over: true });
+        var items   = new Lampa.Explorer(this);
+        var filter  = new Lampa.Filter(this);
+        var page    = 1;
+
+        this.create = function () {
+            this.activity.loader(true);
+            this.load(page);
+        };
+
+        this.load = function (p) {
+            var self = this;
+            var url  = BASE_URL + '/danh-sach/phim-moi-cap-nhat?page=' + p;
+
+            network.silent(url, function (data) {
+                self.activity.loader(false);
+                self.build(data.items || []);
+            }, function () {
+                self.activity.loader(false);
+                self.empty();
+            });
+        };
+
+        this.build = function (movies) {
+            movies.forEach(function (item) {
+                var card = Lampa.InteractionMain.card({
+                    title:       item.name,
+                    poster:      IMG_URL + item.poster_url,
+                    year:        item.year,
+                    kkphim_slug: item.slug,
+                });
+                items.append(card);
+            });
+            scroll.append(items.render());
+            this.render().append(scroll.render());
+        };
+
+        this.empty = function () {
+            var empty = Lampa.Template.get('empty');
+            this.render().append(empty);
+        };
+
+        this.render = function () {
+            return $('<div class="kkphim-wrap"></div>');
+        };
+
+        this.pause   = function () {};
+        this.resume  = function () {};
+        this.stop    = function () { network.clear(); };
+        this.destroy = function () { network.clear(); scroll.destroy(); };
     });
 
     // ==========================================
-    // ĐĂNG KÝ PLUGIN VÀO LAMPA
+    // ĐĂNG KÝ VÀO LAMPA KHI APP READY
     // ==========================================
-    Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') {
-            // Thêm KKPhim vào danh sách nguồn
-            Lampa.Arrays.push(Lampa.Storage.get('sources', []), 'kkphim');
+    function init() {
+        // Thêm KKPhim vào menu chính
+        Lampa.Menu.add({
+            title:     'KKPhim',
+            component: 'kkphim_catalog',
+            icon:      '<svg>...</svg>',
+        });
 
-            console.log('[KKPhim Plugin] Đã khởi động!');
+        // Đăng ký balancer để tìm link xem phim
+        if (Lampa.Balancer) {
+            Lampa.Balancer.add('kkphim', new KKPhimBalancer());
         }
-    });
+    }
+
+    // Kiểm tra app đã ready chưa
+    if (window.appready) {
+        init();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') init();
+        });
+    }
 
 })();
