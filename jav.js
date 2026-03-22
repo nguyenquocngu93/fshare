@@ -2,59 +2,112 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v3.1.0
-       Dùng XMLHttpRequest trực tiếp để lấy HTML
-       (Lampa.Reguest chỉ dùng cho JSON API, không dùng cho HTML)
+       iJavTorrent Plugin for Lampa  —  v3.2.0
+       Thử nhiều CORS proxy song song, dùng cái nào thành công trước
     ============================================================ */
 
     var PLUGIN_ID = 'ijavtorrent';
     var BASE_URL  = 'https://ijavtorrent.com';
 
+    // Proxy nào hoạt động sẽ được lưu lại dùng cho lần sau
+    var _workingProxy = null;
+
+    // Danh sách proxy thử lần lượt
+    var PROXIES = [
+        // allorigins - trả về JSON { contents: "html..." }
+        {
+            build: function (url) {
+                return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+            },
+            extract: function (responseText) {
+                try {
+                    var j = JSON.parse(responseText);
+                    return j.contents || '';
+                } catch (e) { return ''; }
+            }
+        },
+        // codetabs - trả thẳng HTML
+        {
+            build: function (url) {
+                return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url);
+            },
+            extract: function (responseText) { return responseText; }
+        },
+        // corsproxy.io - trả thẳng HTML
+        {
+            build: function (url) {
+                return 'https://corsproxy.io/?' + encodeURIComponent(url);
+            },
+            extract: function (responseText) { return responseText; }
+        },
+        // thingproxy - trả thẳng HTML
+        {
+            build: function (url) {
+                return 'https://thingproxy.freeboard.io/fetch/' + url;
+            },
+            extract: function (responseText) { return responseText; }
+        }
+    ];
+
 
     /* ============================================================
-       FETCH - XMLHttpRequest thuần, không qua jQuery hay Lampa
+       FETCH - thử proxy đang hoạt động trước, nếu fail thử tiếp
     ============================================================ */
     function fetchPage(url, ok, fail) {
+        // Nếu đã biết proxy nào hoạt động → dùng luôn
+        if (_workingProxy !== null) {
+            xhrFetch(_workingProxy, url, ok, function () {
+                // Proxy cũ fail → reset và thử lại từ đầu
+                _workingProxy = null;
+                tryProxies(url, 0, ok, fail);
+            });
+            return;
+        }
+        tryProxies(url, 0, ok, fail);
+    }
+
+    function tryProxies(url, index, ok, fail) {
+        if (index >= PROXIES.length) {
+            if (fail) fail('Tất cả ' + PROXIES.length + ' proxy đều lỗi');
+            return;
+        }
+
+        xhrFetch(PROXIES[index], url,
+            function (html) {
+                _workingProxy = PROXIES[index]; // nhớ proxy đang hoạt động
+                ok(html);
+            },
+            function () {
+                // Thử proxy tiếp theo
+                tryProxies(url, index + 1, ok, fail);
+            }
+        );
+    }
+
+    function xhrFetch(proxy, url, ok, fail) {
+        var proxyUrl = proxy.build(url);
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.timeout = 20000;
+        xhr.open('GET', proxyUrl, true);
+        xhr.timeout = 15000;
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
-
             if (xhr.status >= 200 && xhr.status < 400) {
-                ok(xhr.responseText || '');
-            } else if (xhr.status === 0) {
-                // status 0 = bị block hoặc network error
-                // Thử lấy responseText dù sao
-                if (xhr.responseText && xhr.responseText.length > 50) {
-                    ok(xhr.responseText);
+                var html = proxy.extract(xhr.responseText || '');
+                if (html && html.length > 200) {
+                    ok(html);
                 } else {
-                    if (fail) fail('Blocked / No network (status 0)');
+                    fail('Response quá ngắn: ' + (html || '').length + ' chars');
                 }
             } else {
-                if (fail) fail('HTTP ' + xhr.status);
+                fail('HTTP ' + xhr.status);
             }
         };
 
-        xhr.ontimeout = function () {
-            if (fail) fail('Timeout sau 20s');
-        };
+        xhr.ontimeout = function () { fail('Timeout'); };
+        xhr.onerror   = function () { fail('XHR error'); };
 
-        xhr.onerror = function () {
-            // onerror: thử responseText trước
-            if (xhr.responseText && xhr.responseText.length > 50) {
-                ok(xhr.responseText);
-            } else {
-                if (fail) fail('XHR error');
-            }
-        };
-
-        try {
-            xhr.send();
-        } catch (e) {
-            if (fail) fail(e.message || 'send() exception');
-        }
+        try { xhr.send(); } catch (e) { fail(e.message); }
     }
 
 
@@ -185,7 +238,7 @@
 
             if (page === 1) {
                 scroll.render().find('.scroll__content').html(
-                    '<div style="padding:3em;text-align:center;color:#aaa">Đang tải...</div>'
+                    '<div style="padding:3em;text-align:center;color:#aaa">Đang thử kết nối...<br><small style="opacity:.5">Đang thử ' + PROXIES.length + ' proxy</small></div>'
                 );
             }
 
@@ -196,11 +249,10 @@
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        // Debug: hiện 300 ký tự đầu để xem response
-                        var preview = (html || '(trống)').slice(0, 300).replace(/[<>]/g, function(c){ return c === '<' ? '&lt;' : '&gt;'; });
+                        var preview = (html || '').slice(0, 200).replace(/[<>]/g, function (c) { return c === '<' ? '&lt;' : '&gt;'; });
                         scroll.render().find('.scroll__content').html(
-                            '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all;line-height:1.6">' +
-                            '<b style="color:#e74c3c">Không parse được - response:</b><br>' + preview + '</div>'
+                            '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all">' +
+                            '<b style="color:#e74c3c">Kết nối OK nhưng không parse được.<br>Preview:</b><br>' + preview + '</div>'
                         );
                         return;
                     }
@@ -215,7 +267,7 @@
                 function (errMsg) {
                     loading = false;
                     scroll.render().find('.scroll__content').html(
-                        '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em">' +
+                        '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:2">' +
                         '❌ ' + (errMsg || 'Lỗi không xác định') + '</div>'
                     );
                 }
@@ -420,6 +472,6 @@
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v3.1.0 loaded');
+    console.log('[iJavTorrent] v3.2.0 loaded');
 
 })();
