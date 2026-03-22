@@ -5,140 +5,20 @@
     var CAT_NAME    = 'KKPhim';
     var BASE_URL    = 'https://phimapi.com';
     var IMG_URL     = 'https://phimimg.com/';
+    var TMDB_TOKEN  = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
+    var TMDB_BASE   = 'https://api.themoviedb.org/3';
+    var TMDB_IMG    = 'https://image.tmdb.org/t/p/';
 
-    var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
-             + '<path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
-             + '</svg>';
-
-    // =====================================================================
-    // TMDB CONFIG
-    // =====================================================================
-    var TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
-    var TMDB_BASE  = 'https://api.themoviedb.org/3';
-    var TMDB_IMG   = 'https://image.tmdb.org/t/p/';
-
-    // Fetch TMDB dung window.fetch (ho tro Authorization header)
-    // Tim TMDB bang ten phim + nam (fallback khi khong co tmdb_id)
-    function searchTMDB(title, year, kkType, onFound) {
-        // kkType da la 'movie' hoac 'tv' (xu ly tu truoc)
-        var mediaType = (kkType === 'single') ? 'movie' : (kkType || 'movie');
-        var q = encodeURIComponent(title);
-        var url = TMDB_BASE + '/search/' + mediaType
-                + '?query=' + q + '&language=vi-VN'
-                + (year ? '&year=' + year : '');
-        $.ajax({
-            url: url, type: 'GET',
-            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
-            success: function (data) {
-                var results = (data && data.results) || [];
-                if (results.length) onFound(results[0].id, mediaType);
-                else onFound(null, mediaType);
-            },
-            error: function () { onFound(null, mediaType); }
-        });
-    }
-
-    function fetchTMDBDetail(tmdbId, mediaType, onDone) {
-        var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
-                + '?language=vi-VN&append_to_response=credits';
-        $.ajax({
-            url: url, type: 'GET',
-            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
-            success: function (t) { onDone(t); },
-            error: function () { onDone(null); }
-        });
-    }
-
-    function applyTMDB(result, t) {
-        if (!t) return;
-        try {
-            if (t.backdrop_path) {
-                result.backdrop_path    = t.backdrop_path;
-                result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
-            }
-            if (t.poster_path) result.poster_path = t.poster_path;
-            if (t.vote_average) {
-                result.vote_average = Math.round(t.vote_average * 10) / 10;
-                result.vote_count   = t.vote_count || 0;
-            }
-            if (t.release_date)   result.release_date   = t.release_date;
-            if (t.first_air_date) result.first_air_date = t.first_air_date;
-            if (t.runtime) result.runtime = t.runtime;
-            if (t.episode_run_time && t.episode_run_time.length) {
-                result.runtime = t.episode_run_time[0] || 0;
-            }
-            // Credits tu TMDB: co anh avatar nen ghi de len data KKPhim
-            var credits = t.credits || {};
-            var castList = (credits.cast || []).slice(0, 15).map(function (a) {
-                return {
-                    id:           a.id,
-                    name:         a.name,
-                    character:    a.character || '',
-                    profile_path: a.profile_path || '',
-                    order:        a.order || 0,
-                    img:          a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '',
-                };
-            });
-            var crewList = (credits.crew || []).filter(function (c) {
-                return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
-            }).slice(0, 5).map(function (c) {
-                return {
-                    id:           c.id,
-                    name:         c.name,
-                    job:          c.job,
-                    department:   c.department || '',
-                    profile_path: c.profile_path || '',
-                    img:          c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '',
-                };
-            });
-            // Chi ghi de neu TMDB tra ve du lieu
-            if (castList.length || crewList.length) {
-                result.credits   = { cast: castList, crew: crewList };
-                result.persons   = castList.concat(crewList);
-                result.actors    = castList;
-                result.directors = crewList.filter(function (c) { return c.job === 'Director'; });
-            }
-            if (t.genres && t.genres.length) {
-                result.genres = t.genres.map(function (g) {
-                    return { id: String(g.id), name: g.name };
-                });
-            }
-            result.tmdb    = String(t.id);
-            result.tmdb_id = String(t.id);
-        } catch (e) { console.warn('[KKPhim] applyTMDB error:', e); }
-    }
-
-    function enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, onDone) {
-        // kkType da la 'movie' hoac 'tv' (xu ly tu truoc)
-        var mediaType = (kkType === 'single') ? 'movie' : (kkType || 'movie');
-
-        function done(t) {
-            applyTMDB(result, t);
-            onDone(result);
-        }
-
-        if (tmdbId) {
-            // Co san tmdb_id -> fetch luon
-            fetchTMDBDetail(String(tmdbId), mediaType, done);
-        } else if (searchTitle) {
-            // Khong co tmdb_id -> search bang ten goc (origin_name)
-            searchTMDB(searchTitle, searchYear, kkType, function (foundId, foundType) {
-                if (foundId) fetchTMDBDetail(String(foundId), foundType, done);
-                else onDone(result);
-            });
-        } else {
-            onDone(result);
-        }
-    }
+    var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
     // =====================================================================
-    // CSS - An badge TV
+    // CSS
     // =====================================================================
     function injectCSS() {
         if (document.getElementById('kkp-style')) return;
         var s = document.createElement('style');
         s.id = 'kkp-style';
-        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}';
+        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}';
         document.head.appendChild(s);
     }
 
@@ -150,8 +30,6 @@
         return (url.indexOf('http') === 0) ? url : IMG_URL + url;
     }
 
-    // KKPhim: list API tra ve category[].id = so, category[].slug = "kinh-di"
-    //         full API tra ve category[].id = "kinh-di" (la slug luon)
     function toNameArray(arr) {
         if (!arr || !arr.length) return [];
         return arr.map(function (item) {
@@ -188,10 +66,124 @@
             type:                 'movie',
             media_type:           'movie',
             source:               SOURCE_NAME,
-            kkphim_slug:          item.slug   || '',
-            kkphim_type:          item.type   || '',
+            kkphim_slug:          item.slug     || '',
+            kkphim_type:          item.type     || '',
             kkphim_cats:          item.category || [],
+            kkphim_year:          item.year     || 0,
         };
+    }
+
+    // =====================================================================
+    // TMDB HELPERS
+    // =====================================================================
+    function tmdbAjax(url, onOk, onFail) {
+        $.ajax({
+            url: url, type: 'GET',
+            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
+            success: onOk,
+            error:   onFail || function () {},
+        });
+    }
+
+    function getTmdbInfo(movieOrCard) {
+        var raw       = movieOrCard.tmdb || {};
+        var tmdbId    = (typeof raw === 'object' ? raw.id : raw) || movieOrCard.tmdb_id || '';
+        var mediaType = (typeof raw === 'object' && raw.type)
+                        ? raw.type
+                        : ((movieOrCard.kkphim_type || movieOrCard.type) === 'single' ? 'movie' : 'tv');
+        return { id: tmdbId ? String(tmdbId) : '', type: mediaType };
+    }
+
+    function searchTMDB(title, year, mediaType, onFound) {
+        var url = TMDB_BASE + '/search/' + mediaType
+                + '?query=' + encodeURIComponent(title) + '&language=vi-VN'
+                + (year ? '&year=' + year : '');
+        tmdbAjax(url, function (data) {
+            var results = (data && data.results) || [];
+            if (!results.length) { onFound(null); return; }
+            var matched = null;
+            if (year) {
+                matched = results.filter(function (r) {
+                    return (r.release_date || r.first_air_date || '').slice(0, 4) === year;
+                })[0];
+            }
+            onFound((matched || results[0]).id);
+        }, function () { onFound(null); });
+    }
+
+    function fetchTMDBDetail(tmdbId, mediaType, onDone) {
+        var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
+                + '?language=vi-VN&append_to_response=credits,images&include_image_language=en,vi,null';
+        tmdbAjax(url, function (t) { onDone(t); }, function () { onDone(null); });
+    }
+
+    function applyTMDB(result, t) {
+        if (!t) return;
+        try {
+            if (t.backdrop_path) {
+                result.backdrop_path    = t.backdrop_path;
+                result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
+            }
+            if (t.poster_path) result.poster_path = t.poster_path;
+
+            var logos = (t.images && t.images.logos) || [];
+            var logo  = logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] || logos[0];
+            if (logo && logo.file_path) {
+                result.logo      = TMDB_IMG + 'w300' + logo.file_path;
+                result.logo_path = logo.file_path;
+            }
+
+            if (t.vote_average) {
+                result.vote_average = Math.round(t.vote_average * 10) / 10;
+                result.vote_count   = t.vote_count || 0;
+            }
+            if (t.release_date)   result.release_date   = t.release_date;
+            if (t.first_air_date) result.first_air_date = t.first_air_date;
+            if (t.runtime)        result.runtime         = t.runtime;
+            if (t.episode_run_time && t.episode_run_time.length) result.runtime = t.episode_run_time[0] || 0;
+
+            if (t.genres && t.genres.length) {
+                result.genres = t.genres.map(function (g) { return { id: String(g.id), name: g.name }; });
+            }
+
+            var credits  = t.credits || {};
+            var castList = (credits.cast || []).slice(0, 15).map(function (a) {
+                return { id: a.id, name: a.name, character: a.character || '', profile_path: a.profile_path || '', img: a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '', order: a.order || 0 };
+            });
+            var crewList = (credits.crew || []).filter(function (c) {
+                return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
+            }).slice(0, 5).map(function (c) {
+                return { id: c.id, name: c.name, job: c.job, department: c.department || '', profile_path: c.profile_path || '', img: c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '' };
+            });
+            if (castList.length || crewList.length) {
+                result.credits   = { cast: castList, crew: crewList };
+                result.persons   = castList.concat(crewList);
+                result.actors    = castList;
+                result.directors = crewList.filter(function (c) { return c.job === 'Director'; });
+            }
+
+            result.tmdb    = String(t.id);
+            result.tmdb_id = String(t.id);
+        } catch (e) { console.warn('[KKPhim] applyTMDB:', e); }
+    }
+
+    function enrichWithTMDB(result, movie, onDone) {
+        var info        = getTmdbInfo(movie);
+        var searchTitle = movie.origin_name || movie.name || '';
+        var searchYear  = movie.year ? String(movie.year) : '';
+
+        function done(t) { applyTMDB(result, t); onDone(result, t); }
+
+        if (info.id) {
+            fetchTMDBDetail(info.id, info.type, done);
+        } else if (searchTitle) {
+            searchTMDB(searchTitle, searchYear, info.type, function (foundId) {
+                if (foundId) fetchTMDBDetail(String(foundId), info.type, done);
+                else onDone(result, null);
+            });
+        } else {
+            onDone(result, null);
+        }
     }
 
     // =====================================================================
@@ -221,12 +213,14 @@
                     totalPages = (pag && pag.totalPages) || 1;
                     totalItems = (pag && pag.totalItems) || items.length;
                 }
-            } catch (e) { console.warn('[KKPhim] fetchPage:', e); }
+            } catch (e) {}
             onOk({ items: items, page: page, totalPages: totalPages, totalItems: totalItems });
         }, onFail || function () {});
     }
 
-    // Cache episodes theo slug de khoi fetch lai khi bam nut play
+    // =====================================================================
+    // EPISODE HELPERS
+    // =====================================================================
     var _epsCache = {};
 
     function fetchEpisodes(slug, callback) {
@@ -238,70 +232,46 @@
         }, function () { callback([]); });
     }
 
-    // Hien menu chon server -> tap bang Lampa.Select
-    function showEpisodeMenu(card, episodes) {
-        var title  = card.title || '';
-        var poster = card.img   || card.poster || '';
-
-        if (!episodes.length) return;
-
-        // Neu chi co 1 server va 1 tap -> phat luon
-        if (episodes.length === 1 && (episodes[0].server_data || []).length === 1) {
-            var ep   = episodes[0].server_data[0];
-            var link = ep.link_m3u8 || ep.link_embed || '';
-            if (link) Lampa.Player.play({ url: link, title: title, poster: poster });
-            return;
-        }
-
-        // Neu chi co 1 server va nhieu tap -> hien menu tap luon
-        if (episodes.length === 1) {
-            showEpList(card, episodes[0]);
-            return;
-        }
-
-        // Nhieu server -> hien menu chon server truoc
-        var serverItems = episodes.map(function (srv, si) {
-            return { title: srv.server_name || ('Server ' + (si + 1)), index: si };
-        });
-
-        Lampa.Select.show({
-            title:    'Chọn server',
-            items:    serverItems,
-            onSelect: function (item) {
-                showEpList(card, episodes[item.index]);
-            },
-        });
-    }
-
     function showEpList(card, server) {
         var title  = card.title || '';
         var poster = card.img   || card.poster || '';
         var data   = server.server_data || [];
-
-        // Neu chi co 1 tap -> phat luon
+        if (!data.length) return;
         if (data.length === 1) {
-            var link = data[0].link_m3u8 || data[0].link_embed || '';
-            if (link) Lampa.Player.play({ url: link, title: title + ' - ' + (data[0].name || ''), poster: poster });
+            var lk = data[0].link_m3u8 || data[0].link_embed || '';
+            if (lk) Lampa.Player.play({ url: lk, title: title, poster: poster });
             return;
         }
-
         var playlist = data.map(function (ep) {
             return { url: ep.link_m3u8 || ep.link_embed || '', title: title + ' - ' + (ep.name || '') };
         });
-
-        var epItems = data.map(function (ep, idx) {
-            return { title: ep.name || ('Tập ' + (idx + 1)), index: idx };
-        });
-
         Lampa.Select.show({
-            title:    server.server_name || 'Chọn tập',
-            items:    epItems,
+            title:    server.server_name || 'Ch\u1ECDn t\u1EADp',
+            items:    data.map(function (ep, idx) { return { title: ep.name || ('T\u1EADp ' + (idx + 1)), index: idx }; }),
             onSelect: function (item) {
-                var link = data[item.index].link_m3u8 || data[item.index].link_embed || '';
-                if (!link) return;
-                Lampa.Player.play({ url: link, title: title + ' - ' + (data[item.index].name || ''), poster: poster });
+                var l = data[item.index].link_m3u8 || data[item.index].link_embed || '';
+                if (!l) return;
+                Lampa.Player.play({ url: l, title: title + ' - ' + (data[item.index].name || ''), poster: poster });
                 Lampa.Player.playlist(playlist, item.index);
             },
+        });
+    }
+
+    function showEpisodeMenu(card, episodes) {
+        var title  = card.title || '';
+        var poster = card.img   || card.poster || '';
+        if (!episodes.length) return;
+        if (episodes.length === 1 && (episodes[0].server_data || []).length === 1) {
+            var ep = episodes[0].server_data[0];
+            var lk = ep.link_m3u8 || ep.link_embed || '';
+            if (lk) Lampa.Player.play({ url: lk, title: title, poster: poster });
+            return;
+        }
+        if (episodes.length === 1) { showEpList(card, episodes[0]); return; }
+        Lampa.Select.show({
+            title:    'Ch\u1ECDn server',
+            items:    episodes.map(function (srv, si) { return { title: srv.server_name || ('Server ' + (si + 1)), index: si }; }),
+            onSelect: function (item) { showEpList(card, episodes[item.index]); },
         });
     }
 
@@ -314,7 +284,6 @@
 
         self.list = function (params, onComplete, onError) {
             var page   = params.page    || 1;
-            // Lampa truyen params.cat_url (custom) hoac params.url (native More)
             var catUrl = params.cat_url || params.url || '/danh-sach/phim-moi-cap-nhat';
             fetchPage(catUrl, page, function (res) {
                 onComplete({ results: res.items, page: res.page, total_pages: res.totalPages, total_results: res.totalItems });
@@ -327,9 +296,7 @@
                     fetchPage(cat.url, 1, function (res) {
                         cb({ title: cat.title, results: res.items, url: cat.url, cat_url: cat.url,
                              page: 1, total_pages: res.totalPages, total_results: res.totalItems, source: SOURCE_NAME });
-                    }, function () {
-                        cb({ title: cat.title, results: [], url: cat.url, cat_url: cat.url });
-                    });
+                    }, function () { cb({ title: cat.title, results: [], url: cat.url, cat_url: cat.url }); });
                 };
             });
             Lampa.Api.partNext(parts, 2, onComplete, onError);
@@ -344,55 +311,36 @@
                 var movie    = data.movie    || {};
                 var episodes = data.episodes || [];
                 var seasons  = [];
+
                 episodes.forEach(function (server, si) {
                     var eps = (server.server_data || []).map(function (ep, ei) {
                         return {
-                            episode_number: ei + 1,
-                            season_number:  si + 1,
-                            name:           ep.name || ('T\u1EADp ' + (ei + 1)),
-                            air_date:       '',
-                            link_m3u8:      ep.link_m3u8  || '',
-                            link_embed:     ep.link_embed || '',
+                            episode_number: ei + 1, season_number: si + 1,
+                            name: ep.name || ('T\u1EADp ' + (ei + 1)), air_date: '',
+                            link_m3u8: ep.link_m3u8 || '', link_embed: ep.link_embed || '',
                         };
                     });
                     seasons.push({ season_number: si + 1, name: server.server_name || ('Server ' + (si + 1)), episodes: eps });
                 });
 
-                var result = normalizeItem(movie);
+                var result               = normalizeItem(movie);
                 result.overview          = movie.content || '';
                 result.number_of_seasons = seasons.length || 1;
                 result.seasons           = seasons;
                 result.kkphim_episodes   = episodes;
 
-                // --- Dung truc tiep actor/director tu KKPhim ---
-                // KKPhim tra ve: actor: ["Ten1","Ten2"], director: ["Ten"]
-                var kkActors = (movie.actor || []).map(function (name, i) {
-                    return { id: i, name: name, character: '', profile_path: '', img: '' };
-                });
-                var kkDirs = (movie.director || []).map(function (name, i) {
-                    return { id: 9000 + i, name: name, job: 'Director', profile_path: '', img: '' };
-                });
+                // Cast tu KKPhim truoc (khong co anh)
+                var kkActors = (movie.actor    || []).map(function (n, i) { return { id: i,        name: n, character: '', profile_path: '', img: '' }; });
+                var kkDirs   = (movie.director || []).map(function (n, i) { return { id: 9000 + i, name: n, job: 'Director', profile_path: '', img: '' }; });
                 if (kkActors.length || kkDirs.length) {
-                    result.credits  = { cast: kkActors, crew: kkDirs };
-                    result.persons  = kkActors.concat(kkDirs);
-                    result.actors   = kkActors;
+                    result.credits   = { cast: kkActors, crew: kkDirs };
+                    result.persons   = kkActors.concat(kkDirs);
+                    result.actors    = kkActors;
                     result.directors = kkDirs;
                 }
 
-                // Enrich voi TMDB
-                // KKPhim tra ve: movie.tmdb = {type, id} hoac movie.tmdb_id
-                var tmdbObj  = movie.tmdb || {};
-                var tmdbId   = (typeof tmdbObj === 'object' ? tmdbObj.id : tmdbObj)
-                               || movie.tmdb_id || '';
-                tmdbId       = tmdbId ? String(tmdbId) : '';
-                var kkType   = (typeof tmdbObj === 'object' && tmdbObj.type)
-                               ? tmdbObj.type
-                               : (movie.type === 'single' ? 'movie' : 'tv');
-                // Chi dung origin_name (ten goc tieng Anh/quoc te) de search
-                // Khong dung name tieng Viet vi de match sai phim
-                var searchTitle = movie.origin_name || '';
-                var searchYear  = movie.year ? String(movie.year) : '';
-                enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, function (enriched) {
+                // Enrich TMDB: backdrop, logo, rating, cast co anh
+                enrichWithTMDB(result, movie, function (enriched) {
                     onComplete({ movie: enriched });
                 });
             }, onError);
@@ -417,47 +365,27 @@
             }
         };
 
-        // Lampa goi self.person de lay thong tin cast/crew
-        // params co the chua: params.id (tmdb person id), params.card (movie card)
         self.person = function (params, onComplete, onError) {
-            var card   = params.card || {};
-            var tmdbId = card.tmdb || card.tmdb_id || '';
-            if (!tmdbId) { onError('no tmdb'); return; }
-
-            var mediaType = card.kkphim_type === 'single' ? 'movie' : 'tv';
-            var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
-                    + '/credits?language=vi-VN';
-
-            $.ajax({
-                url: url, type: 'GET',
-                headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
-                success: function (data) {
+            var card = params.card || {};
+            var info = getTmdbInfo(card);
+            if (!info.id) { onError('no tmdb'); return; }
+            tmdbAjax(
+                TMDB_BASE + '/' + info.type + '/' + info.id + '/credits?language=vi-VN',
+                function (data) {
                     var cast = (data.cast || []).slice(0, 20).map(function (a) {
-                        return {
-                            id:           a.id,
-                            name:         a.name,
-                            img:          a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '',
-                            character:    a.character || '',
-                            profile_path: a.profile_path || '',
-                        };
+                        return { id: a.id, name: a.name, img: a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '', character: a.character || '', profile_path: a.profile_path || '' };
                     });
-                    var crew = (data.crew || []).filter(function (c) {
-                        return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
-                    }).slice(0, 5).map(function (c) {
-                        return {
-                            id:           c.id,
-                            name:         c.name,
-                            img:          c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '',
-                            job:          c.job,
-                            profile_path: c.profile_path || '',
-                        };
-                    });
+                    var crew = (data.crew || []).filter(function (c) { return c.job === 'Director' || c.job === 'Writer'; })
+                        .slice(0, 5).map(function (c) {
+                            return { id: c.id, name: c.name, img: c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '', job: c.job, profile_path: c.profile_path || '' };
+                        });
                     onComplete({ persons: cast.concat(crew), cast: cast, crew: crew });
                 },
-                error: function () { onError('tmdb credits failed'); }
-            });
+                function () { onError('failed'); }
+            );
         };
-        self.clear  = function () { self.network.clear(); };
+
+        self.clear = function () { self.network.clear(); };
     }
 
     // =====================================================================
@@ -466,9 +394,7 @@
     function KKPhimListComponent(object) {
         var catUrl     = object.cat_url || '/danh-sach/phim-moi-cap-nhat';
         var catTitle   = object.title   || 'KKPhim';
-        var curPage    = 1;
-        var totalPages = 1;
-        var loading    = false;
+        var curPage    = 1, totalPages = 1, loading = false;
 
         var $html = $(
             '<div class="kkp-list-wrap" style="min-height:100vh;">' +
@@ -477,22 +403,16 @@
             '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">\u2014 \u0110\u00E3 t\u1EA3i h\u1EBFt phim \u2014</span></div>' +
             '</div>'
         );
-        var $grid   = $html.find('.kkp-grid');
-        var $loader = $html.find('.kkp-loader');
-        var $end    = $html.find('.kkp-end');
+        var $grid = $html.find('.kkp-grid'), $loader = $html.find('.kkp-loader'), $end = $html.find('.kkp-end');
 
         function renderCard(item) {
             var poster = item.img || item.poster || '';
             var year   = item.release_date ? item.release_date.slice(0, 4) : '';
             var $card  = $(
                 '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
-                '<div style="position:relative;padding-top:150%;background:#111;">' +
-                '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
-                '</div>' +
-                '<div style="padding:6px 8px;">' +
-                '<div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
-                '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
-                '</div></div>'
+                '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
+                '<div style="padding:6px 8px;"><div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
+                '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div></div></div>'
             );
             $card.on('hover:enter click', function () {
                 Lampa.Activity.push({ component: 'full', id: item.id, source: SOURCE_NAME, card: item });
@@ -502,18 +422,13 @@
 
         function loadPage(page) {
             if (loading) return;
-            loading = true;
-            $loader.show();
+            loading = true; $loader.show();
             fetchPage(catUrl, page, function (res) {
                 totalPages = res.totalPages || 1;
                 res.items.forEach(renderCard);
-                loading = false;
-                $loader.hide();
+                loading = false; $loader.hide();
                 if (curPage >= totalPages) $end.show();
-            }, function () {
-                loading = false;
-                $loader.hide();
-            });
+            }, function () { loading = false; $loader.hide(); });
         }
 
         function onScroll() {
@@ -527,9 +442,8 @@
         this.start = function () {
             loadPage(1);
             setTimeout(function () {
-                var $s = $html.closest('.activity__body, .layer__scroll, .app__content');
-                if ($s.length) $s.on('scroll.kkplist', onScroll);
-                else $(window).on('scroll.kkplist', onScroll);
+                var $s = $html.closest('.activity__body,.layer__scroll,.app__content');
+                ($s.length ? $s : $(window)).on('scroll.kkplist', onScroll);
             }, 400);
             return $html;
         };
@@ -546,7 +460,7 @@
     }
 
     // =====================================================================
-    // INJECT: NUT XEM THEM TREN CATEGORY
+    // INJECT: XEM THEM
     // =====================================================================
     function injectViewMore() {
         Lampa.Listener.follow('activity', function (e) {
@@ -554,12 +468,12 @@
             var obj = e.object || {};
             if (obj.source !== SOURCE_NAME || obj.component !== 'category') return;
             setTimeout(function () {
-                $('.items__head, .category__title').each(function () {
+                $('.items__head,.category__title').each(function () {
                     var $head = $(this);
                     if ($head.find('.kkp-more-btn').length) return;
-                    var headText = $head.text().replace(/\s*[›>].*/g, '').trim();
+                    var txt = $head.text().replace(/\s*[>›].*/g, '').trim();
                     var cfg = null;
-                    CATEGORIES.forEach(function (c) { if (c.title === headText) cfg = c; });
+                    CATEGORIES.forEach(function (c) { if (c.title === txt) cfg = c; });
                     if (!cfg) return;
                     var $btn = $('<span class="kkp-more-btn selector" style="font-size:12px;opacity:.65;cursor:pointer;margin-left:10px;padding:2px 10px;border:1px solid rgba(255,255,255,.3);border-radius:20px;vertical-align:middle;">Xem th\u00EAm \u203A</span>');
                     $btn.on('hover:enter click', function () {
@@ -572,111 +486,127 @@
     }
 
     // =====================================================================
-    // INJECT: NUT TAP PHIM
+    // INJECT: CAST/CREW VAO DOM
     // =====================================================================
+    function injectCastToDOM($ctx, tmdbData) {
+        if (!tmdbData || $ctx.find('.kkp-cast-wrap').length) return;
+        var credits   = tmdbData.credits || {};
+        var cast      = credits.cast || [];
+        var directors = (credits.crew || []).filter(function (c) { return c.job === 'Director'; });
+        if (!cast.length && !directors.length) return;
+
+        var $wrap = $('<div class="kkp-cast-wrap" style="padding:.2em 1.5em 1em;"></div>');
+
+        if (directors.length) {
+            $wrap.append('<div style="font-size:.85em;font-weight:700;opacity:.7;margin:.8em 0 .4em;">\u0110\u1EA1o di\u1EC5n</div>');
+            var $drow = $('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.5em;"></div>');
+            directors.forEach(function (d) {
+                var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
+                $drow.append('<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border-radius:6px;padding:6px 10px;">' +
+                    (img ? '<img src="' + img + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;"/>' : '') +
+                    '<span style="font-size:13px;">' + d.name + '</span></div>');
+            });
+            $wrap.append($drow);
+        }
+
+        if (cast.length) {
+            $wrap.append('<div style="font-size:.85em;font-weight:700;opacity:.7;margin:.8em 0 .4em;">Di\u1EC5n vi\u00EAn</div>');
+            var $crow = $('<div class="kkp-cast-row" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:.5em;scrollbar-width:none;"></div>');
+            cast.slice(0, 15).forEach(function (a) {
+                var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
+                $crow.append(
+                    '<div style="flex:0 0 76px;text-align:center;">' +
+                    '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#333;margin:0 auto 4px;">' +
+                    (img ? '<img src="' + img + '" style="width:100%;height:100%;object-fit:cover;"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.3;font-size:20px;">?</div>') +
+                    '</div>' +
+                    '<div style="font-size:10px;line-height:1.3;word-break:break-word;">' + (a.name || '') + '</div>' +
+                    (a.character ? '<div style="font-size:9px;opacity:.4;">' + a.character + '</div>' : '') +
+                    '</div>'
+                );
+            });
+            $wrap.append($crow);
+        }
+
+        var $target = $ctx.find('.kkp-similar-wrap');
+        if ($target.length) { $target.before($wrap); return; }
+        $target = $ctx.find('.full-descr');
+        if ($target.length) { $target.after($wrap); return; }
+        $ctx.find('.full-start').append($wrap);
+    }
+
     // =====================================================================
-    // INJECT: PHIM LIEN QUAN (random theo the loai)
+    // INJECT: PHIM LIEN QUAN
     // =====================================================================
     function getGenreSlug(card) {
-        // Thu nguon raw truoc (chinh xac hon)
         var cats = card.kkphim_cats || [];
         for (var i = 0; i < cats.length; i++) {
-            var cat = cats[i];
-            if (typeof cat === 'object') {
-                if (cat.slug) return { slug: cat.slug, name: cat.name || cat.slug };
-                if (typeof cat.id === 'string' && isNaN(cat.id) && cat.id) return { slug: cat.id, name: cat.name || cat.id };
+            var c = cats[i];
+            if (typeof c === 'object') {
+                if (c.slug) return { slug: c.slug, name: c.name || c.slug };
+                if (typeof c.id === 'string' && isNaN(c.id) && c.id) return { slug: c.id, name: c.name || c.id };
             }
         }
-        // Fallback: genres da normalize
         var genres = card.genres || [];
         if (genres.length) {
-            var g = genres[0];
-            var s = g.slug || g.id || '';
+            var g = genres[0], s = g.slug || g.id || '';
             if (s && isNaN(s)) return { slug: String(s), name: g.name || String(s) };
         }
         return null;
     }
 
-    // Track slug da inject de tranh trung lap - dung object thay vi bien don
     var _injectedMap = {};
 
     function injectSimilarMovies(card, $ctx) {
         if (!card || card.source !== SOURCE_NAME) return;
-        var genreInfo = getGenreSlug(card);
-        if (!genreInfo) return;
-
-        var genreSlug = genreInfo.slug;
-        var cardSlug  = card.kkphim_slug || card.id;
-
-        // Da inject cho slug nay roi -> bo qua
+        var gi = getGenreSlug(card);
+        if (!gi) return;
+        var cardSlug = card.kkphim_slug || card.id;
         if (_injectedMap[cardSlug]) return;
         _injectedMap[cardSlug] = true;
 
         setTimeout(function () {
-            // Neu container khong con (user da back) -> huy
-            if (!$ctx.closest('body').length) return;
-            // Neu da co wrap trong container nay roi -> bo qua
-            if ($ctx.find('.kkp-similar-wrap').length) return;
-
+            if (!$ctx.closest('body').length || $ctx.find('.kkp-similar-wrap').length) return;
             var net1 = new Lampa.Reguest();
-            net1.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=1', function (firstData) {
-                var totalPages = 1;
-                try {
-                    var pag = firstData.data && firstData.data.params && firstData.data.params.pagination;
-                    totalPages = (pag && pag.totalPages) || 1;
-                } catch (e) {}
-
-                var randomPage = Math.floor(Math.random() * totalPages) + 1;
+            net1.silent(BASE_URL + '/v1/api/the-loai/' + gi.slug + '?page=1', function (fd) {
+                var tp = 1;
+                try { var p = fd.data && fd.data.params && fd.data.params.pagination; tp = (p && p.totalPages) || 1; } catch (e) {}
+                var rp = Math.floor(Math.random() * tp) + 1;
                 var net2 = new Lampa.Reguest();
-                net2.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=' + randomPage, function (data) {
-                    // Kiem tra container con ton tai
+                net2.silent(BASE_URL + '/v1/api/the-loai/' + gi.slug + '?page=' + rp, function (data) {
                     if (!$ctx.closest('body').length) return;
-
                     var items = [];
-                    try {
-                        items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : [];
-                    } catch (e) { return; }
-
-                    items = items.filter(function (i) { return i.id !== cardSlug; });
-                    items = items.sort(function () { return Math.random() - 0.5; }).slice(0, 20);
+                    try { items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : []; } catch (e) { return; }
+                    items = items.filter(function (i) { return i.id !== cardSlug; })
+                                 .sort(function () { return Math.random() - 0.5; }).slice(0, 20);
                     if (!items.length) return;
 
                     var $wrap = $(
                         '<div class="kkp-similar-wrap" data-slug="' + cardSlug + '" style="padding:.5em 0 1.4em;">' +
-                        '<div style="padding:0 1.5em .7em;">' +
-                        '<span style="font-size:1em;font-weight:700;">Phim li\u00EAn quan</span>' +
-                        '</div>' +
+                        '<div style="padding:0 1.5em .7em;"><span style="font-size:1em;font-weight:700;">Phim li\u00EAn quan</span></div>' +
                         '<div class="kkp-similar-row" style="display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:0 1.5em .5em;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>' +
                         '</div>'
                     );
-
                     var $row = $wrap.find('.kkp-similar-row');
                     items.forEach(function (item) {
                         var poster = item.img || item.poster || '';
                         var year   = item.release_date ? item.release_date.slice(0, 4) : '';
                         var $c = $(
                             '<div class="kkp-sim-card selector" style="flex:0 0 110px;width:110px;flex-shrink:0;cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
-                            '<div style="position:relative;padding-top:150%;background:#111;">' +
-                            '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
-                            '</div>' +
-                            '<div style="padding:5px 6px;">' +
-                            '<div style="font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
-                            '<div style="font-size:10px;opacity:.45;margin-top:2px;">' + year + '</div>' +
-                            '</div></div>'
+                            '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
+                            '<div style="padding:5px 6px;"><div style="font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
+                            '<div style="font-size:10px;opacity:.45;margin-top:2px;">' + year + '</div></div></div>'
                         );
                         $c.on('hover:enter click', (function (it) {
-                            return function () {
-                                Lampa.Activity.push({ component: 'full', id: it.id, source: SOURCE_NAME, card: it });
-                            };
+                            return function () { Lampa.Activity.push({ component: 'full', id: it.id, source: SOURCE_NAME, card: it }); };
                         })(item));
                         $row.append($c);
                     });
 
-                    // Inject vao dung container hien tai
                     setTimeout(function () {
                         if (!$ctx.closest('body').length) return;
-                        var $after = $ctx.find('.full-descr');
-                        if ($after.length) $after.after($wrap);
+                        var $after = $ctx.find('.kkp-cast-wrap');
+                        if (!$after.length) $after = $ctx.find('.full-descr');
+                        if ($after.length) $after.last().after($wrap);
                         else $ctx.find('.full-start').append($wrap);
                     }, 200);
                 });
@@ -697,11 +627,8 @@
 
         Lampa.Listener.follow('full', function (e) {
             var obj  = e.object || {};
-            var card = (e.data && e.data.movie)
-                       ? e.data.movie
-                       : (obj.card || (obj.activity && obj.activity.card));
+            var card = (e.data && e.data.movie) ? e.data.movie : (obj.card || (obj.activity && obj.activity.card));
             if (!card || card.source !== SOURCE_NAME) return;
-
             var slug = card.kkphim_slug || card.id;
 
             if (e.type === 'destroy') {
@@ -709,69 +636,42 @@
                 delete _epsCache[slug];
                 return;
             }
-
             if (e.type !== 'complite') return;
 
-            // Pre-fetch episodes
             fetchEpisodes(slug, function () {});
 
-            // Inject nut KKPhim vao hang button (sau nut Torrent)
-            // Giong cach online_mod lam: e.object.activity.render().find('.view--torrent').after(btn)
             var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : null);
-            if ($render && !$render.find('.view--kkphim').length) {
+            var $ctx    = $render || $('body');
+
+            // Nut KKPhim trong hang buttons
+            if (!$ctx.find('.view--kkphim').length) {
                 var $btn = $(
                     '<div class="full-start__button selector view--kkphim" data-subtitle="KKPhim">' +
                     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="44" height="44">' +
                     '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>' +
-                    '<path d="M9.5 8.5L15.5 12L9.5 15.5V8.5Z" fill="currentColor"/>' +
-                    '</svg>' +
-                    '<span>KKPhim</span>' +
-                    '</div>'
+                    '<path d="M9.5 8.5L15.5 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
+                    '<span>KKPhim</span></div>'
                 );
                 $btn.on('hover:enter', function () {
-                    fetchEpisodes(slug, function (episodes) {
-                        if (!episodes || !episodes.length) {
-                            Lampa.Noty.show('Không có link phim');
-                            return;
-                        }
-                        showEpisodeMenu(card, episodes);
+                    fetchEpisodes(slug, function (eps) {
+                        if (!eps || !eps.length) { Lampa.Noty.show('Kh\u00F4ng c\u00F3 link phim'); return; }
+                        showEpisodeMenu(card, eps);
                     });
                 });
-                var $torrent = $render.find('.view--torrent');
-                if ($torrent.length) $torrent.after($btn);
-                else $render.find('.full-start__buttons').append($btn);
+                var $tor = $ctx.find('.view--torrent');
+                if ($tor.length) $tor.after($btn);
+                else $ctx.find('.full-start__buttons').append($btn);
             }
 
-            // Inject phim lien quan
-            var $ctx = $render || $('body');
+            // Inject cast tu TMDB vao DOM
+            var info = getTmdbInfo(card);
+            if (info.id) {
+                fetchTMDBDetail(info.id, info.type, function (tmdbData) {
+                    if ($ctx.closest('body').length) injectCastToDOM($ctx, tmdbData);
+                });
+            }
+
             injectSimilarMovies(card, $ctx);
-        });
-
-        // Dang ky nguon KKPhim vao menu Source cua Lampa
-        // Lampa fire event 'stream' khi user bam nut Play va chon nguon
-        Lampa.Listener.follow('stream', function (e) {
-            // e.object.card: thong tin phim dang xem
-            var card = e.object && e.object.card;
-            if (!card) return;
-
-            // Chi xu ly phim tu nguon KKPhim
-            var slug = card.kkphim_slug || card.id;
-            if (!slug) return;
-
-            // Them vao danh sach source
-            e.results.push({
-                title:   'KKPhim',
-                search:  card,
-                callback: function () {
-                    fetchEpisodes(slug, function (episodes) {
-                        if (!episodes || !episodes.length) {
-                            Lampa.Noty.show('Không tìm thấy link phim');
-                            return;
-                        }
-                        showEpisodeMenu(card, episodes);
-                    });
-                },
-            });
         });
 
         injectViewMore();
