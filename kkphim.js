@@ -20,7 +20,8 @@
     // Fetch TMDB dung window.fetch (ho tro Authorization header)
     // Tim TMDB bang ten phim + nam (fallback khi khong co tmdb_id)
     function searchTMDB(title, year, kkType, onFound) {
-        var mediaType = (kkType === 'single') ? 'movie' : 'tv';
+        // kkType da la 'movie' hoac 'tv' (xu ly tu truoc)
+        var mediaType = (kkType === 'single') ? 'movie' : (kkType || 'movie');
         var q = encodeURIComponent(title);
         var url = TMDB_BASE + '/search/' + mediaType
                 + '?query=' + q + '&language=vi-VN'
@@ -90,7 +91,8 @@
     }
 
     function enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, onDone) {
-        var mediaType = (kkType === 'single') ? 'movie' : 'tv';
+        // kkType da la 'movie' hoac 'tv' (xu ly tu truoc)
+        var mediaType = (kkType === 'single') ? 'movie' : (kkType || 'movie');
 
         function done(t) {
             applyTMDB(result, t);
@@ -345,9 +347,14 @@
                 result.kkphim_episodes   = episodes;
 
                 // Enrich voi TMDB
-                // KKPhim co the tra ve tmdb_id o nhieu truong khac nhau
-                var tmdbId = movie.tmdb_id || movie.tmdb || movie.imdb_id || '';
-                var kkType = movie.type || '';
+                // KKPhim tra ve: movie.tmdb = {type, id} hoac movie.tmdb_id
+                var tmdbObj  = movie.tmdb || {};
+                var tmdbId   = (typeof tmdbObj === 'object' ? tmdbObj.id : tmdbObj)
+                               || movie.tmdb_id || '';
+                tmdbId       = tmdbId ? String(tmdbId) : '';
+                var kkType   = (typeof tmdbObj === 'object' && tmdbObj.type)
+                               ? tmdbObj.type
+                               : (movie.type === 'single' ? 'movie' : 'tv');
                 var searchTitle = movie.origin_name || movie.name || '';
                 var searchYear  = movie.year ? String(movie.year) : '';
                 enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, function (enriched) {
