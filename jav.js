@@ -2,25 +2,31 @@
     'use strict';
 
     /* ============================================================
-       OneJAV Plugin for Lampa  —  v1.0.0
-       Source: https://onejav.com
-       Phát torrent qua TorrServer đã cài trong Lampa Settings
+       OneJAV Plugin for Lampa  —  v1.1.0
     ============================================================ */
 
     var PLUGIN_ID = 'onejav';
     var BASE_URL  = 'https://onejav.com';
 
+    // Tự viết escapeHtml vì Lampa.Utils.escapeHtml không tồn tại
+    function esc(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
 
     /* ============================================================
-       FETCH - XMLHttpRequest thuần
-       onejav.com không có Cloudflare block như ijavtorrent
+       FETCH
     ============================================================ */
     function fetchPage(url, ok, fail) {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
         xhr.timeout = 20000;
         xhr.setRequestHeader('Accept', 'text/html,*/*');
-        xhr.setRequestHeader('User-Agent', 'Mozilla/5.0');
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
@@ -34,20 +40,18 @@
         };
         xhr.ontimeout = function () { if (fail) fail('Timeout'); };
         xhr.onerror   = function () {
-            // Thử Lampa.Reguest làm fallback
             try {
                 var req = new Lampa.Reguest();
                 req.timeout(20000);
                 req.native(url, function (resp) {
-                    // native() trả về responseText trực tiếp
                     var text = typeof resp === 'string' ? resp : (resp && resp.responseText) || '';
                     if (text.length > 100) ok(text);
-                    else if (fail) fail('Lampa.Reguest: response rỗng');
+                    else if (fail) fail('Response rỗng');
                 }, function () {
                     if (fail) fail('XHR + Reguest đều lỗi');
                 }, false);
             } catch (e) {
-                if (fail) fail('XHR error: ' + e.message);
+                if (fail) fail('XHR error');
             }
         };
 
@@ -56,15 +60,12 @@
 
 
     /* ============================================================
-       PARSER - DANH SÁCH
-       Mỗi card trên onejav.com:
-         <a href="/torrent/xxx"><img src="..."> CODE Actress (size)</a>
+       PARSER
     ============================================================ */
     function parseList(html) {
         var movies = [], seen = {};
         var $doc = $('<div>').html(html);
 
-        // Mỗi card là <a href="/torrent/xxx"> chứa <img> và text
         $doc.find('a[href^="/torrent/"]').each(function () {
             var $a   = $(this);
             var href = $a.attr('href') || '';
@@ -74,21 +75,16 @@
             if (seen[full]) return;
             seen[full] = true;
 
-            // Lấy ảnh
             var poster = $a.find('img').attr('src') || '';
-
-            // Text: "CODE Actress (size)" hoặc "CODE (size)"
-            var text = $a.text().trim().replace(/\s+/g, ' ');
+            var text   = $a.text().trim().replace(/\s+/g, ' ');
             if (!text || text.length < 2) return;
 
-            // Tách code từ slug
-            var slug  = href.replace('/torrent/', '');
-            var code  = slug.toUpperCase();
+            var slug = href.replace('/torrent/', '');
 
             movies.push({
                 id:              slug,
-                title:           text || code,
-                original_title:  code,
+                title:           text,
+                original_title:  slug.toUpperCase(),
                 overview:        '',
                 poster:          poster,
                 poster_path:     poster,
@@ -103,54 +99,36 @@
         return movies;
     }
 
-
-    /* ============================================================
-       PARSER - TRANG DETAIL (lấy magnet + info)
-    ============================================================ */
     function parseDetail(html) {
         var $doc = $('<div>').html(html);
-        var info = { magnet: '', size: '', tags: [], actresses: [], desc: '' };
+        var info = { magnet: '', torrent: '', tags: [], actresses: [], desc: '' };
 
-        // Magnet link
         $doc.find('a[href^="magnet:"]').each(function () {
             if (!info.magnet) info.magnet = $(this).attr('href');
         });
 
-        // .torrent download link (fallback)
         if (!info.magnet) {
-            $doc.find('a[href$=".torrent"], a[href*="download"]').each(function () {
+            $doc.find('a[href$=".torrent"]').each(function () {
                 var h = $(this).attr('href') || '';
                 if (h && !info.torrent) info.torrent = h.startsWith('http') ? h : BASE_URL + h;
             });
         }
 
-        // Tags
         $doc.find('a[href^="/tag/"]').each(function () {
             var t = $(this).text().trim();
             if (t) info.tags.push(t);
         });
 
-        // Actresses
         $doc.find('a[href^="/actress/"]').each(function () {
             var a = $(this).text().trim();
             if (a) info.actresses.push(a);
         });
 
-        // Description
-        var $desc = $doc.find('p').first();
-        info.desc = $desc.text().trim();
-
         return info;
     }
 
-    // Parse tổng số trang
     function parseMaxPage(html) {
         var max = 1;
-        $('<div>').html(html).find('a[href*="page="]').each(function () {
-            var m = (($(this).attr('href') || '').match(/page=(\d+)/) || [])[1];
-            if (m && +m > max) max = +m;
-        });
-        // onejav dùng /popular/?page=2 style
         $('<div>').html(html).find('a').each(function () {
             var h = $(this).attr('href') || '';
             var m = h.match(/[?&]page=(\d+)/);
@@ -162,13 +140,12 @@
     function buildUrl(obj, page) {
         var url;
         switch (obj.section) {
-            case 'new':      url = BASE_URL + '/new'; break;
-            case 'popular':  url = BASE_URL + '/popular/'; break;
-            case 'today':    url = BASE_URL + '/' + obj.date; break;
-            case 'tag':      url = BASE_URL + '/tag/' + encodeURIComponent(obj.tag); break;
-            case 'actress':  url = BASE_URL + '/actress/' + encodeURIComponent(obj.actress); break;
-            case 'search':   url = BASE_URL + '/?search=' + encodeURIComponent(obj.query); break;
-            default:         url = BASE_URL + '/';
+            case 'new':     url = BASE_URL + '/new'; break;
+            case 'popular': url = BASE_URL + '/popular/'; break;
+            case 'today':   url = BASE_URL + '/' + obj.date; break;
+            case 'tag':     url = BASE_URL + '/tag/' + encodeURIComponent(obj.tag); break;
+            case 'search':  url = BASE_URL + '/?search=' + encodeURIComponent(obj.query); break;
+            default:        url = BASE_URL + '/';
         }
         if (page > 1) url += (url.indexOf('?') >= 0 ? '&' : '?') + 'page=' + page;
         return url;
@@ -194,10 +171,10 @@
                 '<div class="onejav-card selector">' +
                 '<div class="onejav-card__img">' +
                 (movie.poster
-                    ? '<img src="' + movie.poster + '" onerror="this.style.display=\'none\'" />'
-                    : '<div class="onejav-card__noimg">' + Lampa.Utils.escapeHtml(movie.original_title) + '</div>') +
+                    ? '<img src="' + esc(movie.poster) + '" onerror="this.style.display=\'none\'" />'
+                    : '<div class="onejav-card__noimg">' + esc(movie.original_title) + '</div>') +
                 '</div>' +
-                '<div class="onejav-card__name">' + Lampa.Utils.escapeHtml(movie.title) + '</div>' +
+                '<div class="onejav-card__name">' + esc(movie.title) + '</div>' +
                 '</div>'
             );
             $card.on('hover:enter click', function () {
@@ -239,10 +216,7 @@
                 },
                 function (err) {
                     loading = false;
-                    setContent(
-                        '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:2">' +
-                        '❌ ' + (err || 'Lỗi kết nối') + '</div>'
-                    );
+                    setContent('<div style="padding:3em;text-align:center;color:#e74c3c">❌ ' + esc(err || 'Lỗi kết nối') + '</div>');
                 }
             );
         }
@@ -274,7 +248,6 @@
 
     /* ============================================================
        COMPONENT: DETAIL
-       Load trang /torrent/xxx → lấy magnet → phát qua TorrServer
     ============================================================ */
     function DetailComponent(object) {
         var scroll = new Lampa.Scroll({ mask: true, over: true });
@@ -289,36 +262,32 @@
 
             fetchPage(card.url,
                 function (html) {
-                    var info = parseDetail(html);
+                    var info    = parseDetail(html);
+                    var playUrl = info.magnet || info.torrent;
 
-                    if (!info.magnet && !info.torrent) {
+                    if (!playUrl) {
                         Lampa.Noty.show('Không tìm thấy link torrent');
                         setTimeout(function () { Lampa.Activity.backward(); }, 800);
                         return;
                     }
 
-                    var playUrl = info.magnet || info.torrent;
-
-                    // Hiện thông tin trước khi phát
-                    var actressStr = info.actresses.length ? info.actresses.join(', ') : '';
-                    var tagStr     = info.tags.slice(0, 6).join(' · ');
+                    var actressStr = info.actresses.join(', ');
+                    var tagStr     = info.tags.slice(0, 8).join(' · ');
 
                     scroll.render().find('.scroll__content').html(
                         '<div style="padding:1.5em">' +
-                        (card.poster ? '<img src="' + card.poster + '" style="max-width:200px;border-radius:8px;margin-bottom:1em">' : '') +
-                        '<div style="font-size:1.1em;font-weight:bold;margin-bottom:.5em">' + Lampa.Utils.escapeHtml(card.title) + '</div>' +
-                        (actressStr ? '<div style="color:#aaa;margin-bottom:.3em">👤 ' + Lampa.Utils.escapeHtml(actressStr) + '</div>' : '') +
-                        (tagStr     ? '<div style="color:#888;font-size:.8em;margin-bottom:1em">' + Lampa.Utils.escapeHtml(tagStr) + '</div>' : '') +
-                        '<button class="onejav-play-btn selector" style="' +
-                        'display:block;width:100%;padding:14px;margin-top:1em;' +
-                        'background:#e74c3c;color:#fff;border:none;border-radius:8px;' +
-                        'font-size:1.1em;cursor:pointer;text-align:center">' +
-                        '▶ Phát qua TorrServer</button>' +
+                        (card.poster ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">' : '') +
+                        '<div style="font-size:1.1em;font-weight:bold;margin-bottom:.5em">' + esc(card.title) + '</div>' +
+                        (actressStr ? '<div style="color:#aaa;margin-bottom:.4em">👤 ' + esc(actressStr) + '</div>' : '') +
+                        (tagStr     ? '<div style="color:#666;font-size:.8em;margin-bottom:1em">' + esc(tagStr) + '</div>' : '') +
+                        '<div class="onejav-play-btn selector" style="' +
+                        'padding:14px;margin-top:1em;background:#e74c3c;color:#fff;' +
+                        'border-radius:8px;font-size:1em;cursor:pointer;text-align:center">' +
+                        '▶ Phát qua TorrServer</div>' +
                         '</div>'
                     );
 
                     scroll.render().find('.onejav-play-btn').on('hover:enter click', function () {
-                        // Lampa.Player.play với magnet → Lampa tự dùng TorrServer trong Settings
                         Lampa.Player.play({
                             title:  card.title,
                             url:    playUrl,
@@ -326,7 +295,7 @@
                         });
                     });
 
-                    Lampa.Controller.toggle(PLUGIN_ID + '_detail_ctrl');
+                    Lampa.Controller.toggle(PLUGIN_ID + '_dc');
                 },
                 function (err) {
                     Lampa.Noty.show('Lỗi: ' + (err || 'unknown'));
@@ -336,7 +305,7 @@
         };
 
         this.start = function () {
-            Lampa.Controller.add(PLUGIN_ID + '_detail_ctrl', {
+            Lampa.Controller.add(PLUGIN_ID + '_dc', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
                     Lampa.Controller.collectionFocus(false, scroll.render());
@@ -392,7 +361,6 @@
        MENUS
     ============================================================ */
     function showMainMenu() {
-        // Tính ngày hôm nay và hôm qua
         var now  = new Date();
         var d1   = now.toISOString().slice(0, 10).replace(/-/g, '/');
         var yest = new Date(now - 86400000).toISOString().slice(0, 10).replace(/-/g, '/');
@@ -400,13 +368,13 @@
         Lampa.Select.show({
             title: 'OneJAV',
             items: [
-                { title: '🏠 Trang chủ',   section: '' },
-                { title: '🆕 Mới nhất',    section: 'new' },
-                { title: '🔥 Phổ biến',    section: 'popular' },
-                { title: '📅 Hôm nay',     section: 'today', date: d1 },
-                { title: '📅 Hôm qua',     section: 'today', date: yest },
-                { title: '🎭 FC2 Amateur', section: 'tag', tag: 'FC2' },
-                { title: '🔍 Tìm kiếm',    action: 'search' }
+                { title: '🏠 Trang chủ',  section: '' },
+                { title: '🆕 Mới nhất',   section: 'new' },
+                { title: '🔥 Phổ biến',   section: 'popular' },
+                { title: '📅 Hôm nay',    section: 'today', date: d1 },
+                { title: '📅 Hôm qua',    section: 'today', date: yest },
+                { title: '🎭 FC2 Amateur',section: 'tag',   tag: 'FC2' },
+                { title: '🔍 Tìm kiếm',   action:  'search' }
             ],
             onSelect: function (item) {
                 if (item.action === 'search') { showSearch(); return; }
@@ -441,12 +409,10 @@
                 onBack: function () { Lampa.Controller.toggle('menu'); }
             });
         } else {
-            // Fallback: chọn từ khoá phổ biến
             Lampa.Select.show({
-                title: '🔍 Từ khoá phổ biến',
-                items: [
-                    'Big Tits', 'Creampie', 'Solowork', 'Married Woman',
-                    'Uniform', 'Squirting', 'Lesbian', 'NTR', 'Uncensored'
+                title: '🔍 Từ khoá',
+                items: ['Big Tits','Creampie','Solowork','Married Woman',
+                        'Uniform','Squirting','Lesbian','NTR','Uncensored'
                 ].map(function (t) { return { title: t, q: t }; }),
                 onSelect: function (item) {
                     Lampa.Activity.push({
@@ -468,16 +434,14 @@
     ============================================================ */
     $('<style>').text(
         '.onejav-card{display:inline-block;vertical-align:top;width:160px;margin:6px;cursor:pointer}' +
-        '.onejav-card__img{width:160px;height:220px;border-radius:8px;overflow:hidden;background:#111;position:relative}' +
+        '.onejav-card__img{width:160px;height:220px;border-radius:8px;overflow:hidden;background:#111}' +
         '.onejav-card__img img{width:100%;height:100%;object-fit:cover}' +
-        '.onejav-card__noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;' +
-        'color:#666;font-size:.9em;font-weight:bold;text-align:center;padding:10px;box-sizing:border-box}' +
-        '.onejav-card__name{font-size:.72em;color:#bbb;margin-top:5px;max-width:160px;' +
-        'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-        '.onejav-card.focus .onejav-card__img{outline:3px solid #e74c3c;border-radius:8px}' +
+        '.onejav-card__noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:.85em;font-weight:bold;text-align:center;padding:8px;box-sizing:border-box}' +
+        '.onejav-card__name{font-size:.72em;color:#bbb;margin-top:5px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+        '.onejav-card.focus .onejav-card__img{outline:3px solid #e74c3c}' +
         '.onejav-play-btn.focus{outline:3px solid #fff}'
     ).appendTo('head');
 
-    console.log('[OneJAV] v1.0.0 loaded');
+    console.log('[OneJAV] v1.1.0 loaded');
 
 })();
