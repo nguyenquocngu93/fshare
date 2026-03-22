@@ -458,26 +458,30 @@
         var catUrl   = object.cat_url || '/danh-sach/phim-moi-cap-nhat';
         var catTitle = object.title   || 'KKPhim';
         var curPage  = 1, totalPages = 1, loading = false;
-        var cards    = []; // luu Lampa.Card de destroy
-        var scroll   = new Lampa.Scroll({ mask: true, over: true });
-        var items    = new Lampa.Items();
 
-        scroll.body().addClass('layer--grid');
+        // Container chinh - dung class Lampa de cuon duoc
+        var $html  = $('<div></div>');
+        var $grid  = $('<div class="items__grid items__grid--four"></div>');
+        var $empty = $('<div class="empty"><div class="empty__img"></div><div class="empty__text"><div class="empty__title">Dang tai...</div></div></div>');
+
+        $html.append($empty);
 
         function renderCard(item) {
-            // Dung Lampa.Card native - giong het "Phim le"
-            var card = new Lampa.Card(item);
-            card.create();
-            card.onEnter = function () {
-                Lampa.Activity.push({
-                    component: 'full',
-                    id:        item.id,
-                    source:    SOURCE_NAME,
-                    card:      item,
-                });
-            };
-            cards.push(card);
-            scroll.append(card.render());
+            if ($empty.parent().length) $empty.remove();
+
+            var poster = item.img || item.poster || '';
+            var year   = item.release_date ? item.release_date.slice(0,4) : '';
+            var $card  = $(
+                '<div class="card selector">' +
+                '<div class="card__img"><img loading="lazy" src="' + poster + '" onerror="this.style.opacity=0.2"/></div>' +
+                '<div class="card__title">' + (item.title || '') + '</div>' +
+                '<div class="card__age">' + year + '</div>' +
+                '</div>'
+            );
+            $card.on('hover:enter click', function () {
+                Lampa.Activity.push({ component: 'full', id: item.id, source: SOURCE_NAME, card: item });
+            });
+            $grid.append($card);
         }
 
         function loadPage(page) {
@@ -485,35 +489,34 @@
             loading = true;
             fetchPage(catUrl, page, function (res) {
                 totalPages = res.totalPages || 1;
+                if (!$grid.parent().length) $html.append($grid);
                 res.items.forEach(renderCard);
                 loading = false;
-                if (curPage >= totalPages) {
-                    scroll.append($('<div style="padding:2em;text-align:center;opacity:.4;">— Đã tải hết —</div>'));
-                }
             }, function () { loading = false; });
         }
 
-        scroll.onEnd(function () {
-            if (!loading && curPage < totalPages) {
-                curPage++;
-                loadPage(curPage);
+        // Scroll detection qua Lampa controller
+        function onScroll() {
+            var el = document.querySelector('.activity__content, .layer__scroll, .app');
+            if (!el) return;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 600) {
+                if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
-        });
+        }
 
         this.create = function () {
             loadPage(1);
-            return scroll.render();
+            document.addEventListener('scroll', onScroll, true);
+            return $html;
         };
         this.start   = function () { return this.create(); };
-        this.render  = function () { return scroll.render(); };
+        this.render  = function () { return $html; };
         this.header  = function () { return catTitle; };
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () {};
         this.destroy = function () {
-            cards.forEach(function (c) { try { c.destroy(); } catch(e) {} });
-            cards = [];
-            scroll.destroy();
+            document.removeEventListener('scroll', onScroll, true);
         };
     }
 
@@ -827,3 +830,4 @@
     }
 
 })();
+
