@@ -2,27 +2,30 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v2.1.0
-       Fix: thêm render() method mà Lampa ActivitySlide yêu cầu
+       iJavTorrent Plugin for Lampa  —  v2.2.0
+       Fix: dùng $.ajax thay Lampa.Reguest, bỏ Lampa.Input
     ============================================================ */
 
     var PLUGIN_ID  = 'ijavtorrent';
     var BASE_URL   = 'https://ijavtorrent.com';
-    var PROXY      = '';
     var _menuAdded = false;
 
 
     /* ============================================================
-       FETCH
+       FETCH bằng $.ajax thuần
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        var req = new Lampa.Reguest();
-        req.timeout(15000);
-        req.silent(
-            PROXY ? (PROXY + encodeURIComponent(url)) : url,
-            function (data) { ok(typeof data === 'string' ? data : JSON.stringify(data)); },
-            function (e)    { if (fail) fail(e); }
-        );
+        $.ajax({
+            url:     url,
+            method:  'GET',
+            timeout: 15000,
+            success: function (data) {
+                ok(typeof data === 'string' ? data : $(data).prop('outerHTML') || '');
+            },
+            error: function (xhr, status, err) {
+                if (fail) fail(status + ' ' + err);
+            }
+        });
     }
 
 
@@ -120,22 +123,15 @@
 
     /* ============================================================
        COMPONENT: CATALOG
-       Lampa gọi: new Component(object) → .render() → DOM element
-                  sau đó gọi .start(), .pause(), .stop(), .destroy()
     ============================================================ */
     function CatalogComponent(object) {
-        var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
         var loading = false;
+        var xhr     = null;
 
-        // ✅ Lampa bắt buộc cần method này
-        this.render = function () {
-            return scroll.render();
-        };
+        this.render = function () { return scroll.render(); };
 
-        this.create = function () {
-            loadPage(1);
-        };
+        this.create = function () { loadPage(1); };
 
         function makeCard(movie) {
             var $card = $(
@@ -146,7 +142,6 @@
                 '<div class="ijavt-card__name">' + Lampa.Utils.escapeHtml(movie.title) + '</div>' +
                 '</div>'
             );
-
             $card.on('hover:enter click', function () {
                 Lampa.Activity.push({
                     component: PLUGIN_ID + '_detail',
@@ -155,8 +150,14 @@
                     source:    PLUGIN_ID
                 });
             });
-
             return $card;
+        }
+
+        function showError(msg) {
+            scroll.render().find('.scroll__content').html(
+                '<div style="padding:2em;text-align:center;color:#e74c3c;font-size:.9em">' +
+                msg + '</div>'
+            );
         }
 
         function loadPage(page) {
@@ -165,44 +166,34 @@
 
             var url = buildUrl(object, page);
 
-            network.clear();
-            network.timeout(15000);
-            network.silent(
-                PROXY ? (PROXY + encodeURIComponent(url)) : url,
-                function (data) {
+            if (xhr) xhr.abort();
+            xhr = $.ajax({
+                url:     url,
+                method:  'GET',
+                timeout: 15000,
+                success: function (data) {
                     loading = false;
                     var html    = typeof data === 'string' ? data : '';
                     var movies  = parseList(html);
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        scroll.render().find('.scroll__content').html(
-                            '<div style="padding:3em;text-align:center;color:#888">' +
-                            'Không tìm thấy phim nào.<br>' +
-                            '<small>Nếu dùng trên web → cài CORS Proxy trong menu.</small>' +
-                            '</div>'
-                        );
+                        showError('Không tìm thấy phim nào 😔');
                         return;
                     }
 
-                    movies.forEach(function (m) {
-                        scroll.append(makeCard(m));
-                    });
+                    movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
                     if (page < maxPage) {
                         scroll.loadmore(function () { loadPage(page + 1); });
                     }
                 },
-                function () {
+                error: function (x, status) {
                     loading = false;
-                    scroll.render().find('.scroll__content').html(
-                        '<div style="padding:3em;text-align:center;color:#e74c3c">' +
-                        '❌ Không kết nối được ijavtorrent.com<br>' +
-                        '<small>Vào menu → ⚙️ CORS Proxy → nhập https://corsproxy.io/?</small>' +
-                        '</div>'
-                    );
+                    if (status === 'abort') return;
+                    showError('❌ Không kết nối được ijavtorrent.com<br><small>(lỗi: ' + status + ')</small>');
                 }
-            );
+            });
         }
 
         this.start = function () {
@@ -226,7 +217,7 @@
         this.pause   = function () {};
         this.stop    = function () {};
         this.back    = function () { Lampa.Activity.backward(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
+        this.destroy = function () { if (xhr) xhr.abort(); scroll.destroy(); };
     }
 
 
@@ -234,84 +225,77 @@
        COMPONENT: DETAIL
     ============================================================ */
     function DetailComponent(object) {
-        var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var card    = object.card;
+        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var card   = object.card;
+        var xhr    = null;
 
-        // ✅ Bắt buộc
-        this.render = function () {
-            return scroll.render();
-        };
+        this.render = function () { return scroll.render(); };
 
         this.create = function () {
             scroll.render().find('.scroll__content').html(
-                '<div style="padding:2em;color:#aaa;text-align:center">Đang tải danh sách torrent...</div>'
+                '<div style="padding:2em;color:#aaa;text-align:center">Đang tải torrent...</div>'
             );
 
-            network.timeout(15000);
-            network.silent(
-                PROXY ? (PROXY + encodeURIComponent(card.url)) : card.url,
-                function (data) {
+            xhr = $.ajax({
+                url:     card.url,
+                method:  'GET',
+                timeout: 15000,
+                success: function (data) {
                     var html    = typeof data === 'string' ? data : '';
                     var magnets = parseMagnets(html);
 
                     if (!magnets.length) {
-                        Lampa.Noty.show('Không tìm thấy torrent cho phim này');
-                        setTimeout(function () { Lampa.Activity.backward(); }, 1000);
+                        Lampa.Noty.show('Không tìm thấy torrent');
+                        setTimeout(function () { Lampa.Activity.backward(); }, 800);
                         return;
                     }
 
-                    // Hiện menu chọn chất lượng
                     Lampa.Select.show({
                         title: card.title,
                         items: magnets.map(function (t) {
                             return { title: t.label, magnet: t.magnet };
                         }),
                         onSelect: function (item) {
-                            // Đẩy magnet vào Lampa Player → Lampa tự dùng TorrServer trong Settings
+                            // Lampa tự dùng TorrServer đã cài trong Settings
                             Lampa.Player.play({
                                 title:  card.title,
                                 url:    item.magnet,
                                 poster: card.poster
                             });
                         },
-                        onBack: function () {
-                            Lampa.Activity.backward();
-                        }
+                        onBack: function () { Lampa.Activity.backward(); }
                     });
                 },
-                function () {
+                error: function () {
                     Lampa.Noty.show('Lỗi tải trang phim');
-                    setTimeout(function () { Lampa.Activity.backward(); }, 1000);
+                    setTimeout(function () { Lampa.Activity.backward(); }, 800);
                 }
-            );
+            });
         };
 
         this.start   = function () {};
         this.pause   = function () {};
         this.stop    = function () {};
         this.back    = function () { Lampa.Activity.backward(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
+        this.destroy = function () { if (xhr) xhr.abort(); scroll.destroy(); };
     }
 
 
     /* ============================================================
-       ĐĂNG KÝ COMPONENT
+       ĐĂNG KÝ
     ============================================================ */
     Lampa.Component.add(PLUGIN_ID,             CatalogComponent);
     Lampa.Component.add(PLUGIN_ID + '_detail', DetailComponent);
 
 
     /* ============================================================
-       THÊM MENU (chỉ 1 lần)
+       MENU (chỉ thêm 1 lần)
     ============================================================ */
     function addMenu() {
         if (_menuAdded) return;
         if ($('[data-id="ijavt-menu"]').length) { _menuAdded = true; return; }
-
         var $nav = $('nav.menu .menu__list, .menu .menu__list').first();
         if (!$nav.length) return;
-
         _menuAdded = true;
 
         var $item = $(
@@ -319,19 +303,15 @@
             '<div class="menu__ico">' +
             '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"' +
             ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-            '<circle cx="12" cy="12" r="10"/>' +
-            '<line x1="2" y1="12" x2="22" y2="12"/>' +
+            '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>' +
             '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>' +
             '</svg></div>' +
-            '<div class="menu__text">iJavTorrent</div>' +
-            '</li>'
+            '<div class="menu__text">iJavTorrent</div></li>'
         );
-
         $item.on('hover:enter click', showMainMenu);
 
         var $before = $nav.find('[data-action="settings"]').closest('li');
-        if ($before.length) $before.before($item);
-        else $nav.append($item);
+        if ($before.length) $before.before($item); else $nav.append($item);
     }
 
     Lampa.Listener.follow('app', function (e) {
@@ -341,26 +321,27 @@
 
 
     /* ============================================================
-       MAIN MENU
+       MAIN MENU + TÌM KIẾM (dùng Lampa.Select, không dùng Lampa.Input)
     ============================================================ */
     function showMainMenu() {
         Lampa.Select.show({
             title: 'iJavTorrent',
             items: [
-                { title: '🆕 Mới nhất',    tag: '',                sortby: '' },
-                { title: '📈 Trending',     special: 'mostviewed',  sortby: '' },
-                { title: '⭐ High Rated',    tag: '',                sortby: 'updatedlike' },
-                { title: '🔞 Uncensored',   tag: 'uncensored-75',   sortby: '' },
-                { title: '🥽 VR',           tag: 'vr-246',          sortby: '' },
-                { title: '🔓 Decensored',   tag: 'decensored-1465', sortby: '' },
-                { title: '🇨🇳 Chinese',     tag: 'chinese-1543',    sortby: '' },
-                { title: '💧 Leaked',       tag: 'leaked-1457',     sortby: '' },
-                { title: '🔍 Tìm kiếm',     action: 'search' },
-                { title: '⚙️  CORS Proxy',  action: 'proxy' }
+                { title: '🆕 Mới nhất',   tag: '',                sortby: '' },
+                { title: '📈 Trending',    special: 'mostviewed' },
+                { title: '⭐ High Rated',   tag: '',                sortby: 'updatedlike' },
+                { title: '🔞 Uncensored',  tag: 'uncensored-75' },
+                { title: '🥽 VR',          tag: 'vr-246' },
+                { title: '🔓 Decensored',  tag: 'decensored-1465' },
+                { title: '🇨🇳 Chinese',    tag: 'chinese-1543' },
+                { title: '💧 Leaked',      tag: 'leaked-1457' },
+                { title: '🔍 Tìm kiếm',    action: 'search' }
             ],
             onSelect: function (item) {
-                if (item.action === 'search') { showSearch(); return; }
-                if (item.action === 'proxy')  { showProxy();  return; }
+                if (item.action === 'search') {
+                    showSearch();
+                    return;
+                }
                 Lampa.Activity.push({
                     component: PLUGIN_ID,
                     title:     item.title,
@@ -374,66 +355,63 @@
         });
     }
 
+    // Tìm kiếm bằng bàn phím ảo có sẵn của Lampa
     function showSearch() {
-        Lampa.Input.show({
-            title:       'Tìm phim JAV',
-            placeholder: 'Mã phim hoặc tên diễn viên...',
-            onEnter: function (q) {
-                if (!q) return;
-                Lampa.Activity.push({
-                    component: PLUGIN_ID,
-                    title:     '🔍 ' + q,
-                    source:    PLUGIN_ID,
-                    query:     q
-                });
-            },
-            onBack: function () { Lampa.Controller.toggle('menu'); }
-        });
+        // Thử Lampa.Keyboard trước, nếu không có thì dùng Select với gợi ý
+        if (Lampa.Keyboard) {
+            Lampa.Keyboard.show({
+                title: 'Tìm phim JAV',
+                value: '',
+                onEnter: function (q) {
+                    if (!q) return;
+                    Lampa.Activity.push({
+                        component: PLUGIN_ID,
+                        title:     '🔍 ' + q,
+                        source:    PLUGIN_ID,
+                        query:     q
+                    });
+                },
+                onBack: function () { Lampa.Controller.toggle('menu'); }
+            });
+        } else {
+            // Fallback: chọn các từ khóa phổ biến
+            Lampa.Select.show({
+                title: '🔍 Tìm theo thể loại',
+                items: [
+                    { title: 'Big Tits',    q: 'big+tits' },
+                    { title: 'Creampie',    q: 'creampie' },
+                    { title: 'Married',     q: 'married' },
+                    { title: 'Office Lady', q: 'office+lady' },
+                    { title: 'Uniform',     q: 'uniform' },
+                    { title: 'NTR',         q: 'ntr' },
+                    { title: 'Squirting',   q: 'squirting' },
+                    { title: 'Lesbian',     q: 'lesbian' }
+                ],
+                onSelect: function (item) {
+                    Lampa.Activity.push({
+                        component: PLUGIN_ID,
+                        title:     '🔍 ' + item.title,
+                        source:    PLUGIN_ID,
+                        query:     item.q
+                    });
+                },
+                onBack: function () { showMainMenu(); }
+            });
+        }
     }
-
-    function showProxy() {
-        Lampa.Input.show({
-            title:       'CORS Proxy',
-            placeholder: 'https://corsproxy.io/?  (để trống nếu dùng APK)',
-            value:       Lampa.Storage.get('ijavt_proxy', ''),
-            onEnter: function (val) {
-                PROXY = val.trim();
-                Lampa.Storage.set('ijavt_proxy', PROXY);
-                Lampa.Noty.show('✅ Proxy: ' + (PROXY || 'đã tắt'));
-            },
-            onBack: function () { Lampa.Controller.toggle('menu'); }
-        });
-    }
-
-    // Load proxy đã lưu
-    PROXY = Lampa.Storage.get('ijavt_proxy', '');
 
 
     /* ============================================================
        CSS
     ============================================================ */
-    $('<style>').text([
-        '.ijavt-card {',
-        '  display:inline-block; vertical-align:top;',
-        '  width:150px; margin:6px; cursor:pointer;',
-        '}',
-        '.ijavt-card__img {',
-        '  width:150px; height:220px; border-radius:6px;',
-        '  overflow:hidden; background:#111;',
-        '}',
-        '.ijavt-card__img img {',
-        '  width:100%; height:100%; object-fit:cover;',
-        '}',
-        '.ijavt-card__name {',
-        '  font-size:.72em; color:#bbb; margin-top:4px;',
-        '  max-width:150px; white-space:nowrap;',
-        '  overflow:hidden; text-overflow:ellipsis;',
-        '}',
-        '.ijavt-card.focus .ijavt-card__img {',
-        '  outline:3px solid #e74c3c; border-radius:6px;',
-        '}'
-    ].join('\n')).appendTo('head');
+    $('<style>').text(
+        '.ijavt-card{display:inline-block;vertical-align:top;width:150px;margin:6px;cursor:pointer}' +
+        '.ijavt-card__img{width:150px;height:220px;border-radius:6px;overflow:hidden;background:#111}' +
+        '.ijavt-card__img img{width:100%;height:100%;object-fit:cover}' +
+        '.ijavt-card__name{font-size:.72em;color:#bbb;margin-top:4px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+        '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
+    ).appendTo('head');
 
-    console.log('[iJavTorrent] v2.1.0 loaded');
+    console.log('[iJavTorrent] v2.2.0 loaded');
 
 })();
