@@ -17,67 +17,87 @@
     var TMDB_BASE  = 'https://api.themoviedb.org/3';
     var TMDB_IMG   = 'https://image.tmdb.org/t/p/';
 
-    // Fetch TMDB va merge vao result (chi dung cho trang chi tiet)
+    // Fetch TMDB dung window.fetch (ho tro Authorization header)
     function enrichWithTMDB(result, tmdbId, kkType, onDone) {
         if (!tmdbId) { onDone(result); return; }
 
-        // phim-le = movie, con lai = tv
         var mediaType = (kkType === 'single') ? 'movie' : 'tv';
         var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
                 + '?language=vi-VN&append_to_response=credits';
 
         $.ajax({
-            url: url,
+            url:     url,
+            type:    'GET',
             headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
             success: function (t) {
-            try {
-                // Poster & backdrop tu TMDB neu dep hon
-                if (t.backdrop_path) {
-                    result.backdrop_path    = t.backdrop_path;
-                    result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
-                }
-                if (t.poster_path) {
-                    result.poster_path = t.poster_path;
-                    // Giu poster KKPhim (tieng Viet), chi lay backdrop TMDB
-                }
-
-                // Rating TMDB
-                if (t.vote_average) {
-                    result.vote_average = Math.round(t.vote_average * 10) / 10;
-                    result.vote_count   = t.vote_count || 0;
-                }
-
-                // Runtime
-                if (t.runtime)         result.runtime  = t.runtime;
-                if (t.episode_run_time) result.runtime  = t.episode_run_time[0] || 0;
-
-                // Cast & crew tu TMDB
-                var credits = t.credits || {};
-                if (credits.cast && credits.cast.length) {
-                    result.actors = credits.cast.slice(0, 10).map(function (a) {
-                        return {
-                            id:            a.id,
-                            name:          a.name,
-                            character:     a.character || '',
-                            profile_path:  a.profile_path || '',
-                        };
-                    });
-                }
-                if (credits.crew && credits.crew.length) {
-                    var directors = credits.crew.filter(function (c) { return c.job === 'Director'; });
-                    if (directors.length) {
-                        result.director = directors.map(function (d) { return d.name; }).join(', ');
+                try {
+                    // Backdrop & poster
+                    if (t.backdrop_path) {
+                        result.backdrop_path    = t.backdrop_path;
+                        result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
                     }
-                }
+                    if (t.poster_path) {
+                        result.poster_path = t.poster_path;
+                    }
 
-                // TMDB id de Lampa su dung
-                result.tmdb    = tmdbId;
-                result.tmdb_id = tmdbId;
-            } catch (e) { console.warn('[KKPhim] TMDB enrich error:', e); }
-            onDone(result);
+                    // Rating
+                    if (t.vote_average) {
+                        result.vote_average = Math.round(t.vote_average * 10) / 10;
+                        result.vote_count   = t.vote_count || 0;
+                    }
+
+                    // Ngay phat hanh
+                    if (t.release_date)   result.release_date   = t.release_date;
+                    if (t.first_air_date) result.first_air_date = t.first_air_date;
+
+                    // Runtime
+                    if (t.runtime) result.runtime = t.runtime;
+                    if (t.episode_run_time && t.episode_run_time.length) {
+                        result.runtime = t.episode_run_time[0] || 0;
+                    }
+
+                    // Credits (Lampa doc truc tiep cau truc nay)
+                    var credits = t.credits || {};
+                    if (credits.cast || credits.crew) {
+                        result.credits = {
+                            cast: (credits.cast || []).slice(0, 15).map(function (a) {
+                                return {
+                                    id:           a.id,
+                                    name:         a.name,
+                                    character:    a.character || '',
+                                    profile_path: a.profile_path || '',
+                                    order:        a.order || 0,
+                                };
+                            }),
+                            crew: (credits.crew || []).filter(function (c) {
+                                return c.job === 'Director' || c.job === 'Writer'
+                                    || c.job === 'Screenplay' || c.department === 'Directing';
+                            }).slice(0, 5).map(function (c) {
+                                return {
+                                    id:           c.id,
+                                    name:         c.name,
+                                    job:          c.job,
+                                    department:   c.department,
+                                    profile_path: c.profile_path || '',
+                                };
+                            }),
+                        };
+                    }
+
+                    // Genres tieng Viet tu TMDB
+                    if (t.genres && t.genres.length) {
+                        result.genres = t.genres.map(function (g) {
+                            return { id: String(g.id), name: g.name };
+                        });
+                    }
+
+                    result.tmdb    = String(tmdbId);
+                    result.tmdb_id = String(tmdbId);
+
+                } catch (e) { console.warn('[KKPhim] TMDB enrich error:', e); }
+                onDone(result);
             },
             error: function () {
-                // TMDB that bai -> van dung data KKPhim
                 onDone(result);
             }
         });
