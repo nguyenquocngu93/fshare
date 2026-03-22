@@ -18,7 +18,7 @@
         if (document.getElementById('kkp-style')) return;
         var s = document.createElement('style');
         s.id = 'kkp-style';
-        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}.full-start__genres{display:none!important}.full-start-new__genres{display:none!important}.full-start__genre{display:none!important}';
+        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}.full-start__genres{display:none!important}.full-start-new__genres{display:none!important}';
         document.head.appendChild(s);
     }
 
@@ -460,10 +460,10 @@
         var curPage  = 1, totalPages = 1, loading = false;
 
         var $html = $(
-            '<div class="kkp-list-wrap" style="min-height:100vh;">' +
-            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;"></div>' +
-            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">Đang tải...</span></div>' +
-            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">— Đã tải hết phim —</span></div>' +
+            '<div class="kkp-list-wrap" style="position:absolute;inset:0;overflow-y:auto;">' +
+            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:8px;"></div>' +
+            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">\u0110ang t\u1EA3i...</span></div>' +
+            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">\u2014 \u0110\u00E3 t\u1EA3i h\u1EBFt phim \u2014</span></div>' +
             '</div>'
         );
         var $grid   = $html.find('.kkp-grid');
@@ -479,7 +479,7 @@
                 '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
                 '<div style="padding:4px 2px 8px;">' +
-                '<div style="font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
+                '<div style="font-size:12px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                 '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
                 '</div></div>'
             );
@@ -499,36 +499,20 @@
                 loading = false;
                 $loader.hide();
                 if (curPage >= totalPages) $end.show();
-            }, function () {
-                loading = false;
-                $loader.hide();
-            });
+            }, function () { loading = false; $loader.hide(); });
         }
 
         function onScroll() {
-            // Thu cac container co the cuon trong Lampa
-            var selectors = ['.activity__body', '.layer__scroll', '.app__content', '.app'];
-            var el = null;
-            for (var i = 0; i < selectors.length; i++) {
-                var found = document.querySelector(selectors[i]);
-                if (found && found.scrollHeight > found.clientHeight) {
-                    el = found;
-                    break;
-                }
-            }
-            if (!el) el = document.documentElement;
-            var scrollTop    = el.scrollTop || window.pageYOffset || 0;
-            var clientHeight = el.clientHeight || window.innerHeight;
-            var scrollHeight = el.scrollHeight || document.body.scrollHeight;
-            if (scrollTop + clientHeight >= scrollHeight - 600) {
+            var el = $html[0];
+            if (!el) return;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
                 if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
         }
 
         this.create = function () {
             loadPage(1);
-            // Gan scroll cho ca window va cac element co the cuon
-            window.addEventListener('scroll', onScroll, true);
+            $html.on('scroll', onScroll);
             return $html;
         };
         this.start   = function () { return this.create(); };
@@ -537,9 +521,7 @@
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () {};
-        this.destroy = function () {
-            window.removeEventListener('scroll', onScroll, true);
-        };
+        this.destroy = function () { $html.off('scroll', onScroll); };
     }
 
     // =====================================================================
