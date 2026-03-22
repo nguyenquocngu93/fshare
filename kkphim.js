@@ -455,27 +455,30 @@
     // COMPONENT: DANH SACH INFINITE SCROLL
     // =====================================================================
     function KKPhimListComponent(object) {
-        var catUrl     = object.cat_url || '/danh-sach/phim-moi-cap-nhat';
-        var catTitle   = object.title   || 'KKPhim';
-        var curPage    = 1, totalPages = 1, loading = false;
+        var catUrl   = object.cat_url || '/danh-sach/phim-moi-cap-nhat';
+        var catTitle = object.title   || 'KKPhim';
+        var curPage  = 1, totalPages = 1, loading = false;
 
+        // Dung dung class Lampa native de co scroll va layout giong "Phim le"
         var $html = $(
-            '<div class="kkp-list-wrap" style="min-height:100vh;">' +
-            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:1em 1.5em;"></div>' +
-            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">\u0110ang t\u1EA3i...</span></div>' +
-            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">\u2014 \u0110\u00E3 t\u1EA3i h\u1EBFt phim \u2014</span></div>' +
+            '<div class="items layer--wheell">' +
+            '<div class="items__grid"></div>' +
             '</div>'
         );
-        var $grid = $html.find('.kkp-grid'), $loader = $html.find('.kkp-loader'), $end = $html.find('.kkp-end');
+        var $grid = $html.find('.items__grid');
 
         function renderCard(item) {
             var poster = item.img || item.poster || '';
             var year   = item.release_date ? item.release_date.slice(0, 4) : '';
             var $card  = $(
-                '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
-                '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
-                '<div style="padding:6px 8px;"><div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
-                '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div></div></div>'
+                '<div class="card selector" style="cursor:pointer;">' +
+                '<div class="card__img">' +
+                '<img src="' + poster + '" loading="lazy" onerror="this.style.opacity=0.2"/>' +
+                '</div>' +
+                '<div class="card__info">' +
+                '<div class="card__title">' + (item.title || '') + '</div>' +
+                '<div class="card__age">' + year + '</div>' +
+                '</div></div>'
             );
             $card.on('hover:enter click', function () {
                 Lampa.Activity.push({ component: 'full', id: item.id, source: SOURCE_NAME, card: item });
@@ -485,32 +488,35 @@
 
         function loadPage(page) {
             if (loading) return;
-            loading = true; $loader.show();
+            loading = true;
             fetchPage(catUrl, page, function (res) {
                 totalPages = res.totalPages || 1;
                 res.items.forEach(renderCard);
-                loading = false; $loader.hide();
-                if (curPage >= totalPages) $end.show();
-            }, function () { loading = false; $loader.hide(); });
+                loading = false;
+                if (curPage >= totalPages) {
+                    $html.append('<div style="text-align:center;padding:1em;opacity:.4;">— Đã tải hết —</div>');
+                }
+            }, function () { loading = false; });
         }
 
+        // Scroll: Lampa cuon trang qua window hoac .layer__scroll
         function onScroll() {
-            var el = $html.parent()[0];
-            if (!el) return;
-            if ((el.scrollTop + el.clientHeight) >= (el.scrollHeight - 500)) {
+            var $scroll = $('.layer__scroll').first();
+            var scrollTop    = $scroll.length ? $scroll.scrollTop()  : $(window).scrollTop();
+            var innerHeight  = $scroll.length ? $scroll.innerHeight() : window.innerHeight;
+            var scrollHeight = $scroll.length ? $scroll[0].scrollHeight : document.body.scrollHeight;
+            if ((scrollTop + innerHeight) >= (scrollHeight - 600)) {
                 if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
         }
 
-        this.create = function () { return this.start(); };
-        this.start = function () {
+        this.create = function () {
             loadPage(1);
-            setTimeout(function () {
-                var $s = $html.closest('.activity__body,.layer__scroll,.app__content');
-                ($s.length ? $s : $(window)).on('scroll.kkplist', onScroll);
-            }, 400);
+            $(window).on('scroll.kkplist', onScroll);
+            $('.layer__scroll').on('scroll.kkplist', onScroll);
             return $html;
         };
+        this.start   = function () { return this.create(); };
         this.render  = function () { return $html; };
         this.header  = function () { return catTitle; };
         this.pause   = function () {};
@@ -518,7 +524,7 @@
         this.stop    = function () {};
         this.destroy = function () {
             $(window).off('scroll.kkplist');
-            $('.activity__body,.layer__scroll,.app__content').off('scroll.kkplist');
+            $('.layer__scroll').off('scroll.kkplist');
             $html.remove();
         };
     }
