@@ -2,46 +2,55 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v2.3.0
-       Fix CORS: dùng allorigins proxy mặc định
+       iJavTorrent Plugin for Lampa  —  v2.4.0
+       Dùng native fetch() API - không cần proxy
     ============================================================ */
 
     var PLUGIN_ID = 'ijavtorrent';
     var BASE_URL  = 'https://ijavtorrent.com';
-
-    // Proxy mặc định - tự động bypass CORS
-    // allorigins trả về JSON: { contents: "<html>..." }
-    var PROXY = 'https://api.allorigins.win/raw?url=';
-
     var _menuAdded = false;
 
 
     /* ============================================================
-       FETCH qua proxy
+       FETCH - dùng native fetch() của WebView
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        var proxyUrl = PROXY + encodeURIComponent(url);
-
-        $.ajax({
-            url:      proxyUrl,
-            method:   'GET',
-            dataType: 'text',
-            timeout:  20000,
-            headers:  { 'X-Requested-With': '' }, // bỏ header mặc định jQuery
-            success:  function (data) {
-                ok(typeof data === 'string' ? data : '');
-            },
-            error: function (xhr, status, err) {
-                // Nếu allorigins lỗi thì thử corsproxy.io
-                var fallback = 'https://corsproxy.io/?' + encodeURIComponent(url);
-                $.ajax({
-                    url:      fallback,
-                    method:   'GET',
-                    dataType: 'text',
-                    timeout:  20000,
-                    success:  function (data) { ok(typeof data === 'string' ? data : ''); },
-                    error:    function ()      { if (fail) fail('Cả 2 proxy đều lỗi'); }
-                });
+        fetch(url, {
+            method:  'GET',
+            headers: { 'Accept': 'text/html,application/xhtml+xml,*/*' },
+            mode:    'no-cors'   // bypass CORS hoàn toàn
+        })
+        .then(function (res) {
+            // mode: no-cors trả về opaque response, dùng .text() vẫn được
+            return res.text();
+        })
+        .then(function (html) {
+            if (html && html.length > 100) {
+                ok(html);
+            } else {
+                // Nếu opaque trả về rỗng thì thử lại không có mode
+                return fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'text/html' }
+                })
+                .then(function (r) { return r.text(); })
+                .then(function (h) { ok(h); });
+            }
+        })
+        .catch(function (e) {
+            // Fallback cuối: Lampa.Reguest
+            try {
+                var req = new Lampa.Reguest();
+                req.timeout(20000);
+                req.silent(url,
+                    function (data) {
+                        var html = typeof data === 'string' ? data : JSON.stringify(data);
+                        ok(html);
+                    },
+                    function () { if (fail) fail('Tất cả phương thức đều lỗi'); }
+                );
+            } catch (ex) {
+                if (fail) fail(ex.message);
             }
         });
     }
@@ -130,7 +139,6 @@
         if (obj.special === 'mostviewed') return BASE_URL + '/mostviewed';
         var url = BASE_URL + '/';
         if (obj.tag) url = BASE_URL + '/tag/' + obj.tag;
-
         var p = [];
         if (obj.query)  p.push('search=' + encodeURIComponent(obj.query));
         if (obj.sortby) p.push('sortby=' + obj.sortby);
@@ -146,8 +154,8 @@
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
         var loading = false;
 
-        this.render  = function () { return scroll.render(); };
-        this.create  = function () { loadPage(1); };
+        this.render = function () { return scroll.render(); };
+        this.create = function () { loadPage(1); };
 
         function makeCard(movie) {
             var $card = $(
@@ -169,40 +177,30 @@
             return $card;
         }
 
-        function showError(msg) {
-            scroll.render().find('.scroll__content').html(
-                '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:1.8">' +
-                msg + '</div>'
-            );
-        }
-
         function loadPage(page) {
             if (loading) return;
             loading = true;
 
-            // Loading indicator
             if (page === 1) {
                 scroll.render().find('.scroll__content').html(
                     '<div style="padding:3em;text-align:center;color:#aaa">Đang tải...</div>'
                 );
             }
 
-            var url = buildUrl(object, page);
-
-            fetchPage(url,
+            fetchPage(buildUrl(object, page),
                 function (html) {
                     loading = false;
                     var movies  = parseList(html);
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        showError('Không tìm thấy phim nào 😔<br><small>' + url + '</small>');
+                        scroll.render().find('.scroll__content').html(
+                            '<div style="padding:3em;text-align:center;color:#888">Không tìm thấy phim nào 😔</div>'
+                        );
                         return;
                     }
 
-                    if (page === 1) {
-                        scroll.render().find('.scroll__content').html('');
-                    }
+                    if (page === 1) scroll.render().find('.scroll__content').html('');
 
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
@@ -212,7 +210,10 @@
                 },
                 function (err) {
                     loading = false;
-                    showError('❌ Lỗi kết nối<br><small>' + (err || 'unknown') + '</small>');
+                    scroll.render().find('.scroll__content').html(
+                        '<div style="padding:3em;text-align:center;color:#e74c3c">' +
+                        '❌ Lỗi: ' + (err || 'unknown') + '</div>'
+                    );
                 }
             );
         }
@@ -272,7 +273,6 @@
                             return { title: t.label, magnet: t.magnet };
                         }),
                         onSelect: function (item) {
-                            // Lampa tự dùng TorrServer đã cài trong Settings
                             Lampa.Player.play({
                                 title:  card.title,
                                 url:    item.magnet,
@@ -337,7 +337,7 @@
 
 
     /* ============================================================
-       MAIN MENU
+       MENUS
     ============================================================ */
     function showMainMenu() {
         Lampa.Select.show({
@@ -369,11 +369,10 @@
     }
 
     function showSearch() {
-        // Dùng Lampa.Keyboard nếu có, không thì fallback menu
         if (typeof Lampa.Keyboard !== 'undefined') {
             Lampa.Keyboard.show({
-                title:  'Tìm phim JAV',
-                value:  '',
+                title:   'Tìm phim JAV',
+                value:   '',
                 onEnter: function (q) {
                     if (!q) return;
                     Lampa.Activity.push({
@@ -389,14 +388,14 @@
             Lampa.Select.show({
                 title: '🔍 Tìm theo từ khoá',
                 items: [
-                    { title: 'Big Tits',     q: 'big tits' },
-                    { title: 'Creampie',     q: 'creampie' },
-                    { title: 'Office Lady',  q: 'office lady' },
-                    { title: 'Married',      q: 'married' },
-                    { title: 'Uniform',      q: 'uniform' },
-                    { title: 'Squirting',    q: 'squirting' },
-                    { title: 'Lesbian',      q: 'lesbian' },
-                    { title: 'NTR / Cuckold',q: 'cuckold' }
+                    { title: 'Big Tits',      q: 'big tits' },
+                    { title: 'Creampie',      q: 'creampie' },
+                    { title: 'Office Lady',   q: 'office lady' },
+                    { title: 'Married Woman', q: 'married' },
+                    { title: 'Uniform',       q: 'uniform' },
+                    { title: 'Squirting',     q: 'squirting' },
+                    { title: 'Lesbian',       q: 'lesbian' },
+                    { title: 'NTR / Cuckold', q: 'cuckold' }
                 ],
                 onSelect: function (item) {
                     Lampa.Activity.push({
@@ -424,6 +423,6 @@
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v2.3.0 loaded');
+    console.log('[iJavTorrent] v2.4.0 loaded');
 
 })();
