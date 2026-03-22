@@ -406,7 +406,46 @@
             }
         };
 
-        self.person = function (p, ok, err) { err('not supported'); };
+        // Lampa goi self.person de lay thong tin cast/crew
+        // params co the chua: params.id (tmdb person id), params.card (movie card)
+        self.person = function (params, onComplete, onError) {
+            var card   = params.card || {};
+            var tmdbId = card.tmdb || card.tmdb_id || '';
+            if (!tmdbId) { onError('no tmdb'); return; }
+
+            var mediaType = card.kkphim_type === 'single' ? 'movie' : 'tv';
+            var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
+                    + '/credits?language=vi-VN';
+
+            $.ajax({
+                url: url, type: 'GET',
+                headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
+                success: function (data) {
+                    var cast = (data.cast || []).slice(0, 20).map(function (a) {
+                        return {
+                            id:           a.id,
+                            name:         a.name,
+                            img:          a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '',
+                            character:    a.character || '',
+                            profile_path: a.profile_path || '',
+                        };
+                    });
+                    var crew = (data.crew || []).filter(function (c) {
+                        return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
+                    }).slice(0, 5).map(function (c) {
+                        return {
+                            id:           c.id,
+                            name:         c.name,
+                            img:          c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '',
+                            job:          c.job,
+                            profile_path: c.profile_path || '',
+                        };
+                    });
+                    onComplete({ persons: cast.concat(crew), cast: cast, crew: crew });
+                },
+                error: function () { onError('tmdb credits failed'); }
+            });
+        };
         self.clear  = function () { self.network.clear(); };
     }
 
