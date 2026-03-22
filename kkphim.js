@@ -16,10 +16,10 @@
         var html    = $('<div class="kkphim-wrap"></div>');
         var page    = 1;
 
-        this.create = function () {
+        // Lampa yêu cầu hàm start (không phải create)
+        this.start = function () {
             this.activity.loader(true);
             this.load(page);
-            return html;
         };
 
         this.load = function (p) {
