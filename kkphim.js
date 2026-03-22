@@ -459,24 +459,29 @@
         var catTitle = object.title   || 'KKPhim';
         var curPage  = 1, totalPages = 1, loading = false;
 
-        // Container chinh - dung class Lampa de cuon duoc
-        var $html  = $('<div></div>');
-        var $grid  = $('<div class="items__grid items__grid--four"></div>');
-        var $empty = $('<div class="empty"><div class="empty__img"></div><div class="empty__text"><div class="empty__title">Dang tai...</div></div></div>');
-
-        $html.append($empty);
+        var $html = $(
+            '<div class="kkp-list-wrap" style="min-height:100vh;">' +
+            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:1em 1.5em;"></div>' +
+            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">Đang tải...</span></div>' +
+            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">— Đã tải hết phim —</span></div>' +
+            '</div>'
+        );
+        var $grid   = $html.find('.kkp-grid');
+        var $loader = $html.find('.kkp-loader');
+        var $end    = $html.find('.kkp-end');
 
         function renderCard(item) {
-            if ($empty.parent().length) $empty.remove();
-
             var poster = item.img || item.poster || '';
-            var year   = item.release_date ? item.release_date.slice(0,4) : '';
+            var year   = item.release_date ? item.release_date.slice(0, 4) : '';
             var $card  = $(
-                '<div class="card selector">' +
-                '<div class="card__img"><img loading="lazy" src="' + poster + '" onerror="this.style.opacity=0.2"/></div>' +
-                '<div class="card__title">' + (item.title || '') + '</div>' +
-                '<div class="card__age">' + year + '</div>' +
-                '</div>'
+                '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
+                '<div style="position:relative;padding-top:150%;background:#111;">' +
+                '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
+                '</div>' +
+                '<div style="padding:6px 8px;">' +
+                '<div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
+                '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
+                '</div></div>'
             );
             $card.on('hover:enter click', function () {
                 Lampa.Activity.push({ component: 'full', id: item.id, source: SOURCE_NAME, card: item });
@@ -487,19 +492,24 @@
         function loadPage(page) {
             if (loading) return;
             loading = true;
+            $loader.show();
             fetchPage(catUrl, page, function (res) {
                 totalPages = res.totalPages || 1;
-                if (!$grid.parent().length) $html.append($grid);
                 res.items.forEach(renderCard);
                 loading = false;
-            }, function () { loading = false; });
+                $loader.hide();
+                if (curPage >= totalPages) $end.show();
+            }, function () {
+                loading = false;
+                $loader.hide();
+            });
         }
 
-        // Scroll detection qua Lampa controller
         function onScroll() {
-            var el = document.querySelector('.activity__content, .layer__scroll, .app');
+            var el = $html.closest('.activity__body, .layer__scroll, .app__content')[0]
+                  || document.querySelector('.activity__body, .layer__scroll');
             if (!el) return;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 600) {
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 500) {
                 if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
         }
@@ -830,4 +840,3 @@
     }
 
 })();
-
