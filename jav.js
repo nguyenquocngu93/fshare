@@ -8,7 +8,7 @@
        Trước khi dùng:
        1. Deploy file cf-worker-proxy.js lên Cloudflare Workers (miễn phí)
        2. Sửa PROXY_URL bên dưới thành URL worker của bạn
-          VD: 'https://ijavt-proxy.yourname.workers.dev'
+          VD: 'https://yellow-resonance-6174.nguyenquocngu93.workers.dev/'
     ============================================================ */
 
     var PLUGIN_ID  = 'ijavtorrent';
