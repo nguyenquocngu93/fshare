@@ -474,12 +474,12 @@
             var poster = item.img || item.poster || '';
             var year   = item.release_date ? item.release_date.slice(0, 4) : '';
             var $card  = $(
-                '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
-                '<div style="position:relative;padding-top:150%;background:#111;">' +
+                '<div class="kkp-card selector" style="cursor:pointer;">' +
+                '<div style="position:relative;padding-top:150%;border-radius:6px;overflow:hidden;background:#111;">' +
                 '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
-                '<div style="padding:6px 8px;">' +
-                '<div style="font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
+                '<div style="padding:4px 2px 8px;">' +
+                '<div style="font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                 '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
                 '</div></div>'
             );
@@ -672,13 +672,11 @@
             );
             $tag.on('hover:enter click', (function(gName, gSlug) {
                 return function () {
-                    // Dung component 'items' native - y het "Xem them" danh muc
                     Lampa.Activity.push({
                         title:     gName,
-                        component: 'items',
-                        source:    SOURCE_NAME,
+                        component: 'kkphim_list',
                         cat_url:   '/v1/api/the-loai/' + gSlug,
-                        url:       '/v1/api/the-loai/' + gSlug,
+                        source:    SOURCE_NAME,
                         page:      1,
                     });
                 };
