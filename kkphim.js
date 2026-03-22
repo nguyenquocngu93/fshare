@@ -67,7 +67,7 @@
             if (t.episode_run_time && t.episode_run_time.length) {
                 result.runtime = t.episode_run_time[0] || 0;
             }
-            // Credits - Lampa dung nhieu field khac nhau tuy version
+            // Credits tu TMDB: co anh avatar nen ghi de len data KKPhim
             var credits = t.credits || {};
             var castList = (credits.cast || []).slice(0, 15).map(function (a) {
                 return {
@@ -76,9 +76,7 @@
                     character:    a.character || '',
                     profile_path: a.profile_path || '',
                     order:        a.order || 0,
-                    // Lampa can them 2 field nay
-                    img:          a.profile_path ? 'https://image.tmdb.org/t/p/w185' + a.profile_path : '',
-                    title:        a.name,
+                    img:          a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '',
                 };
             });
             var crewList = (credits.crew || []).filter(function (c) {
@@ -90,17 +88,13 @@
                     job:          c.job,
                     department:   c.department || '',
                     profile_path: c.profile_path || '',
-                    img:          c.profile_path ? 'https://image.tmdb.org/t/p/w185' + c.profile_path : '',
-                    title:        c.name,
+                    img:          c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '',
                 };
             });
-
+            // Chi ghi de neu TMDB tra ve du lieu
             if (castList.length || crewList.length) {
-                // Format 1: result.credits (TMDB native)
-                result.credits = { cast: castList, crew: crewList };
-                // Format 2: result.persons (mot so version Lampa)
-                result.persons = castList.concat(crewList);
-                // Format 3: result.actors / result.directors (Lampa cu)
+                result.credits   = { cast: castList, crew: crewList };
+                result.persons   = castList.concat(crewList);
                 result.actors    = castList;
                 result.directors = crewList.filter(function (c) { return c.job === 'Director'; });
             }
@@ -369,6 +363,21 @@
                 result.number_of_seasons = seasons.length || 1;
                 result.seasons           = seasons;
                 result.kkphim_episodes   = episodes;
+
+                // --- Dung truc tiep actor/director tu KKPhim ---
+                // KKPhim tra ve: actor: ["Ten1","Ten2"], director: ["Ten"]
+                var kkActors = (movie.actor || []).map(function (name, i) {
+                    return { id: i, name: name, character: '', profile_path: '', img: '' };
+                });
+                var kkDirs = (movie.director || []).map(function (name, i) {
+                    return { id: 9000 + i, name: name, job: 'Director', profile_path: '', img: '' };
+                });
+                if (kkActors.length || kkDirs.length) {
+                    result.credits  = { cast: kkActors, crew: kkDirs };
+                    result.persons  = kkActors.concat(kkDirs);
+                    result.actors   = kkActors;
+                    result.directors = kkDirs;
+                }
 
                 // Enrich voi TMDB
                 // KKPhim tra ve: movie.tmdb = {type, id} hoac movie.tmdb_id
