@@ -189,11 +189,29 @@
     // DANH MUC
     // =====================================================================
     var CATEGORIES = [
-        { url: '/danh-sach/phim-moi-cap-nhat', title: 'Phim m\u1EDBi c\u1EADp nh\u1EADt' },
-        { url: '/v1/api/danh-sach/phim-le',    title: 'Phim l\u1EBB'                      },
-        { url: '/v1/api/danh-sach/phim-bo',    title: 'Phim b\u1ED9'                      },
-        { url: '/v1/api/danh-sach/hoat-hinh',  title: 'Ho\u1EA1t h\u00ECnh'               },
-        { url: '/v1/api/danh-sach/tv-shows',   title: 'TV Shows'                          },
+        { url: '/danh-sach/phim-moi-cap-nhat',   title: 'Phim m\u1EDBi c\u1EADp nh\u1EADt' },
+        { url: '/v1/api/danh-sach/phim-le',      title: 'Phim l\u1EBB'                       },
+        { url: '/v1/api/danh-sach/phim-bo',      title: 'Phim b\u1ED9'                       },
+        { url: '/v1/api/danh-sach/hoat-hinh',    title: 'Ho\u1EA1t h\u00ECnh'                },
+        { url: '/v1/api/danh-sach/tv-shows',     title: 'TV Shows'                           },
+        { url: '/v1/api/the-loai/hanh-dong',     title: 'H\u00E0nh \u0110\u1ED9ng'          },
+        { url: '/v1/api/the-loai/tinh-cam',      title: 'T\u00ECnh C\u1EA3m'                 },
+        { url: '/v1/api/the-loai/hai-huoc',      title: 'H\u00E0i H\u01B0\u1EDBc'           },
+        { url: '/v1/api/the-loai/kinh-di',       title: 'Kinh D\u1ECB'                       },
+        { url: '/v1/api/the-loai/vo-thuat',      title: 'V\u00F5 Thu\u1EADt'                 },
+        { url: '/v1/api/the-loai/vien-tuong',    title: 'Vi\u1EC5n T\u01B0\u1EDFng'         },
+        { url: '/v1/api/the-loai/phieu-luu',     title: 'Phi\u00EAu L\u01B0u'               },
+        { url: '/v1/api/the-loai/chinh-kich',    title: 'Ch\u00EDnh K\u1ECBch'               },
+        { url: '/v1/api/the-loai/tam-ly',        title: 'T\u00E2m L\u00FD'                   },
+        { url: '/v1/api/the-loai/bia-kich',      title: 'Bi\u1EC1n K\u1ECBch'               },
+        { url: '/v1/api/the-loai/the-thao',      title: 'Th\u1EC3 Thao'                      },
+        { url: '/v1/api/the-loai/am-nhac',       title: '\u00C2m Nh\u1EA1c'                  },
+        { url: '/v1/api/the-loai/khoa-hoc',      title: 'Khoa H\u1ECDc'                      },
+        { url: '/v1/api/the-loai/lich-su',       title: 'L\u1ECBch S\u1EED'                  },
+        { url: '/v1/api/the-loai/gia-dinh',      title: 'Gia \u0110\u00ECnh'                 },
+        { url: '/v1/api/the-loai/bi-an',         title: 'B\u00ED \u1EA8n'                    },
+        { url: '/v1/api/the-loai/tai-lieu',      title: 'T\u00E0i Li\u1EC7u'                 },
+        { url: '/v1/api/the-loai/chien-tranh',   title: 'Chi\u1EBFn Tranh'                   },
     ];
 
     function fetchPage(catUrl, page, onOk, onFail) {
@@ -460,10 +478,10 @@
         var curPage  = 1, totalPages = 1, loading = false;
 
         var $html = $(
-            '<div class="kkp-list-wrap" style="position:absolute;inset:0;overflow-y:auto;">' +
-            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding:8px;"></div>' +
-            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">\u0110ang t\u1EA3i...</span></div>' +
-            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">\u2014 \u0110\u00E3 t\u1EA3i h\u1EBFt phim \u2014</span></div>' +
+            '<div class="kkp-list-wrap" style="min-height:100vh;">' +
+            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;"></div>' +
+            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">Đang tải...</span></div>' +
+            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">— Đã tải hết phim —</span></div>' +
             '</div>'
         );
         var $grid   = $html.find('.kkp-grid');
@@ -474,12 +492,12 @@
             var poster = item.img || item.poster || '';
             var year   = item.release_date ? item.release_date.slice(0, 4) : '';
             var $card  = $(
-                '<div class="kkp-card selector" style="cursor:pointer;">' +
-                '<div style="position:relative;padding-top:150%;border-radius:6px;overflow:hidden;background:#111;">' +
+                '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
+                '<div style="position:relative;padding-top:150%;background:#111;">' +
                 '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
-                '<div style="padding:4px 2px 8px;">' +
-                '<div style="font-size:12px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
+                '<div style="padding:6px 8px;">' +
+                '<div style="font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                 '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
                 '</div></div>'
             );
@@ -499,20 +517,36 @@
                 loading = false;
                 $loader.hide();
                 if (curPage >= totalPages) $end.show();
-            }, function () { loading = false; $loader.hide(); });
+            }, function () {
+                loading = false;
+                $loader.hide();
+            });
         }
 
         function onScroll() {
-            var el = $html[0];
-            if (!el) return;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 400) {
+            // Thu cac container co the cuon trong Lampa
+            var selectors = ['.activity__body', '.layer__scroll', '.app__content', '.app'];
+            var el = null;
+            for (var i = 0; i < selectors.length; i++) {
+                var found = document.querySelector(selectors[i]);
+                if (found && found.scrollHeight > found.clientHeight) {
+                    el = found;
+                    break;
+                }
+            }
+            if (!el) el = document.documentElement;
+            var scrollTop    = el.scrollTop || window.pageYOffset || 0;
+            var clientHeight = el.clientHeight || window.innerHeight;
+            var scrollHeight = el.scrollHeight || document.body.scrollHeight;
+            if (scrollTop + clientHeight >= scrollHeight - 600) {
                 if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
         }
 
         this.create = function () {
             loadPage(1);
-            $html.on('scroll', onScroll);
+            // Gan scroll cho ca window va cac element co the cuon
+            window.addEventListener('scroll', onScroll, true);
             return $html;
         };
         this.start   = function () { return this.create(); };
@@ -521,7 +555,9 @@
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () {};
-        this.destroy = function () { $html.off('scroll', onScroll); };
+        this.destroy = function () {
+            window.removeEventListener('scroll', onScroll, true);
+        };
     }
 
     // =====================================================================
@@ -606,6 +642,26 @@
         $target = $ctx.find('.full-descr');
         if ($target.length) { $target.after($wrap); return; }
         $ctx.find('.full-start').first().append($wrap);
+    }
+
+    // =====================================================================
+    // INJECT: PHIM LIEN QUAN
+    // =====================================================================
+    function getGenreSlug(card) {
+        var cats = card.kkphim_cats || [];
+        for (var i = 0; i < cats.length; i++) {
+            var c = cats[i];
+            if (typeof c === 'object') {
+                if (c.slug) return { slug: c.slug, name: c.name || c.slug };
+                if (typeof c.id === 'string' && isNaN(c.id) && c.id) return { slug: c.id, name: c.name || c.id };
+            }
+        }
+        var genres = card.genres || [];
+        if (genres.length) {
+            var g = genres[0], s = g.slug || g.id || '';
+            if (s && isNaN(s)) return { slug: String(s), name: g.name || String(s) };
+        }
+        return null;
     }
 
     // =====================================================================
@@ -784,7 +840,6 @@
             }
 
             injectSimilarMovies(card, $ctx);
-            injectGenres(card, $ctx);
 
             // Inject cast/crew + logo tu TMDB vao DOM
             var info = getTmdbInfo(card);
