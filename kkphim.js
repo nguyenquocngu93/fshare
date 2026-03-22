@@ -28,9 +28,7 @@
         var poster = getPoster(item.poster_url);
         var thumb  = getPoster(item.thumb_url || item.poster_url);
 
-        // ✅ FIX BADGE TV: chỉ set 'tv' khi thực sự là series/hoathinh/tvshows
-        var kkType    = item.type || '';
-        var mediaType = (kkType === 'single') ? 'movie' : 'tv';
+        var kkType = item.type || '';
 
         return {
             id:               item.slug,
@@ -52,9 +50,6 @@
             production_companies: [],
             production_countries: [],
             spoken_languages: [],
-
-            // ✅ media_type đúng để Lampa hiện/ẩn badge TV
-            media_type:       mediaType,
 
             source:           SOURCE_NAME,
             kkphim_slug:      item.slug,
@@ -247,15 +242,10 @@
             items.forEach(function (item) {
                 var poster = item.img || item.poster || '';
                 var year   = item.release_date ? item.release_date.slice(0, 4) : '';
-                var badge  = (item.media_type === 'tv')
-                    ? '<span style="position:absolute;top:6px;left:6px;background:#e50914;color:#fff;font-size:10px;padding:2px 5px;border-radius:3px;">TV</span>'
-                    : '';
-
                 var $card = $(
                     '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;position:relative;">' +
                     '  <div style="position:relative;padding-top:150%;background:#111;">' +
                     '    <img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />' +
-                    '    ' + badge +
                     '  </div>' +
                     '  <div style="padding:6px 8px;">' +
                     '    <div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
