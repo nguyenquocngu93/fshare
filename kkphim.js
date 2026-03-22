@@ -596,11 +596,14 @@
             $wrap.append($crow);
         }
 
+        // Thu tu: sau genres, truoc similar
         var $target = $ctx.find('.kkp-similar-wrap');
         if ($target.length) { $target.before($wrap); return; }
+        $target = $ctx.find('.kkp-genres-wrap');
+        if ($target.length) { $target.after($wrap); return; }
         $target = $ctx.find('.full-descr');
         if ($target.length) { $target.after($wrap); return; }
-        $ctx.find('.full-start').append($wrap);
+        $ctx.find('.full-start').first().append($wrap);
     }
 
     // =====================================================================
@@ -621,6 +624,48 @@
             if (s && isNaN(s)) return { slug: String(s), name: g.name || String(s) };
         }
         return null;
+    }
+
+    // =====================================================================
+    // INJECT: THE LOAI
+    // =====================================================================
+    function injectGenres(card, $ctx) {
+        if (!card || card.source !== SOURCE_NAME) return;
+        if ($ctx.find('.kkp-genres-wrap').length) return;
+        var genres = card.genres || [];
+        if (!genres.length) return;
+
+        var $wrap = $(
+            '<div class="kkp-genres-wrap" style="padding:.2em 1.5em 1em;">' +
+            '<div style="font-size:.8em;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin:0 0 .8em;">Thể loại</div>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;"></div>' +
+            '</div>'
+        );
+        var $row = $wrap.find('div').last();
+
+        genres.forEach(function (g) {
+            var slug = g.slug || (isNaN(g.id) ? g.id : '');
+            if (!slug) return;
+            var $tag = $(
+                '<div class="selector" style="padding:6px 16px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);">' +
+                (g.name || '') + '</div>'
+            );
+            $tag.on('hover:enter click', function () {
+                Lampa.Activity.push({
+                    title:     g.name || slug,
+                    component: 'kkphim_list',
+                    cat_url:   '/v1/api/the-loai/' + slug,
+                    source:    SOURCE_NAME,
+                    page:      1,
+                });
+            });
+            $row.append($tag);
+        });
+
+        // Inject sau full-descr
+        var $d = $ctx.find('.full-descr').first();
+        if ($d.length) $d.after($wrap);
+        else $ctx.find('.full-start').first().append($wrap);
     }
 
     var _injectedMap = {};
