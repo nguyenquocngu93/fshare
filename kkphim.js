@@ -520,61 +520,46 @@
         var directors = (credits.crew || []).filter(function (c) { return c.job === 'Director'; });
         if (!cast.length && !directors.length) return;
 
-        var $wrap = $('<div class="kkp-cast-wrap"></div>');
+        var $wrap = $('<div class="kkp-cast-wrap" style="padding:0 1.5em 1em;"></div>');
 
-        // --- DIRECTOR: style giong Lampa native crew row ---
+        // DAO DIEN
         if (directors.length) {
-            var $section = $(
-                '<div class="full-person">' +
-                '<div class="full-person__title">Đạo diễn</div>' +
-                '<div class="full-person__list"></div>' +
-                '</div>'
-            );
-            var $list = $section.find('.full-person__list');
+            $wrap.append('<div style="font-size:.8em;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin:1em 0 .6em;">Đạo diễn</div>');
+            var $drow = $('<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:.8em;"></div>');
             directors.forEach(function (d) {
                 var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
-                var $item = $(
-                    '<div class="full-person__item selector">' +
-                    '<div class="full-person__img">' +
-                    (img
-                        ? '<img src="' + img + '"/>'
-                        : '<div class="full-person__empty"></div>') +
-                    '</div>' +
-                    '<div class="full-person__info">' +
-                    '<div class="full-person__name">' + (d.name || '') + '</div>' +
-                    '<div class="full-person__role">Director</div>' +
-                    '</div></div>'
+                var $item = $('<div class="selector" style="display:flex;align-items:center;gap:12px;padding:6px 0;"></div>');
+                $item.append(img
+                    ? '<img src="' + img + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#222;"/>'
+                    : '<div style="width:48px;height:48px;border-radius:50%;background:#333;flex-shrink:0;"></div>'
                 );
-                $list.append($item);
-            });
-            $wrap.append($section);
-        }
-
-        // --- CAST: style giong Lampa native actor row ---
-        if (cast.length) {
-            var $section2 = $(
-                '<div class="full-actors">' +
-                '<div class="full-actors__title">Diễn viên</div>' +
-                '<div class="full-actors__list"></div>' +
-                '</div>'
-            );
-            var $list2 = $section2.find('.full-actors__list');
-            cast.slice(0, 15).forEach(function (a) {
-                var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
-                var $item = $(
-                    '<div class="full-actors__item selector">' +
-                    '<div class="full-actors__img">' +
-                    (img
-                        ? '<img src="' + img + '"/>'
-                        : '<div class="full-actors__empty"></div>') +
-                    '</div>' +
-                    '<div class="full-actors__name">' + (a.name || '') + '</div>' +
-                    (a.character ? '<div class="full-actors__character">' + a.character + '</div>' : '') +
+                $item.append(
+                    '<div>' +
+                    '<div style="font-size:14px;font-weight:500;">' + (d.name || '') + '</div>' +
+                    '<div style="font-size:12px;opacity:.45;margin-top:2px;">Director</div>' +
                     '</div>'
                 );
-                $list2.append($item);
+                $drow.append($item);
             });
-            $wrap.append($section2);
+            $wrap.append($drow);
+        }
+
+        // DIEN VIEN
+        if (cast.length) {
+            $wrap.append('<div style="font-size:.8em;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin:1em 0 .6em;">Diễn viên</div>');
+            var $crow = $('<div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>');
+            cast.slice(0, 15).forEach(function (a) {
+                var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
+                var $item = $('<div class="selector" style="flex:0 0 70px;text-align:center;"></div>');
+                $item.append(img
+                    ? '<img src="' + img + '" style="width:62px;height:62px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 5px;background:#222;"/>'
+                    : '<div style="width:62px;height:62px;border-radius:50%;background:#333;margin:0 auto 5px;"></div>'
+                );
+                $item.append('<div style="font-size:11px;line-height:1.3;">' + (a.name || '') + '</div>');
+                if (a.character) $item.append('<div style="font-size:10px;opacity:.4;margin-top:2px;">' + a.character + '</div>');
+                $crow.append($item);
+            });
+            $wrap.append($crow);
         }
 
         var $target = $ctx.find('.kkp-similar-wrap');
