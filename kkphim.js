@@ -283,10 +283,49 @@
         self.network = new Lampa.Reguest();
 
         self.list = function (params, onComplete, onError) {
-            var page   = params.page    || 1;
-            var catUrl = params.cat_url || params.url || '/danh-sach/phim-moi-cap-nhat';
+            var page   = params.page || 1;
+            var catUrl = '';
+
+            // 1. cat_url truyen truc tiep (tu kkphim_list hoac More button)
+            if (params.cat_url) {
+                catUrl = params.cat_url;
+
+            // 2. url truyen truc tiep (Lampa native More button)
+            } else if (params.url) {
+                catUrl = params.url;
+
+            // 3. Lampa truyen genre params khi bam the loai
+            // params.genres: [{id, name}] hoac params.genre: {id, name}
+            } else if (params.genres && params.genres[0]) {
+                var g    = params.genres[0];
+                var slug = g.slug || (isNaN(g.id) ? g.id : '');
+                if (slug) catUrl = '/v1/api/the-loai/' + slug;
+
+            } else if (params.genre) {
+                var g2   = params.genre;
+                var slug2 = (typeof g2 === 'object')
+                    ? (g2.slug || (isNaN(g2.id) ? g2.id : ''))
+                    : (isNaN(g2) ? g2 : '');
+                if (slug2) catUrl = '/v1/api/the-loai/' + slug2;
+
+            // 4. Lampa truyen type + value (co the la ten the loai)
+            } else if (params.type === 'genre' && params.value) {
+                catUrl = '/v1/api/the-loai/' + params.value;
+            }
+
+            // Fallback
+            if (!catUrl) catUrl = '/danh-sach/phim-moi-cap-nhat';
+
             fetchPage(catUrl, page, function (res) {
-                onComplete({ results: res.items, page: res.page, total_pages: res.totalPages, total_results: res.totalItems });
+                onComplete({
+                    results:       res.items,
+                    page:          res.page,
+                    total_pages:   res.totalPages,
+                    total_results: res.totalItems,
+                    // Tra ve cat_url de Lampa dung cho trang tiep theo
+                    cat_url:       catUrl,
+                    url:           catUrl,
+                });
             }, onError);
         };
 
