@@ -18,7 +18,7 @@
         if (document.getElementById('kkp-style')) return;
         var s = document.createElement('style');
         s.id = 'kkp-style';
-        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}.full-start__genres{display:none!important}.full-start-new__genres{display:none!important}';
+        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}.full-start__genres{display:none!important}.full-start-new__genres{display:none!important}.full-start__genre{display:none!important}';
         document.head.appendChild(s);
     }
 
