@@ -802,41 +802,57 @@
             }, 0);
         });
 
+        // Luu card hien tai de dung cho genre click
+        var _currentCard = null;
+
         Lampa.Listener.follow('full', function (e) {
             if (e.type !== 'complite') return;
             var obj  = e.object || {};
             var card = (e.data && e.data.movie) ? e.data.movie : (obj.card || (obj.activity && obj.activity.card));
             if (!card || card.source !== SOURCE_NAME) return;
+            _currentCard = card;
+        });
 
-            setTimeout(function () {
-                var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : $('body'));
-                // Lam moi cac the loai tag
-                $render.find('.full-info__tag, .full-start__genre, .info-tag, .tag').each(function () {
-                    var $el = $(this);
-                    if ($el.data('kkp-genre')) return;
-                    $el.data('kkp-genre', true);
+        // Dung MutationObserver de bat genre list khi Lampa render popup
+        // Lampa render genre items vao body khi bam "Genre N"
+        var _observer = new MutationObserver(function (mutations) {
+            if (!_currentCard || _currentCard.source !== SOURCE_NAME) return;
 
-                    $el.on('hover:enter click', function (ev) {
-                        ev.stopPropagation();
-                        var genreText = $el.text().trim();
-                        var genres    = card.genres || [];
-                        var matched   = genres.filter(function (g) {
-                            return g.name === genreText || g.name.toLowerCase() === genreText.toLowerCase();
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (node) {
+                    if (!node.querySelectorAll) return;
+                    // Tim tat ca .selector trong node moi duoc them
+                    var items = node.querySelectorAll('.selector');
+                    items.forEach(function (el) {
+                        var $el = $(el);
+                        if ($el.data('kkp-genre')) return;
+
+                        var txt = $el.text().trim();
+                        var genres = _currentCard.genres || [];
+                        var matched = genres.filter(function (g) {
+                            return g.name === txt;
                         })[0];
-                        var slug = matched ? (matched.slug || matched.id) : '';
-                        if (!slug || !isNaN(slug)) return;
+                        if (!matched) return; // Khong phai genre tag
 
-                        Lampa.Activity.push({
-                            title:     genreText,
-                            component: 'kkphim_list',
-                            cat_url:   '/v1/api/the-loai/' + slug,
-                            source:    SOURCE_NAME,
-                            page:      1,
+                        $el.data('kkp-genre', true);
+                        $el.on('hover:enter click', function (ev) {
+                            ev.stopPropagation();
+                            var slug = matched.slug || matched.id || '';
+                            if (!slug || !isNaN(slug)) return;
+                            Lampa.Activity.push({
+                                title:     txt,
+                                component: 'kkphim_list',
+                                cat_url:   '/v1/api/the-loai/' + slug,
+                                source:    SOURCE_NAME,
+                                page:      1,
+                            });
                         });
                     });
                 });
-            }, 1000);
+            });
         });
+
+        _observer.observe(document.body, { childList: true, subtree: true });
 
         var $item = $(
             '<li data-action="' + SOURCE_NAME + '" class="menu__item selector">' +
