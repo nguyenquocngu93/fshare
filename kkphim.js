@@ -479,7 +479,7 @@
                 '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
                 '<div style="padding:6px 8px;">' +
-                '<div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
+                '<div style="font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                 '<div style="font-size:11px;opacity:.5;margin-top:2px;">' + year + '</div>' +
                 '</div></div>'
             );
@@ -506,17 +506,29 @@
         }
 
         function onScroll() {
-            var el = $html.closest('.activity__body, .layer__scroll, .app__content')[0]
-                  || document.querySelector('.activity__body, .layer__scroll');
-            if (!el) return;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 500) {
+            // Thu cac container co the cuon trong Lampa
+            var selectors = ['.activity__body', '.layer__scroll', '.app__content', '.app'];
+            var el = null;
+            for (var i = 0; i < selectors.length; i++) {
+                var found = document.querySelector(selectors[i]);
+                if (found && found.scrollHeight > found.clientHeight) {
+                    el = found;
+                    break;
+                }
+            }
+            if (!el) el = document.documentElement;
+            var scrollTop    = el.scrollTop || window.pageYOffset || 0;
+            var clientHeight = el.clientHeight || window.innerHeight;
+            var scrollHeight = el.scrollHeight || document.body.scrollHeight;
+            if (scrollTop + clientHeight >= scrollHeight - 600) {
                 if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
             }
         }
 
         this.create = function () {
             loadPage(1);
-            document.addEventListener('scroll', onScroll, true);
+            // Gan scroll cho ca window va cac element co the cuon
+            window.addEventListener('scroll', onScroll, true);
             return $html;
         };
         this.start   = function () { return this.create(); };
@@ -526,7 +538,7 @@
         this.resume  = function () {};
         this.stop    = function () {};
         this.destroy = function () {
-            document.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('scroll', onScroll, true);
         };
     }
 
