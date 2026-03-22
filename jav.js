@@ -2,8 +2,8 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v2.4.0
-       Dùng native fetch() API - không cần proxy
+       iJavTorrent Plugin for Lampa  —  v3.0.0
+       Dùng Lampa.Reguest (native HTTP, bypass CORS) như KKPhim
     ============================================================ */
 
     var PLUGIN_ID = 'ijavtorrent';
@@ -12,47 +12,41 @@
 
 
     /* ============================================================
-       FETCH - dùng native fetch() của WebView
+       FETCH - dùng Lampa.Reguest như KKPhim
+       ijavtorrent trả về HTML, Lampa.Reguest có thể trả về:
+       - string (HTML thô)
+       - object (nếu Lampa tự parse JSON, nhưng HTML sẽ fail parse)
+       Dù cách nào cũng handle được
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        fetch(url, {
-            method:  'GET',
-            headers: { 'Accept': 'text/html,application/xhtml+xml,*/*' },
-            mode:    'no-cors'   // bypass CORS hoàn toàn
-        })
-        .then(function (res) {
-            // mode: no-cors trả về opaque response, dùng .text() vẫn được
-            return res.text();
-        })
-        .then(function (html) {
-            if (html && html.length > 100) {
-                ok(html);
-            } else {
-                // Nếu opaque trả về rỗng thì thử lại không có mode
-                return fetch(url, {
-                    method: 'GET',
-                    headers: { 'Accept': 'text/html' }
-                })
-                .then(function (r) { return r.text(); })
-                .then(function (h) { ok(h); });
+        var net = new Lampa.Reguest();
+        net.timeout(20000);
+        net.silent(
+            url,
+            function (data) {
+                // Nếu data là string → dùng thẳng
+                if (typeof data === 'string') {
+                    ok(data);
+                    return;
+                }
+                // Nếu Lampa parse thành object (thường xảy ra khi content-type là JSON)
+                // Thử convert lại thành string
+                try {
+                    ok(JSON.stringify(data));
+                } catch (e) {
+                    ok('');
+                }
+            },
+            function (a, b) {
+                // Lampa.Reguest fail callback có thể có nhiều dạng
+                // a có thể là XHR object, check responseText
+                if (a && a.responseText && a.responseText.length > 100) {
+                    ok(a.responseText);
+                    return;
+                }
+                if (fail) fail(a, b);
             }
-        })
-        .catch(function (e) {
-            // Fallback cuối: Lampa.Reguest
-            try {
-                var req = new Lampa.Reguest();
-                req.timeout(20000);
-                req.silent(url,
-                    function (data) {
-                        var html = typeof data === 'string' ? data : JSON.stringify(data);
-                        ok(html);
-                    },
-                    function () { if (fail) fail('Tất cả phương thức đều lỗi'); }
-                );
-            } catch (ex) {
-                if (fail) fail(ex.message);
-            }
-        });
+        );
     }
 
 
@@ -155,6 +149,7 @@
         var loading = false;
 
         this.render = function () { return scroll.render(); };
+
         this.create = function () { loadPage(1); };
 
         function makeCard(movie) {
@@ -194,25 +189,30 @@
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
+                        // Debug: hiển thị 200 ký tự đầu của response để xem nhận được gì
+                        var preview = html ? html.slice(0, 200).replace(/</g, '&lt;') : '(trống)';
                         scroll.render().find('.scroll__content').html(
-                            '<div style="padding:3em;text-align:center;color:#888">Không tìm thấy phim nào 😔</div>'
+                            '<div style="padding:2em;color:#888;font-size:.8em">' +
+                            'Không parse được phim.<br>Response preview:<br>' +
+                            '<code style="font-size:.75em;word-break:break-all">' + preview + '</code>' +
+                            '</div>'
                         );
                         return;
                     }
 
                     if (page === 1) scroll.render().find('.scroll__content').html('');
-
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
                     if (page < maxPage) {
                         scroll.loadmore(function () { loadPage(page + 1); });
                     }
                 },
-                function (err) {
+                function (a, b) {
                     loading = false;
+                    var msg = (a && a.status) ? ('HTTP ' + a.status) : String(a || b || 'unknown');
                     scroll.render().find('.scroll__content').html(
-                        '<div style="padding:3em;text-align:center;color:#e74c3c">' +
-                        '❌ Lỗi: ' + (err || 'unknown') + '</div>'
+                        '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em">' +
+                        '❌ Lỗi: ' + msg + '</div>'
                     );
                 }
             );
@@ -273,6 +273,7 @@
                             return { title: t.label, magnet: t.magnet };
                         }),
                         onSelect: function (item) {
+                            // Lampa tự dùng TorrServer đã cài trong Settings
                             Lampa.Player.play({
                                 title:  card.title,
                                 url:    item.magnet,
@@ -305,35 +306,38 @@
 
 
     /* ============================================================
-       MENU
+       KHỞI ĐỘNG - copy y chang pattern của KKPhim
     ============================================================ */
-    function addMenu() {
-        if (_menuAdded) return;
-        if ($('[data-id="ijavt-menu"]').length) { _menuAdded = true; return; }
-        var $nav = $('nav.menu .menu__list, .menu .menu__list').first();
-        if (!$nav.length) return;
-        _menuAdded = true;
+    function startPlugin() {
+        if (window.ijavtorrent_started) return;
+        window.ijavtorrent_started = true;
 
+        // Thêm menu - copy y chang KKPhim
         var $item = $(
-            '<li class="menu__item selector" data-id="ijavt-menu">' +
+            '<li data-action="' + PLUGIN_ID + '" class="menu__item selector">' +
             '<div class="menu__ico">' +
-            '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"' +
+            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22"' +
             ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-            '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>' +
+            '<circle cx="12" cy="12" r="10"/>' +
+            '<line x1="2" y1="12" x2="22" y2="12"/>' +
             '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>' +
             '</svg></div>' +
-            '<div class="menu__text">iJavTorrent</div></li>'
+            '<div class="menu__text">iJavTorrent</div>' +
+            '</li>'
         );
-        $item.on('hover:enter click', showMainMenu);
-
-        var $before = $nav.find('[data-action="settings"]').closest('li');
-        if ($before.length) $before.before($item); else $nav.append($item);
+        $item.on('hover:enter', showMainMenu);
+        // Dùng y chang KKPhim: $('.menu .menu__list').eq(0).append($item)
+        $('.menu .menu__list').eq(0).append($item);
     }
 
-    Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') setTimeout(addMenu, 400);
-    });
-    setTimeout(addMenu, 1200);
+    // Copy y chang KKPhim: check window.appready trước
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
+    }
 
 
     /* ============================================================
@@ -386,13 +390,12 @@
             });
         } else {
             Lampa.Select.show({
-                title: '🔍 Tìm theo từ khoá',
+                title: '🔍 Từ khoá',
                 items: [
                     { title: 'Big Tits',      q: 'big tits' },
                     { title: 'Creampie',      q: 'creampie' },
                     { title: 'Office Lady',   q: 'office lady' },
                     { title: 'Married Woman', q: 'married' },
-                    { title: 'Uniform',       q: 'uniform' },
                     { title: 'Squirting',     q: 'squirting' },
                     { title: 'Lesbian',       q: 'lesbian' },
                     { title: 'NTR / Cuckold', q: 'cuckold' }
@@ -423,6 +426,6 @@
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v2.4.0 loaded');
+    console.log('[iJavTorrent] v3.0.0 loaded');
 
 })();
