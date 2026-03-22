@@ -18,89 +18,99 @@
     var TMDB_IMG   = 'https://image.tmdb.org/t/p/';
 
     // Fetch TMDB dung window.fetch (ho tro Authorization header)
-    function enrichWithTMDB(result, tmdbId, kkType, onDone) {
+    // Tim TMDB bang ten phim + nam (fallback khi khong co tmdb_id)
+    function searchTMDB(title, year, kkType, onFound) {
+        var mediaType = (kkType === 'single') ? 'movie' : 'tv';
+        var q = encodeURIComponent(title);
+        var url = TMDB_BASE + '/search/' + mediaType
+                + '?query=' + q + '&language=vi-VN'
+                + (year ? '&year=' + year : '');
+        $.ajax({
+            url: url, type: 'GET',
+            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
+            success: function (data) {
+                var results = (data && data.results) || [];
+                if (results.length) onFound(results[0].id, mediaType);
+                else onFound(null, mediaType);
+            },
+            error: function () { onFound(null, mediaType); }
+        });
+    }
+
+    function fetchTMDBDetail(tmdbId, mediaType, onDone) {
+        var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
+                + '?language=vi-VN&append_to_response=credits';
+        $.ajax({
+            url: url, type: 'GET',
+            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
+            success: function (t) { onDone(t); },
+            error: function () { onDone(null); }
+        });
+    }
+
+    function applyTMDB(result, t) {
+        if (!t) return;
+        try {
+            if (t.backdrop_path) {
+                result.backdrop_path    = t.backdrop_path;
+                result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
+            }
+            if (t.poster_path) result.poster_path = t.poster_path;
+            if (t.vote_average) {
+                result.vote_average = Math.round(t.vote_average * 10) / 10;
+                result.vote_count   = t.vote_count || 0;
+            }
+            if (t.release_date)   result.release_date   = t.release_date;
+            if (t.first_air_date) result.first_air_date = t.first_air_date;
+            if (t.runtime) result.runtime = t.runtime;
+            if (t.episode_run_time && t.episode_run_time.length) {
+                result.runtime = t.episode_run_time[0] || 0;
+            }
+            var credits = t.credits || {};
+            if (credits.cast || credits.crew) {
+                result.credits = {
+                    cast: (credits.cast || []).slice(0, 15).map(function (a) {
+                        return { id: a.id, name: a.name, character: a.character || '', profile_path: a.profile_path || '', order: a.order || 0 };
+                    }),
+                    crew: (credits.crew || []).filter(function (c) {
+                        return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
+                    }).slice(0, 5).map(function (c) {
+                        return { id: c.id, name: c.name, job: c.job, department: c.department, profile_path: c.profile_path || '' };
+                    }),
+                };
+            }
+            if (t.genres && t.genres.length) {
+                result.genres = t.genres.map(function (g) {
+                    return { id: String(g.id), name: g.name };
+                });
+            }
+            result.tmdb    = String(t.id);
+            result.tmdb_id = String(t.id);
+        } catch (e) { console.warn('[KKPhim] applyTMDB error:', e); }
+    }
+
+    function enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, onDone) {
         if (!tmdbId) { onDone(result); return; }
 
         var mediaType = (kkType === 'single') ? 'movie' : 'tv';
-        var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
-                + '?language=vi-VN&append_to_response=credits';
 
-        $.ajax({
-            url:     url,
-            type:    'GET',
-            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
-            success: function (t) {
-                try {
-                    // Backdrop & poster
-                    if (t.backdrop_path) {
-                        result.backdrop_path    = t.backdrop_path;
-                        result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
-                    }
-                    if (t.poster_path) {
-                        result.poster_path = t.poster_path;
-                    }
+        function done(t) {
+            applyTMDB(result, t);
+            onDone(result);
+        }
 
-                    // Rating
-                    if (t.vote_average) {
-                        result.vote_average = Math.round(t.vote_average * 10) / 10;
-                        result.vote_count   = t.vote_count || 0;
-                    }
-
-                    // Ngay phat hanh
-                    if (t.release_date)   result.release_date   = t.release_date;
-                    if (t.first_air_date) result.first_air_date = t.first_air_date;
-
-                    // Runtime
-                    if (t.runtime) result.runtime = t.runtime;
-                    if (t.episode_run_time && t.episode_run_time.length) {
-                        result.runtime = t.episode_run_time[0] || 0;
-                    }
-
-                    // Credits (Lampa doc truc tiep cau truc nay)
-                    var credits = t.credits || {};
-                    if (credits.cast || credits.crew) {
-                        result.credits = {
-                            cast: (credits.cast || []).slice(0, 15).map(function (a) {
-                                return {
-                                    id:           a.id,
-                                    name:         a.name,
-                                    character:    a.character || '',
-                                    profile_path: a.profile_path || '',
-                                    order:        a.order || 0,
-                                };
-                            }),
-                            crew: (credits.crew || []).filter(function (c) {
-                                return c.job === 'Director' || c.job === 'Writer'
-                                    || c.job === 'Screenplay' || c.department === 'Directing';
-                            }).slice(0, 5).map(function (c) {
-                                return {
-                                    id:           c.id,
-                                    name:         c.name,
-                                    job:          c.job,
-                                    department:   c.department,
-                                    profile_path: c.profile_path || '',
-                                };
-                            }),
-                        };
-                    }
-
-                    // Genres tieng Viet tu TMDB
-                    if (t.genres && t.genres.length) {
-                        result.genres = t.genres.map(function (g) {
-                            return { id: String(g.id), name: g.name };
-                        });
-                    }
-
-                    result.tmdb    = String(tmdbId);
-                    result.tmdb_id = String(tmdbId);
-
-                } catch (e) { console.warn('[KKPhim] TMDB enrich error:', e); }
-                onDone(result);
-            },
-            error: function () {
-                onDone(result);
-            }
-        });
+        if (tmdbId) {
+            // Co san tmdb_id -> fetch luon
+            fetchTMDBDetail(tmdbId, mediaType, done);
+        } else if (searchTitle) {
+            // Khong co tmdb_id -> search bang ten phim
+            searchTMDB(searchTitle, searchYear, kkType, function (foundId, foundType) {
+                if (foundId) fetchTMDBDetail(foundId, foundType, done);
+                else onDone(result);
+            });
+        } else {
+            onDone(result);
+        }
     }
 
     // =====================================================================
@@ -336,10 +346,13 @@
                 result.seasons           = seasons;
                 result.kkphim_episodes   = episodes;
 
-                // Enrich voi TMDB neu co tmdb_id
-                var tmdbId  = movie.tmdb_id || movie.tmdb || '';
-                var kkType  = movie.type || '';
-                enrichWithTMDB(result, tmdbId, kkType, function (enriched) {
+                // Enrich voi TMDB
+                // KKPhim co the tra ve tmdb_id o nhieu truong khac nhau
+                var tmdbId = movie.tmdb_id || movie.tmdb || movie.imdb_id || '';
+                var kkType = movie.type || '';
+                var searchTitle = movie.origin_name || movie.name || '';
+                var searchYear  = movie.year ? String(movie.year) : '';
+                enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, function (enriched) {
                     onComplete({ movie: enriched });
                 });
             }, onError);
