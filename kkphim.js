@@ -67,18 +67,42 @@
             if (t.episode_run_time && t.episode_run_time.length) {
                 result.runtime = t.episode_run_time[0] || 0;
             }
+            // Credits - Lampa dung nhieu field khac nhau tuy version
             var credits = t.credits || {};
-            if (credits.cast || credits.crew) {
-                result.credits = {
-                    cast: (credits.cast || []).slice(0, 15).map(function (a) {
-                        return { id: a.id, name: a.name, character: a.character || '', profile_path: a.profile_path || '', order: a.order || 0 };
-                    }),
-                    crew: (credits.crew || []).filter(function (c) {
-                        return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
-                    }).slice(0, 5).map(function (c) {
-                        return { id: c.id, name: c.name, job: c.job, department: c.department, profile_path: c.profile_path || '' };
-                    }),
+            var castList = (credits.cast || []).slice(0, 15).map(function (a) {
+                return {
+                    id:           a.id,
+                    name:         a.name,
+                    character:    a.character || '',
+                    profile_path: a.profile_path || '',
+                    order:        a.order || 0,
+                    // Lampa can them 2 field nay
+                    img:          a.profile_path ? 'https://image.tmdb.org/t/p/w185' + a.profile_path : '',
+                    title:        a.name,
                 };
+            });
+            var crewList = (credits.crew || []).filter(function (c) {
+                return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay';
+            }).slice(0, 5).map(function (c) {
+                return {
+                    id:           c.id,
+                    name:         c.name,
+                    job:          c.job,
+                    department:   c.department || '',
+                    profile_path: c.profile_path || '',
+                    img:          c.profile_path ? 'https://image.tmdb.org/t/p/w185' + c.profile_path : '',
+                    title:        c.name,
+                };
+            });
+
+            if (castList.length || crewList.length) {
+                // Format 1: result.credits (TMDB native)
+                result.credits = { cast: castList, crew: crewList };
+                // Format 2: result.persons (mot so version Lampa)
+                result.persons = castList.concat(crewList);
+                // Format 3: result.actors / result.directors (Lampa cu)
+                result.actors    = castList;
+                result.directors = crewList.filter(function (c) { return c.job === 'Director'; });
             }
             if (t.genres && t.genres.length) {
                 result.genres = t.genres.map(function (g) {
