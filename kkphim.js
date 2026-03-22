@@ -142,9 +142,8 @@
             if (t.runtime)        result.runtime         = t.runtime;
             if (t.episode_run_time && t.episode_run_time.length) result.runtime = t.episode_run_time[0] || 0;
 
-            if (t.genres && t.genres.length) {
-                result.genres = t.genres.map(function (g) { return { id: String(g.id), name: g.name }; });
-            }
+            // KHONG overwrite genres tu TMDB - giu genres KKPhim de slug link dung
+            // KKPhim genres co slug chinh xac (vd: "kinh-di"), TMDB thi khac ("Phim Kinh Di")
 
             var credits  = t.credits || {};
             var castList = (credits.cast || []).slice(0, 15).map(function (a) {
