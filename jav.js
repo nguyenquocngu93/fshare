@@ -2,51 +2,59 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v3.0.0
-       Dùng Lampa.Reguest (native HTTP, bypass CORS) như KKPhim
+       iJavTorrent Plugin for Lampa  —  v3.1.0
+       Dùng XMLHttpRequest trực tiếp để lấy HTML
+       (Lampa.Reguest chỉ dùng cho JSON API, không dùng cho HTML)
     ============================================================ */
 
     var PLUGIN_ID = 'ijavtorrent';
     var BASE_URL  = 'https://ijavtorrent.com';
-    var _menuAdded = false;
 
 
     /* ============================================================
-       FETCH - dùng Lampa.Reguest như KKPhim
-       ijavtorrent trả về HTML, Lampa.Reguest có thể trả về:
-       - string (HTML thô)
-       - object (nếu Lampa tự parse JSON, nhưng HTML sẽ fail parse)
-       Dù cách nào cũng handle được
+       FETCH - XMLHttpRequest thuần, không qua jQuery hay Lampa
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        var net = new Lampa.Reguest();
-        net.timeout(20000);
-        net.silent(
-            url,
-            function (data) {
-                // Nếu data là string → dùng thẳng
-                if (typeof data === 'string') {
-                    ok(data);
-                    return;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.timeout = 20000;
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+
+            if (xhr.status >= 200 && xhr.status < 400) {
+                ok(xhr.responseText || '');
+            } else if (xhr.status === 0) {
+                // status 0 = bị block hoặc network error
+                // Thử lấy responseText dù sao
+                if (xhr.responseText && xhr.responseText.length > 50) {
+                    ok(xhr.responseText);
+                } else {
+                    if (fail) fail('Blocked / No network (status 0)');
                 }
-                // Nếu Lampa parse thành object (thường xảy ra khi content-type là JSON)
-                // Thử convert lại thành string
-                try {
-                    ok(JSON.stringify(data));
-                } catch (e) {
-                    ok('');
-                }
-            },
-            function (a, b) {
-                // Lampa.Reguest fail callback có thể có nhiều dạng
-                // a có thể là XHR object, check responseText
-                if (a && a.responseText && a.responseText.length > 100) {
-                    ok(a.responseText);
-                    return;
-                }
-                if (fail) fail(a, b);
+            } else {
+                if (fail) fail('HTTP ' + xhr.status);
             }
-        );
+        };
+
+        xhr.ontimeout = function () {
+            if (fail) fail('Timeout sau 20s');
+        };
+
+        xhr.onerror = function () {
+            // onerror: thử responseText trước
+            if (xhr.responseText && xhr.responseText.length > 50) {
+                ok(xhr.responseText);
+            } else {
+                if (fail) fail('XHR error');
+            }
+        };
+
+        try {
+            xhr.send();
+        } catch (e) {
+            if (fail) fail(e.message || 'send() exception');
+        }
     }
 
 
@@ -149,7 +157,6 @@
         var loading = false;
 
         this.render = function () { return scroll.render(); };
-
         this.create = function () { loadPage(1); };
 
         function makeCard(movie) {
@@ -189,13 +196,11 @@
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        // Debug: hiển thị 200 ký tự đầu của response để xem nhận được gì
-                        var preview = html ? html.slice(0, 200).replace(/</g, '&lt;') : '(trống)';
+                        // Debug: hiện 300 ký tự đầu để xem response
+                        var preview = (html || '(trống)').slice(0, 300).replace(/[<>]/g, function(c){ return c === '<' ? '&lt;' : '&gt;'; });
                         scroll.render().find('.scroll__content').html(
-                            '<div style="padding:2em;color:#888;font-size:.8em">' +
-                            'Không parse được phim.<br>Response preview:<br>' +
-                            '<code style="font-size:.75em;word-break:break-all">' + preview + '</code>' +
-                            '</div>'
+                            '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all;line-height:1.6">' +
+                            '<b style="color:#e74c3c">Không parse được - response:</b><br>' + preview + '</div>'
                         );
                         return;
                     }
@@ -207,12 +212,11 @@
                         scroll.loadmore(function () { loadPage(page + 1); });
                     }
                 },
-                function (a, b) {
+                function (errMsg) {
                     loading = false;
-                    var msg = (a && a.status) ? ('HTTP ' + a.status) : String(a || b || 'unknown');
                     scroll.render().find('.scroll__content').html(
                         '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em">' +
-                        '❌ Lỗi: ' + msg + '</div>'
+                        '❌ ' + (errMsg || 'Lỗi không xác định') + '</div>'
                     );
                 }
             );
@@ -260,20 +264,17 @@
             fetchPage(card.url,
                 function (html) {
                     var magnets = parseMagnets(html);
-
                     if (!magnets.length) {
                         Lampa.Noty.show('Không tìm thấy torrent');
                         setTimeout(function () { Lampa.Activity.backward(); }, 800);
                         return;
                     }
-
                     Lampa.Select.show({
                         title: card.title,
                         items: magnets.map(function (t) {
                             return { title: t.label, magnet: t.magnet };
                         }),
                         onSelect: function (item) {
-                            // Lampa tự dùng TorrServer đã cài trong Settings
                             Lampa.Player.play({
                                 title:  card.title,
                                 url:    item.magnet,
@@ -283,8 +284,8 @@
                         onBack: function () { Lampa.Activity.backward(); }
                     });
                 },
-                function () {
-                    Lampa.Noty.show('Lỗi tải trang phim');
+                function (e) {
+                    Lampa.Noty.show('Lỗi: ' + (e || 'unknown'));
                     setTimeout(function () { Lampa.Activity.backward(); }, 800);
                 }
             );
@@ -299,20 +300,15 @@
 
 
     /* ============================================================
-       ĐĂNG KÝ
+       ĐĂNG KÝ + KHỞI ĐỘNG
     ============================================================ */
     Lampa.Component.add(PLUGIN_ID,             CatalogComponent);
     Lampa.Component.add(PLUGIN_ID + '_detail', DetailComponent);
 
-
-    /* ============================================================
-       KHỞI ĐỘNG - copy y chang pattern của KKPhim
-    ============================================================ */
     function startPlugin() {
         if (window.ijavtorrent_started) return;
         window.ijavtorrent_started = true;
 
-        // Thêm menu - copy y chang KKPhim
         var $item = $(
             '<li data-action="' + PLUGIN_ID + '" class="menu__item selector">' +
             '<div class="menu__ico">' +
@@ -326,11 +322,9 @@
             '</li>'
         );
         $item.on('hover:enter', showMainMenu);
-        // Dùng y chang KKPhim: $('.menu .menu__list').eq(0).append($item)
         $('.menu .menu__list').eq(0).append($item);
     }
 
-    // Copy y chang KKPhim: check window.appready trước
     if (window.appready) {
         startPlugin();
     } else {
@@ -426,6 +420,6 @@
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v3.0.0 loaded');
+    console.log('[iJavTorrent] v3.1.0 loaded');
 
 })();
