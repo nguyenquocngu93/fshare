@@ -22,8 +22,13 @@
     function toNameArray(arr) {
         if (!arr || !arr.length) return [];
         return arr.map(function (item) {
-            if (typeof item === 'string') return { id: item, name: item };
-            return { id: item.id || item.slug || '', name: item.name || '' };
+            if (typeof item === 'string') return { id: item, slug: item, name: item };
+            // KKPhim: id la so, slug la string dung lam URL the-loai
+            return {
+                id:   item.slug || String(item.id || ''),
+                slug: item.slug || '',
+                name: item.name || '',
+            };
         });
     }
 
@@ -54,6 +59,7 @@
             production_companies: [],
             production_countries: [],
             spoken_languages:     [],
+            media_type:           'movie',
             source:               SOURCE_NAME,
             kkphim_slug:          item.slug || '',
             kkphim_type:          kkType,
@@ -403,7 +409,7 @@
         var genreItem = genres[0];
         if (!genreItem) return;
 
-        var genreSlug = (typeof genreItem.id === 'string' && genreItem.id) ? genreItem.id : '';
+        var genreSlug = genreItem.slug || genreItem.id || '';
         var genreName = genreItem.name || genreSlug;
         if (!genreSlug) return;
 
