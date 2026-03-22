@@ -105,6 +105,85 @@
         }, onFail || function () {});
     }
 
+    // Cache episodes theo slug de khoi fetch lai khi bam nut play
+    var _epsCache = {};
+
+    function fetchEpisodes(slug, callback) {
+        if (_epsCache[slug]) { callback(_epsCache[slug]); return; }
+        var net = new Lampa.Reguest();
+        net.silent(BASE_URL + '/phim/' + slug, function (res) {
+            _epsCache[slug] = res.episodes || [];
+            callback(_epsCache[slug]);
+        }, function () { callback([]); });
+    }
+
+    // Hien menu chon server -> tap bang Lampa.Select
+    function showEpisodeMenu(card, episodes) {
+        var title  = card.title || '';
+        var poster = card.img   || card.poster || '';
+
+        if (!episodes.length) return;
+
+        // Neu chi co 1 server va 1 tap -> phat luon
+        if (episodes.length === 1 && (episodes[0].server_data || []).length === 1) {
+            var ep   = episodes[0].server_data[0];
+            var link = ep.link_m3u8 || ep.link_embed || '';
+            if (link) Lampa.Player.play({ url: link, title: title, poster: poster });
+            return;
+        }
+
+        // Neu chi co 1 server va nhieu tap -> hien menu tap luon
+        if (episodes.length === 1) {
+            showEpList(card, episodes[0]);
+            return;
+        }
+
+        // Nhieu server -> hien menu chon server truoc
+        var serverItems = episodes.map(function (srv, si) {
+            return { title: srv.server_name || ('Server ' + (si + 1)), index: si };
+        });
+
+        Lampa.Select.show({
+            title:    'Chọn server',
+            items:    serverItems,
+            onSelect: function (item) {
+                showEpList(card, episodes[item.index]);
+            },
+        });
+    }
+
+    function showEpList(card, server) {
+        var title  = card.title || '';
+        var poster = card.img   || card.poster || '';
+        var data   = server.server_data || [];
+
+        // Neu chi co 1 tap -> phat luon
+        if (data.length === 1) {
+            var link = data[0].link_m3u8 || data[0].link_embed || '';
+            if (link) Lampa.Player.play({ url: link, title: title + ' - ' + (data[0].name || ''), poster: poster });
+            return;
+        }
+
+        var playlist = data.map(function (ep) {
+            return { url: ep.link_m3u8 || ep.link_embed || '', title: title + ' - ' + (ep.name || '') };
+        });
+
+        var epItems = data.map(function (ep, idx) {
+            return { title: ep.name || ('Tập ' + (idx + 1)), index: idx };
+        });
+
+        Lampa.Select.show({
+            title:    server.server_name || 'Chọn tập',
+            items:    epItems,
+            onSelect: function (item) {
+                var link = data[item.index].link_m3u8 || data[item.index].link_embed || '';
+                if (!link) return;
+                Lampa.Player.play({ url: link, title: title + ' - ' + (data[item.index].name || ''), poster: poster });
+                Lampa.Player.playlist(playlist, item.index);
+            },
+        });
+    }
+
     // =====================================================================
     // API SOURCE
     // =====================================================================
@@ -184,6 +263,22 @@
                     onComplete({ seasons: (res.movie && res.movie.seasons) || [] });
                 }, onError);
             }
+        };
+
+        // Lampa goi self.stream khi bam nut play tren trang chi tiet
+        self.stream = function (params, onComplete, onError) {
+            var card = params.card || {};
+            var slug = card.kkphim_slug || card.id;
+            if (!slug) { if (onError) onError('no stream'); return; }
+
+            fetchEpisodes(slug, function (episodes) {
+                if (!episodes.length) { if (onError) onError('no episodes'); return; }
+                // Tra ve object de Lampa biet la co stream
+                // Sau do ta tu xu ly hien menu
+                showEpisodeMenu(card, episodes);
+                // Lampa can goi onComplete de khong hien loi
+                onComplete({ url: '', title: card.title || '' });
+            });
         };
 
         self.person = function (p, ok, err) { err('not supported'); };
@@ -304,85 +399,6 @@
     // =====================================================================
     // INJECT: NUT TAP PHIM
     // =====================================================================
-    // Cache episodes theo slug de khoi fetch lai khi bam nut play
-    var _epsCache = {};
-
-    function fetchEpisodes(slug, callback) {
-        if (_epsCache[slug]) { callback(_epsCache[slug]); return; }
-        var net = new Lampa.Reguest();
-        net.silent(BASE_URL + '/phim/' + slug, function (res) {
-            _epsCache[slug] = res.episodes || [];
-            callback(_epsCache[slug]);
-        }, function () { callback([]); });
-    }
-
-    // Hien menu chon server -> tap bang Lampa.Select
-    function showEpisodeMenu(card, episodes) {
-        var title  = card.title || '';
-        var poster = card.img   || card.poster || '';
-
-        if (!episodes.length) return;
-
-        // Neu chi co 1 server va 1 tap -> phat luon
-        if (episodes.length === 1 && (episodes[0].server_data || []).length === 1) {
-            var ep   = episodes[0].server_data[0];
-            var link = ep.link_m3u8 || ep.link_embed || '';
-            if (link) Lampa.Player.play({ url: link, title: title, poster: poster });
-            return;
-        }
-
-        // Neu chi co 1 server va nhieu tap -> hien menu tap luon
-        if (episodes.length === 1) {
-            showEpList(card, episodes[0]);
-            return;
-        }
-
-        // Nhieu server -> hien menu chon server truoc
-        var serverItems = episodes.map(function (srv, si) {
-            return { title: srv.server_name || ('Server ' + (si + 1)), index: si };
-        });
-
-        Lampa.Select.show({
-            title:    'Chọn server',
-            items:    serverItems,
-            onSelect: function (item) {
-                showEpList(card, episodes[item.index]);
-            },
-        });
-    }
-
-    function showEpList(card, server) {
-        var title  = card.title || '';
-        var poster = card.img   || card.poster || '';
-        var data   = server.server_data || [];
-
-        // Neu chi co 1 tap -> phat luon
-        if (data.length === 1) {
-            var link = data[0].link_m3u8 || data[0].link_embed || '';
-            if (link) Lampa.Player.play({ url: link, title: title + ' - ' + (data[0].name || ''), poster: poster });
-            return;
-        }
-
-        var playlist = data.map(function (ep) {
-            return { url: ep.link_m3u8 || ep.link_embed || '', title: title + ' - ' + (ep.name || '') };
-        });
-
-        var epItems = data.map(function (ep, idx) {
-            return { title: ep.name || ('Tập ' + (idx + 1)), index: idx };
-        });
-
-        Lampa.Select.show({
-            title:    server.server_name || 'Chọn tập',
-            items:    epItems,
-            onSelect: function (item) {
-                var link = data[item.index].link_m3u8 || data[item.index].link_embed || '';
-                if (!link) return;
-                Lampa.Player.play({ url: link, title: title + ' - ' + (data[item.index].name || ''), poster: poster });
-                Lampa.Player.playlist(playlist, item.index);
-            },
-        });
-    }
-
     // =====================================================================
     // INJECT: PHIM LIEN QUAN (random theo the loai)
     // =====================================================================
@@ -505,20 +521,12 @@
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
         Lampa.Listener.follow('full', function (e) {
-            var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
+            var obj  = e.object || {};
+            var card = (e.data && e.data.movie) ? e.data.movie : obj.card;
             if (!card || card.source !== SOURCE_NAME) return;
 
             var slug = card.kkphim_slug || card.id;
 
-            // Bam nut phat mac dinh cua Lampa
-            if (e.type === 'play') {
-                fetchEpisodes(slug, function (episodes) {
-                    showEpisodeMenu(card, episodes);
-                });
-                return;
-            }
-
-            // Reset cache khi roi trang
             if (e.type === 'destroy') {
                 delete _injectedMap[slug];
                 delete _epsCache[slug];
@@ -527,12 +535,25 @@
 
             if (e.type !== 'complite') return;
 
-            // Pre-fetch episodes de phat nhanh hon khi bam play
+            // Pre-fetch episodes ngay khi trang chi tiet load xong
             fetchEpisodes(slug, function () {});
 
-            // Inject phim lien quan
-            var $ctx = (e.object && e.object.render) ? e.object.render() : $('body');
+            // Inject phim lien quan sau khi DOM san sang
+            var $ctx = (obj.render) ? obj.render() : $('body');
             injectSimilarMovies(card, $ctx);
+        });
+
+        // Lampa fire event 'player' khi chuan bi phat, 'torrent' khi bam nut play
+        // o mot so version. Intercept ca 2 de dam bao bat duoc
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type !== 'play') return;
+            var obj  = e.object || {};
+            var card = obj.card;
+            if (!card || card.source !== SOURCE_NAME) return;
+            var slug = card.kkphim_slug || card.id;
+            fetchEpisodes(slug, function (episodes) {
+                showEpisodeMenu(card, episodes);
+            });
         });
 
         injectViewMore();
