@@ -366,20 +366,45 @@
         };
 
         self.person = function (params, onComplete, onError) {
-            var card = params.card || {};
+            // Lampa truyen card qua nhieu ten field khac nhau
+            var card = params.card || params.movie || params.item || {};
             var info = getTmdbInfo(card);
             if (!info.id) { onError('no tmdb'); return; }
+
             tmdbAjax(
-                TMDB_BASE + '/' + info.type + '/' + info.id + '/credits?language=vi-VN',
+                TMDB_BASE + '/' + info.type + '/' + info.id
+                + '/credits?language=vi-VN',
                 function (data) {
+                    // Format dung cho Lampa native cast renderer
+                    var mapPerson = function (p, extra) {
+                        return Object.assign({
+                            id:           p.id,
+                            name:         p.name,
+                            // Lampa dung 'img' hoac 'profile_path' de hien anh
+                            img:          p.profile_path ? TMDB_IMG + 'w185' + p.profile_path : '',
+                            profile_path: p.profile_path || '',
+                            // Lampa dung 'character' hoac 'role'
+                            character:    p.character || '',
+                            role:         p.character || p.job || '',
+                        }, extra || {});
+                    };
+
                     var cast = (data.cast || []).slice(0, 20).map(function (a) {
-                        return { id: a.id, name: a.name, img: a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '', character: a.character || '', profile_path: a.profile_path || '' };
+                        return mapPerson(a, { known_for_department: 'Acting' });
                     });
-                    var crew = (data.crew || []).filter(function (c) { return c.job === 'Director' || c.job === 'Writer'; })
-                        .slice(0, 5).map(function (c) {
-                            return { id: c.id, name: c.name, img: c.profile_path ? TMDB_IMG + 'w185' + c.profile_path : '', job: c.job, profile_path: c.profile_path || '' };
-                        });
-                    onComplete({ persons: cast.concat(crew), cast: cast, crew: crew });
+                    var crew = (data.crew || [])
+                        .filter(function (c) { return c.job === 'Director' || c.job === 'Writer' || c.job === 'Screenplay'; })
+                        .slice(0, 5)
+                        .map(function (c) { return mapPerson(c, { job: c.job, known_for_department: c.department }); });
+
+                    onComplete({
+                        persons: cast.concat(crew),
+                        cast:    cast,
+                        crew:    crew,
+                        // Mot so version Lampa dung field nay
+                        actors:     cast,
+                        directors:  crew.filter(function (c) { return c.job === 'Director'; }),
+                    });
                 },
                 function () { onError('failed'); }
             );
@@ -661,14 +686,6 @@
                 var $tor = $ctx.find('.view--torrent');
                 if ($tor.length) $tor.after($btn);
                 else $ctx.find('.full-start__buttons').append($btn);
-            }
-
-            // Inject cast tu TMDB vao DOM
-            var info = getTmdbInfo(card);
-            if (info.id) {
-                fetchTMDBDetail(info.id, info.type, function (tmdbData) {
-                    if ($ctx.closest('body').length) injectCastToDOM($ctx, tmdbData);
-                });
             }
 
             injectSimilarMovies(card, $ctx);
