@@ -265,24 +265,6 @@
             }
         };
 
-        // Lampa goi self.stream khi bam nut play
-        // Goi onError de huy flow cua Lampa (tranh hien man Torrents)
-        // Va tu xu ly hien menu chon tap
-        self.stream = function (params, onComplete, onError) {
-            var card = params.card || {};
-            var slug = card.kkphim_slug || card.id;
-            if (!slug) { if (onError) onError('no stream'); return; }
-
-            fetchEpisodes(slug, function (episodes) {
-                // Huy flow Lampa truoc
-                if (onError) onError('kkphim handled');
-                // Hien menu chon tap/server
-                if (episodes.length) {
-                    setTimeout(function () { showEpisodeMenu(card, episodes); }, 50);
-                }
-            });
-        };
-
         self.person = function (p, ok, err) { err('not supported'); };
         self.clear  = function () { self.network.clear(); };
     }
@@ -547,6 +529,33 @@
                 var $ctx = (obj.render) ? obj.render() : $('body');
                 injectSimilarMovies(card, $ctx);
             }
+        });
+
+        // Dang ky nguon KKPhim vao menu Source cua Lampa
+        // Lampa fire event 'stream' khi user bam nut Play va chon nguon
+        Lampa.Listener.follow('stream', function (e) {
+            // e.object.card: thong tin phim dang xem
+            var card = e.object && e.object.card;
+            if (!card) return;
+
+            // Chi xu ly phim tu nguon KKPhim
+            var slug = card.kkphim_slug || card.id;
+            if (!slug) return;
+
+            // Them vao danh sach source
+            e.results.push({
+                title:   'KKPhim',
+                search:  card,
+                callback: function () {
+                    fetchEpisodes(slug, function (episodes) {
+                        if (!episodes || !episodes.length) {
+                            Lampa.Noty.show('Không tìm thấy link phim');
+                            return;
+                        }
+                        showEpisodeMenu(card, episodes);
+                    });
+                },
+            });
         });
 
         injectViewMore();
