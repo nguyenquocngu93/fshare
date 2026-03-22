@@ -13,9 +13,19 @@
         return url.indexOf('http') === 0 ? url : IMG_URL + url;
     }
 
+    // Chuyển mảng object {id, name} hoặc string sang [{id, name}]
+    function toNameArray(arr) {
+        if (!arr || !arr.length) return [];
+        return arr.map(function (item) {
+            if (typeof item === 'string') return { id: 0, name: item };
+            return { id: item.id || 0, name: item.name || '' };
+        });
+    }
+
     function normalizeItem(item) {
         var poster = getPoster(item.poster_url);
         var thumb  = getPoster(item.thumb_url || item.poster_url);
+
         return {
             id:               item.slug,
             title:            item.name,
@@ -30,7 +40,13 @@
             release_date:     item.year ? item.year + '-01-01' : '',
             first_air_date:   item.year ? item.year + '-01-01' : '',
             vote_average:     0,
-            overview:         '',
+            overview:         item.content || '',
+            // Lampa yêu cầu các field này phải là array
+            genres:           toNameArray(item.category || []),
+            countries:        toNameArray(item.country  || []),
+            production_companies: [],
+            production_countries: [],
+            spoken_languages: [],
             source:           SOURCE_NAME,
             kkphim_slug:      item.slug,
             kkphim_type:      item.type,
@@ -148,48 +164,49 @@
     }
 
     // ==========================================
-    // INJECT NÚT PHÁT KHI MỞ CHI TIẾT PHIM
+    // INJECT NÚT PHÁT VÀO TRANG CHI TIẾT
     // ==========================================
     function injectPlayButtons(object, data) {
-        var card = data.movie || data;
+        var card = (data && data.movie) ? data.movie : (object && object.card);
         if (!card || card.source !== SOURCE_NAME) return;
 
         var slug = card.kkphim_slug || card.id;
         if (!slug) return;
 
-        // Chờ DOM của trang full sẵn sàng
         setTimeout(function () {
+            // Tránh inject 2 lần
+            if ($('.kkp-play-wrap').length) return;
+
             var network = new Lampa.Reguest();
             network.silent(BASE_URL + '/phim/' + slug, function (res) {
                 var episodes = res.episodes || [];
                 if (!episodes.length) return;
 
-                // Tạo container chứa các nút tập phim
-                var $wrap = $('<div class="kkp-play-wrap" style="padding:0.5em 1.5em;"></div>');
+                var $wrap = $('<div class="kkp-play-wrap" style="padding:0.5em 1.5em 1em;"></div>');
 
                 episodes.forEach(function (server) {
-                    var $serverTitle = $('<div style="font-size:0.85em;opacity:0.6;margin:0.5em 0 0.3em;">' + (server.server_name || 'Server') + '</div>');
-                    $wrap.append($serverTitle);
-
-                    var $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.5em;"></div>');
+                    var $serverLabel = $('<div style="font-size:0.8em;opacity:0.5;margin:0.6em 0 0.3em;">' + (server.server_name || 'Server') + '</div>');
+                    $wrap.append($serverLabel);
 
                     var playlist = (server.server_data || []).map(function (ep) {
                         return {
                             url:   ep.link_m3u8 || ep.link_embed || '',
-                            title: (card.title || card.name || '') + ' - ' + (ep.name || ep.slug),
+                            title: (card.title || '') + ' - ' + (ep.name || ep.slug),
                         };
                     });
+
+                    var $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;"></div>');
 
                     (server.server_data || []).forEach(function (ep, idx) {
                         var link = ep.link_m3u8 || ep.link_embed || '';
                         if (!link) return;
 
-                        var $btn = $('<div class="selector" style="padding:5px 12px;background:rgba(255,255,255,0.12);border-radius:4px;font-size:13px;cursor:pointer;">' + (ep.name || ('Tập ' + (idx + 1))) + '</div>');
+                        var $btn = $('<div class="selector" style="padding:5px 14px;background:rgba(255,255,255,0.12);border-radius:4px;font-size:13px;cursor:pointer;">' + (ep.name || ('Tập ' + (idx + 1))) + '</div>');
 
                         $btn.on('hover:enter click', function () {
                             Lampa.Player.play({
                                 url:    link,
-                                title:  (card.title || card.name || '') + ' - ' + (ep.name || ep.slug),
+                                title:  (card.title || '') + ' - ' + (ep.name || ep.slug),
                                 poster: card.img || card.poster || '',
                             });
                             Lampa.Player.playlist(playlist, idx);
@@ -201,15 +218,15 @@
                     $wrap.append($row);
                 });
 
-                // Inject vào trang full — thêm sau phần mô tả
-                var $target = $('.full-descr,.full-start__buttons,.full-info').first();
+                // Inject vào đúng vị trí trong trang full
+                var $target = $('.full-descr').first();
                 if ($target.length) {
                     $target.after($wrap);
                 } else {
-                    $('.full-start, .full-page').first().append($wrap);
+                    $('.full-start').first().append($wrap);
                 }
             });
-        }, 300);
+        }, 500);
     }
 
     // ==========================================
@@ -221,10 +238,10 @@
 
         Lampa.Api.sources[SOURCE_NAME] = new KKPhimApi();
 
-        // Lắng nghe khi mở chi tiết phim
+        // Hook vào trang chi tiết phim
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
-                injectPlayButtons(e.object, e.data || {});
+                injectPlayButtons(e.object, e.data);
             }
         });
 
