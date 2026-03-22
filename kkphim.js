@@ -11,6 +11,26 @@
              + '</svg>';
 
     // =====================================================================
+    // INJECT CSS - An badge TV cua Lampa
+    // =====================================================================
+    function injectCSS() {
+        var style = document.getElementById('kkp-style');
+        if (style) return;
+        style = document.createElement('style');
+        style.id = 'kkp-style';
+        // An tat ca badge/label type tren card cua Lampa
+        style.textContent = [
+            '.card__type { display: none !important; }',
+            '.card-label--type { display: none !important; }',
+            '.card__label--tv { display: none !important; }',
+            '.item__type { display: none !important; }',
+            // An scrollbar ngang cho similar row
+            '.kkp-similar-row::-webkit-scrollbar { display: none; }',
+        ].join('\n');
+        document.head.appendChild(style);
+    }
+
+    // =====================================================================
     // HELPERS
     // =====================================================================
 
@@ -19,14 +39,24 @@
         return (url.indexOf('http') === 0) ? url : IMG_URL + url;
     }
 
+    // Chuyen mang category/country thanh [{id, name, slug}]
+    // KKPhim co 2 format:
+    //   list API: [{id: 15, name: "Kinh Di", slug: "kinh-di"}]
+    //   full API: [{id: "kinh-di", name: "Kinh Di"}]  <- id la slug luon
     function toNameArray(arr) {
         if (!arr || !arr.length) return [];
         return arr.map(function (item) {
-            if (typeof item === 'string') return { id: item, slug: item, name: item };
-            // KKPhim: id la so, slug la string dung lam URL the-loai
+            if (typeof item === 'string') {
+                return { id: item, slug: item, name: item };
+            }
+            // Neu id la string -> chinh la slug
+            // Neu id la so -> dung truong slug
+            var slug = (typeof item.id === 'string' && isNaN(item.id))
+                       ? item.id
+                       : (item.slug || '');
             return {
-                id:   item.slug || String(item.id || ''),
-                slug: item.slug || '',
+                id:   slug || String(item.id || ''),
+                slug: slug,
                 name: item.name || '',
             };
         });
@@ -36,7 +66,6 @@
         if (!item) return {};
         var poster = getPoster(item.poster_url);
         var thumb  = getPoster(item.thumb_url || item.poster_url);
-        var kkType = item.type || '';
         var genres = toNameArray(item.category || []);
 
         return {
@@ -59,11 +88,14 @@
             production_companies: [],
             production_countries: [],
             spoken_languages:     [],
+            // Set ca 2 de Lampa khong hien badge TV o bat ky cho nao
             type:                 'movie',
             media_type:           'movie',
             source:               SOURCE_NAME,
             kkphim_slug:          item.slug || '',
-            kkphim_type:          kkType,
+            kkphim_type:          item.type || '',
+            // Luu raw categories de dung cho similar
+            kkphim_cats:          item.category || [],
         };
     }
 
@@ -72,26 +104,13 @@
     // =====================================================================
 
     var CATEGORIES = [
-        { url: '/danh-sach/phim-moi-cap-nhat', title: 'Phim moi cap nhat' },
-        { url: '/v1/api/danh-sach/phim-le',    title: 'Phim le'           },
-        { url: '/v1/api/danh-sach/phim-bo',    title: 'Phim bo'           },
-        { url: '/v1/api/danh-sach/hoat-hinh',  title: 'Hoat hinh'         },
-        { url: '/v1/api/danh-sach/tv-shows',   title: 'TV Shows'          },
+        { url: '/danh-sach/phim-moi-cap-nhat', title: 'Phim m\u1EDBi c\u1EADp nh\u1EADt' },
+        { url: '/v1/api/danh-sach/phim-le',    title: 'Phim l\u1EBB'                      },
+        { url: '/v1/api/danh-sach/phim-bo',    title: 'Phim b\u1ED9'                      },
+        { url: '/v1/api/danh-sach/hoat-hinh',  title: 'Ho\u1EA1t h\u00ECnh'               },
+        { url: '/v1/api/danh-sach/tv-shows',   title: 'TV Shows'                          },
     ];
 
-    var CAT_TITLES = {
-        '/danh-sach/phim-moi-cap-nhat': 'Phim m\u1EDBi c\u1EADp nh\u1EADt',
-        '/v1/api/danh-sach/phim-le':    'Phim l\u1EBB',
-        '/v1/api/danh-sach/phim-bo':    'Phim b\u1ED9',
-        '/v1/api/danh-sach/hoat-hinh':  'Ho\u1EA1t h\u00ECnh',
-        '/v1/api/danh-sach/tv-shows':   'TV Shows',
-    };
-
-    function getCatTitle(url) {
-        return CAT_TITLES[url] || url;
-    }
-
-    // Fetch 1 trang, tu nhan biet format legacy / v1
     function fetchPage(catUrl, page, onOk, onFail) {
         var net = new Lampa.Reguest();
         var sep = (catUrl.indexOf('?') >= 0) ? '&' : '?';
@@ -108,7 +127,7 @@
                     totalPages = (pag && pag.totalPages) || 1;
                     totalItems = (pag && pag.totalItems) || items.length;
                 }
-            } catch (e) {}
+            } catch (e) { console.warn('[KKPhim] fetchPage error:', e); }
             onOk({ items: items, page: page, totalPages: totalPages, totalItems: totalItems });
         }, onFail || function () {});
     }
@@ -125,12 +144,7 @@
             var page   = params.page   || 1;
             var catUrl = params.cat_url || '/danh-sach/phim-moi-cap-nhat';
             fetchPage(catUrl, page, function (res) {
-                onComplete({
-                    results:       res.items,
-                    page:          res.page,
-                    total_pages:   res.totalPages,
-                    total_results: res.totalItems,
-                });
+                onComplete({ results: res.items, page: res.page, total_pages: res.totalPages, total_results: res.totalItems });
             }, onError);
         };
 
@@ -138,18 +152,10 @@
             var parts = CATEGORIES.map(function (cat) {
                 return function (cb) {
                     fetchPage(cat.url, 1, function (res) {
-                        cb({
-                            title:         getCatTitle(cat.url),
-                            results:       res.items,
-                            url:           cat.url,
-                            cat_url:       cat.url,
-                            page:          1,
-                            total_pages:   res.totalPages,
-                            total_results: res.totalItems,
-                            source:        SOURCE_NAME,
-                        });
+                        cb({ title: cat.title, results: res.items, url: cat.url, cat_url: cat.url,
+                             page: 1, total_pages: res.totalPages, total_results: res.totalItems, source: SOURCE_NAME });
                     }, function () {
-                        cb({ title: getCatTitle(cat.url), results: [], url: cat.url, cat_url: cat.url });
+                        cb({ title: cat.title, results: [], url: cat.url, cat_url: cat.url });
                     });
                 };
             });
@@ -171,17 +177,13 @@
                         return {
                             episode_number: ei + 1,
                             season_number:  si + 1,
-                            name:           ep.name || ('Tap ' + (ei + 1)),
+                            name:           ep.name || ('T\u1EADp ' + (ei + 1)),
                             air_date:       '',
                             link_m3u8:      ep.link_m3u8  || '',
                             link_embed:     ep.link_embed || '',
                         };
                     });
-                    seasons.push({
-                        season_number: si + 1,
-                        name:          server.server_name || ('Server ' + (si + 1)),
-                        episodes:      eps,
-                    });
+                    seasons.push({ season_number: si + 1, name: server.server_name || ('Server ' + (si + 1)), episodes: eps });
                 });
 
                 var result               = normalizeItem(movie);
@@ -197,8 +199,7 @@
         self.search = function (params, onComplete, onError) {
             var q = encodeURIComponent(params.query || '');
             self.network.silent(BASE_URL + '/v1/api/tim-kiem?keyword=' + q, function (data) {
-                var items = (data.data && data.data.items)
-                            ? data.data.items.map(normalizeItem) : [];
+                var items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : [];
                 onComplete({ results: items, page: 1, total_pages: 1, total_results: items.length });
             }, onError);
         };
@@ -230,10 +231,10 @@
         var loading    = false;
 
         var $html = $(
-            '<div class="kkp-list-wrap">' +
+            '<div class="kkp-list-wrap" style="min-height:100vh;">' +
             '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:1em 1.5em;"></div>' +
-            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">&#272;ang t&#7843;i...</span></div>' +
-            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">&#8212; &#272;&#227; t&#7843;i h&#7871;t phim &#8212;</span></div>' +
+            '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">\u0110ang t\u1EA3i...</span></div>' +
+            '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">\u2014 \u0110\u00E3 t\u1EA3i h\u1EBFt phim \u2014</span></div>' +
             '</div>'
         );
 
@@ -247,7 +248,7 @@
             var $card  = $(
                 '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
                 '<div style="position:relative;padding-top:150%;background:#111;">' +
-                '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"/>' +
+                '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
                 '<div style="padding:6px 8px;">' +
                 '<div style="font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (item.title || '') + '</div>' +
@@ -279,7 +280,7 @@
         function onScroll() {
             var el = $html.parent()[0];
             if (!el) return;
-            if ((el.scrollTop + el.clientHeight) >= (el.scrollHeight - 400)) {
+            if ((el.scrollTop + el.clientHeight) >= (el.scrollHeight - 500)) {
                 if (!loading && curPage < totalPages) {
                     curPage++;
                     loadPage(curPage);
@@ -287,6 +288,7 @@
             }
         }
 
+        // Lampa goi 'start', khong phai 'create'
         this.start = function () {
             loadPage(1);
             setTimeout(function () {
@@ -301,14 +303,16 @@
         this.header  = function () { return catTitle; };
         this.pause   = function () {};
         this.resume  = function () {};
+        this.stop    = function () {};
         this.destroy = function () {
             $(window).off('scroll.kkplist');
             $('.activity__body, .layer__scroll, .app__content').off('scroll.kkplist');
+            $html.remove();
         };
     }
 
     // =====================================================================
-    // INJECT: NUT XEM THEM TREN CATEGORY
+    // INJECT: NUT XEM THEM
     // =====================================================================
 
     function injectViewMore() {
@@ -322,25 +326,14 @@
                     var $head = $(this);
                     if ($head.find('.kkp-more-btn').length) return;
 
-                    var headText = $head.text().replace(/[›>].*/g, '').trim();
+                    var headText = $head.text().replace(/\s*[›>].*/g, '').trim();
                     var cfg = null;
-                    CATEGORIES.forEach(function (c) {
-                        if (getCatTitle(c.url) === headText) cfg = c;
-                    });
+                    CATEGORIES.forEach(function (c) { if (c.title === headText) cfg = c; });
                     if (!cfg) return;
 
-                    var $btn = $(
-                        '<span class="kkp-more-btn selector" style="font-size:12px;opacity:.65;cursor:pointer;margin-left:10px;padding:2px 10px;border:1px solid rgba(255,255,255,.3);border-radius:20px;vertical-align:middle;">' +
-                        'Xem th\u00EAm \u203A</span>'
-                    );
+                    var $btn = $('<span class="kkp-more-btn selector" style="font-size:12px;opacity:.65;cursor:pointer;margin-left:10px;padding:2px 10px;border:1px solid rgba(255,255,255,.3);border-radius:20px;vertical-align:middle;">Xem th\u00EAm \u203A</span>');
                     $btn.on('hover:enter click', function () {
-                        Lampa.Activity.push({
-                            title:     getCatTitle(cfg.url),
-                            component: 'kkphim_list',
-                            cat_url:   cfg.url,
-                            source:    SOURCE_NAME,
-                            page:      1,
-                        });
+                        Lampa.Activity.push({ title: cfg.title, component: 'kkphim_list', cat_url: cfg.url, source: SOURCE_NAME, page: 1 });
                     });
                     $head.append($btn);
                 });
@@ -352,29 +345,30 @@
     // INJECT: NUT TAP PHIM
     // =====================================================================
 
-    function injectPlayButtons(object, data) {
-        var card = (data && data.movie) ? data.movie : (object && object.card);
+    function injectPlayButtons(card) {
         if (!card || card.source !== SOURCE_NAME) return;
         var slug = card.kkphim_slug || card.id;
         if (!slug) return;
 
         setTimeout(function () {
-            if ($('.kkp-play-wrap').length) return; // da inject roi
+            // Tranh inject 2 lan
+            if ($('.kkp-play-wrap[data-slug="' + slug + '"]').length) return;
 
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/phim/' + slug, function (res) {
                 var eps = res.episodes || [];
                 if (!eps.length) return;
 
-                var $wrap = $('<div class="kkp-play-wrap" style="padding:.5em 1.5em 1em;"></div>');
+                // Xoa wrap cu neu co (truong hop navigate)
+                $('.kkp-play-wrap').remove();
+
+                var $wrap = $('<div class="kkp-play-wrap" data-slug="' + slug + '" style="padding:.5em 1.5em 1em;"></div>');
 
                 eps.forEach(function (server) {
                     $wrap.append('<div style="font-size:.8em;opacity:.5;margin:.6em 0 .3em;">' + (server.server_name || 'Server') + '</div>');
-
                     var playlist = (server.server_data || []).map(function (ep) {
                         return { url: ep.link_m3u8 || ep.link_embed || '', title: (card.title || '') + ' - ' + (ep.name || '') };
                     });
-
                     var $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;"></div>');
                     (server.server_data || []).forEach(function (ep, idx) {
                         var link = ep.link_m3u8 || ep.link_embed || '';
@@ -403,22 +397,44 @@
     // INJECT: PHIM LIEN QUAN
     // =====================================================================
 
-    var _similarInjected = false;
+    function getGenreSlug(card) {
+        // Thu tu uu tien: kkphim_cats raw -> genres da normalize
+        var cats = card.kkphim_cats || [];
+        if (cats.length) {
+            var cat = cats[0];
+            if (typeof cat === 'object') {
+                // id co the la slug string hoac so
+                if (cat.slug) return { slug: cat.slug, name: cat.name || cat.slug };
+                if (typeof cat.id === 'string' && isNaN(cat.id) && cat.id) {
+                    return { slug: cat.id, name: cat.name || cat.id };
+                }
+            }
+        }
+        // Fallback tu genres da normalize
+        var genres = card.genres || [];
+        if (genres.length) {
+            var g = genres[0];
+            var s = g.slug || g.id || '';
+            if (s && isNaN(s)) return { slug: s, name: g.name || s };
+        }
+        return null;
+    }
 
     function injectSimilarMovies(card) {
         if (!card || card.source !== SOURCE_NAME) return;
 
-        var genres    = card.genres || [];
-        var genreItem = genres[0];
-        if (!genreItem) return;
+        var genreInfo = getGenreSlug(card);
+        if (!genreInfo) return;
 
-        var genreSlug = genreItem.slug || genreItem.id || '';
-        var genreName = genreItem.name || genreSlug;
-        if (!genreSlug) return;
+        var genreSlug = genreInfo.slug;
+        var genreName = genreInfo.name;
+        var cardSlug  = card.kkphim_slug || card.id;
 
         setTimeout(function () {
-            if (_similarInjected || $('.kkp-similar-wrap').length) return;
-            _similarInjected = true;
+            // Tranh inject 2 lan cho cung 1 phim
+            if ($('.kkp-similar-wrap[data-slug="' + cardSlug + '"]').length) return;
+            // Xoa wrap cu neu chuyen phim
+            $('.kkp-similar-wrap').remove();
 
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=1', function (data) {
@@ -427,27 +443,21 @@
                     items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : [];
                 } catch (e) { return; }
 
-                items = items.filter(function (i) { return i.id !== card.id; }).slice(0, 20);
+                items = items.filter(function (i) { return i.id !== cardSlug; }).slice(0, 20);
                 if (!items.length) return;
 
                 var $wrap = $(
-                    '<div class="kkp-similar-wrap" style="padding:.5em 0 1.4em;">' +
+                    '<div class="kkp-similar-wrap" data-slug="' + cardSlug + '" style="padding:.5em 0 1.4em;">' +
                     '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 1.5em .7em;">' +
                     '<span style="font-size:1em;font-weight:700;">Phim li\u00EAn quan</span>' +
                     '<span class="kkp-sim-more selector" style="font-size:11px;opacity:.55;cursor:pointer;padding:2px 10px;border:1px solid rgba(255,255,255,.25);border-radius:20px;">Xem th\u00EAm \u203A</span>' +
                     '</div>' +
-                    '<div class="kkp-similar-row" style="display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:0 1.5em .5em;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>' +
+                    '<div class="kkp-similar-row" style="display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:0 1.5em .5em;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>' +
                     '</div>'
                 );
 
                 $wrap.find('.kkp-sim-more').on('hover:enter click', function () {
-                    Lampa.Activity.push({
-                        title:     'Th\u1EC3 lo\u1EA1i: ' + genreName,
-                        component: 'kkphim_list',
-                        cat_url:   '/v1/api/the-loai/' + genreSlug,
-                        source:    SOURCE_NAME,
-                        page:      1,
-                    });
+                    Lampa.Activity.push({ title: 'Th\u1EC3 lo\u1EA1i: ' + genreName, component: 'kkphim_list', cat_url: '/v1/api/the-loai/' + genreSlug, source: SOURCE_NAME, page: 1 });
                 });
 
                 var $row = $wrap.find('.kkp-similar-row');
@@ -455,15 +465,16 @@
                     var poster = item.img || item.poster || '';
                     var year   = item.release_date ? item.release_date.slice(0, 4) : '';
                     var $c = $(
-                        '<div class="kkp-sim-card selector" style="flex:0 0 110px;width:110px;scroll-snap-align:start;cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
+                        '<div class="kkp-sim-card selector" style="flex:0 0 110px;width:110px;flex-shrink:0;cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
                         '<div style="position:relative;padding-top:150%;background:#111;">' +
-                        '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"/>' +
+                        '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                         '</div>' +
                         '<div style="padding:5px 6px;">' +
                         '<div style="font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                         '<div style="font-size:10px;opacity:.45;margin-top:2px;">' + year + '</div>' +
                         '</div></div>'
                     );
+                    // Closure an toan
                     $c.on('hover:enter click', (function (it) {
                         return function () {
                             Lampa.Activity.push({ component: 'full', id: it.id, source: SOURCE_NAME, card: it });
@@ -472,12 +483,19 @@
                     $row.append($c);
                 });
 
-                var $after = $('.kkp-play-wrap').last();
-                if (!$after.length) $after = $('.full-descr').first();
-                if ($after.length) $after.after($wrap);
-                else $('.full-start').first().append($wrap);
+                // Inject sau play buttons hoac sau full-descr
+                // Doi 200ms de play buttons kip inject truoc
+                setTimeout(function () {
+                    var $after = $('.kkp-play-wrap[data-slug="' + cardSlug + '"]');
+                    if (!$after.length) $after = $('.full-descr').first();
+                    if ($after.length) {
+                        $after.after($wrap);
+                    } else {
+                        $('.full-start').first().append($wrap);
+                    }
+                }, 200);
             });
-        }, 800);
+        }, 700);
     }
 
     // =====================================================================
@@ -488,14 +506,16 @@
         if (window.kkphim_started) return;
         window.kkphim_started = true;
 
+        // Inject CSS an badge TV
+        injectCSS();
+
         Lampa.Api.sources[SOURCE_NAME] = new KKPhimApi();
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') { _similarInjected = false; return; }
             if (e.type !== 'complite') return;
-            injectPlayButtons(e.object, e.data);
             var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
+            injectPlayButtons(card);
             injectSimilarMovies(card);
         });
 
@@ -504,8 +524,7 @@
         var $item = $(
             '<li data-action="' + SOURCE_NAME + '" class="menu__item selector">' +
             '<div class="menu__ico">' + ICON + '</div>' +
-            '<div class="menu__text">' + CAT_NAME + '</div>' +
-            '</li>'
+            '<div class="menu__text">' + CAT_NAME + '</div></li>'
         );
         $item.on('hover:enter', function () {
             Lampa.Activity.push({ title: CAT_NAME, component: 'category', source: SOURCE_NAME, page: 1 });
