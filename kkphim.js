@@ -11,6 +11,79 @@
              + '</svg>';
 
     // =====================================================================
+    // TMDB CONFIG
+    // =====================================================================
+    var TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
+    var TMDB_BASE  = 'https://api.themoviedb.org/3';
+    var TMDB_IMG   = 'https://image.tmdb.org/t/p/';
+
+    // Fetch TMDB va merge vao result (chi dung cho trang chi tiet)
+    function enrichWithTMDB(result, tmdbId, kkType, onDone) {
+        if (!tmdbId) { onDone(result); return; }
+
+        // phim-le = movie, con lai = tv
+        var mediaType = (kkType === 'single') ? 'movie' : 'tv';
+        var url = TMDB_BASE + '/' + mediaType + '/' + tmdbId
+                + '?language=vi-VN&append_to_response=credits';
+
+        $.ajax({
+            url: url,
+            headers: { 'Authorization': 'Bearer ' + TMDB_TOKEN },
+            success: function (t) {
+            try {
+                // Poster & backdrop tu TMDB neu dep hon
+                if (t.backdrop_path) {
+                    result.backdrop_path    = t.backdrop_path;
+                    result.background_image = TMDB_IMG + 'original' + t.backdrop_path;
+                }
+                if (t.poster_path) {
+                    result.poster_path = t.poster_path;
+                    // Giu poster KKPhim (tieng Viet), chi lay backdrop TMDB
+                }
+
+                // Rating TMDB
+                if (t.vote_average) {
+                    result.vote_average = Math.round(t.vote_average * 10) / 10;
+                    result.vote_count   = t.vote_count || 0;
+                }
+
+                // Runtime
+                if (t.runtime)         result.runtime  = t.runtime;
+                if (t.episode_run_time) result.runtime  = t.episode_run_time[0] || 0;
+
+                // Cast & crew tu TMDB
+                var credits = t.credits || {};
+                if (credits.cast && credits.cast.length) {
+                    result.actors = credits.cast.slice(0, 10).map(function (a) {
+                        return {
+                            id:            a.id,
+                            name:          a.name,
+                            character:     a.character || '',
+                            profile_path:  a.profile_path || '',
+                        };
+                    });
+                }
+                if (credits.crew && credits.crew.length) {
+                    var directors = credits.crew.filter(function (c) { return c.job === 'Director'; });
+                    if (directors.length) {
+                        result.director = directors.map(function (d) { return d.name; }).join(', ');
+                    }
+                }
+
+                // TMDB id de Lampa su dung
+                result.tmdb    = tmdbId;
+                result.tmdb_id = tmdbId;
+            } catch (e) { console.warn('[KKPhim] TMDB enrich error:', e); }
+            onDone(result);
+            },
+            error: function () {
+                // TMDB that bai -> van dung data KKPhim
+                onDone(result);
+            }
+        });
+    }
+
+    // =====================================================================
     // CSS - An badge TV
     // =====================================================================
     function injectCSS() {
@@ -242,7 +315,13 @@
                 result.number_of_seasons = seasons.length || 1;
                 result.seasons           = seasons;
                 result.kkphim_episodes   = episodes;
-                onComplete({ movie: result });
+
+                // Enrich voi TMDB neu co tmdb_id
+                var tmdbId  = movie.tmdb_id || movie.tmdb || '';
+                var kkType  = movie.type || '';
+                enrichWithTMDB(result, tmdbId, kkType, function (enriched) {
+                    onComplete({ movie: enriched });
+                });
             }, onError);
         };
 
