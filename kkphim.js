@@ -506,7 +506,6 @@
 
         Lampa.Listener.follow('full', function (e) {
             var obj  = e.object || {};
-            // Card co the nam o nhieu cho khac nhau tuy theo type event
             var card = (e.data && e.data.movie)
                        ? e.data.movie
                        : (obj.card || (obj.activity && obj.activity.card));
@@ -514,21 +513,47 @@
 
             var slug = card.kkphim_slug || card.id;
 
-            // Destroy: xoa cache de slug duoc inject lai lan sau
             if (e.type === 'destroy') {
                 delete _injectedMap[slug];
                 delete _epsCache[slug];
                 return;
             }
 
-            // complite: trang chi tiet da render xong
-            if (e.type === 'complite') {
-                // Pre-fetch de play nhanh
-                fetchEpisodes(slug, function () {});
-                // Inject phim lien quan
-                var $ctx = (obj.render) ? obj.render() : $('body');
-                injectSimilarMovies(card, $ctx);
+            if (e.type !== 'complite') return;
+
+            // Pre-fetch episodes
+            fetchEpisodes(slug, function () {});
+
+            // Inject nut KKPhim vao hang button (sau nut Torrent)
+            // Giong cach online_mod lam: e.object.activity.render().find('.view--torrent').after(btn)
+            var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : null);
+            if ($render && !$render.find('.view--kkphim').length) {
+                var $btn = $(
+                    '<div class="full-start__button selector view--kkphim" data-subtitle="KKPhim">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="44" height="44">' +
+                    '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>' +
+                    '<path d="M9.5 8.5L15.5 12L9.5 15.5V8.5Z" fill="currentColor"/>' +
+                    '</svg>' +
+                    '<span>KKPhim</span>' +
+                    '</div>'
+                );
+                $btn.on('hover:enter', function () {
+                    fetchEpisodes(slug, function (episodes) {
+                        if (!episodes || !episodes.length) {
+                            Lampa.Noty.show('Không có link phim');
+                            return;
+                        }
+                        showEpisodeMenu(card, episodes);
+                    });
+                });
+                var $torrent = $render.find('.view--torrent');
+                if ($torrent.length) $torrent.after($btn);
+                else $render.find('.full-start__buttons').append($btn);
             }
+
+            // Inject phim lien quan
+            var $ctx = $render || $('body');
+            injectSimilarMovies(card, $ctx);
         });
 
         // Dang ky nguon KKPhim vao menu Source cua Lampa
