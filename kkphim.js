@@ -1,225 +1,186 @@
 (function () {
     'use strict';
 
-    if (window.kkphim_plugin) return;
-    window.kkphim_plugin = true;
+    var SOURCE_NAME = 'kkphim';
+    var CAT_NAME    = 'KKPhim';
+    var BASE_URL    = 'https://phimapi.com';
+    var IMG_URL     = 'https://phimimg.com/';
 
-    var BASE_URL = 'https://phimapi.com';
-    var IMG_URL  = 'https://phimimg.com/';
+    var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
     function getPoster(url) {
         if (!url) return '';
         return url.indexOf('http') === 0 ? url : IMG_URL + url;
     }
 
-    $('head').append($('<style>' +
-        '.kkp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;width:100%;box-sizing:border-box;}' +
-        '.kkp-card{cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;transition:transform .2s;}' +
-        '.kkp-card.focus,.kkp-card:focus{transform:scale(1.05);outline:2px solid #fff;}' +
-        '.kkp-card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;}' +
-        '.kkp-title{font-size:11px;padding:4px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-        '.kkp-eps{display:flex;flex-wrap:wrap;gap:6px;padding:8px;}' +
-        '.kkp-ep{padding:6px 14px;background:rgba(255,255,255,.1);border-radius:4px;cursor:pointer;font-size:13px;}' +
-        '.kkp-ep.focus,.kkp-ep:focus{background:#fff;color:#000;}' +
-    '</style>'));
+    // Chuyển dữ liệu KKPhim -> định dạng TMDB mà Lampa hiểu
+    function normalizeItem(item) {
+        return {
+            id:              item.slug,
+            title:           item.name,
+            name:            item.name,
+            original_title:  item.origin_name || item.name,
+            original_name:   item.origin_name || item.name,
+            poster_path:     getPoster(item.poster_url),
+            poster:          getPoster(item.poster_url),
+            backdrop_path:   getPoster(item.thumb_url || item.poster_url),
+            release_date:    item.year ? item.year + '-01-01' : '',
+            first_air_date:  item.year ? item.year + '-01-01' : '',
+            vote_average:    0,
+            overview:        '',
+            source:          SOURCE_NAME,
+            kkphim_slug:     item.slug,
+            kkphim_type:     item.type,
+        };
+    }
 
     // ==========================================
-    // COMPONENT - DANH SÁCH PHIM
+    // API SERVICE
     // ==========================================
-    Lampa.Component.add('kkphim_catalog', function () {
-        var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var grid    = $('<div class="kkp-grid"></div>');
+    function KKPhimApi() {
+        var self     = this;
+        self.network = new Lampa.Reguest();
 
-        this.create = function () {
-            // Append grid vào bên trong scroll
-            scroll.append(grid);
-            return scroll.render();
+        // Gọi khi load danh sách / phân trang
+        self.list = function (params, onComplete, onError) {
+            var page = params.page || 1;
+            var url  = BASE_URL + '/danh-sach/phim-moi-cap-nhat?page=' + page;
+
+            self.network.silent(url, function (data) {
+                var items = (data.items || []).map(normalizeItem);
+                onComplete({
+                    results:       items,
+                    page:          page,
+                    total_pages:   data.pagination ? data.pagination.totalPages : 1,
+                    total_results: data.pagination ? data.pagination.totalItems : items.length,
+                });
+            }, onError);
         };
 
-        this.start = function () {
-            this.activity.loader(true);
-            this.load(1);
-        };
+        // Gọi khi vào trang chủ category
+        self.category = function (params, onComplete, onError) {
+            var categories = [
+                { url: '/danh-sach/phim-moi-cap-nhat', title: 'Phim mới cập nhật' },
+                { url: '/v1/api/danh-sach/phim-le',    title: 'Phim lẻ' },
+                { url: '/v1/api/danh-sach/phim-bo',    title: 'Phim bộ' },
+                { url: '/v1/api/danh-sach/hoat-hinh',  title: 'Hoạt hình' },
+                { url: '/v1/api/danh-sach/tv-shows',   title: 'TV Shows' },
+            ];
 
-        this.load = function (p) {
-            var self = this;
-            network.silent(BASE_URL + '/danh-sach/phim-moi-cap-nhat?page=' + p, function (data) {
-                self.activity.loader(false);
-                self.build(data.items || []);
-            }, function () {
-                self.activity.loader(false);
+            var parts = categories.map(function (cat) {
+                return function (callback) {
+                    self.network.silent(BASE_URL + cat.url + '?page=1', function (data) {
+                        var items = [];
+                        if (data.items) {
+                            items = data.items.map(normalizeItem);
+                        } else if (data.data && data.data.items) {
+                            items = data.data.items.map(normalizeItem);
+                        }
+                        callback({
+                            title:         cat.title,
+                            results:       items,
+                            url:           cat.url,
+                            page:          1,
+                            total_pages:   1,
+                            total_results: items.length,
+                            source:        SOURCE_NAME,
+                        });
+                    }, function () {
+                        callback({ title: cat.title, results: [], url: cat.url });
+                    });
+                };
             });
+
+            Lampa.Api.partNext(parts, 2, onComplete, onError);
         };
 
-        this.build = function (movies) {
-            movies.forEach(function (item) {
-                var card = $(
-                    '<div class="kkp-card selector">' +
-                        '<img src="' + getPoster(item.poster_url) + '" loading="lazy"/>' +
-                        '<div class="kkp-title">' + item.name + '</div>' +
-                    '</div>'
-                );
+        // Gọi khi mở chi tiết phim
+        self.full = function (params, onComplete, onError) {
+            var slug = (params.card && params.card.kkphim_slug) || params.card.id;
 
-                card.on('hover:enter click', function () {
-                    Lampa.Activity.push({
-                        url:       BASE_URL + '/phim/' + item.slug,
-                        title:     item.name,
-                        component: 'kkphim_detail',
-                        slug:      item.slug,
-                        poster:    getPoster(item.thumb_url || item.poster_url),
+            self.network.silent(BASE_URL + '/phim/' + slug, function (data) {
+                var movie    = data.movie    || {};
+                var episodes = data.episodes || [];
+
+                var seasons = [];
+                episodes.forEach(function (server, si) {
+                    var eps = (server.server_data || []).map(function (ep, ei) {
+                        return {
+                            episode_number: ei + 1,
+                            season_number:  si + 1,
+                            name:           ep.name || ('Tập ' + (ei + 1)),
+                            air_date:       '',
+                            link_m3u8:      ep.link_m3u8  || '',
+                            link_embed:     ep.link_embed || '',
+                        };
+                    });
+                    seasons.push({
+                        season_number: si + 1,
+                        name:          server.server_name || ('Server ' + (si + 1)),
+                        episodes:      eps,
                     });
                 });
 
-                grid.append(card);
-            });
+                var result = normalizeItem(movie);
+                result.overview          = movie.content || '';
+                result.number_of_seasons = seasons.length;
+                result.seasons           = seasons;
+                result.kkphim_episodes   = episodes;
 
-            // Thông báo scroll biết có nội dung mới
-            scroll.update();
+                onComplete({ movie: result });
+            }, onError);
         };
 
-        this.render  = function () { return scroll.render(); };
-        this.pause   = function () {};
-        this.resume  = function () {};
-        this.stop    = function () { network.clear(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
-    });
-
-    // ==========================================
-    // COMPONENT - CHI TIẾT PHIM
-    // ==========================================
-    Lampa.Component.add('kkphim_detail', function () {
-        var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-
-        this.create = function () {
-            return scroll.render();
+        // Tìm kiếm phim
+        self.search = function (params, onComplete, onError) {
+            var query = params.query || '';
+            self.network.silent(BASE_URL + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(query), function (data) {
+                var items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : [];
+                onComplete({ results: items, page: 1, total_pages: 1, total_results: items.length });
+            }, onError);
         };
 
-        this.start = function () {
-            var self = this;
-            var slug = this.activity.slug;
-            this.activity.loader(true);
-
-            network.silent(BASE_URL + '/phim/' + slug, function (data) {
-                self.activity.loader(false);
-                self.build(data);
-            }, function () {
-                self.activity.loader(false);
-            });
+        self.person  = function (p, ok, err) { err('not supported'); };
+        self.seasons = function (params, onComplete, onError) {
+            var card = params.card;
+            if (card && card.seasons) onComplete({ seasons: card.seasons });
+            else onError('no seasons');
         };
-
-        this.build = function (data) {
-            var movie    = data.movie    || {};
-            var episodes = data.episodes || [];
-            var poster   = getPoster(movie.thumb_url || movie.poster_url);
-
-            // Header thông tin phim
-            var header = $(
-                '<div style="display:flex;gap:12px;padding:12px;">' +
-                    '<img src="' + poster + '" style="width:90px;border-radius:6px;flex-shrink:0;" />' +
-                    '<div style="overflow:hidden;">' +
-                        '<div style="font-size:15px;font-weight:bold;margin-bottom:4px;">' + movie.name + '</div>' +
-                        '<div style="font-size:12px;opacity:.6;">' + (movie.origin_name || '') + '</div>' +
-                        '<div style="font-size:12px;opacity:.6;margin-top:4px;">' + (movie.year || '') + (movie.time ? ' • ' + movie.time : '') + '</div>' +
-                        '<div style="font-size:11px;opacity:.5;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">' + (movie.content || '') + '</div>' +
-                    '</div>' +
-                '</div>'
-            );
-            scroll.append(header);
-
-            // Danh sách tập
-            episodes.forEach(function (server) {
-                var label = $('<div style="padding:4px 12px 2px;font-weight:bold;opacity:.8;">' + server.server_name + '</div>');
-                scroll.append(label);
-
-                var epsRow = $('<div class="kkp-eps"></div>');
-
-                (server.server_data || []).forEach(function (ep) {
-                    var link = ep.link_m3u8 || ep.link_embed || '';
-                    var btn  = $('<div class="kkp-ep selector">' + (ep.name || ep.slug) + '</div>');
-
-                    btn.on('hover:enter click', function () {
-                        if (!link) return;
-
-                        // API player đúng của Lampa
-                        var playlist = (server.server_data || []).map(function (e) {
-                            return {
-                                url:   e.link_m3u8 || e.link_embed || '',
-                                title: movie.name + ' - ' + (e.name || e.slug),
-                            };
-                        });
-
-                        var startIndex = (server.server_data || []).indexOf(ep);
-
-                        Lampa.Player.play({
-                            url:    link,
-                            title:  movie.name + ' - ' + (ep.name || ep.slug),
-                            poster: poster,
-                        });
-
-                        Lampa.Player.playlist(playlist, startIndex);
-                    });
-
-                    epsRow.append(btn);
-                });
-
-                scroll.append(epsRow);
-            });
-
-            scroll.update();
-        };
-
-        this.render  = function () { return scroll.render(); };
-        this.pause   = function () {};
-        this.resume  = function () {};
-        this.stop    = function () { network.clear(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
-    });
+        self.clear = function () { self.network.clear(); };
+    }
 
     // ==========================================
-    // INJECT VÀO MENU
+    // KHỞI ĐỘNG
     // ==========================================
-    function addMenuItem() {
-        if ($('.menu__item[data-component="kkphim_catalog"]').length) return;
+    function startPlugin() {
+        if (window.kkphim_plugin) return;
+        window.kkphim_plugin = true;
 
-        var item = $(
-            '<li class="menu__item selector" data-component="kkphim_catalog">' +
-            '<div class="menu__ico">' +
-            '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-            '<path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
-            '</svg></div>' +
-            '<div class="menu__text">KKPhim</div>' +
-            '</li>'
-        );
+        Lampa.Api.sources[SOURCE_NAME] = new KKPhimApi();
 
-        item.on('hover:enter click', function () {
+        var menuItem = $('<li data-action="' + SOURCE_NAME + '" class="menu__item selector">' +
+            '<div class="menu__ico">' + ICON + '</div>' +
+            '<div class="menu__text">' + CAT_NAME + '</div>' +
+            '</li>');
+
+        menuItem.on('hover:enter', function () {
             Lampa.Activity.push({
-                url:       '',
-                title:     'KKPhim',
-                component: 'kkphim_catalog',
+                title:     CAT_NAME,
+                component: 'category',
+                source:    SOURCE_NAME,
                 page:      1,
             });
         });
 
-        $('.menu .menu__list').first().append(item);
+        $('.menu .menu__list').eq(0).append(menuItem);
     }
 
-    function init() {
-        var tries = 0;
-        var timer = setInterval(function () {
-            tries++;
-            if ($('.menu .menu__list').length) {
-                clearInterval(timer);
-                addMenuItem();
-            }
-            if (tries > 20) clearInterval(timer);
-        }, 500);
+    if (window.appready) {
+        startPlugin();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') startPlugin();
+        });
     }
-
-    if (window.appready) init();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') init();
-    });
 
 })();
