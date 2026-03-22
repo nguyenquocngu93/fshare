@@ -522,23 +522,19 @@
 
         var $wrap = $('<div class="kkp-cast-wrap" style="padding:0 1.5em 1em;"></div>');
 
-        // DAO DIEN
+        // DAO DIEN - layout giong dien vien (hang ngang, anh tron)
         if (directors.length) {
             $wrap.append('<div style="font-size:.8em;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin:1em 0 .6em;">Đạo diễn</div>');
-            var $drow = $('<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:.8em;"></div>');
+            var $drow = $('<div style="display:flex;gap:18px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>');
             directors.forEach(function (d) {
                 var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
-                var $item = $('<div class="selector" style="display:flex;align-items:center;gap:14px;padding:10px 0;"></div>');
+                var $item = $('<div class="selector" style="flex:0 0 100px;text-align:center;"></div>');
                 $item.append(img
-                    ? '<img src="' + img + '" style="width:70px;height:70px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#222;"/>'
-                    : '<div style="width:70px;height:70px;border-radius:50%;background:#333;flex-shrink:0;"></div>'
+                    ? '<img src="' + img + '" style="width:86px;height:86px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 7px;background:#222;"/>'
+                    : '<div style="width:86px;height:86px;border-radius:50%;background:#333;margin:0 auto 7px;"></div>'
                 );
-                $item.append(
-                    '<div>' +
-                    '<div style="font-size:14px;font-weight:500;">' + (d.name || '') + '</div>' +
-                    '<div style="font-size:12px;opacity:.45;margin-top:2px;">Director</div>' +
-                    '</div>'
-                );
+                $item.append('<div style="font-size:11px;line-height:1.3;">' + (d.name || '') + '</div>');
+                $item.append('<div style="font-size:10px;opacity:.4;margin-top:2px;">Director</div>');
                 $drow.append($item);
             });
             $wrap.append($drow);
@@ -617,7 +613,7 @@
 
                     var $wrap = $(
                         '<div class="kkp-similar-wrap" data-slug="' + cardSlug + '" style="padding:.5em 0 1.4em;">' +
-                        '<div style="padding:0 1.5em .7em;"><span style="font-size:1em;font-weight:700;">Phim li\u00EAn quan</span></div>' +
+                        '<div style="padding:0 1.5em 1.2em;"><span style="font-size:1.15em;font-weight:700;">Phim li\u00EAn quan</span></div>' +
                         '<div class="kkp-similar-row" style="display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:0 1.5em .5em;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>' +
                         '</div>'
                     );
