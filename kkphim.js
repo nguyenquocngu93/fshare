@@ -265,19 +265,21 @@
             }
         };
 
-        // Lampa goi self.stream khi bam nut play tren trang chi tiet
+        // Lampa goi self.stream khi bam nut play
+        // Goi onError de huy flow cua Lampa (tranh hien man Torrents)
+        // Va tu xu ly hien menu chon tap
         self.stream = function (params, onComplete, onError) {
             var card = params.card || {};
             var slug = card.kkphim_slug || card.id;
             if (!slug) { if (onError) onError('no stream'); return; }
 
             fetchEpisodes(slug, function (episodes) {
-                if (!episodes.length) { if (onError) onError('no episodes'); return; }
-                // Tra ve object de Lampa biet la co stream
-                // Sau do ta tu xu ly hien menu
-                showEpisodeMenu(card, episodes);
-                // Lampa can goi onComplete de khong hien loi
-                onComplete({ url: '', title: card.title || '' });
+                // Huy flow Lampa truoc
+                if (onError) onError('kkphim handled');
+                // Hien menu chon tap/server
+                if (episodes.length) {
+                    setTimeout(function () { showEpisodeMenu(card, episodes); }, 50);
+                }
             });
         };
 
@@ -522,38 +524,29 @@
 
         Lampa.Listener.follow('full', function (e) {
             var obj  = e.object || {};
-            var card = (e.data && e.data.movie) ? e.data.movie : obj.card;
+            // Card co the nam o nhieu cho khac nhau tuy theo type event
+            var card = (e.data && e.data.movie)
+                       ? e.data.movie
+                       : (obj.card || (obj.activity && obj.activity.card));
             if (!card || card.source !== SOURCE_NAME) return;
 
             var slug = card.kkphim_slug || card.id;
 
+            // Destroy: xoa cache de slug duoc inject lai lan sau
             if (e.type === 'destroy') {
                 delete _injectedMap[slug];
                 delete _epsCache[slug];
                 return;
             }
 
-            if (e.type !== 'complite') return;
-
-            // Pre-fetch episodes ngay khi trang chi tiet load xong
-            fetchEpisodes(slug, function () {});
-
-            // Inject phim lien quan sau khi DOM san sang
-            var $ctx = (obj.render) ? obj.render() : $('body');
-            injectSimilarMovies(card, $ctx);
-        });
-
-        // Lampa fire event 'player' khi chuan bi phat, 'torrent' khi bam nut play
-        // o mot so version. Intercept ca 2 de dam bao bat duoc
-        Lampa.Listener.follow('activity', function (e) {
-            if (e.type !== 'play') return;
-            var obj  = e.object || {};
-            var card = obj.card;
-            if (!card || card.source !== SOURCE_NAME) return;
-            var slug = card.kkphim_slug || card.id;
-            fetchEpisodes(slug, function (episodes) {
-                showEpisodeMenu(card, episodes);
-            });
+            // complite: trang chi tiet da render xong
+            if (e.type === 'complite') {
+                // Pre-fetch de play nhanh
+                fetchEpisodes(slug, function () {});
+                // Inject phim lien quan
+                var $ctx = (obj.render) ? obj.render() : $('body');
+                injectSimilarMovies(card, $ctx);
+            }
         });
 
         injectViewMore();
