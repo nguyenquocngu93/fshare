@@ -520,36 +520,61 @@
         var directors = (credits.crew || []).filter(function (c) { return c.job === 'Director'; });
         if (!cast.length && !directors.length) return;
 
-        var $wrap = $('<div class="kkp-cast-wrap" style="padding:.2em 1.5em 1em;"></div>');
+        var $wrap = $('<div class="kkp-cast-wrap"></div>');
 
+        // --- DIRECTOR: style giong Lampa native crew row ---
         if (directors.length) {
-            $wrap.append('<div style="font-size:.85em;font-weight:700;opacity:.7;margin:.8em 0 .4em;">\u0110\u1EA1o di\u1EC5n</div>');
-            var $drow = $('<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.5em;"></div>');
+            var $section = $(
+                '<div class="full-person">' +
+                '<div class="full-person__title">Đạo diễn</div>' +
+                '<div class="full-person__list"></div>' +
+                '</div>'
+            );
+            var $list = $section.find('.full-person__list');
             directors.forEach(function (d) {
                 var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
-                $drow.append('<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border-radius:6px;padding:6px 10px;">' +
-                    (img ? '<img src="' + img + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;"/>' : '') +
-                    '<span style="font-size:13px;">' + d.name + '</span></div>');
+                var $item = $(
+                    '<div class="full-person__item selector">' +
+                    '<div class="full-person__img">' +
+                    (img
+                        ? '<img src="' + img + '"/>'
+                        : '<div class="full-person__empty"></div>') +
+                    '</div>' +
+                    '<div class="full-person__info">' +
+                    '<div class="full-person__name">' + (d.name || '') + '</div>' +
+                    '<div class="full-person__role">Director</div>' +
+                    '</div></div>'
+                );
+                $list.append($item);
             });
-            $wrap.append($drow);
+            $wrap.append($section);
         }
 
+        // --- CAST: style giong Lampa native actor row ---
         if (cast.length) {
-            $wrap.append('<div style="font-size:.85em;font-weight:700;opacity:.7;margin:.8em 0 .4em;">Di\u1EC5n vi\u00EAn</div>');
-            var $crow = $('<div class="kkp-cast-row" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:.5em;scrollbar-width:none;"></div>');
+            var $section2 = $(
+                '<div class="full-actors">' +
+                '<div class="full-actors__title">Diễn viên</div>' +
+                '<div class="full-actors__list"></div>' +
+                '</div>'
+            );
+            var $list2 = $section2.find('.full-actors__list');
             cast.slice(0, 15).forEach(function (a) {
                 var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
-                $crow.append(
-                    '<div style="flex:0 0 76px;text-align:center;">' +
-                    '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#333;margin:0 auto 4px;">' +
-                    (img ? '<img src="' + img + '" style="width:100%;height:100%;object-fit:cover;"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.3;font-size:20px;">?</div>') +
+                var $item = $(
+                    '<div class="full-actors__item selector">' +
+                    '<div class="full-actors__img">' +
+                    (img
+                        ? '<img src="' + img + '"/>'
+                        : '<div class="full-actors__empty"></div>') +
                     '</div>' +
-                    '<div style="font-size:10px;line-height:1.3;word-break:break-word;">' + (a.name || '') + '</div>' +
-                    (a.character ? '<div style="font-size:9px;opacity:.4;">' + a.character + '</div>' : '') +
+                    '<div class="full-actors__name">' + (a.name || '') + '</div>' +
+                    (a.character ? '<div class="full-actors__character">' + a.character + '</div>' : '') +
                     '</div>'
                 );
+                $list2.append($item);
             });
-            $wrap.append($crow);
+            $wrap.append($section2);
         }
 
         var $target = $ctx.find('.kkp-similar-wrap');
@@ -689,6 +714,14 @@
             }
 
             injectSimilarMovies(card, $ctx);
+
+            // Inject cast/crew tu TMDB vao DOM
+            var info = getTmdbInfo(card);
+            if (info.id) {
+                fetchTMDBDetail(info.id, info.type, function (tmdbData) {
+                    if ($ctx.closest('body').length) injectCastToDOM($ctx, tmdbData);
+                });
+            }
         });
 
         injectViewMore();
