@@ -12,14 +12,17 @@
     // ==========================================
     Lampa.Component.add('kkphim_catalog', function () {
         var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var html    = $('<div class="kkphim-wrap"></div>');
-        var page    = 1;
+        var html    = $('<div class="kkphim-wrap" style="padding:1em;display:flex;flex-wrap:wrap;gap:10px;overflow-y:auto;height:100%;"></div>');
 
-        // Lampa yêu cầu hàm start (không phải create)
+        // Lampa gọi create để lấy DOM
+        this.create = function () {
+            return html;
+        };
+
+        // Lampa gọi start để bắt đầu load dữ liệu
         this.start = function () {
             this.activity.loader(true);
-            this.load(page);
+            this.load(1);
         };
 
         this.load = function (p) {
@@ -31,33 +34,45 @@
                 self.build(data.items || []);
             }, function () {
                 self.activity.loader(false);
+                html.append('<div style="color:red;padding:20px">Không tải được dữ liệu!</div>');
             });
         };
 
         this.build = function (movies) {
             movies.forEach(function (item) {
-                var card = $('<div class="card selector">'
-                    + '<div class="card__img"><img src="' + IMG_URL + item.poster_url + '"/></div>'
-                    + '<div class="card__title">' + item.name + '</div>'
-                    + '</div>');
-                scroll.append(card);
+                var poster = item.poster_url
+                    ? (item.poster_url.indexOf('http') === 0 ? item.poster_url : IMG_URL + item.poster_url)
+                    : '';
+
+                var card = $(
+                    '<div class="card selector" style="width:120px;cursor:pointer;">' +
+                        '<div class="card__img" style="width:120px;height:180px;overflow:hidden;border-radius:6px;">' +
+                            '<img src="' + poster + '" style="width:100%;height:100%;object-fit:cover;" />' +
+                        '</div>' +
+                        '<div class="card__title" style="font-size:12px;margin-top:5px;text-align:center;">' + item.name + '</div>' +
+                    '</div>'
+                );
+
+                html.append(card);
             });
-            html.append(scroll.render());
         };
 
         this.render  = function () { return html; };
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () { network.clear(); };
-        this.destroy = function () { network.clear(); scroll.destroy(); };
+        this.destroy = function () { network.clear(); html.empty(); };
     });
 
     // ==========================================
     // INJECT VÀO MENU
     // ==========================================
     function addMenuItem() {
+        // Tránh thêm 2 lần
+        if ($('.menu__item[data-component="kkphim_catalog"]').length) return;
+
         var item = $([
-            '<li class="menu__item selector" data-action="kkphim_catalog">',
+            '<li class="menu__item selector" data-component="kkphim_catalog">',
             '    <div class="menu__ico">',
             '        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
             '            <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
