@@ -2,17 +2,18 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v2.0.0
+       iJavTorrent Plugin for Lampa  —  v2.1.0
+       Fix: thêm render() method mà Lampa ActivitySlide yêu cầu
     ============================================================ */
 
     var PLUGIN_ID  = 'ijavtorrent';
     var BASE_URL   = 'https://ijavtorrent.com';
-    var PROXY      = '';        // load từ Storage bên dưới
-    var _menuAdded = false;     // chống duplicate menu
+    var PROXY      = '';
+    var _menuAdded = false;
 
 
     /* ============================================================
-       FETCH (dùng Lampa.Reguest để tránh CORS issue)
+       FETCH
     ============================================================ */
     function fetchPage(url, ok, fail) {
         var req = new Lampa.Reguest();
@@ -46,16 +47,16 @@
             var poster = 'https://images.ijavtorrent.com/data/screenshots/' + id + '.jpg';
 
             movies.push({
-                id: parseInt(id) || 0,
-                title: title,
-                original_title: title,
-                overview: '',
-                poster: poster,
-                poster_path: poster,
+                id:              parseInt(id) || 0,
+                title:           title,
+                original_title:  title,
+                overview:        '',
+                poster:          poster,
+                poster_path:     poster,
                 background_path: poster,
-                url: full,
-                type: 'movie',
-                source: PLUGIN_ID
+                url:             full,
+                type:            'movie',
+                source:          PLUGIN_ID
             });
         });
         return movies;
@@ -84,7 +85,6 @@
             if (/Reducing Mosaic|Decen/i.test(dn)) tag = ' [Decen]';
             else if (/uncensored/i.test(dn))        tag = ' [Uncen]';
 
-            // Dung lượng từ cột bên cạnh
             var size = '';
             $(this).closest('tr').find('td').each(function () {
                 var t = $(this).text().trim();
@@ -106,36 +106,46 @@
     }
 
     function buildUrl(obj, page) {
-        var url = BASE_URL + '/';
         if (obj.special === 'mostviewed') return BASE_URL + '/mostviewed';
-        if (obj.tag)   url = BASE_URL + '/tag/' + obj.tag;
-        if (obj.query) { url = BASE_URL + '/'; }
+        var url = BASE_URL + '/';
+        if (obj.tag) url = BASE_URL + '/tag/' + obj.tag;
 
         var p = [];
         if (obj.query)  p.push('search=' + encodeURIComponent(obj.query));
         if (obj.sortby) p.push('sortby=' + obj.sortby);
         if (page > 1)   p.push('page=' + page);
-        return url + (p.length ? '?' + p.join('&') : '');
+        return url + (p.length ? (url.indexOf('?') >= 0 ? '&' : '?') + p.join('&') : '');
     }
 
 
     /* ============================================================
        COMPONENT: CATALOG
+       Lampa gọi: new Component(object) → .render() → DOM element
+                  sau đó gọi .start(), .pause(), .stop(), .destroy()
     ============================================================ */
     function CatalogComponent(object) {
-        var network  = new Lampa.Reguest();
-        var scroll   = new Lampa.Scroll({ mask: true, over: true });
-        var loading  = false;
-        var curPage  = 1;
+        var network = new Lampa.Reguest();
+        var scroll  = new Lampa.Scroll({ mask: true, over: true });
+        var loading = false;
+
+        // ✅ Lampa bắt buộc cần method này
+        this.render = function () {
+            return scroll.render();
+        };
+
+        this.create = function () {
+            loadPage(1);
+        };
 
         function makeCard(movie) {
-            var $card = $('<div class="ijavt-card selector">' +
-                '<div class="ijavt-card__img-wrap">' +
-                '  <img src="' + movie.poster + '" ' +
-                '       onerror="this.style.display=\'none\'" />' +
+            var $card = $(
+                '<div class="ijavt-card selector">' +
+                '<div class="ijavt-card__img">' +
+                '<img src="' + movie.poster + '" onerror="this.style.display=\'none\'" />' +
                 '</div>' +
-                '<div class="ijavt-card__title">' + Lampa.Utils.escapeHtml(movie.title) + '</div>' +
-                '</div>');
+                '<div class="ijavt-card__name">' + Lampa.Utils.escapeHtml(movie.title) + '</div>' +
+                '</div>'
+            );
 
             $card.on('hover:enter click', function () {
                 Lampa.Activity.push({
@@ -145,10 +155,11 @@
                     source:    PLUGIN_ID
                 });
             });
+
             return $card;
         }
 
-        function load(page) {
+        function loadPage(page) {
             if (loading) return;
             loading = true;
 
@@ -167,34 +178,32 @@
                     if (!movies.length && page === 1) {
                         scroll.render().find('.scroll__content').html(
                             '<div style="padding:3em;text-align:center;color:#888">' +
-                            'Không tìm thấy phim nào.<br>Thử bật CORS Proxy nếu dùng trên web.</div>'
+                            'Không tìm thấy phim nào.<br>' +
+                            '<small>Nếu dùng trên web → cài CORS Proxy trong menu.</small>' +
+                            '</div>'
                         );
                         return;
                     }
 
-                    movies.forEach(function (m) { scroll.append(makeCard(m)); });
+                    movies.forEach(function (m) {
+                        scroll.append(makeCard(m));
+                    });
 
                     if (page < maxPage) {
-                        scroll.loadmore(function () { load(page + 1); });
+                        scroll.loadmore(function () { loadPage(page + 1); });
                     }
-
-                    if (page === 1) Lampa.Controller.toggle(PLUGIN_ID);
                 },
                 function () {
                     loading = false;
                     scroll.render().find('.scroll__content').html(
                         '<div style="padding:3em;text-align:center;color:#e74c3c">' +
-                        '❌ Lỗi kết nối ijavtorrent.com<br>' +
-                        '<small>Nếu dùng trên web, hãy vào ⚙️ CORS Proxy để cài đặt.</small></div>'
+                        '❌ Không kết nối được ijavtorrent.com<br>' +
+                        '<small>Vào menu → ⚙️ CORS Proxy → nhập https://corsproxy.io/?</small>' +
+                        '</div>'
                     );
                 }
             );
         }
-
-        this.create = function () {
-            load(1);
-            return scroll.render();
-        };
 
         this.start = function () {
             Lampa.Controller.add(PLUGIN_ID, {
@@ -202,7 +211,10 @@
                     Lampa.Controller.collectionSet(scroll.render());
                     Lampa.Controller.collectionFocus(false, scroll.render());
                 },
-                up:    function () { if (Navigator.canmove('up')) Navigator.move('up'); else Lampa.Controller.toggle('head'); },
+                up:    function () {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
                 down:  function () { Navigator.move('down'); },
                 left:  function () { Navigator.move('left'); },
                 right: function () { Navigator.move('right'); },
@@ -219,15 +231,22 @@
 
 
     /* ============================================================
-       COMPONENT: DETAIL + CHỌN TORRENT
+       COMPONENT: DETAIL
     ============================================================ */
     function DetailComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
         var card    = object.card;
 
+        // ✅ Bắt buộc
+        this.render = function () {
+            return scroll.render();
+        };
+
         this.create = function () {
-            scroll.render().html('<div style="padding:2em;color:#aaa">Đang tải torrent...</div>');
+            scroll.render().find('.scroll__content').html(
+                '<div style="padding:2em;color:#aaa;text-align:center">Đang tải danh sách torrent...</div>'
+            );
 
             network.timeout(15000);
             network.silent(
@@ -237,19 +256,19 @@
                     var magnets = parseMagnets(html);
 
                     if (!magnets.length) {
-                        Lampa.Noty.show('Không tìm thấy torrent');
-                        Lampa.Activity.backward();
+                        Lampa.Noty.show('Không tìm thấy torrent cho phim này');
+                        setTimeout(function () { Lampa.Activity.backward(); }, 1000);
                         return;
                     }
 
+                    // Hiện menu chọn chất lượng
                     Lampa.Select.show({
                         title: card.title,
                         items: magnets.map(function (t) {
                             return { title: t.label, magnet: t.magnet };
                         }),
                         onSelect: function (item) {
-                            // Đẩy magnet thẳng vào Lampa Player
-                            // Lampa sẽ tự dùng TorrServer đã cài trong Settings
+                            // Đẩy magnet vào Lampa Player → Lampa tự dùng TorrServer trong Settings
                             Lampa.Player.play({
                                 title:  card.title,
                                 url:    item.magnet,
@@ -263,11 +282,9 @@
                 },
                 function () {
                     Lampa.Noty.show('Lỗi tải trang phim');
-                    Lampa.Activity.backward();
+                    setTimeout(function () { Lampa.Activity.backward(); }, 1000);
                 }
             );
-
-            return scroll.render();
         };
 
         this.start   = function () {};
@@ -286,11 +303,10 @@
 
 
     /* ============================================================
-       THÊM MENU (CHỈ 1 LẦN)
+       THÊM MENU (chỉ 1 lần)
     ============================================================ */
     function addMenu() {
         if (_menuAdded) return;
-        // Kiểm tra phần tử đã tồn tại chưa
         if ($('[data-id="ijavt-menu"]').length) { _menuAdded = true; return; }
 
         var $nav = $('nav.menu .menu__list, .menu .menu__list').first();
@@ -298,7 +314,8 @@
 
         _menuAdded = true;
 
-        var $item = $('<li class="menu__item selector" data-id="ijavt-menu">' +
+        var $item = $(
+            '<li class="menu__item selector" data-id="ijavt-menu">' +
             '<div class="menu__ico">' +
             '<svg viewBox="0 0 24 24" width="22" height="22" fill="none"' +
             ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -307,19 +324,20 @@
             '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>' +
             '</svg></div>' +
             '<div class="menu__text">iJavTorrent</div>' +
-            '</li>');
+            '</li>'
+        );
 
         $item.on('hover:enter click', showMainMenu);
 
-        // Chèn trước Settings
         var $before = $nav.find('[data-action="settings"]').closest('li');
-        if ($before.length) $before.before($item); else $nav.append($item);
+        if ($before.length) $before.before($item);
+        else $nav.append($item);
     }
 
     Lampa.Listener.follow('app', function (e) {
         if (e.type === 'ready') setTimeout(addMenu, 400);
     });
-    setTimeout(addMenu, 1200); // fallback
+    setTimeout(addMenu, 1200);
 
 
     /* ============================================================
@@ -329,27 +347,27 @@
         Lampa.Select.show({
             title: 'iJavTorrent',
             items: [
-                { title: '🆕 Mới nhất',    data: { tag: '',               sortby: '' } },
-                { title: '📈 Trending',     data: { special: 'mostviewed', sortby: '' } },
-                { title: '⭐ High Rated',    data: { tag: '',               sortby: 'updatedlike' } },
-                { title: '🔞 Uncensored',   data: { tag: 'uncensored-75',  sortby: '' } },
-                { title: '🥽 VR',           data: { tag: 'vr-246',         sortby: '' } },
-                { title: '🔓 Decensored',   data: { tag: 'decensored-1465',sortby: '' } },
-                { title: '🇨🇳 Chinese',     data: { tag: 'chinese-1543',   sortby: '' } },
-                { title: '💧 Leaked',       data: { tag: 'leaked-1457',    sortby: '' } },
-                { title: '🔍 Tìm kiếm',     data: null, type: 'search' },
-                { title: '⚙️  CORS Proxy',  data: null, type: 'proxy' }
+                { title: '🆕 Mới nhất',    tag: '',                sortby: '' },
+                { title: '📈 Trending',     special: 'mostviewed',  sortby: '' },
+                { title: '⭐ High Rated',    tag: '',                sortby: 'updatedlike' },
+                { title: '🔞 Uncensored',   tag: 'uncensored-75',   sortby: '' },
+                { title: '🥽 VR',           tag: 'vr-246',          sortby: '' },
+                { title: '🔓 Decensored',   tag: 'decensored-1465', sortby: '' },
+                { title: '🇨🇳 Chinese',     tag: 'chinese-1543',    sortby: '' },
+                { title: '💧 Leaked',       tag: 'leaked-1457',     sortby: '' },
+                { title: '🔍 Tìm kiếm',     action: 'search' },
+                { title: '⚙️  CORS Proxy',  action: 'proxy' }
             ],
             onSelect: function (item) {
-                if (item.type === 'search') { showSearch(); return; }
-                if (item.type === 'proxy')  { showProxy();  return; }
+                if (item.action === 'search') { showSearch(); return; }
+                if (item.action === 'proxy')  { showProxy();  return; }
                 Lampa.Activity.push({
                     component: PLUGIN_ID,
                     title:     item.title,
                     source:    PLUGIN_ID,
-                    tag:       item.data.tag     || '',
-                    sortby:    item.data.sortby  || '',
-                    special:   item.data.special || ''
+                    tag:       item.tag     || '',
+                    sortby:    item.sortby  || '',
+                    special:   item.special || ''
                 });
             },
             onBack: function () { Lampa.Controller.toggle('menu'); }
@@ -381,13 +399,13 @@
             onEnter: function (val) {
                 PROXY = val.trim();
                 Lampa.Storage.set('ijavt_proxy', PROXY);
-                Lampa.Noty.show('✅ Proxy: ' + (PROXY || 'tắt'));
+                Lampa.Noty.show('✅ Proxy: ' + (PROXY || 'đã tắt'));
             },
             onBack: function () { Lampa.Controller.toggle('menu'); }
         });
     }
 
-    // Khởi tạo proxy từ storage
+    // Load proxy đã lưu
     PROXY = Lampa.Storage.get('ijavt_proxy', '');
 
 
@@ -395,16 +413,27 @@
        CSS
     ============================================================ */
     $('<style>').text([
-        '.ijavt-card { display:inline-block; vertical-align:top;',
-        '  width:150px; margin:6px; cursor:pointer; }',
-        '.ijavt-card__img-wrap { width:150px; height:220px; border-radius:6px;',
-        '  overflow:hidden; background:#111; }',
-        '.ijavt-card__img-wrap img { width:100%; height:100%; object-fit:cover; }',
-        '.ijavt-card__title { font-size:.72em; color:#bbb; margin-top:4px;',
-        '  max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }',
-        '.ijavt-card.focus .ijavt-card__img-wrap { outline:3px solid #e74c3c; }'
-    ].join('')).appendTo('head');
+        '.ijavt-card {',
+        '  display:inline-block; vertical-align:top;',
+        '  width:150px; margin:6px; cursor:pointer;',
+        '}',
+        '.ijavt-card__img {',
+        '  width:150px; height:220px; border-radius:6px;',
+        '  overflow:hidden; background:#111;',
+        '}',
+        '.ijavt-card__img img {',
+        '  width:100%; height:100%; object-fit:cover;',
+        '}',
+        '.ijavt-card__name {',
+        '  font-size:.72em; color:#bbb; margin-top:4px;',
+        '  max-width:150px; white-space:nowrap;',
+        '  overflow:hidden; text-overflow:ellipsis;',
+        '}',
+        '.ijavt-card.focus .ijavt-card__img {',
+        '  outline:3px solid #e74c3c; border-radius:6px;',
+        '}'
+    ].join('\n')).appendTo('head');
 
-    console.log('[iJavTorrent] v2.0.0 loaded');
+    console.log('[iJavTorrent] v2.1.0 loaded');
 
 })();
