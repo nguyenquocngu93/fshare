@@ -8,18 +8,19 @@
     var IMG_URL  = 'https://phimimg.com/';
 
     // ==========================================
-    // COMPONENT
+    // COMPONENT - DANH SÁCH PHIM
     // ==========================================
     Lampa.Component.add('kkphim_catalog', function () {
         var network = new Lampa.Reguest();
-        var html    = $('<div class="kkphim-wrap" style="padding:1em;display:flex;flex-wrap:wrap;gap:10px;overflow-y:auto;height:100%;"></div>');
+        var scroll  = new Lampa.Scroll({ mask: true, over: true });
+        var cards   = new Lampa.Explorer(this);
+        var html    = $('<div></div>');
 
-        // Lampa gọi create để lấy DOM
         this.create = function () {
+            html.append(scroll.render());
             return html;
         };
 
-        // Lampa gọi start để bắt đầu load dữ liệu
         this.start = function () {
             this.activity.loader(true);
             this.load(1);
@@ -34,26 +35,36 @@
                 self.build(data.items || []);
             }, function () {
                 self.activity.loader(false);
-                html.append('<div style="color:red;padding:20px">Không tải được dữ liệu!</div>');
             });
         };
 
         this.build = function (movies) {
+            var self = this;
             movies.forEach(function (item) {
                 var poster = item.poster_url
                     ? (item.poster_url.indexOf('http') === 0 ? item.poster_url : IMG_URL + item.poster_url)
                     : '';
 
-                var card = $(
-                    '<div class="card selector" style="width:120px;cursor:pointer;">' +
-                        '<div class="card__img" style="width:120px;height:180px;overflow:hidden;border-radius:6px;">' +
-                            '<img src="' + poster + '" style="width:100%;height:100%;object-fit:cover;" />' +
-                        '</div>' +
-                        '<div class="card__title" style="font-size:12px;margin-top:5px;text-align:center;">' + item.name + '</div>' +
-                    '</div>'
-                );
+                // Dùng đúng card template của Lampa
+                var card = Lampa.Template.js('card', {
+                    title: item.name,
+                    release_year: item.year || '',
+                    vote_average: '',
+                });
 
-                html.append(card);
+                card.find('img').attr('src', poster);
+
+                // Bấm vào card mở chi tiết
+                card.on('hover:enter', function () {
+                    Lampa.Activity.push({
+                        url:       BASE_URL + '/phim/' + item.slug,
+                        title:     item.name,
+                        component: 'kkphim_detail',
+                        item:      item,
+                    });
+                });
+
+                scroll.append(card);
             });
         };
 
@@ -61,14 +72,81 @@
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () { network.clear(); };
-        this.destroy = function () { network.clear(); html.empty(); };
+        this.destroy = function () { network.clear(); scroll.destroy(); };
+    });
+
+    // ==========================================
+    // COMPONENT - CHI TIẾT PHIM
+    // ==========================================
+    Lampa.Component.add('kkphim_detail', function () {
+        var network = new Lampa.Reguest();
+        var scroll  = new Lampa.Scroll({ mask: true, over: true });
+        var html    = $('<div style="padding:1em;"></div>');
+
+        this.create = function () {
+            html.append(scroll.render());
+            return html;
+        };
+
+        this.start = function () {
+            var self     = this;
+            var item     = this.activity.item;
+            var slug     = item ? item.slug : '';
+            this.activity.loader(true);
+
+            network.silent(BASE_URL + '/phim/' + slug, function (data) {
+                self.activity.loader(false);
+                self.build(data);
+            }, function () {
+                self.activity.loader(false);
+            });
+        };
+
+        this.build = function (data) {
+            var movie    = data.movie || {};
+            var episodes = data.episodes || [];
+
+            // Thông tin phim
+            var info = $(
+                '<div style="margin-bottom:1em;">' +
+                '<h2 style="margin:0 0 .5em">' + movie.name + '</h2>' +
+                '<p style="opacity:.7">' + (movie.content || '') + '</p>' +
+                '</div>'
+            );
+            scroll.append(info);
+
+            // Danh sách tập
+            episodes.forEach(function (server) {
+                var serverTitle = $('<div style="margin:.5em 0;font-weight:bold;">' + server.server_name + '</div>');
+                scroll.append(serverTitle);
+
+                (server.server_data || []).forEach(function (ep) {
+                    var btn = $('<div class="full-start__button selector" style="margin:.3em 0;padding:.5em 1em;background:rgba(255,255,255,.1);border-radius:4px;cursor:pointer;">' + (ep.name || ep.slug) + '</div>');
+
+                    btn.on('hover:enter click', function () {
+                        var link = ep.link_m3u8 || ep.link_embed || '';
+                        if (link) {
+                            Lampa.Player.play({ url: link, title: movie.name + ' - ' + ep.name });
+                            Lampa.Player.playlist([{ url: link, title: ep.name }]);
+                        }
+                    });
+
+                    scroll.append(btn);
+                });
+            });
+        };
+
+        this.render  = function () { return html; };
+        this.pause   = function () {};
+        this.resume  = function () {};
+        this.stop    = function () { network.clear(); };
+        this.destroy = function () { network.clear(); scroll.destroy(); };
     });
 
     // ==========================================
     // INJECT VÀO MENU
     // ==========================================
     function addMenuItem() {
-        // Tránh thêm 2 lần
         if ($('.menu__item[data-component="kkphim_catalog"]').length) return;
 
         var item = $([
@@ -91,18 +169,14 @@
             });
         });
 
-        var menuList = $('.menu .menu__list').first();
-        if (menuList.length) {
-            menuList.append(item);
-        }
+        $('.menu .menu__list').first().append(item);
     }
 
     function init() {
         var tries = 0;
         var timer = setInterval(function () {
             tries++;
-            var menuList = $('.menu .menu__list').first();
-            if (menuList.length) {
+            if ($('.menu .menu__list').length) {
                 clearInterval(timer);
                 addMenuItem();
             }
@@ -110,12 +184,9 @@
         }, 500);
     }
 
-    if (window.appready) {
-        init();
-    } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') init();
-        });
-    }
+    if (window.appready) init();
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') init();
+    });
 
 })();
