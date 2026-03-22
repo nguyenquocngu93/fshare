@@ -458,32 +458,26 @@
         var catUrl   = object.cat_url || '/danh-sach/phim-moi-cap-nhat';
         var catTitle = object.title   || 'KKPhim';
         var curPage  = 1, totalPages = 1, loading = false;
+        var cards    = []; // luu Lampa.Card de destroy
+        var scroll   = new Lampa.Scroll({ mask: true, over: true });
+        var items    = new Lampa.Items();
 
-        // Dung dung class Lampa native de co scroll va layout giong "Phim le"
-        var $html = $(
-            '<div class="items layer--wheell">' +
-            '<div class="items__grid"></div>' +
-            '</div>'
-        );
-        var $grid = $html.find('.items__grid');
+        scroll.body().addClass('layer--grid');
 
         function renderCard(item) {
-            var poster = item.img || item.poster || '';
-            var year   = item.release_date ? item.release_date.slice(0, 4) : '';
-            var $card  = $(
-                '<div class="card selector" style="cursor:pointer;">' +
-                '<div class="card__img">' +
-                '<img src="' + poster + '" loading="lazy" onerror="this.style.opacity=0.2"/>' +
-                '</div>' +
-                '<div class="card__info">' +
-                '<div class="card__title">' + (item.title || '') + '</div>' +
-                '<div class="card__age">' + year + '</div>' +
-                '</div></div>'
-            );
-            $card.on('hover:enter click', function () {
-                Lampa.Activity.push({ component: 'full', id: item.id, source: SOURCE_NAME, card: item });
-            });
-            $grid.append($card);
+            // Dung Lampa.Card native - giong het "Phim le"
+            var card = new Lampa.Card(item);
+            card.create();
+            card.onEnter = function () {
+                Lampa.Activity.push({
+                    component: 'full',
+                    id:        item.id,
+                    source:    SOURCE_NAME,
+                    card:      item,
+                });
+            };
+            cards.push(card);
+            scroll.append(card.render());
         }
 
         function loadPage(page) {
@@ -494,38 +488,32 @@
                 res.items.forEach(renderCard);
                 loading = false;
                 if (curPage >= totalPages) {
-                    $html.append('<div style="text-align:center;padding:1em;opacity:.4;">— Đã tải hết —</div>');
+                    scroll.append($('<div style="padding:2em;text-align:center;opacity:.4;">— Đã tải hết —</div>'));
                 }
             }, function () { loading = false; });
         }
 
-        // Scroll: Lampa cuon trang qua window hoac .layer__scroll
-        function onScroll() {
-            var $scroll = $('.layer__scroll').first();
-            var scrollTop    = $scroll.length ? $scroll.scrollTop()  : $(window).scrollTop();
-            var innerHeight  = $scroll.length ? $scroll.innerHeight() : window.innerHeight;
-            var scrollHeight = $scroll.length ? $scroll[0].scrollHeight : document.body.scrollHeight;
-            if ((scrollTop + innerHeight) >= (scrollHeight - 600)) {
-                if (!loading && curPage < totalPages) { curPage++; loadPage(curPage); }
+        scroll.onEnd(function () {
+            if (!loading && curPage < totalPages) {
+                curPage++;
+                loadPage(curPage);
             }
-        }
+        });
 
         this.create = function () {
             loadPage(1);
-            $(window).on('scroll.kkplist', onScroll);
-            $('.layer__scroll').on('scroll.kkplist', onScroll);
-            return $html;
+            return scroll.render();
         };
         this.start   = function () { return this.create(); };
-        this.render  = function () { return $html; };
+        this.render  = function () { return scroll.render(); };
         this.header  = function () { return catTitle; };
         this.pause   = function () {};
         this.resume  = function () {};
         this.stop    = function () {};
         this.destroy = function () {
-            $(window).off('scroll.kkplist');
-            $('.layer__scroll').off('scroll.kkplist');
-            $html.remove();
+            cards.forEach(function (c) { try { c.destroy(); } catch(e) {} });
+            cards = [];
+            scroll.destroy();
         };
     }
 
