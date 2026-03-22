@@ -2,112 +2,56 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v3.2.0
-       Thử nhiều CORS proxy song song, dùng cái nào thành công trước
+       iJavTorrent Plugin for Lampa  —  v4.0.0
+       Dùng proxy riêng (Cloudflare Worker) để bypass Cloudflare
+       
+       Trước khi dùng:
+       1. Deploy file cf-worker-proxy.js lên Cloudflare Workers (miễn phí)
+       2. Sửa PROXY_URL bên dưới thành URL worker của bạn
+          VD: 'https://ijavt-proxy.yourname.workers.dev'
     ============================================================ */
 
-    var PLUGIN_ID = 'ijavtorrent';
-    var BASE_URL  = 'https://ijavtorrent.com';
+    var PLUGIN_ID  = 'ijavtorrent';
+    var BASE_URL   = 'https://ijavtorrent.com';
 
-    // Proxy nào hoạt động sẽ được lưu lại dùng cho lần sau
-    var _workingProxy = null;
-
-    // Danh sách proxy thử lần lượt
-    var PROXIES = [
-        // allorigins - trả về JSON { contents: "html..." }
-        {
-            build: function (url) {
-                return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-            },
-            extract: function (responseText) {
-                try {
-                    var j = JSON.parse(responseText);
-                    return j.contents || '';
-                } catch (e) { return ''; }
-            }
-        },
-        // codetabs - trả thẳng HTML
-        {
-            build: function (url) {
-                return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url);
-            },
-            extract: function (responseText) { return responseText; }
-        },
-        // corsproxy.io - trả thẳng HTML
-        {
-            build: function (url) {
-                return 'https://corsproxy.io/?' + encodeURIComponent(url);
-            },
-            extract: function (responseText) { return responseText; }
-        },
-        // thingproxy - trả thẳng HTML
-        {
-            build: function (url) {
-                return 'https://thingproxy.freeboard.io/fetch/' + url;
-            },
-            extract: function (responseText) { return responseText; }
-        }
-    ];
+    // ↓↓↓ ĐIỀN URL CLOUDFLARE WORKER CỦA BẠN VÀO ĐÂY ↓↓↓
+    var PROXY_URL  = Lampa.Storage.get('ijavt_proxy_url', '');
+    // ↑↑↑ Hoặc vào menu iJavTorrent → ⚙️ Cài đặt Proxy để nhập ↑↑↑
 
 
     /* ============================================================
-       FETCH - thử proxy đang hoạt động trước, nếu fail thử tiếp
+       FETCH qua proxy
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        // Nếu đã biết proxy nào hoạt động → dùng luôn
-        if (_workingProxy !== null) {
-            xhrFetch(_workingProxy, url, ok, function () {
-                // Proxy cũ fail → reset và thử lại từ đầu
-                _workingProxy = null;
-                tryProxies(url, 0, ok, fail);
-            });
-            return;
-        }
-        tryProxies(url, 0, ok, fail);
-    }
-
-    function tryProxies(url, index, ok, fail) {
-        if (index >= PROXIES.length) {
-            if (fail) fail('Tất cả ' + PROXIES.length + ' proxy đều lỗi');
+        if (!PROXY_URL) {
+            if (fail) fail('Chưa cài Proxy URL. Vào menu → ⚙️ Cài đặt Proxy');
             return;
         }
 
-        xhrFetch(PROXIES[index], url,
-            function (html) {
-                _workingProxy = PROXIES[index]; // nhớ proxy đang hoạt động
-                ok(html);
-            },
-            function () {
-                // Thử proxy tiếp theo
-                tryProxies(url, index + 1, ok, fail);
-            }
-        );
-    }
+        var proxyReq = PROXY_URL.replace(/\/$/, '') + '?url=' + encodeURIComponent(url);
 
-    function xhrFetch(proxy, url, ok, fail) {
-        var proxyUrl = proxy.build(url);
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', proxyUrl, true);
-        xhr.timeout = 15000;
+        xhr.open('GET', proxyReq, true);
+        xhr.timeout = 20000;
+        xhr.setRequestHeader('Accept', 'text/html');
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
             if (xhr.status >= 200 && xhr.status < 400) {
-                var html = proxy.extract(xhr.responseText || '');
-                if (html && html.length > 200) {
+                var html = xhr.responseText || '';
+                if (html.length > 200) {
                     ok(html);
                 } else {
-                    fail('Response quá ngắn: ' + (html || '').length + ' chars');
+                    if (fail) fail('Response quá ngắn (' + html.length + ' chars)');
                 }
             } else {
-                fail('HTTP ' + xhr.status);
+                if (fail) fail('HTTP ' + xhr.status);
             }
         };
+        xhr.ontimeout = function () { if (fail) fail('Timeout 20s'); };
+        xhr.onerror   = function () { if (fail) fail('Network error'); };
 
-        xhr.ontimeout = function () { fail('Timeout'); };
-        xhr.onerror   = function () { fail('XHR error'); };
-
-        try { xhr.send(); } catch (e) { fail(e.message); }
+        try { xhr.send(); } catch (e) { if (fail) fail(e.message); }
     }
 
 
@@ -212,6 +156,10 @@
         this.render = function () { return scroll.render(); };
         this.create = function () { loadPage(1); };
 
+        function setHtml(msg) {
+            scroll.render().find('.scroll__content').html(msg);
+        }
+
         function makeCard(movie) {
             var $card = $(
                 '<div class="ijavt-card selector">' +
@@ -237,9 +185,22 @@
             loading = true;
 
             if (page === 1) {
-                scroll.render().find('.scroll__content').html(
-                    '<div style="padding:3em;text-align:center;color:#aaa">Đang thử kết nối...<br><small style="opacity:.5">Đang thử ' + PROXIES.length + ' proxy</small></div>'
+                setHtml('<div style="padding:3em;text-align:center;color:#aaa">Đang tải...</div>');
+            }
+
+            // Nếu chưa cài proxy → nhắc ngay
+            if (!PROXY_URL) {
+                loading = false;
+                setHtml(
+                    '<div style="padding:2em;text-align:center;color:#e74c3c;line-height:2;font-size:.9em">' +
+                    '⚠️ Chưa cài Proxy URL<br>' +
+                    '<span style="color:#aaa;font-size:.85em">' +
+                    'Vào menu ☰ → iJavTorrent → ⚙️ Cài đặt Proxy<br>' +
+                    'Sau đó deploy file <b>cf-worker-proxy.js</b> lên<br>' +
+                    '<a style="color:#3498db">workers.cloudflare.com</a> (miễn phí)</span>' +
+                    '</div>'
                 );
+                return;
             }
 
             fetchPage(buildUrl(object, page),
@@ -249,26 +210,31 @@
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        var preview = (html || '').slice(0, 200).replace(/[<>]/g, function (c) { return c === '<' ? '&lt;' : '&gt;'; });
-                        scroll.render().find('.scroll__content').html(
+                        var preview = (html || '').slice(0, 300).replace(/[<>]/g, function (c) {
+                            return c === '<' ? '&lt;' : '&gt;';
+                        });
+                        setHtml(
                             '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all">' +
-                            '<b style="color:#e74c3c">Kết nối OK nhưng không parse được.<br>Preview:</b><br>' + preview + '</div>'
+                            '<b style="color:#e74c3c">Kết nối OK nhưng không parse được.<br>Preview:</b><br>' +
+                            preview + '</div>'
                         );
                         return;
                     }
 
-                    if (page === 1) scroll.render().find('.scroll__content').html('');
+                    if (page === 1) setHtml('');
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
                     if (page < maxPage) {
                         scroll.loadmore(function () { loadPage(page + 1); });
                     }
                 },
-                function (errMsg) {
+                function (err) {
                     loading = false;
-                    scroll.render().find('.scroll__content').html(
+                    setHtml(
                         '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:2">' +
-                        '❌ ' + (errMsg || 'Lỗi không xác định') + '</div>'
+                        '❌ ' + (err || 'Lỗi không xác định') +
+                        '<br><span style="color:#aaa;font-size:.85em">Kiểm tra lại Proxy URL trong Cài đặt</span>' +
+                        '</div>'
                     );
                 }
             );
@@ -401,10 +367,12 @@
                 { title: '🔓 Decensored', tag: 'decensored-1465' },
                 { title: '🇨🇳 Chinese',   tag: 'chinese-1543' },
                 { title: '💧 Leaked',     tag: 'leaked-1457' },
-                { title: '🔍 Tìm kiếm',   action: 'search' }
+                { title: '🔍 Tìm kiếm',   action: 'search' },
+                { title: '⚙️  Cài đặt Proxy', action: 'proxy' }
             ],
             onSelect: function (item) {
                 if (item.action === 'search') { showSearch(); return; }
+                if (item.action === 'proxy')  { showProxySetting(); return; }
                 Lampa.Activity.push({
                     component: PLUGIN_ID,
                     title:     item.title,
@@ -416,6 +384,59 @@
             },
             onBack: function () { Lampa.Controller.toggle('menu'); }
         });
+    }
+
+    function showProxySetting() {
+        // Hiển thị dialog nhập URL bằng Lampa.Modal
+        var current = Lampa.Storage.get('ijavt_proxy_url', '');
+
+        var $html = $(
+            '<div style="padding:1.5em">' +
+            '<p style="color:#aaa;margin-bottom:12px;font-size:.9em">' +
+            'Nhập URL Cloudflare Worker của bạn:<br>' +
+            '<span style="font-size:.8em;color:#666">VD: https://ijavt.yourname.workers.dev</span>' +
+            '</p>' +
+            '<input id="ijavt-proxy-input" type="text"' +
+            ' value="' + (current || '') + '"' +
+            ' style="width:100%;padding:10px;background:rgba(255,255,255,.1);' +
+            'color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;' +
+            'font-size:.95em;box-sizing:border-box;outline:none" />' +
+            '<div style="margin-top:14px;display:flex;gap:10px">' +
+            '<button id="ijavt-proxy-save" class="selector"' +
+            ' style="flex:1;padding:10px;background:#27ae60;color:#fff;' +
+            'border:none;border-radius:6px;font-size:.95em;cursor:pointer">💾 Lưu</button>' +
+            '<button id="ijavt-proxy-cancel" class="selector"' +
+            ' style="flex:1;padding:10px;background:rgba(255,255,255,.1);color:#fff;' +
+            'border:none;border-radius:6px;font-size:.95em;cursor:pointer">✖ Huỷ</button>' +
+            '</div>' +
+            '</div>'
+        );
+
+        Lampa.Modal.open({
+            title:  '⚙️ Cài đặt Proxy URL',
+            html:   $html,
+            onBack: function () {
+                Lampa.Modal.close();
+                Lampa.Controller.toggle('menu');
+            }
+        });
+
+        setTimeout(function () {
+            var $input = $('#ijavt-proxy-input');
+            $input.focus();
+
+            $('#ijavt-proxy-save').on('hover:enter click', function () {
+                var val = ($input.val() || '').trim().replace(/\/$/, '');
+                PROXY_URL = val;
+                Lampa.Storage.set('ijavt_proxy_url', val);
+                Lampa.Modal.close();
+                Lampa.Noty.show(val ? '✅ Đã lưu Proxy!' : '🗑 Đã xoá Proxy');
+            });
+
+            $('#ijavt-proxy-cancel').on('hover:enter click', function () {
+                Lampa.Modal.close();
+            });
+        }, 200);
     }
 
     function showSearch() {
@@ -472,6 +493,6 @@
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v3.2.0 loaded');
+    console.log('[iJavTorrent] v4.0.0 loaded');
 
 })();
