@@ -379,7 +379,9 @@
                 var kkType   = (typeof tmdbObj === 'object' && tmdbObj.type)
                                ? tmdbObj.type
                                : (movie.type === 'single' ? 'movie' : 'tv');
-                var searchTitle = movie.origin_name || movie.name || '';
+                // Chi dung origin_name (ten goc tieng Anh/quoc te) de search
+                // Khong dung name tieng Viet vi de match sai phim
+                var searchTitle = movie.origin_name || '';
                 var searchYear  = movie.year ? String(movie.year) : '';
                 enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, function (enriched) {
                     onComplete({ movie: enriched });
