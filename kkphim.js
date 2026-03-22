@@ -658,15 +658,18 @@
                 '<div class="selector" style="padding:6px 16px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);">' +
                 (g.name || '') + '</div>'
             );
-            $tag.on('hover:enter click', function () {
-                Lampa.Activity.push({
-                    title:     g.name || slug,
-                    component: 'kkphim_list',
-                    cat_url:   '/v1/api/the-loai/' + slug,
-                    source:    SOURCE_NAME,
-                    page:      1,
-                });
-            });
+            $tag.on('hover:enter click', (function(gName, gSlug) {
+                return function () {
+                    Lampa.Activity.push({
+                        title:     gName,
+                        component: 'items',
+                        url:       '/v1/api/the-loai/' + gSlug,
+                        cat_url:   '/v1/api/the-loai/' + gSlug,
+                        source:    SOURCE_NAME,
+                        page:      1,
+                    });
+                };
+            })(g.name || slug, slug));
             $row.append($tag);
         });
 
