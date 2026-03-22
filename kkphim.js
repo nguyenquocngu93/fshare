@@ -304,51 +304,83 @@
     // =====================================================================
     // INJECT: NUT TAP PHIM
     // =====================================================================
-    // $ctx: container cua trang full hien tai (de tranh truy van sai trang cu)
-    function injectPlayButtons(card, $ctx) {
-        if (!card || card.source !== SOURCE_NAME) return;
-        var slug = card.kkphim_slug || card.id;
-        if (!slug) return;
+    // Cache episodes theo slug de khoi fetch lai khi bam nut play
+    var _epsCache = {};
 
-        setTimeout(function () {
-            // Chi inject vao dung container hien tai
-            if ($ctx.find('.kkp-play-wrap').length) return;
+    function fetchEpisodes(slug, callback) {
+        if (_epsCache[slug]) { callback(_epsCache[slug]); return; }
+        var net = new Lampa.Reguest();
+        net.silent(BASE_URL + '/phim/' + slug, function (res) {
+            _epsCache[slug] = res.episodes || [];
+            callback(_epsCache[slug]);
+        }, function () { callback([]); });
+    }
 
-            var net = new Lampa.Reguest();
-            net.silent(BASE_URL + '/phim/' + slug, function (res) {
-                var eps = res.episodes || [];
-                if (!eps.length) return;
-                // Kiem tra lai container con ton tai khong (user co the da back)
-                if (!$ctx.closest('body').length) return;
+    // Hien menu chon server -> tap bang Lampa.Select
+    function showEpisodeMenu(card, episodes) {
+        var title  = card.title || '';
+        var poster = card.img   || card.poster || '';
 
-                var $wrap = $('<div class="kkp-play-wrap" data-slug="' + slug + '" style="padding:.5em 1.5em 1em;"></div>');
-                eps.forEach(function (server) {
-                    $wrap.append('<div style="font-size:.8em;opacity:.5;margin:.6em 0 .3em;">' + (server.server_name || 'Server') + '</div>');
-                    var playlist = (server.server_data || []).map(function (ep) {
-                        return { url: ep.link_m3u8 || ep.link_embed || '', title: (card.title || '') + ' - ' + (ep.name || '') };
-                    });
-                    var $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;"></div>');
-                    (server.server_data || []).forEach(function (ep, idx) {
-                        var link = ep.link_m3u8 || ep.link_embed || '';
-                        if (!link) return;
-                        var label = ep.name || ('T\u1EADp ' + (idx + 1));
-                        var $btn = $('<div class="selector" style="padding:5px 14px;background:rgba(255,255,255,.12);border-radius:4px;font-size:13px;cursor:pointer;">' + label + '</div>');
-                        $btn.on('hover:enter click', (function (l, t, pl, i) {
-                            return function () {
-                                Lampa.Player.play({ url: l, title: t, poster: card.img || card.poster || '' });
-                                Lampa.Player.playlist(pl, i);
-                            };
-                        })(link, (card.title || '') + ' - ' + (ep.name || ''), playlist, idx));
-                        $row.append($btn);
-                    });
-                    $wrap.append($row);
-                });
+        if (!episodes.length) return;
 
-                var $t = $ctx.find('.full-descr');
-                if ($t.length) $t.after($wrap);
-                else $ctx.find('.full-start').append($wrap);
-            });
-        }, 500);
+        // Neu chi co 1 server va 1 tap -> phat luon
+        if (episodes.length === 1 && (episodes[0].server_data || []).length === 1) {
+            var ep   = episodes[0].server_data[0];
+            var link = ep.link_m3u8 || ep.link_embed || '';
+            if (link) Lampa.Player.play({ url: link, title: title, poster: poster });
+            return;
+        }
+
+        // Neu chi co 1 server va nhieu tap -> hien menu tap luon
+        if (episodes.length === 1) {
+            showEpList(card, episodes[0]);
+            return;
+        }
+
+        // Nhieu server -> hien menu chon server truoc
+        var serverItems = episodes.map(function (srv, si) {
+            return { title: srv.server_name || ('Server ' + (si + 1)), index: si };
+        });
+
+        Lampa.Select.show({
+            title:    'Chọn server',
+            items:    serverItems,
+            onSelect: function (item) {
+                showEpList(card, episodes[item.index]);
+            },
+        });
+    }
+
+    function showEpList(card, server) {
+        var title  = card.title || '';
+        var poster = card.img   || card.poster || '';
+        var data   = server.server_data || [];
+
+        // Neu chi co 1 tap -> phat luon
+        if (data.length === 1) {
+            var link = data[0].link_m3u8 || data[0].link_embed || '';
+            if (link) Lampa.Player.play({ url: link, title: title + ' - ' + (data[0].name || ''), poster: poster });
+            return;
+        }
+
+        var playlist = data.map(function (ep) {
+            return { url: ep.link_m3u8 || ep.link_embed || '', title: title + ' - ' + (ep.name || '') };
+        });
+
+        var epItems = data.map(function (ep, idx) {
+            return { title: ep.name || ('Tập ' + (idx + 1)), index: idx };
+        });
+
+        Lampa.Select.show({
+            title:    server.server_name || 'Chọn tập',
+            items:    epItems,
+            onSelect: function (item) {
+                var link = data[item.index].link_m3u8 || data[item.index].link_embed || '';
+                if (!link) return;
+                Lampa.Player.play({ url: link, title: title + ' - ' + (data[item.index].name || ''), poster: poster });
+                Lampa.Player.playlist(playlist, item.index);
+            },
+        });
     }
 
     // =====================================================================
@@ -452,9 +484,8 @@
                     // Inject vao dung container hien tai
                     setTimeout(function () {
                         if (!$ctx.closest('body').length) return;
-                        var $after = $ctx.find('.kkp-play-wrap');
-                        if (!$after.length) $after = $ctx.find('.full-descr');
-                        if ($after.length) $after.last().after($wrap);
+                        var $after = $ctx.find('.full-descr');
+                        if ($after.length) $after.after($wrap);
                         else $ctx.find('.full-start').append($wrap);
                     }, 200);
                 });
@@ -474,17 +505,33 @@
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
         Lampa.Listener.follow('full', function (e) {
-            // Reset map khi roi trang full
-            if (e.type === 'destroy') {
-                var destroySlug = e.object && e.object.card && (e.object.card.kkphim_slug || e.object.card.id);
-                if (destroySlug) delete _injectedMap[destroySlug];
+            var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
+            if (!card || card.source !== SOURCE_NAME) return;
+
+            var slug = card.kkphim_slug || card.id;
+
+            // Bam nut phat mac dinh cua Lampa
+            if (e.type === 'play') {
+                fetchEpisodes(slug, function (episodes) {
+                    showEpisodeMenu(card, episodes);
+                });
                 return;
             }
+
+            // Reset cache khi roi trang
+            if (e.type === 'destroy') {
+                delete _injectedMap[slug];
+                delete _epsCache[slug];
+                return;
+            }
+
             if (e.type !== 'complite') return;
-            var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
-            // Lay container cua component hien tai de scope cac selector
+
+            // Pre-fetch episodes de phat nhanh hon khi bam play
+            fetchEpisodes(slug, function () {});
+
+            // Inject phim lien quan
             var $ctx = (e.object && e.object.render) ? e.object.render() : $('body');
-            injectPlayButtons(card, $ctx);
             injectSimilarMovies(card, $ctx);
         });
 
