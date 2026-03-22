@@ -142,7 +142,8 @@
 
         self.list = function (params, onComplete, onError) {
             var page   = params.page   || 1;
-            var catUrl = params.cat_url || '/danh-sach/phim-moi-cap-nhat';
+            // Lampa co the truyen cat_url (custom) hoac url (native more button)
+            var catUrl = params.cat_url || params.url || '/danh-sach/phim-moi-cap-nhat';
             fetchPage(catUrl, page, function (res) {
                 onComplete({ results: res.items, page: res.page, total_pages: res.totalPages, total_results: res.totalItems });
             }, onError);
@@ -152,7 +153,7 @@
             var parts = CATEGORIES.map(function (cat) {
                 return function (cb) {
                     fetchPage(cat.url, 1, function (res) {
-                        cb({ title: cat.title, results: res.items, url: cat.url, cat_url: cat.url,
+                        cb({ title: cat.title, results: res.items, url: cat.url, cat_url: cat.url, source: SOURCE_NAME,
                              page: 1, total_pages: res.totalPages, total_results: res.totalItems, source: SOURCE_NAME });
                     }, function () {
                         cb({ title: cat.title, results: [], url: cat.url, cat_url: cat.url });
