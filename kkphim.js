@@ -49,7 +49,7 @@
             name:                 item.name || '',
             original_title:       item.origin_name || item.name || '',
             original_name:        item.origin_name || item.name || '',
-            img:                  poster,
+            img:                  getPoster(item.thumb_url || item.poster_url),
             poster:               poster,
             poster_path:          '',
             backdrop_path:        '',
@@ -494,7 +494,7 @@
             var $card  = $(
                 '<div class="kkp-card selector" style="cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
                 '<div style="position:relative;padding-top:150%;background:#111;">' +
-                '<img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
+                '<img src="' + poster + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
                 '<div style="padding:6px 8px;">' +
                 '<div style="font-size:13px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
@@ -766,7 +766,7 @@
                         var year   = item.release_date ? item.release_date.slice(0, 4) : '';
                         var $c = $(
                             '<div class="kkp-sim-card selector" style="flex:0 0 110px;width:110px;flex-shrink:0;cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
-                            '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
+                            '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
                             '<div style="padding:5px 6px;"><div style="font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
                             '<div style="font-size:10px;opacity:.45;margin-top:2px;">' + year + '</div></div></div>'
                         );
