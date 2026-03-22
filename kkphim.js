@@ -528,7 +528,7 @@
             var $drow = $('<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:.8em;"></div>');
             directors.forEach(function (d) {
                 var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
-                var $item = $('<div class="selector" style="display:flex;align-items:center;gap:12px;padding:6px 0;"></div>');
+                var $item = $('<div class="selector" style="display:flex;align-items:center;gap:14px;padding:10px 0;"></div>');
                 $item.append(img
                     ? '<img src="' + img + '" style="width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#222;"/>'
                     : '<div style="width:48px;height:48px;border-radius:6px;background:#333;flex-shrink:0;"></div>'
@@ -547,10 +547,10 @@
         // DIEN VIEN
         if (cast.length) {
             $wrap.append('<div style="font-size:.8em;text-transform:uppercase;letter-spacing:.08em;opacity:.5;margin:1em 0 .6em;">Diễn viên</div>');
-            var $crow = $('<div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>');
+            var $crow = $('<div style="display:flex;gap:18px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;"></div>');
             cast.slice(0, 15).forEach(function (a) {
                 var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
-                var $item = $('<div class="selector" style="flex:0 0 70px;text-align:center;"></div>');
+                var $item = $('<div class="selector" style="flex:0 0 86px;text-align:center;"></div>');
                 $item.append(img
                     ? '<img src="' + img + '" style="width:62px;height:62px;border-radius:6px;object-fit:cover;display:block;margin:0 auto 5px;background:#222;"/>'
                     : '<div style="width:62px;height:62px;border-radius:6px;background:#333;margin:0 auto 5px;"></div>'
