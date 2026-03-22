@@ -59,6 +59,7 @@
             production_companies: [],
             production_countries: [],
             spoken_languages:     [],
+            type:                 'movie',
             media_type:           'movie',
             source:               SOURCE_NAME,
             kkphim_slug:          item.slug || '',
@@ -286,7 +287,7 @@
             }
         }
 
-        this.create = function () {
+        this.start = function () {
             loadPage(1);
             setTimeout(function () {
                 var $s = $html.closest('.activity__body, .layer__scroll, .app__content');
@@ -358,7 +359,7 @@
         if (!slug) return;
 
         setTimeout(function () {
-            if ($('.kkp-play-wrap').length) return;
+            if ($('.kkp-play-wrap').length) return; // da inject roi
 
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/phim/' + slug, function (res) {
@@ -402,6 +403,8 @@
     // INJECT: PHIM LIEN QUAN
     // =====================================================================
 
+    var _similarInjected = false;
+
     function injectSimilarMovies(card) {
         if (!card || card.source !== SOURCE_NAME) return;
 
@@ -414,7 +417,8 @@
         if (!genreSlug) return;
 
         setTimeout(function () {
-            if ($('.kkp-similar-wrap').length) return;
+            if (_similarInjected || $('.kkp-similar-wrap').length) return;
+            _similarInjected = true;
 
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/v1/api/the-loai/' + genreSlug + '?page=1', function (data) {
@@ -488,6 +492,7 @@
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
         Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'destroy') { _similarInjected = false; return; }
             if (e.type !== 'complite') return;
             injectPlayButtons(e.object, e.data);
             var card = (e.data && e.data.movie) ? e.data.movie : (e.object && e.object.card);
