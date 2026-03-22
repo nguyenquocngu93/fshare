@@ -90,8 +90,6 @@
     }
 
     function enrichWithTMDB(result, tmdbId, kkType, searchTitle, searchYear, onDone) {
-        if (!tmdbId) { onDone(result); return; }
-
         var mediaType = (kkType === 'single') ? 'movie' : 'tv';
 
         function done(t) {
@@ -101,11 +99,11 @@
 
         if (tmdbId) {
             // Co san tmdb_id -> fetch luon
-            fetchTMDBDetail(tmdbId, mediaType, done);
+            fetchTMDBDetail(String(tmdbId), mediaType, done);
         } else if (searchTitle) {
-            // Khong co tmdb_id -> search bang ten phim
+            // Khong co tmdb_id -> search bang ten goc (origin_name)
             searchTMDB(searchTitle, searchYear, kkType, function (foundId, foundType) {
-                if (foundId) fetchTMDBDetail(foundId, foundType, done);
+                if (foundId) fetchTMDBDetail(String(foundId), foundType, done);
                 else onDone(result);
             });
         } else {
