@@ -2,28 +2,46 @@
     'use strict';
 
     /* ============================================================
-       iJavTorrent Plugin for Lampa  —  v2.2.0
-       Fix: dùng $.ajax thay Lampa.Reguest, bỏ Lampa.Input
+       iJavTorrent Plugin for Lampa  —  v2.3.0
+       Fix CORS: dùng allorigins proxy mặc định
     ============================================================ */
 
-    var PLUGIN_ID  = 'ijavtorrent';
-    var BASE_URL   = 'https://ijavtorrent.com';
+    var PLUGIN_ID = 'ijavtorrent';
+    var BASE_URL  = 'https://ijavtorrent.com';
+
+    // Proxy mặc định - tự động bypass CORS
+    // allorigins trả về JSON: { contents: "<html>..." }
+    var PROXY = 'https://api.allorigins.win/raw?url=';
+
     var _menuAdded = false;
 
 
     /* ============================================================
-       FETCH bằng $.ajax thuần
+       FETCH qua proxy
     ============================================================ */
     function fetchPage(url, ok, fail) {
+        var proxyUrl = PROXY + encodeURIComponent(url);
+
         $.ajax({
-            url:     url,
-            method:  'GET',
-            timeout: 15000,
-            success: function (data) {
-                ok(typeof data === 'string' ? data : $(data).prop('outerHTML') || '');
+            url:      proxyUrl,
+            method:   'GET',
+            dataType: 'text',
+            timeout:  20000,
+            headers:  { 'X-Requested-With': '' }, // bỏ header mặc định jQuery
+            success:  function (data) {
+                ok(typeof data === 'string' ? data : '');
             },
             error: function (xhr, status, err) {
-                if (fail) fail(status + ' ' + err);
+                // Nếu allorigins lỗi thì thử corsproxy.io
+                var fallback = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                $.ajax({
+                    url:      fallback,
+                    method:   'GET',
+                    dataType: 'text',
+                    timeout:  20000,
+                    success:  function (data) { ok(typeof data === 'string' ? data : ''); },
+                    error:    function ()      { if (fail) fail('Cả 2 proxy đều lỗi'); }
+                });
             }
         });
     }
@@ -127,11 +145,9 @@
     function CatalogComponent(object) {
         var scroll  = new Lampa.Scroll({ mask: true, over: true });
         var loading = false;
-        var xhr     = null;
 
-        this.render = function () { return scroll.render(); };
-
-        this.create = function () { loadPage(1); };
+        this.render  = function () { return scroll.render(); };
+        this.create  = function () { loadPage(1); };
 
         function makeCard(movie) {
             var $card = $(
@@ -155,7 +171,7 @@
 
         function showError(msg) {
             scroll.render().find('.scroll__content').html(
-                '<div style="padding:2em;text-align:center;color:#e74c3c;font-size:.9em">' +
+                '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:1.8">' +
                 msg + '</div>'
             );
         }
@@ -164,22 +180,28 @@
             if (loading) return;
             loading = true;
 
+            // Loading indicator
+            if (page === 1) {
+                scroll.render().find('.scroll__content').html(
+                    '<div style="padding:3em;text-align:center;color:#aaa">Đang tải...</div>'
+                );
+            }
+
             var url = buildUrl(object, page);
 
-            if (xhr) xhr.abort();
-            xhr = $.ajax({
-                url:     url,
-                method:  'GET',
-                timeout: 15000,
-                success: function (data) {
+            fetchPage(url,
+                function (html) {
                     loading = false;
-                    var html    = typeof data === 'string' ? data : '';
                     var movies  = parseList(html);
                     var maxPage = parseMaxPage(html);
 
                     if (!movies.length && page === 1) {
-                        showError('Không tìm thấy phim nào 😔');
+                        showError('Không tìm thấy phim nào 😔<br><small>' + url + '</small>');
                         return;
+                    }
+
+                    if (page === 1) {
+                        scroll.render().find('.scroll__content').html('');
                     }
 
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
@@ -188,12 +210,11 @@
                         scroll.loadmore(function () { loadPage(page + 1); });
                     }
                 },
-                error: function (x, status) {
+                function (err) {
                     loading = false;
-                    if (status === 'abort') return;
-                    showError('❌ Không kết nối được ijavtorrent.com<br><small>(lỗi: ' + status + ')</small>');
+                    showError('❌ Lỗi kết nối<br><small>' + (err || 'unknown') + '</small>');
                 }
-            });
+            );
         }
 
         this.start = function () {
@@ -217,7 +238,7 @@
         this.pause   = function () {};
         this.stop    = function () {};
         this.back    = function () { Lampa.Activity.backward(); };
-        this.destroy = function () { if (xhr) xhr.abort(); scroll.destroy(); };
+        this.destroy = function () { scroll.destroy(); };
     }
 
 
@@ -227,7 +248,6 @@
     function DetailComponent(object) {
         var scroll = new Lampa.Scroll({ mask: true, over: true });
         var card   = object.card;
-        var xhr    = null;
 
         this.render = function () { return scroll.render(); };
 
@@ -236,12 +256,8 @@
                 '<div style="padding:2em;color:#aaa;text-align:center">Đang tải torrent...</div>'
             );
 
-            xhr = $.ajax({
-                url:     card.url,
-                method:  'GET',
-                timeout: 15000,
-                success: function (data) {
-                    var html    = typeof data === 'string' ? data : '';
+            fetchPage(card.url,
+                function (html) {
                     var magnets = parseMagnets(html);
 
                     if (!magnets.length) {
@@ -266,18 +282,18 @@
                         onBack: function () { Lampa.Activity.backward(); }
                     });
                 },
-                error: function () {
+                function () {
                     Lampa.Noty.show('Lỗi tải trang phim');
                     setTimeout(function () { Lampa.Activity.backward(); }, 800);
                 }
-            });
+            );
         };
 
         this.start   = function () {};
         this.pause   = function () {};
         this.stop    = function () {};
         this.back    = function () { Lampa.Activity.backward(); };
-        this.destroy = function () { if (xhr) xhr.abort(); scroll.destroy(); };
+        this.destroy = function () { scroll.destroy(); };
     }
 
 
@@ -289,7 +305,7 @@
 
 
     /* ============================================================
-       MENU (chỉ thêm 1 lần)
+       MENU
     ============================================================ */
     function addMenu() {
         if (_menuAdded) return;
@@ -321,27 +337,24 @@
 
 
     /* ============================================================
-       MAIN MENU + TÌM KIẾM (dùng Lampa.Select, không dùng Lampa.Input)
+       MAIN MENU
     ============================================================ */
     function showMainMenu() {
         Lampa.Select.show({
             title: 'iJavTorrent',
             items: [
-                { title: '🆕 Mới nhất',   tag: '',                sortby: '' },
-                { title: '📈 Trending',    special: 'mostviewed' },
-                { title: '⭐ High Rated',   tag: '',                sortby: 'updatedlike' },
-                { title: '🔞 Uncensored',  tag: 'uncensored-75' },
-                { title: '🥽 VR',          tag: 'vr-246' },
-                { title: '🔓 Decensored',  tag: 'decensored-1465' },
-                { title: '🇨🇳 Chinese',    tag: 'chinese-1543' },
-                { title: '💧 Leaked',      tag: 'leaked-1457' },
-                { title: '🔍 Tìm kiếm',    action: 'search' }
+                { title: '🆕 Mới nhất',  tag: '',                sortby: '' },
+                { title: '📈 Trending',   special: 'mostviewed' },
+                { title: '⭐ High Rated',  tag: '',                sortby: 'updatedlike' },
+                { title: '🔞 Uncensored', tag: 'uncensored-75' },
+                { title: '🥽 VR',         tag: 'vr-246' },
+                { title: '🔓 Decensored', tag: 'decensored-1465' },
+                { title: '🇨🇳 Chinese',   tag: 'chinese-1543' },
+                { title: '💧 Leaked',     tag: 'leaked-1457' },
+                { title: '🔍 Tìm kiếm',   action: 'search' }
             ],
             onSelect: function (item) {
-                if (item.action === 'search') {
-                    showSearch();
-                    return;
-                }
+                if (item.action === 'search') { showSearch(); return; }
                 Lampa.Activity.push({
                     component: PLUGIN_ID,
                     title:     item.title,
@@ -355,13 +368,12 @@
         });
     }
 
-    // Tìm kiếm bằng bàn phím ảo có sẵn của Lampa
     function showSearch() {
-        // Thử Lampa.Keyboard trước, nếu không có thì dùng Select với gợi ý
-        if (Lampa.Keyboard) {
+        // Dùng Lampa.Keyboard nếu có, không thì fallback menu
+        if (typeof Lampa.Keyboard !== 'undefined') {
             Lampa.Keyboard.show({
-                title: 'Tìm phim JAV',
-                value: '',
+                title:  'Tìm phim JAV',
+                value:  '',
                 onEnter: function (q) {
                     if (!q) return;
                     Lampa.Activity.push({
@@ -374,18 +386,17 @@
                 onBack: function () { Lampa.Controller.toggle('menu'); }
             });
         } else {
-            // Fallback: chọn các từ khóa phổ biến
             Lampa.Select.show({
-                title: '🔍 Tìm theo thể loại',
+                title: '🔍 Tìm theo từ khoá',
                 items: [
-                    { title: 'Big Tits',    q: 'big+tits' },
-                    { title: 'Creampie',    q: 'creampie' },
-                    { title: 'Married',     q: 'married' },
-                    { title: 'Office Lady', q: 'office+lady' },
-                    { title: 'Uniform',     q: 'uniform' },
-                    { title: 'NTR',         q: 'ntr' },
-                    { title: 'Squirting',   q: 'squirting' },
-                    { title: 'Lesbian',     q: 'lesbian' }
+                    { title: 'Big Tits',     q: 'big tits' },
+                    { title: 'Creampie',     q: 'creampie' },
+                    { title: 'Office Lady',  q: 'office lady' },
+                    { title: 'Married',      q: 'married' },
+                    { title: 'Uniform',      q: 'uniform' },
+                    { title: 'Squirting',    q: 'squirting' },
+                    { title: 'Lesbian',      q: 'lesbian' },
+                    { title: 'NTR / Cuckold',q: 'cuckold' }
                 ],
                 onSelect: function (item) {
                     Lampa.Activity.push({
@@ -408,10 +419,11 @@
         '.ijavt-card{display:inline-block;vertical-align:top;width:150px;margin:6px;cursor:pointer}' +
         '.ijavt-card__img{width:150px;height:220px;border-radius:6px;overflow:hidden;background:#111}' +
         '.ijavt-card__img img{width:100%;height:100%;object-fit:cover}' +
-        '.ijavt-card__name{font-size:.72em;color:#bbb;margin-top:4px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+        '.ijavt-card__name{font-size:.72em;color:#bbb;margin-top:4px;max-width:150px;' +
+        'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
         '.ijavt-card.focus .ijavt-card__img{outline:3px solid #e74c3c}'
     ).appendTo('head');
 
-    console.log('[iJavTorrent] v2.2.0 loaded');
+    console.log('[iJavTorrent] v2.3.0 loaded');
 
 })();
