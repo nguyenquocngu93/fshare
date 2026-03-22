@@ -735,6 +735,7 @@
             }
 
             injectSimilarMovies(card, $ctx);
+            injectGenres(card, $ctx);
 
             // Inject cast/crew + logo tu TMDB vao DOM
             var info = getTmdbInfo(card);
@@ -764,95 +765,7 @@
         injectViewMore();
 
         // Hook Genre: bam vao the loai -> mo danh sach phim theo the loai
-        // Bat tat ca activity tu source KKPhim co component la genre/catalog/category_filter
-        // -> redirect sang kkphim_list
-        Lampa.Listener.follow('activity', function (e) {
-            if (e.type !== 'start') return;
-            var obj = e.object || {};
-            if (obj.source !== SOURCE_NAME) return;
 
-            var redirectComponents = ['genre', 'catalog', 'category_filter', 'items'];
-            if (redirectComponents.indexOf(obj.component) === -1) return;
-
-            // Co the co genre info trong obj
-            var genreName = obj.title || obj.genre || '';
-            var genreId   = obj.genre_id || obj.id || '';
-
-            // Tim slug tu genreId hoac genreName trong CATEGORIES
-            var slug = '';
-            if (genreId && isNaN(genreId)) {
-                slug = genreId;
-            } else if (obj.url) {
-                // url co the la /v1/api/the-loai/slug
-                var m = obj.url.match(/the-loai\/([^?]+)/);
-                if (m) slug = m[1];
-            }
-
-            if (!slug) return;
-
-            // Thay the activity bang kkphim_list
-            setTimeout(function () {
-                Lampa.Activity.replace({
-                    title:     genreName || slug,
-                    component: 'kkphim_list',
-                    cat_url:   '/v1/api/the-loai/' + slug,
-                    source:    SOURCE_NAME,
-                    page:      1,
-                });
-            }, 0);
-        });
-
-        // Luu card hien tai de dung cho genre click
-        var _currentCard = null;
-
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type !== 'complite') return;
-            var obj  = e.object || {};
-            var card = (e.data && e.data.movie) ? e.data.movie : (obj.card || (obj.activity && obj.activity.card));
-            if (!card || card.source !== SOURCE_NAME) return;
-            _currentCard = card;
-        });
-
-        // Dung MutationObserver de bat genre list khi Lampa render popup
-        // Lampa render genre items vao body khi bam "Genre N"
-        var _observer = new MutationObserver(function (mutations) {
-            if (!_currentCard || _currentCard.source !== SOURCE_NAME) return;
-
-            mutations.forEach(function (m) {
-                m.addedNodes.forEach(function (node) {
-                    if (!node.querySelectorAll) return;
-                    // Tim tat ca .selector trong node moi duoc them
-                    var items = node.querySelectorAll('.selector');
-                    items.forEach(function (el) {
-                        var $el = $(el);
-                        if ($el.data('kkp-genre')) return;
-
-                        var txt = $el.text().trim();
-                        var genres = _currentCard.genres || [];
-                        var matched = genres.filter(function (g) {
-                            return g.name === txt;
-                        })[0];
-                        if (!matched) return; // Khong phai genre tag
-
-                        $el.data('kkp-genre', true);
-                        $el.on('hover:enter click', function (ev) {
-                            ev.stopPropagation();
-                            var slug = matched.slug || matched.id || '';
-                            if (!slug || !isNaN(slug)) return;
-                            Lampa.Activity.push({
-                                title:     txt,
-                                component: 'kkphim_list',
-                                cat_url:   '/v1/api/the-loai/' + slug,
-                                source:    SOURCE_NAME,
-                                page:      1,
-                            });
-                        });
-                    });
-                });
-            });
-        });
-
-        _observer.observe(document.body, { childList: true, subtree: true });
 
         var $item = $(
             '<li data-action="' + SOURCE_NAME + '" class="menu__item selector">' +
