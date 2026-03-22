@@ -461,7 +461,7 @@
 
         var $html = $(
             '<div class="kkp-list-wrap" style="min-height:100vh;">' +
-            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding:1em 1.5em;"></div>' +
+            '<div class="kkp-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;"></div>' +
             '<div class="kkp-loader" style="text-align:center;padding:1.5em;display:none;"><span style="opacity:.5;font-size:.9em;">Đang tải...</span></div>' +
             '<div class="kkp-end" style="text-align:center;padding:1em;display:none;"><span style="opacity:.4;font-size:.85em;">— Đã tải hết phim —</span></div>' +
             '</div>'
@@ -662,8 +662,7 @@
                 return function () {
                     Lampa.Activity.push({
                         title:     gName,
-                        component: 'items',
-                        url:       '/v1/api/the-loai/' + gSlug,
+                        component: 'kkphim_list',
                         cat_url:   '/v1/api/the-loai/' + gSlug,
                         source:    SOURCE_NAME,
                         page:      1,
