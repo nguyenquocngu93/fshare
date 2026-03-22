@@ -530,8 +530,8 @@
                 var img = d.profile_path ? TMDB_IMG + 'w185' + d.profile_path : '';
                 var $item = $('<div class="selector" style="display:flex;align-items:center;gap:12px;padding:6px 0;"></div>');
                 $item.append(img
-                    ? '<img src="' + img + '" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#222;"/>'
-                    : '<div style="width:48px;height:48px;border-radius:50%;background:#333;flex-shrink:0;"></div>'
+                    ? '<img src="' + img + '" style="width:48px;height:48px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#222;"/>'
+                    : '<div style="width:48px;height:48px;border-radius:6px;background:#333;flex-shrink:0;"></div>'
                 );
                 $item.append(
                     '<div>' +
@@ -552,8 +552,8 @@
                 var img = a.profile_path ? TMDB_IMG + 'w185' + a.profile_path : '';
                 var $item = $('<div class="selector" style="flex:0 0 70px;text-align:center;"></div>');
                 $item.append(img
-                    ? '<img src="' + img + '" style="width:62px;height:62px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 5px;background:#222;"/>'
-                    : '<div style="width:62px;height:62px;border-radius:50%;background:#333;margin:0 auto 5px;"></div>'
+                    ? '<img src="' + img + '" style="width:62px;height:62px;border-radius:6px;object-fit:cover;display:block;margin:0 auto 5px;background:#222;"/>'
+                    : '<div style="width:62px;height:62px;border-radius:6px;background:#333;margin:0 auto 5px;"></div>'
                 );
                 $item.append('<div style="font-size:11px;line-height:1.3;">' + (a.name || '') + '</div>');
                 if (a.character) $item.append('<div style="font-size:10px;opacity:.4;margin-top:2px;">' + a.character + '</div>');
@@ -700,11 +700,36 @@
 
             injectSimilarMovies(card, $ctx);
 
-            // Inject cast/crew tu TMDB vao DOM
+            // Inject cast/crew + logo tu TMDB vao DOM
             var info = getTmdbInfo(card);
             if (info.id) {
                 fetchTMDBDetail(info.id, info.type, function (tmdbData) {
-                    if ($ctx.closest('body').length) injectCastToDOM($ctx, tmdbData);
+                    if (!$ctx.closest('body').length) return;
+
+                    // Inject cast
+                    injectCastToDOM($ctx, tmdbData);
+
+                    // Inject logo phim
+                    var logos = (tmdbData.images && tmdbData.images.logos) || [];
+                    var logo  = logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] || logos[0];
+                    if (logo && logo.file_path) {
+                        var logoUrl = TMDB_IMG + 'w300' + logo.file_path;
+                        // Lampa hien logo trong .full-start__logo hoac .full__logo
+                        var $logoEl = $ctx.find('.full-start__logo, .full__logo');
+                        if ($logoEl.length) {
+                            $logoEl.html('<img src="' + logoUrl + '" style="max-height:70px;max-width:250px;object-fit:contain;"/>');
+                        } else {
+                            // Neu chua co element thi tao moi inject truoc ten phim
+                            var $title = $ctx.find('.full-start__title, .full__title').first();
+                            if ($title.length) {
+                                $title.before(
+                                    '<div class="full-start__logo" style="margin-bottom:8px;">' +
+                                    '<img src="' + logoUrl + '" style="max-height:70px;max-width:250px;object-fit:contain;"/>' +
+                                    '</div>'
+                                );
+                            }
+                        }
+                    }
                 });
             }
         });
