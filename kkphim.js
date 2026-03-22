@@ -656,32 +656,7 @@
         Lampa.Api.sources[SOURCE_NAME] = new KKPhimApi();
         Lampa.Component.add('kkphim_list', KKPhimListComponent);
 
-        // Override genre component cho source KKPhim
-        // Khi Lampa push activity 'genre' voi source KKPhim -> redirect sang kkphim_list
-        var _origPush = Lampa.Activity.push.bind(Lampa.Activity);
-        Lampa.Activity.push = function (params) {
-            if (params && params.component === 'genre' && params.source === SOURCE_NAME) {
-                var genreName = params.title || params.genre_name || '';
-                var slug      = params.genre_id || params.id || '';
-                // Neu slug la so -> tim trong genres cua card
-                if (slug && isNaN(slug) === false) slug = '';
-                if (!slug && params.card) {
-                    var genres = (params.card.genres || []);
-                    var m = genres.filter(function (g) { return g.name === genreName; })[0];
-                    if (m) slug = m.slug || (isNaN(m.id) ? m.id : '');
-                }
-                if (slug) {
-                    return _origPush({
-                        title:     genreName,
-                        component: 'kkphim_list',
-                        cat_url:   '/v1/api/the-loai/' + slug,
-                        source:    SOURCE_NAME,
-                        page:      1,
-                    });
-                }
-            }
-            return _origPush(params);
-        };
+
 
         Lampa.Listener.follow('full', function (e) {
             var obj  = e.object || {};
@@ -750,56 +725,67 @@
 
         injectViewMore();
 
-        // Hook Genre click: khi user bam vao the loai trong trang chi tiet
-        // Lampa fire event 'full' type='genres' hoac dung listener 'activity' type='genres'
-        Lampa.Listener.follow('genres', function (e) {
-            // e.genre: { id, name } hoac e.object.genre
-            var genre = e.genre || (e.object && e.object.genre) || {};
-            var card  = e.card  || (e.object && e.object.card)  || {};
+        // Hook Genre: bam vao the loai -> mo danh sach phim theo the loai
+        // Bat tat ca activity tu source KKPhim co component la genre/catalog/category_filter
+        // -> redirect sang kkphim_list
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type !== 'start') return;
+            var obj = e.object || {};
+            if (obj.source !== SOURCE_NAME) return;
 
-            // Chi xu ly khi phim tu KKPhim
-            if (card.source !== SOURCE_NAME) return;
+            var redirectComponents = ['genre', 'catalog', 'category_filter', 'items'];
+            if (redirectComponents.indexOf(obj.component) === -1) return;
 
-            var genreName = genre.name || '';
-            // Tim slug tuong ung trong genres cua card
-            var genres = card.genres || [];
-            var matched = genres.filter(function (g) {
-                return g.name === genreName || g.id === genre.id;
-            })[0];
-            var slug = matched ? (matched.slug || matched.id) : '';
-            if (!slug || !isNaN(slug)) return;
+            // Co the co genre info trong obj
+            var genreName = obj.title || obj.genre || '';
+            var genreId   = obj.genre_id || obj.id || '';
 
-            Lampa.Activity.push({
-                title:     genreName,
-                component: 'kkphim_list',
-                cat_url:   '/v1/api/the-loai/' + slug,
-                source:    SOURCE_NAME,
-                page:      1,
-            });
+            // Tim slug tu genreId hoac genreName trong CATEGORIES
+            var slug = '';
+            if (genreId && isNaN(genreId)) {
+                slug = genreId;
+            } else if (obj.url) {
+                // url co the la /v1/api/the-loai/slug
+                var m = obj.url.match(/the-loai\/([^?]+)/);
+                if (m) slug = m[1];
+            }
+
+            if (!slug) return;
+
+            // Thay the activity bang kkphim_list
+            setTimeout(function () {
+                Lampa.Activity.replace({
+                    title:     genreName || slug,
+                    component: 'kkphim_list',
+                    cat_url:   '/v1/api/the-loai/' + slug,
+                    source:    SOURCE_NAME,
+                    page:      1,
+                });
+            }, 0);
         });
 
-        // Hook cho khi Lampa dung component 'category_list' hoac 'genre'
-        // inject vao DOM sau khi render genre list
         Lampa.Listener.follow('full', function (e) {
             if (e.type !== 'complite') return;
             var obj  = e.object || {};
             var card = (e.data && e.data.movie) ? e.data.movie : (obj.card || (obj.activity && obj.activity.card));
             if (!card || card.source !== SOURCE_NAME) return;
 
-            // Doi 1s de Lampa render xong genre list
             setTimeout(function () {
                 var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : $('body'));
-                // Tim cac genre item va gan click handler
-                $render.find('.full-info__tag, .full-start__genre, .tag').each(function () {
+                // Lam moi cac the loai tag
+                $render.find('.full-info__tag, .full-start__genre, .info-tag, .tag').each(function () {
                     var $el = $(this);
-                    if ($el.data('kkp-genre')) return; // da gan roi
+                    if ($el.data('kkp-genre')) return;
                     $el.data('kkp-genre', true);
 
-                    $el.on('hover:enter click', function () {
+                    $el.on('hover:enter click', function (ev) {
+                        ev.stopPropagation();
                         var genreText = $el.text().trim();
                         var genres    = card.genres || [];
-                        var matched   = genres.filter(function (g) { return g.name === genreText; })[0];
-                        var slug      = matched ? (matched.slug || matched.id) : '';
+                        var matched   = genres.filter(function (g) {
+                            return g.name === genreText || g.name.toLowerCase() === genreText.toLowerCase();
+                        })[0];
+                        var slug = matched ? (matched.slug || matched.id) : '';
                         if (!slug || !isNaN(slug)) return;
 
                         Lampa.Activity.push({
@@ -811,7 +797,7 @@
                         });
                     });
                 });
-            }, 800);
+            }, 1000);
         });
 
         var $item = $(
