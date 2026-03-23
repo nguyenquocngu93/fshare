@@ -197,6 +197,19 @@
         });
     }
 
+    /* ---- BUILD STREAM URL ---- */
+    // TorrServer stream URL với tên file trong path
+    // giúp MX Player nhận dạng đúng định dạng video
+    function buildStreamUrl(tsUrl, hash, fileIndex, fileName) {
+        var name = (fileName || 'video.mkv')
+            .split('/').pop()                    // lấy tên file cuối
+            .replace(/[^a-zA-Z0-9.\-_() ]/g, '_'); // sanitize
+        return tsUrl + '/stream/' + encodeURIComponent(name) +
+               '?link=' + encodeURIComponent(hash) +
+               '&index=' + (fileIndex || 0) +
+               '&play';
+    }
+
     /* ---- TORRSERVER PLAY ---- */
     function tsPlay(magnet, hash, fileIdx, title) {
         var tsUrl = getTsUrl();
@@ -217,33 +230,40 @@
                             var useHash = (d && d.hash) || hash;
                             var files   = (d && d.file_stats) || [];
                             var vids    = files.filter(function (f) {
-                                return /\.(mp4|mkv|avi|mov|ts)$/i.test(f.path || '');
+                                return /\.(mp4|mkv|avi|mov|ts|m4v|wmv|flv)$/i.test(f.path || '');
                             });
                             var list = vids.length ? vids : files;
+
                             if (list.length > 1) {
                                 Lampa.Select.show({
                                     title: '📂 Chọn file',
                                     items: list.map(function (f, i) {
-                                        return { title: (f.path || 'File').split('/').pop(),
-                                                 index: f.id !== undefined ? f.id : i };
+                                        var fname = (f.path || 'File ' + i).split('/').pop();
+                                        return { title: fname, index: f.id !== undefined ? f.id : i, fname: fname };
                                     }),
                                     onSelect: function (item) {
-                                        var url = tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + item.index + '&play';
+                                        var url = buildStreamUrl(tsUrl, useHash, item.index, item.fname);
                                         playUrl(url, title);
                                     },
                                     onBack: function () { Lampa.Controller.toggle('full'); }
                                 });
                             } else {
-                                var url = tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + (fileIdx || 0) + '&play';
+                                // 1 file hoặc không có info → dùng tên title làm filename
+                                var fname = list.length === 1
+                                    ? (list[0].path || title + '.mkv').split('/').pop()
+                                    : (title + '.mkv');
+                                var idx = (list.length === 1 && list[0].id !== undefined) ? list[0].id : (fileIdx || 0);
+                                var url = buildStreamUrl(tsUrl, useHash, idx, fname);
                                 playUrl(url, title);
                             }
                         },
                         error: function () {
-                            var url = tsUrl + '/stream?link=' + encodeURIComponent(hash) + '&index=' + (fileIdx || 0) + '&play';
+                            // Fallback: dùng title làm filename
+                            var url = buildStreamUrl(tsUrl, hash, fileIdx || 0, title + '.mkv');
                             playUrl(url, title);
                         }
                     });
-                }, 1500);
+                }, 2000);
             }
         });
     }
