@@ -1,18 +1,18 @@
 (function () {
     'use strict';
 
-    if (window.plugin_torrentio_v7_ready) return;
-    window.plugin_torrentio_v7_ready = true;
+    if (window.plugin_torrentio_v71_ready) return;
+    window.plugin_torrentio_v71_ready = true;
 
     /* ============================================================
-       Torrentio + jac.red + SolidTorrents for Lampa  v7.0
+       Torrentio + jacred.stream for Lampa  v7.1
        Tất cả dùng Lampa.Reguest (bypass CORS trong APK)
     ============================================================ */
 
     // Config: https://torrentio.strem.fun/sort=size|qualityfilter=480p/manifest.json
     var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|qualityfilter=480p/stream';
 
-    var JACRED_URL = 'https://jacred.xyz';
+    var JACRED_URL = 'https://jacred.stream';
     var JACRED_KEY = '';
 
     var SOLID_BASE = 'https://solidtorrents.to';
@@ -168,41 +168,6 @@
         );
     }
 
-    /* ---- SOLIDTORRENTS ---- */
-    function fetchSolid(query, onDone) {
-        var url = SOLID_BASE +
-            '/api/v1/search' +
-            '?q='        + encodeURIComponent(query) +
-            '&category=Video' +
-            '&sort=seeders';
-
-        reguest(url,
-            function (data) {
-                var d = (typeof data === 'string') ? JSON.parse(data) : data;
-                var results = ((d && d.results) || []).map(function (r) {
-                    var hash   = (r.infohash || '').toLowerCase();
-                    var magnet = r.magnet || (hash ? makeMagnet(hash, r.title) : '');
-                    if (!magnet) return null;
-                    var swarm  = r.swarm || {};
-                    return {
-                        title:   r.title   || '',
-                        seeds:   parseInt(swarm.seeders) || parseInt(r.seeders) || 0,
-                        size:    fmtBytes(r.size),
-                        sizeNum: parseInt(r.size) || 0,
-                        tracker: 'SolidTorrents',
-                        hash:    hash,
-                        fileIdx: 0,
-                        magnet:  magnet
-                    };
-                }).filter(Boolean);
-                onDone(results);
-            },
-            function (e) {
-                Lampa.Noty.show('SolidTorrents lỗi: ' + e);
-                onDone([]);
-            }
-        );
-    }
 
     /* ---- SORT ---- */
     function sortResults(arr) {
@@ -292,18 +257,21 @@
         });
     }
 
-    /* ---- TÌM KIẾM GỘP 3 NGUỒN ---- */
+    /* ---- TÌM KIẾM GỘP ---- */
     function doSearch(card, season, episode) {
         var title  = card.title || card.name || '';
         var type   = getMediaType(card);
         var imdbId = getImdbId(card);
         var year   = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query  = title + (year ? ' ' + year : '');
+
+        // Torrentio: tìm bằng IMDB ID (chính xác nhất)
+        // jac.red: tìm bằng tên + năm (title query)
+        var jacQuery = title + (year ? ' ' + year : '');
 
         Lampa.Noty.show('Đang tìm...');
 
         var combined = [];
-        var pending  = 3;
+        var pending  = 2;
 
         function onPart(arr) {
             combined = combined.concat(arr);
@@ -319,28 +287,30 @@
             showResults(combined, title);
         }
 
-        // 1. Torrentio
+        // 1. Torrentio — bằng IMDB ID
+        function runTorrentio(id) {
+            fetchTorrentio(id, type, season, episode, onPart);
+        }
+
         if (imdbId) {
-            fetchTorrentio(imdbId, type, season, episode, onPart);
+            runTorrentio(imdbId);
         } else {
+            // Fetch IMDB ID từ TMDB trước
             var tmdbType = type === 'series' ? 'tv' : 'movie';
             reguest(
                 'https://api.themoviedb.org/3/' + tmdbType + '/' + card.id +
                 '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
                 function (d) {
                     var id = d && d.imdb_id;
-                    if (id) { card.imdb_id = id; fetchTorrentio(id, type, season, episode, onPart); }
-                    else onPart([]);
+                    if (id) { card.imdb_id = id; runTorrentio(id); }
+                    else onPart([]); // Torrentio skip
                 },
                 function () { onPart([]); }
             );
         }
 
-        // 2. jac.red
-        fetchJacred(query, onPart);
-
-        // 3. SolidTorrents
-        fetchSolid(query, onPart);
+        // 2. jac.red — bằng tên + năm (độc lập với Torrentio)
+        fetchJacred(jacQuery, onPart);
     }
 
     function askSeasonAndSearch(card) {
@@ -387,5 +357,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+jac.red+Solid] v7.0 loaded');
+    console.log('[Torrentio+jacred.stream] v7.1 loaded');
 })();
