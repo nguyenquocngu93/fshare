@@ -220,9 +220,14 @@
             }
         });
 
-        // Step 2: GET → lấy hash + tìm đúng file theo fileIdx
+        // Step 2: GET với retry — đợi TorrServer parse xong .torrent
         function doGet(linkOrHash) {
-            setTimeout(function () {
+            var maxRetry = 6;   // thử tối đa 6 lần
+            var interval = 2000; // mỗi 2s
+            var attempt  = 0;
+
+            function tryGet() {
+                attempt++;
                 $.ajax({
                     url: tsUrl + '/torrents', method: 'POST',
                     contentType: 'application/json', timeout: 15000,
@@ -237,8 +242,12 @@
                         });
                         var list = vids.length ? vids : files;
 
-                        // Torrentio set fileIdx chính xác → tìm đúng file
-                        // jac.maxvol fileIdx=null → cho chọn file
+                        // Nếu fileIdx=null (Jackett) và chưa có file → retry
+                        if (fileIdx === null && list.length === 0 && attempt < maxRetry) {
+                            setTimeout(tryGet, interval);
+                            return;
+                        }
+
                         var targetFile = null;
                         if (fileIdx !== null && fileIdx !== undefined) {
                             targetFile = list.filter(function (f) {
@@ -248,13 +257,18 @@
 
                         doPlay(useHash, list, targetFile);
                     },
-                    error: function (xhr) {
-                        // 400 = link không hợp lệ với TorrServer
-                        // Fallback: stream thẳng với hash/index từ magnet
-                        doPlay(linkOrHash, [], null);
+                    error: function () {
+                        if (attempt < maxRetry) {
+                            setTimeout(tryGet, interval);
+                        } else {
+                            doPlay(linkOrHash, [], null);
+                        }
                     }
                 });
-            }, 3000);
+            }
+
+            // Đợi 2s lần đầu rồi bắt đầu retry
+            setTimeout(tryGet, 2000);
         }
 
         // Step 3: PLAY
