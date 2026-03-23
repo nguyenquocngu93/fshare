@@ -2,71 +2,86 @@
     'use strict';
 
     /* ============================================================
-       Public Torrent Parser for Lampa  —  v1.0.0
+       Torrentio Parser for Lampa  —  v1.0.0
 
-       Cách hoạt động (giống ConcertSearch):
-       - Hook vào trang chi tiết phim → thêm nút "🔍 Torrent"
-       - Tìm kiếm trên TPB / 1337x / TorrentGalaxy
-       - Chọn kết quả → phát qua TorrServer đã cài trong Settings
-       
-       Sources:
-         TPB      → apibay.org (JSON API, không cần proxy) ✅
-         1337x    → Lampa.Reguest + allorigins (JSON wrapper)
-         TGX      → Lampa.Reguest + allorigins (JSON wrapper)
+       Dùng Torrentio public API (giống Stremio addon):
+         Movies:  GET torrentio.strem.fun/stream/movie/tt{imdb}.json
+         Series:  GET torrentio.strem.fun/stream/series/tt{imdb}:{s}:{e}.json
+
+       Trả về JSON { streams: [ { title, infoHash, ... } ] }
+       → build magnet link → phát qua TorrServer trong Lampa
+
+       Không cần proxy, không cần scrape HTML ✅
     ============================================================ */
 
-    if (window.plugin_pubtorr_en_ready) return;
-    window.plugin_pubtorr_en_ready = true;
+    if (window.plugin_torrentio_lampa_ready) return;
+    window.plugin_torrentio_lampa_ready = true;
 
-    /* ============================================================
-       HELPERS
-    ============================================================ */
+    var BASE = 'https://torrentio.strem.fun';
+
+    // Trackers thêm vào magnet để tăng tốc độ kết nối
     var TRACKERS = [
         'udp://tracker.opentrackr.org:1337/announce',
         'udp://open.stealth.si:80/announce',
         'udp://tracker.torrent.eu.org:451/announce',
         'udp://exodus.desync.com:6969/announce',
-        'udp://tracker.leechers-paradise.org:6969/announce'
+        'udp://tracker.leechers-paradise.org:6969/announce',
+        'http://tracker.gbitt.info/announce',
+        'https://tracker.fastdownload.xyz/announce'
     ].map(function (t) { return '&tr=' + encodeURIComponent(t); }).join('');
 
     function makeMagnet(hash, name) {
         return 'magnet:?xt=urn:btih:' + hash.toLowerCase() +
-            '&dn=' + encodeURIComponent(name) + TRACKERS;
-    }
-
-    function fmtSize(bytes) {
-        bytes = parseInt(bytes) || 0;
-        if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
-        if (bytes > 1e6) return (bytes / 1e6).toFixed(0) + ' MB';
-        return (bytes / 1e3).toFixed(0) + ' KB';
+               '&dn=' + encodeURIComponent(name || '') + TRACKERS;
     }
 
 
     /* ============================================================
-       SOURCE 1: THE PIRATE BAY
-       apibay.org → JSON trực tiếp, Lampa.Reguest gọi được ngay
+       LẤY IMDB ID TỪ CARD
+       Lampa card có thể có imdb_id trực tiếp hoặc trong ids object
     ============================================================ */
-    function searchTPB(query, onDone) {
+    function getImdbId(card) {
+        // Thử các vị trí khác nhau
+        var id = card.imdb_id
+            || (card.ids && card.ids.imdb)
+            || card.external_ids && card.external_ids.imdb_id
+            || '';
+        if (!id && card.id) {
+            // Thử lấy từ TMDB nếu chưa có
+            return null;
+        }
+        // Đảm bảo có prefix "tt"
+        if (id && !/^tt/i.test(String(id))) id = 'tt' + id;
+        return id || null;
+    }
+
+    function getMediaType(card) {
+        var type = card.type || card.media_type || '';
+        if (type === 'tv' || type === 'series' || card.number_of_seasons || card.first_air_date) {
+            return 'series';
+        }
+        return 'movie';
+    }
+
+
+    /* ============================================================
+       GỌI TORRENTIO API
+    ============================================================ */
+    function fetchTorrentio(imdbId, type, season, episode, onDone) {
+        var path;
+        if (type === 'series' && season) {
+            path = '/stream/series/' + imdbId + ':' + season + ':' + (episode || 1) + '.json';
+        } else {
+            path = '/stream/movie/' + imdbId + '.json';
+        }
+
         var net = new Lampa.Reguest();
-        net.timeout(12000);
+        net.timeout(15000);
         net.silent(
-            'https://apibay.org/q.php?q=' + encodeURIComponent(query) + '&cat=0',
+            BASE + path,
             function (data) {
-                if (!Array.isArray(data) || !data.length || data[0].id === '0') {
-                    onDone([]); return;
-                }
-                var results = data.map(function (t) {
-                    return {
-                        title:  t.name,
-                        size:   fmtSize(t.size),
-                        seeds:  parseInt(t.seeders)  || 0,
-                        leech:  parseInt(t.leechers) || 0,
-                        magnet: makeMagnet(t.info_hash, t.name),
-                        src:    'TPB'
-                    };
-                });
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
-                onDone(results);
+                var streams = (data && data.streams) || [];
+                onDone(streams);
             },
             function () { onDone([]); }
         );
@@ -74,139 +89,93 @@
 
 
     /* ============================================================
-       SOURCE 2: 1337x
-       allorigins → Lampa.Reguest nhận JSON → parse HTML từ contents
-       Cần fetch detail page để lấy magnet
+       PARSE STREAM TITLE
+       Torrentio format: "Source\nQuality 💾 Size 👤 Seeds ⚙️ Tracker"
     ============================================================ */
-    function search1337x(query, onDone) {
-        var url = 'https://1337x.to/search/' + encodeURIComponent(query) + '/1/';
-        var net = new Lampa.Reguest();
-        net.timeout(20000);
-        net.silent(
-            'https://api.allorigins.win/get?url=' + encodeURIComponent(url),
-            function (data) {
-                var html = data && data.contents;
-                if (!html) { onDone([]); return; }
-                var results = [];
-                var $doc = $('<div>').html(html);
-                $doc.find('table.table-list tbody tr').each(function () {
-                    var $tr   = $(this);
-                    var name  = $tr.find('.name a').last().text().trim();
-                    var href  = $tr.find('.name a').last().attr('href') || '';
-                    var seeds = parseInt($tr.find('td.seeds').text())   || 0;
-                    var leech = parseInt($tr.find('td.leeches').text()) || 0;
-                    var size  = $tr.find('td.size').clone()
-                                   .children().remove().end().text().trim();
-                    if (!name || !href) return;
-                    results.push({
-                        title:      name,
-                        size:       size || '?',
-                        seeds:      seeds,
-                        leech:      leech,
-                        detailUrl:  href.startsWith('http') ? href : 'https://1337x.to' + href,
-                        src:        '1337x',
-                        _fetch:     true
-                    });
-                });
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
-                onDone(results.slice(0, 20));
-            },
-            function () { onDone([]); }
-        );
-    }
+    function parseStream(stream) {
+        var title = stream.title || '';
+        var lines = title.split('\n');
 
-    function getMagnet1337x(detailUrl, onDone) {
-        var net = new Lampa.Reguest();
-        net.timeout(12000);
-        net.silent(
-            'https://api.allorigins.win/get?url=' + encodeURIComponent(detailUrl),
-            function (data) {
-                var html   = data && data.contents;
-                var magnet = html && $('<div>').html(html)
-                                              .find('a[href^="magnet:"]')
-                                              .first().attr('href');
-                onDone(magnet || null);
-            },
-            function () { onDone(null); }
-        );
+        // Dòng 1: tên file / chất lượng
+        var nameLine = lines[0] || '';
+        // Dòng 2: thông tin (size, seeds, source)
+        var infoLine = lines[1] || lines[0] || '';
+
+        // Extract quality từ tên
+        var quality = '';
+        var qMatch = nameLine.match(/\b(2160p|4K|1080p|720p|480p|BluRay|BDRip|WEB-DL|WEBRip|HDTV|CAM)\b/i);
+        if (qMatch) quality = qMatch[1];
+
+        // Extract size
+        var sizeMatch = infoLine.match(/💾\s*([\d.,]+\s*[GMKB]+)/i);
+        var size = sizeMatch ? sizeMatch[1].trim() : '';
+
+        // Extract seeds
+        var seedMatch = infoLine.match(/👤\s*(\d+)/);
+        var seeds = seedMatch ? parseInt(seedMatch[1]) : 0;
+
+        // Source/tracker
+        var srcMatch = infoLine.match(/⚙️\s*(.+?)(\s|$)/);
+        var src = srcMatch ? srcMatch[1].trim() : '';
+
+        // Tên hiển thị gọn
+        var displayName = (quality || 'Unknown') +
+            (size  ? '  💾 ' + size  : '') +
+            (seeds ? '  👤 ' + seeds : '') +
+            (src   ? '  [' + src + ']' : '');
+
+        return {
+            display: displayName,
+            quality: quality,
+            size:    size,
+            seeds:   seeds,
+            src:     src,
+            hash:    stream.infoHash || '',
+            fileIdx: stream.fileIdx  || 0,
+            rawName: nameLine
+        };
     }
 
 
     /* ============================================================
-       SOURCE 3: TORRENTGALAXY
-       allorigins → Lampa.Reguest nhận JSON → parse HTML từ contents
-       Magnet link có sẵn trên trang kết quả → không cần fetch thêm
+       HIỂN THỊ KẾT QUẢ
     ============================================================ */
-    function searchTGX(query, onDone) {
-        var url = 'https://torrentgalaxy.to/torrents.php?search=' + encodeURIComponent(query);
-        var net = new Lampa.Reguest();
-        net.timeout(20000);
-        net.silent(
-            'https://api.allorigins.win/get?url=' + encodeURIComponent(url),
-            function (data) {
-                var html = data && data.contents;
-                if (!html) { onDone([]); return; }
-                var results = [];
-                var $doc = $('<div>').html(html);
-                $doc.find('.tgxtable .tgxtablerow:not(.hrow)').each(function () {
-                    var $row   = $(this);
-                    var name   = $row.find('.txlight').text().trim();
-                    var magnet = $row.find('a[href^="magnet:"]').first().attr('href') || '';
-                    var seeds  = parseInt($row.find('.tgxtablecell:nth-child(11)').text()) || 0;
-                    var leech  = parseInt($row.find('.tgxtablecell:nth-child(12)').text()) || 0;
-                    var size   = $row.find('.tgxtablecell:nth-child(8)').text().trim();
-                    if (!name || !magnet) return;
-                    results.push({
-                        title:  name,
-                        size:   size || '?',
-                        seeds:  seeds,
-                        leech:  leech,
-                        magnet: magnet,
-                        src:    'TGX'
-                    });
-                });
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
-                onDone(results.slice(0, 20));
-            },
-            function () { onDone([]); }
-        );
-    }
-
-
-    /* ============================================================
-       HIỂN THỊ KẾT QUẢ TÌM KIẾM
-    ============================================================ */
-    function showResults(results, title) {
-        if (!results.length) {
-            Lampa.Noty.show('Không tìm thấy torrent cho: ' + title);
+    function showStreams(streams, cardTitle) {
+        if (!streams.length) {
+            Lampa.Noty.show('Torrentio: Không tìm thấy torrent 😔');
             return;
         }
 
-        var items = results.map(function (r) {
-            var seeds = r.seeds > 0
-                ? '<span style="color:#27ae60">▲' + r.seeds + '</span>'
-                : '<span style="color:#888">▲0</span>';
+        // Parse + sort theo seeds
+        var parsed = streams.map(function (s) {
+            var p = parseStream(s);
+            p._stream = s;
+            return p;
+        });
+        parsed.sort(function (a, b) { return b.seeds - a.seeds; });
+
+        var items = parsed.map(function (p) {
             return {
-                title:    '[' + r.src + '] ' + r.title,
-                subtitle: seeds + '  💾' + r.size,
-                torrent:  r
+                title:  p.display || p.rawName || 'Unknown',
+                parsed: p
             };
         });
 
         Lampa.Select.show({
-            title: '🔍 ' + title,
+            title: '🧲 ' + (cardTitle || 'Torrents'),
             items: items,
             onSelect: function (item) {
-                var t = item.torrent;
-                if (t.magnet) {
-                    playTorrent(t.magnet, t.title);
-                } else if (t._fetch && t.detailUrl) {
-                    Lampa.Noty.show('Đang lấy magnet link...');
-                    getMagnet1337x(t.detailUrl, function (magnet) {
-                        if (magnet) playTorrent(magnet, t.title);
-                        else Lampa.Noty.show('Không lấy được magnet link');
-                    });
+                var p = item.parsed;
+                if (!p.hash) {
+                    Lampa.Noty.show('Không có hash torrent');
+                    return;
                 }
+                var magnet = makeMagnet(p.hash, p.rawName || cardTitle);
+                Lampa.Player.play({
+                    title:  cardTitle || p.rawName || 'Torrent',
+                    url:    magnet,
+                    poster: ''
+                });
             },
             onBack: function () {
                 Lampa.Controller.toggle('full');
@@ -214,127 +183,106 @@
         });
     }
 
-    function playTorrent(magnet, title) {
-        Lampa.Player.play({
-            title:  title || 'Torrent',
-            url:    magnet,
-            poster: ''
-        });
-    }
-
 
     /* ============================================================
-       TÌM KIẾM THEO NGUỒN
+       LẤY IMDB ID QUA TMDB NẾU CHƯA CÓ
     ============================================================ */
-    function doSearch(query, srcKey, title) {
-        Lampa.Noty.show('Đang tìm "' + query + '" trên ' + srcKey + '...');
+    function resolveImdbAndPlay(card) {
+        var imdbId = getImdbId(card);
+        var title  = card.title || card.name || '';
+        var type   = getMediaType(card);
 
-        if (srcKey === 'TPB') {
-            searchTPB(query, function (results) {
-                showResults(results, title || query);
-            });
-        } else if (srcKey === '1337x') {
-            search1337x(query, function (results) {
-                showResults(results, title || query);
-            });
-        } else if (srcKey === 'TGX') {
-            searchTGX(query, function (results) {
-                showResults(results, title || query);
-            });
-        } else {
-            // All: tìm đồng thời tất cả, gộp kết quả
-            var all = [], pending = 3;
-            function done(arr) {
-                all = all.concat(arr);
-                pending--;
-                if (pending === 0) {
-                    all.sort(function (a, b) { return b.seeds - a.seeds; });
-                    showResults(all, title || query);
-                }
-            }
-            searchTPB(query, done);
-            search1337x(query, done);
-            searchTGX(query, done);
+        if (imdbId) {
+            doFetch(imdbId, type, card, title);
+            return;
         }
-    }
 
-
-    /* ============================================================
-       MENU CHỌN NGUỒN
-    ============================================================ */
-    function showSourceMenu(card) {
-        var title = card.title || card.original_title || card.name || '';
-        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query = title + (year ? ' ' + year : '');
-
-        Lampa.Select.show({
-            title: '🔍 Tìm Torrent',
-            items: [
-                { title: '🌐 Tất cả nguồn',      src: 'ALL' },
-                { title: '🏴‍☠️ The Pirate Bay',  src: 'TPB' },
-                { title: '🔱 1337x',              src: '1337x' },
-                { title: '🌌 TorrentGalaxy',      src: 'TGX' },
-                { title: '✏️ Tìm kiếm thủ công',  src: 'MANUAL' }
-            ],
-            onSelect: function (item) {
-                if (item.src === 'MANUAL') {
-                    showManualSearch(title);
+        // Chưa có IMDB ID → lấy từ TMDB external IDs
+        Lampa.Noty.show('Đang lấy IMDB ID...');
+        var tmdbId = card.id || '';
+        var tmdbType = (type === 'series') ? 'tv' : 'movie';
+        var net = new Lampa.Reguest();
+        net.timeout(10000);
+        net.silent(
+            'https://api.themoviedb.org/3/' + tmdbType + '/' + tmdbId +
+            '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
+            function (data) {
+                var id = data && data.imdb_id;
+                if (id) {
+                    doFetch(id, type, card, title);
                 } else {
-                    doSearch(query, item.src, title);
+                    Lampa.Noty.show('Không tìm thấy IMDB ID cho phim này');
                 }
             },
-            onBack: function () {
-                Lampa.Controller.toggle('full');
+            function () {
+                Lampa.Noty.show('Lỗi khi lấy IMDB ID');
             }
-        });
+        );
     }
 
-    function showManualSearch(defaultQuery) {
-        if (typeof Lampa.Keyboard !== 'undefined') {
-            Lampa.Keyboard.show({
-                title:   'Tìm kiếm torrent',
-                value:   defaultQuery || '',
-                onEnter: function (q) {
-                    if (!q) return;
-                    showSourceMenuForQuery(q);
-                },
-                onBack: function () {
-                    Lampa.Controller.toggle('full');
-                }
+    function doFetch(imdbId, type, card, title) {
+        var season  = card._season  || null;
+        var episode = card._episode || null;
+
+        if (type === 'series' && !season) {
+            // Series: hỏi season/episode
+            askSeasonEpisode(function (s, e) {
+                Lampa.Noty.show('Đang tìm torrent...');
+                fetchTorrentio(imdbId, 'series', s, e, function (streams) {
+                    showStreams(streams, title + ' S' + s + 'E' + e);
+                });
             });
         } else {
-            // Fallback nếu không có Keyboard
-            doSearch(defaultQuery, 'ALL', defaultQuery);
+            Lampa.Noty.show('Đang tìm torrent...');
+            fetchTorrentio(imdbId, type, season, episode, function (streams) {
+                showStreams(streams, title);
+            });
         }
     }
 
-    function showSourceMenuForQuery(query) {
+
+    /* ============================================================
+       HỎI SEASON/EPISODE CHO SERIES
+    ============================================================ */
+    function askSeasonEpisode(onDone) {
+        // Tạo list season 1-20
+        var seasons = [];
+        for (var s = 1; s <= 20; s++) {
+            seasons.push({ title: 'Season ' + s, s: s });
+        }
+
         Lampa.Select.show({
-            title: '🔍 Chọn nguồn cho: ' + query,
-            items: [
-                { title: '🌐 Tất cả',             src: 'ALL' },
-                { title: '🏴‍☠️ The Pirate Bay',  src: 'TPB' },
-                { title: '🔱 1337x',              src: '1337x' },
-                { title: '🌌 TorrentGalaxy',      src: 'TGX' }
-            ],
-            onSelect: function (item) {
-                doSearch(query, item.src, query);
+            title: 'Chọn Season',
+            items: seasons,
+            onSelect: function (sItem) {
+                var eps = [];
+                for (var e = 1; e <= 50; e++) {
+                    eps.push({ title: 'Episode ' + e, e: e });
+                }
+                Lampa.Select.show({
+                    title: 'Season ' + sItem.s + ' — Chọn Episode',
+                    items: eps,
+                    onSelect: function (eItem) {
+                        onDone(sItem.s, eItem.e);
+                    },
+                    onBack: function () { Lampa.Controller.toggle('full'); }
+                });
             },
-            onBack: function () {
-                Lampa.Controller.toggle('full');
-            }
+            onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
 
 
     /* ============================================================
        HOOK VÀO TRANG CHI TIẾT PHIM
-       Thêm nút "🔍 Torrent" vào hàng buttons — giống KKPhim
+       Thêm nút "Torrentio" cạnh các nút khác
     ============================================================ */
     Lampa.Listener.follow('full', function (e) {
         if (e.type !== 'complite') return;
 
-        var card   = e.data && e.data.movie ? e.data.movie : (e.object && e.object.card);
+        var card = e.data && e.data.movie
+            ? e.data.movie
+            : (e.object && e.object.card);
         if (!card) return;
 
         var $ctx = e.object && e.object.activity
@@ -342,45 +290,74 @@
             : (e.object && e.object.render ? e.object.render() : null);
         if (!$ctx) $ctx = $('body');
 
-        // Tránh thêm 2 lần
-        if ($ctx.find('.view--pubtorren').length) return;
+        if ($ctx.find('.view--torrentio').length) return;
 
         var $btn = $(
-            '<div class="full-start__button selector view--pubtorren">' +
+            '<div class="full-start__button selector view--torrentio">' +
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"' +
             ' fill="none" width="44" height="44"' +
             ' stroke="currentColor" stroke-width="1.5"' +
             ' stroke-linecap="round" stroke-linejoin="round">' +
-            '<circle cx="11" cy="11" r="8"/>' +
-            '<line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
+            '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/>' +
+            '<path d="M8 12l4 4 4-4"/>' +
+            '<path d="M12 8v8"/>' +
             '</svg>' +
-            '<span>Torrent</span>' +
+            '<span>Torrentio</span>' +
             '</div>'
         );
 
         $btn.on('hover:enter', function () {
-            showSourceMenu(card);
+            resolveImdbAndPlay(card);
         });
 
-        // Chèn vào hàng buttons — sau nút TorrServer nếu có
+        // Chèn vào hàng buttons
         var $torBtn = $ctx.find('.view--torrent');
-        if ($torBtn.length) {
-            $torBtn.after($btn);
-        } else {
-            $ctx.find('.full-start__buttons').append($btn);
-        }
+        if ($torBtn.length) $torBtn.after($btn);
+        else $ctx.find('.full-start__buttons').append($btn);
     });
 
 
     /* ============================================================
-       ĐĂNG KÝ PLUGIN
+       SETTINGS — Cấu hình nguồn Torrentio
     ============================================================ */
-    Lampa.Manifest && Lampa.Manifest.plugins && Lampa.Manifest.plugins.push({
-        name:    'Public Torrent Parser',
-        version: '1.0.0',
-        type:    'other'
-    });
+    function addSettings() {
+        if (!Lampa.SettingsApi) return;
 
-    console.log('[PubTorr-EN] v1.0.0 loaded — TPB / 1337x / TorrentGalaxy');
+        Lampa.SettingsApi.addParam({
+            component: 'parser',
+            param: {
+                name:    'torrentio_providers',
+                type:    'select',
+                values: {
+                    'all':         'Tất cả nguồn',
+                    'yts':         'YTS (phim chất lượng cao)',
+                    '1337x':       '1337x',
+                    'thepiratebay':'The Pirate Bay',
+                    'eztv':        'EZTV (TV Shows)',
+                    'torrentgalaxy':'TorrentGalaxy',
+                    'kickasstorrents':'KickassTorrents'
+                },
+                default: 'all'
+            },
+            field: {
+                name:        '🧲 Torrentio — Nguồn',
+                description: 'Chọn nguồn torrent ưu tiên'
+            },
+            onChange: function (val) {
+                Lampa.Storage.set('torrentio_providers', val);
+            }
+        });
+    }
+
+    // Khởi động
+    function start() {
+        addSettings();
+        console.log('[Torrentio] v1.0.0 loaded');
+    }
+
+    if (window.appready) start();
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') start();
+    });
 
 })();
