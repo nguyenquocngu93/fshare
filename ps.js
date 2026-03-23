@@ -202,7 +202,7 @@
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('⚠️ Chưa cài TorrServer URL'); return; }
 
-        Lampa.Noty.show('Đang add vào TorrServer...');
+        Lampa.Noty.show('Đang tải torrent...');
 
         // Step 1: ADD
         $.ajax({
@@ -233,10 +233,6 @@
                         var useHash = (d && d.hash) || linkOrHash;
                         var files   = (d && d.file_stats) || [];
 
-                        // DEBUG: log ra console để kiểm tra
-                        console.log('[TS] hash=' + useHash + ' files=' + files.length);
-                        if (files.length) console.log('[TS] first file:', JSON.stringify(files[0]));
-
                         var vids = files.filter(function (f) {
                             return /\.(mp4|mkv|avi|mov|ts|m4v|wmv|flv)$/i.test(f.path || '');
                         });
@@ -261,32 +257,47 @@
         // Step 3: PLAY
         function doPlay(useHash, list) {
             // Format chuẩn: /stream/{filename}?link={hash}&index={idx}&play
-            function streamUrl(idx, fname) {
+            // index = f.id từ TorrServer (quan trọng: đây là index thực trong torrent)
+            function streamUrl(id, fname) {
                 var name = encodeURIComponent(fname || 'video.mkv');
                 return tsUrl + '/stream/' + name +
                        '?link=' + useHash +
-                       '&index=' + (idx || 0) +
+                       '&index=' + id +
                        '&play';
             }
 
             if (list.length > 1) {
+                // Sắp xếp file theo tên để dễ tìm episode
+                var sorted = list.slice().sort(function (a, b) {
+                    return (a.path || '').localeCompare(b.path || '');
+                });
+
                 Lampa.Select.show({
-                    title: '📂 Chọn file',
-                    items: list.map(function (f, i) {
-                        var fname = (f.path || 'File ' + i).split('/').pop();
-                        return { title: fname, index: f.id !== undefined ? f.id : i, fname: fname };
+                    title: '📂 Chọn tập / file (' + sorted.length + ')',
+                    items: sorted.map(function (f) {
+                        // Hiện đường dẫn ngắn gọn: folder/file.mkv
+                        var parts = (f.path || 'unknown').split('/');
+                        var label = parts.length > 1
+                            ? parts[parts.length - 2] + '/' + parts[parts.length - 1]
+                            : parts[0];
+                        return {
+                            title: label,
+                            id:    f.id,           // id thực trong TorrServer
+                            fname: parts[parts.length - 1]
+                        };
                     }),
                     onSelect: function (item) {
-                        playUrl(streamUrl(item.index, item.fname), title);
+                        playUrl(streamUrl(item.id, item.fname), item.fname);
                     },
                     onBack: function () { Lampa.Controller.toggle('full'); }
                 });
+            } else if (list.length === 1) {
+                var f     = list[0];
+                var fname = (f.path || title).split('/').pop();
+                playUrl(streamUrl(f.id, fname), fname);
             } else {
-                var idx   = (list.length === 1 && list[0].id !== undefined) ? list[0].id : (fileIdx || 0);
-                var fname = list.length === 1
-                    ? (list[0].path || title).split('/').pop()
-                    : (title + '.mkv');
-                playUrl(streamUrl(idx, fname), title);
+                // Không có file info → dùng index 0
+                playUrl(streamUrl(0, title + '.mkv'), title);
             }
         }
     }
