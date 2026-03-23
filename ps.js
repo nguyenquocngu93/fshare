@@ -1,11 +1,18 @@
 (function () {
     'use strict';
 
-    if (window.plugin_torrentio_v5_ready) return;
-    window.plugin_torrentio_v5_ready = true;
+    if (window.plugin_torrentio_v6_ready) return;
+    window.plugin_torrentio_v6_ready = true;
 
-    var TORRENTIO_BASE = 'https://torrentio.strem.fun';
-    var KNABEN_API     = 'https://knaben.org/api/v1';
+    // Không filter providers → lấy TẤT CẢ nguồn Torrentio (TPB, YTS, 1337x, Rutor, Rutracker...)
+    // sort=size → Torrentio sort theo size trước khi trả về
+    var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size/stream';
+
+    var JACRED_URL = 'jacred.xyz';
+    var JACRED_KEY = '';
+
+    // Các tracker được ưu tiên hiển thị đầu
+    var PRIORITY_TRACKERS = ['rutor', 'rutracker'];
 
     /* ---- HELPERS ---- */
     function makeMagnet(hash, name) {
@@ -21,6 +28,24 @@
         if (b > 1e9) return (b / 1e9).toFixed(2) + ' GB';
         if (b > 1e6) return (b / 1e6).toFixed(0)  + ' MB';
         return b + ' B';
+    }
+
+    function parseSize(str) {
+        if (!str) return 0;
+        var m = String(str).match(/([\d.,]+)\s*(TB|GB|MB|KB)/i);
+        if (!m) return 0;
+        var n = parseFloat(m[1].replace(',', '.'));
+        var u = m[2].toUpperCase();
+        if (u === 'TB') return n * 1e12;
+        if (u === 'GB') return n * 1e9;
+        if (u === 'MB') return n * 1e6;
+        if (u === 'KB') return n * 1e3;
+        return n;
+    }
+
+    function isPriority(tracker) {
+        var t = (tracker || '').toLowerCase();
+        return PRIORITY_TRACKERS.some(function (p) { return t.indexOf(p) >= 0; });
     }
 
     function getImdbId(card) {
@@ -48,13 +73,24 @@
         return url;
     }
 
+    /* ---- SORT: rutor/rutracker trước, trong nhóm sort theo size lớn → nhỏ ---- */
+    function sortResults(arr) {
+        return arr.slice().sort(function (a, b) {
+            var pa = isPriority(a.tracker) ? 1 : 0;
+            var pb = isPriority(b.tracker) ? 1 : 0;
+            if (pa !== pb) return pb - pa;       // priority group lên đầu
+            return b.sizeNum - a.sizeNum;        // trong nhóm: size lớn → nhỏ
+        });
+    }
+
     /* ---- TORRENTIO ---- */
     function fetchTorrentio(imdbId, type, season, episode, onDone) {
         var path = type === 'series'
-            ? '/stream/series/' + imdbId + ':' + season + ':' + (episode || 1) + '.json'
-            : '/stream/movie/'  + imdbId + '.json';
+            ? '/series/' + imdbId + ':' + season + ':' + (episode || 1) + '.json'
+            : '/movie/'  + imdbId + '.json';
+
         var net = new Lampa.Reguest();
-        net.timeout(15000);
+        net.timeout(20000);
         net.silent(TORRENTIO_BASE + path,
             function (data) {
                 var results = ((data && data.streams) || []).map(function (s) {
@@ -65,107 +101,61 @@
                     var sizeM = info.match(/💾\s*([\d.,]+\s*[GMKB]+)/i);
                     var seedM = info.match(/👤\s*(\d+)/);
                     var srcM  = info.match(/⚙️\s*(\S+)/);
+                    var sizeStr = sizeM ? sizeM[1].trim() : '';
                     return {
                         title:   name,
                         seeds:   seedM ? parseInt(seedM[1]) : 0,
-                        size:    sizeM ? sizeM[1].trim() : '',
-                        tracker: srcM  ? srcM[1] : 'Torrentio',
+                        size:    sizeStr,
+                        sizeNum: parseSize(sizeStr),
+                        tracker: srcM ? srcM[1] : 'Torrentio',
                         hash:    s.infoHash.toLowerCase(),
                         fileIdx: typeof s.fileIdx === 'number' ? s.fileIdx : 0,
                         magnet:  makeMagnet(s.infoHash, name)
                     };
                 }).filter(Boolean);
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
                 onDone(results);
             },
             function () { onDone([]); }
         );
     }
 
-    /* ---- KNABEN ---- */
-    // Knaben yêu cầu POST JSON → dùng Lampa.Reguest.native() thay $.ajax
-    // vì $.ajax POST có thể bị CORS block trong WebView
-    function fetchKnaben(query, onDone) {
-        var body = JSON.stringify({
-            search_type:     'score',
-            search_field:    'title',
-            query:           query,
-            order_by:        'seeders',
-            order_direction: 'desc',
-            from:            0,
-            size:            50,
-            hide_unsafe:     false,
-            hide_xxx:        false
-        });
+    /* ---- JAC.RED ---- */
+    function fetchJacred(query, onDone) {
+        var url = 'https://' + JACRED_URL +
+            '/api/v2.0/indexers/all/results' +
+            '?apikey=' + JACRED_KEY +
+            '&Query=' + encodeURIComponent(query) +
+            '&Category[]=2000' +
+            '&Category[]=5000';
 
-        // Thử dùng XMLHttpRequest trực tiếp để có thể set method + body
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', KNABEN_API, true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.timeout = 15000;
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
-
-            // DEBUG: hiện status
-            if (xhr.status === 0) {
-                Lampa.Noty.show('Knaben: bị block (status 0) — CORS');
+        var net = new Lampa.Reguest();
+        net.timeout(20000);
+        net.silent(url,
+            function (data) {
+                var results = ((data && data.Results) || []).map(function (r) {
+                    var magnet = r.MagnetUri || r.Link || '';
+                    if (!magnet) return null;
+                    var hash = '';
+                    var hm = magnet.match(/btih:([a-f0-9]+)/i);
+                    if (hm) hash = hm[1].toLowerCase();
+                    return {
+                        title:   r.Title   || '',
+                        seeds:   parseInt(r.Seeders)  || 0,
+                        size:    fmtBytes(r.Size),
+                        sizeNum: parseInt(r.Size) || 0,
+                        tracker: r.Tracker || 'jac.red',
+                        hash:    hash,
+                        fileIdx: 0,
+                        magnet:  magnet
+                    };
+                }).filter(Boolean);
+                onDone(results);
+            },
+            function (e) {
+                Lampa.Noty.show('jac.red lỗi: ' + String(e && e.status || e));
                 onDone([]);
-                return;
             }
-
-            if (xhr.status < 200 || xhr.status >= 300) {
-                Lampa.Noty.show('Knaben HTTP ' + xhr.status);
-                onDone([]);
-                return;
-            }
-
-            var data;
-            try { data = JSON.parse(xhr.responseText); }
-            catch (e) {
-                Lampa.Noty.show('Knaben: JSON parse lỗi');
-                onDone([]);
-                return;
-            }
-
-            var total = data.total && data.total.value;
-            var hits  = data.hits || [];
-            Lampa.Noty.show('Knaben: total=' + total + ' hits=' + hits.length);
-
-            var results = hits.map(function (h) {
-                var hash   = (h.hash || '').toLowerCase();
-                var magnet = h.magnetUrl || (hash ? makeMagnet(hash, h.title) : '');
-                if (!magnet) return null;
-                return {
-                    title:   h.title   || '',
-                    seeds:   parseInt(h.seeders)  || 0,
-                    size:    fmtBytes(h.bytes),
-                    tracker: h.cachedOrigin || 'Knaben',
-                    hash:    hash,
-                    fileIdx: 0,
-                    magnet:  magnet
-                };
-            }).filter(Boolean);
-            results.sort(function (a, b) { return b.seeds - a.seeds; });
-            onDone(results);
-        };
-
-        xhr.ontimeout = function () {
-            Lampa.Noty.show('Knaben: timeout');
-            onDone([]);
-        };
-
-        xhr.onerror = function () {
-            Lampa.Noty.show('Knaben: XHR error (có thể CORS)');
-            onDone([]);
-        };
-
-        try { xhr.send(body); }
-        catch (e) {
-            Lampa.Noty.show('Knaben send lỗi: ' + e.message);
-            onDone([]);
-        }
+        );
     }
 
     /* ---- TORRSERVER PLAY ---- */
@@ -229,12 +219,13 @@
             return;
         }
         Lampa.Select.show({
-            title: '🧲 ' + title,
+            title: '🧲 ' + title + ' (' + results.length + ')',
             items: results.map(function (r) {
+                var prefix = isPriority(r.tracker) ? '⭐ ' : '';
                 return {
-                    title:   '[' + r.tracker + '] ' + r.title,
+                    title:    prefix + '[' + r.tracker + '] ' + r.title,
                     subtitle: '👤 ' + r.seeds + '  💾 ' + r.size,
-                    result:  r
+                    result:   r
                 };
             }),
             onSelect: function (item) {
@@ -258,10 +249,11 @@
         var combined = [];
         var pending  = 2;
 
-        function onPart(arr, src) {
-            Lampa.Noty.show('✅ ' + src + ': ' + arr.length + ' kết quả');
+        function onPart(arr) {
             combined = combined.concat(arr);
             if (--pending > 0) return;
+
+            // Dedup theo hash
             var seen = {};
             combined = combined.filter(function (r) {
                 var key = r.hash || r.title;
@@ -269,13 +261,16 @@
                 seen[key] = true;
                 return true;
             });
-            combined.sort(function (a, b) { return b.seeds - a.seeds; });
+
+            // Sort: rutor/rutracker trước → rồi size lớn → nhỏ
+            combined = sortResults(combined);
+
             showResults(combined, title);
         }
 
         // Torrentio
         if (imdbId) {
-            fetchTorrentio(imdbId, type, season, episode, function (arr) { onPart(arr, 'Torrentio'); });
+            fetchTorrentio(imdbId, type, season, episode, onPart);
         } else {
             var tmdbType = type === 'series' ? 'tv' : 'movie';
             var net = new Lampa.Reguest();
@@ -285,15 +280,15 @@
                 '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
                 function (d) {
                     var id = d && d.imdb_id;
-                    if (id) { card.imdb_id = id; fetchTorrentio(id, type, season, episode, function (arr) { onPart(arr, 'Torrentio'); }); }
-                    else onPart([], 'Torrentio');
+                    if (id) { card.imdb_id = id; fetchTorrentio(id, type, season, episode, onPart); }
+                    else onPart([]);
                 },
-                function () { onPart([], 'Torrentio'); }
+                function () { onPart([]); }
             );
         }
 
-        // Knaben
-        fetchKnaben(query, function (arr) { onPart(arr, 'Knaben'); });
+        // jac.red
+        fetchJacred(query, onPart);
     }
 
     function askSeasonAndSearch(card) {
@@ -321,10 +316,10 @@
         if (!card) return;
         var $ctx = e.object && e.object.activity ? e.object.activity.render()
                  : (e.object && e.object.render   ? e.object.render() : $('body'));
-        if ($ctx.find('.view--torrentio5').length) return;
+        if ($ctx.find('.view--torrentio6').length) return;
 
         var $btn = $(
-            '<div class="full-start__button selector view--torrentio5">' +
+            '<div class="full-start__button selector view--torrentio6">' +
             '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
             ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
             '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/>' +
@@ -340,5 +335,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+Knaben] v5.1 loaded');
+    console.log('[Torrentio+jac.red] v6.2 loaded');
 })();
