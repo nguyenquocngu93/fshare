@@ -267,16 +267,8 @@
                        '&play';
             }
 
-            // Nếu Torrentio đã chỉ đúng file → phát luôn không hỏi
-            if (targetFile) {
-                var fname = (targetFile.path || title).split('/').pop();
-                playUrl(streamUrl(targetFile.id, fname), fname);
-                return;
-            }
-
-            // Không có target → cho chọn file
-            if (list.length > 1) {
-                var sorted = list.slice().sort(function (a, b) {
+            function showFileMenu(files) {
+                var sorted = files.slice().sort(function (a, b) {
                     return (a.path || '').localeCompare(b.path || '');
                 });
                 Lampa.Select.show({
@@ -293,13 +285,21 @@
                     },
                     onBack: function () { Lampa.Controller.toggle('full'); }
                 });
-            } else if (list.length === 1) {
-                var f     = list[0];
-                var fname = (f.path || title).split('/').pop();
-                playUrl(streamUrl(f.id, fname), fname);
+            }
+
+            // Torrentio đã chỉ đúng file (fileIdx không phải null) → phát luôn
+            if (targetFile) {
+                var fname = (targetFile.path || title).split('/').pop();
+                playUrl(streamUrl(targetFile.id, fname), fname);
+                return;
+            }
+
+            // Jackett (fileIdx=null): luôn hiện menu chọn tập dù 1 hay nhiều file
+            if (list.length >= 1) {
+                showFileMenu(list);
             } else {
-                // Fallback hoàn toàn
-                playUrl(streamUrl(fileIdx || 0, title + '.mkv'), title);
+                // Không có file info gì cả → fallback
+                playUrl(streamUrl(0, title + '.mkv'), title);
             }
         }
     }
