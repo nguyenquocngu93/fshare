@@ -200,121 +200,24 @@
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('⚠️ Chưa cài TorrServer URL'); return; }
 
-        Lampa.Noty.show('Đang tải torrent...');
-
-        // Step 1: ADD — lấy hash từ response
+        // Add torrent vào TorrServer rồi phát thẳng
         $.ajax({
             url: tsUrl + '/torrents', method: 'POST',
-            contentType: 'application/json', timeout: 15000,
+            contentType: 'application/json', timeout: 12000,
             data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
-            success: function (addResp) {
-                var addedHash = (addResp && addResp.hash) || hash;
-                doGet(addedHash, addedHash);
-            },
-            error: function () {
-                doGet(hash, magnet);
+            complete: function (addResp) {
+                var addedHash = (addResp.responseJSON && addResp.responseJSON.hash) || hash;
+                var useHash   = addedHash || hash;
+                if (!useHash) { Lampa.Noty.show('Lỗi: không có hash'); return; }
+
+                var fname = title + '.mkv';
+                var url   = tsUrl + '/stream/' + encodeURIComponent(fname) +
+                            '?link=' + useHash +
+                            '&index=' + (fileIdx || 0) +
+                            '&play';
+                playUrl(url, title);
             }
         });
-
-        // Step 2: GET với retry
-        // useHash = hash dùng để GET (từ ADD response)
-        // fallbackLink = link gốc nếu GET fail hoàn toàn
-        function doGet(useHashForGet, fallbackLink) {
-            var maxRetry = 8;
-            var interval = 2000;
-            var attempt  = 0;
-
-            function tryGet() {
-                attempt++;
-                $.ajax({
-                    url: tsUrl + '/torrents', method: 'POST',
-                    contentType: 'application/json', timeout: 15000,
-                    data: JSON.stringify({ action: 'get', link: useHashForGet }),
-                    success: function (d) {
-                        var useHash = (d && d.hash) || useHashForGet;
-                        if (!useHash) { Lampa.Noty.show('Lỗi: không lấy được hash'); return; }
-
-                        var files = (d && d.file_stats) || [];
-                        var vids  = files.filter(function (f) {
-                            return /\.(mp4|mkv|avi|mov|ts|m4v|wmv|flv)$/i.test(f.path || '');
-                        });
-                        var list = vids.length ? vids : files;
-
-                        // Nếu fileIdx=null (Jackett) và chưa có file → retry
-                        if (fileIdx === null && list.length === 0 && attempt < maxRetry) {
-                            setTimeout(tryGet, interval);
-                            return;
-                        }
-
-                        var targetFile = null;
-                        if (fileIdx !== null && fileIdx !== undefined) {
-                            targetFile = list.filter(function (f) {
-                                return f.id === fileIdx;
-                            })[0];
-                        }
-
-                        Lampa.Noty.show('Files: ' + list.length + ' | fileIdx: ' + fileIdx);
-                        doPlay(useHash, list, targetFile);
-                    },
-                    error: function () {
-                        if (attempt < maxRetry) {
-                            setTimeout(tryGet, interval);
-                        } else {
-                            doPlay(useHashForGet, [], null);
-                        }
-                    }
-                });
-            }
-
-            // Đợi 2s lần đầu rồi bắt đầu retry
-            setTimeout(tryGet, 2000);
-        }
-
-        // Step 3: PLAY
-        function doPlay(useHash, list, targetFile) {
-            function streamUrl(id, fname) {
-                var name = encodeURIComponent(fname || 'video.mkv');
-                return tsUrl + '/stream/' + name +
-                       '?link=' + useHash +
-                       '&index=' + id +
-                       '&play';
-            }
-
-            function showFileMenu(files) {
-                var sorted = files.slice().sort(function (a, b) {
-                    return (a.path || '').localeCompare(b.path || '');
-                });
-                Lampa.Select.show({
-                    title: '📂 Chọn tập (' + sorted.length + ')',
-                    items: sorted.map(function (f) {
-                        var parts = (f.path || 'unknown').split('/');
-                        var label = parts.length > 1
-                            ? parts[parts.length - 2] + '/' + parts[parts.length - 1]
-                            : parts[0];
-                        return { title: label, id: f.id, fname: parts[parts.length - 1] };
-                    }),
-                    onSelect: function (item) {
-                        playUrl(streamUrl(item.id, item.fname), item.fname);
-                    },
-                    onBack: function () { Lampa.Controller.toggle('full'); }
-                });
-            }
-
-            // Torrentio đã chỉ đúng file (fileIdx không phải null) → phát luôn
-            if (targetFile) {
-                var fname = (targetFile.path || title).split('/').pop();
-                playUrl(streamUrl(targetFile.id, fname), fname);
-                return;
-            }
-
-            // Jackett (fileIdx=null): luôn hiện menu chọn tập dù 1 hay nhiều file
-            if (list.length >= 1) {
-                showFileMenu(list);
-            } else {
-                // Không có file info gì cả → fallback
-                playUrl(streamUrl(0, title + '.mkv'), title);
-            }
-        }
     }
 
     /* ---- HIỂN THỊ ---- */
