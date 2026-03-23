@@ -12,8 +12,8 @@
     // Config: https://torrentio.strem.fun/sort=size|qualityfilter=480p/manifest.json
     var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|qualityfilter=480p/stream';
 
-    var JACRED_URL = 'https://jacred.stream';
-    var JACRED_KEY = '';
+    var JACRED_URL = 'https://jacred.viewbox.dev';
+    var JACRED_KEY = 'viewbox';
 
     var SOLID_BASE = 'https://solidtorrents.to';
 
