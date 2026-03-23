@@ -6,7 +6,8 @@
 
     // Không filter providers → lấy TẤT CẢ nguồn Torrentio (TPB, YTS, 1337x, Rutor, Rutracker...)
     // sort=size → Torrentio sort theo size trước khi trả về
-    var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size/stream';
+    // limitcount=100 → lấy tối đa 100 kết quả thay vì mặc định ~20
+    var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|limitcount=100/stream';
 
     var JACRED_URL = 'jacred.xyz';
     var JACRED_KEY = '';
@@ -119,7 +120,7 @@
         );
     }
 
-    /* ---- JAC.RED ---- */
+    /* ---- JAC.RED (dùng $.ajax dataType:json để tránh object parse issues) ---- */
     function fetchJacred(query, onDone) {
         var url = 'https://' + JACRED_URL +
             '/api/v2.0/indexers/all/results' +
@@ -128,16 +129,13 @@
             '&Category[]=2000' +
             '&Category[]=5000';
 
-        var net = new Lampa.Reguest();
-        net.timeout(20000);
-        net.silent(url,
-            function (data) {
-                // Lampa.Reguest có thể trả object (đã parse) hoặc string
-                var parsed = data;
-                if (typeof data === 'string') {
-                    try { parsed = JSON.parse(data); } catch(e) { parsed = {}; }
-                }
-                var results = ((parsed && parsed.Results) || []).map(function (r) {
+        $.ajax({
+            url:      url,
+            method:   'GET',
+            dataType: 'json',
+            timeout:  20000,
+            success: function (data) {
+                var results = ((data && data.Results) || []).map(function (r) {
                     var magnet = r.MagnetUri || r.Link || '';
                     if (!magnet) return null;
                     var hash = '';
@@ -156,14 +154,50 @@
                 }).filter(Boolean);
                 onDone(results);
             },
-            function (a, b) {
-                // a = XHR object, b = status text
-                var status = (a && a.status) ? a.status : 0;
-                var msg    = b || (a && a.statusText) || 'unknown';
-                Lampa.Noty.show('jac.red lỗi HTTP ' + status + ': ' + msg);
+            error: function (xhr, status, err) {
+                Lampa.Noty.show('jac.red lỗi: ' + status + ' ' + err);
                 onDone([]);
             }
-        );
+        });
+    }
+
+    /* ---- SOLIDTORRENTS ---- */
+    function fetchSolid(query, onDone) {
+        var url = 'https://solidtorrents.to/api/v1/search' +
+            '?q=' + encodeURIComponent(query) +
+            '&category=Video' +
+            '&_=1';
+
+        $.ajax({
+            url:      url,
+            method:   'GET',
+            dataType: 'json',
+            timeout:  20000,
+            success: function (data) {
+                var results = ((data && data.results) || []).map(function (r) {
+                    var hash   = (r.infohash || '').toLowerCase();
+                    var magnet = r.magnet || (hash ? makeMagnet(hash, r.title) : '');
+                    if (!magnet) return null;
+                    var swarm  = r.swarm || {};
+                    return {
+                        title:   r.title  || '',
+                        seeds:   parseInt(swarm.seeders)  || 0,
+                        size:    fmtBytes(r.size),
+                        sizeNum: parseInt(r.size) || 0,
+                        tracker: r.category || 'SolidTorrents',
+                        hash:    hash,
+                        fileIdx: 0,
+                        magnet:  magnet
+                    };
+                }).filter(Boolean);
+                results.sort(function (a, b) { return b.sizeNum - a.sizeNum; });
+                onDone(results);
+            },
+            error: function (xhr, status, err) {
+                Lampa.Noty.show('SolidTorrents lỗi: ' + status + ' ' + err);
+                onDone([]);
+            }
+        });
     }
 
     /* ---- TORRSERVER PLAY ---- */
@@ -255,7 +289,7 @@
         Lampa.Noty.show('Đang tìm...');
 
         var combined = [];
-        var pending  = 2;
+        var pending  = 3;
 
         function onPart(arr) {
             combined = combined.concat(arr);
@@ -297,6 +331,9 @@
 
         // jac.red
         fetchJacred(query, onPart);
+
+        // SolidTorrents
+        fetchSolid(query, onPart);
     }
 
     function askSeasonAndSearch(card) {
@@ -343,5 +380,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+jac.red] v6.2 loaded');
+    console.log('[Torrentio+jac.red+SolidTorrents] v6.3 loaded');
 })();
