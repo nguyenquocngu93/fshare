@@ -162,7 +162,7 @@
                         sizeNum: parseInt(r.Size) || 0,
                         tracker: r.Tracker || 'maxvol',
                         hash:    hash,
-                        fileIdx: 0,
+                        fileIdx: null, // null = không biết file cụ thể → cho chọn
                         magnet:  link  // có thể là magnet: hoặc http:// .torrent
                     };
                 }).filter(Boolean);
@@ -220,10 +220,8 @@
             }
         });
 
-        // Step 2: GET → lấy hash chính xác + file list
+        // Step 2: GET → lấy hash + tìm đúng file theo fileIdx
         function doGet(linkOrHash) {
-            // Đợi 3s để TorrServer tải metadata torrent
-            Lampa.Noty.show('Đang tải metadata...');
             setTimeout(function () {
                 $.ajax({
                     url: tsUrl + '/torrents', method: 'POST',
@@ -231,33 +229,36 @@
                     data: JSON.stringify({ action: 'get', link: magnet }),
                     success: function (d) {
                         var useHash = (d && d.hash) || linkOrHash;
-                        var files   = (d && d.file_stats) || [];
+                        if (!useHash) { Lampa.Noty.show('Lỗi: không lấy được hash'); return; }
 
-                        var vids = files.filter(function (f) {
+                        var files = (d && d.file_stats) || [];
+                        var vids  = files.filter(function (f) {
                             return /\.(mp4|mkv|avi|mov|ts|m4v|wmv|flv)$/i.test(f.path || '');
                         });
                         var list = vids.length ? vids : files;
 
-                        if (!useHash) {
-                            Lampa.Noty.show('Lỗi: không lấy được hash từ TorrServer');
-                            return;
+                        // Torrentio set fileIdx chính xác → tìm đúng file
+                        // jac.maxvol fileIdx=null → cho chọn file
+                        var targetFile = null;
+                        if (fileIdx !== null && fileIdx !== undefined) {
+                            targetFile = list.filter(function (f) {
+                                return f.id === fileIdx;
+                            })[0];
                         }
 
-                        doPlay(useHash, list);
+                        doPlay(useHash, list, targetFile);
                     },
                     error: function (xhr) {
-                        Lampa.Noty.show('TorrServer get lỗi: ' + xhr.status);
-                        // Fallback: stream với hash ban đầu
-                        doPlay(linkOrHash, []);
+                        // 400 = link không hợp lệ với TorrServer
+                        // Fallback: stream thẳng với hash/index từ magnet
+                        doPlay(linkOrHash, [], null);
                     }
                 });
             }, 3000);
         }
 
         // Step 3: PLAY
-        function doPlay(useHash, list) {
-            // Format chuẩn: /stream/{filename}?link={hash}&index={idx}&play
-            // index = f.id từ TorrServer (quan trọng: đây là index thực trong torrent)
+        function doPlay(useHash, list, targetFile) {
             function streamUrl(id, fname) {
                 var name = encodeURIComponent(fname || 'video.mkv');
                 return tsUrl + '/stream/' + name +
@@ -266,25 +267,26 @@
                        '&play';
             }
 
+            // Nếu Torrentio đã chỉ đúng file → phát luôn không hỏi
+            if (targetFile) {
+                var fname = (targetFile.path || title).split('/').pop();
+                playUrl(streamUrl(targetFile.id, fname), fname);
+                return;
+            }
+
+            // Không có target → cho chọn file
             if (list.length > 1) {
-                // Sắp xếp file theo tên để dễ tìm episode
                 var sorted = list.slice().sort(function (a, b) {
                     return (a.path || '').localeCompare(b.path || '');
                 });
-
                 Lampa.Select.show({
-                    title: '📂 Chọn tập / file (' + sorted.length + ')',
+                    title: '📂 Chọn tập (' + sorted.length + ')',
                     items: sorted.map(function (f) {
-                        // Hiện đường dẫn ngắn gọn: folder/file.mkv
                         var parts = (f.path || 'unknown').split('/');
                         var label = parts.length > 1
                             ? parts[parts.length - 2] + '/' + parts[parts.length - 1]
                             : parts[0];
-                        return {
-                            title: label,
-                            id:    f.id,           // id thực trong TorrServer
-                            fname: parts[parts.length - 1]
-                        };
+                        return { title: label, id: f.id, fname: parts[parts.length - 1] };
                     }),
                     onSelect: function (item) {
                         playUrl(streamUrl(item.id, item.fname), item.fname);
@@ -296,8 +298,8 @@
                 var fname = (f.path || title).split('/').pop();
                 playUrl(streamUrl(f.id, fname), fname);
             } else {
-                // Không có file info → dùng index 0
-                playUrl(streamUrl(0, title + '.mkv'), title);
+                // Fallback hoàn toàn
+                playUrl(streamUrl(fileIdx || 0, title + '.mkv'), title);
             }
         }
     }
