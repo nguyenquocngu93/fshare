@@ -141,13 +141,21 @@
 
         reguest(url,
             function (data) {
-                // data có thể là object hoặc string
                 var d = (typeof data === 'string') ? JSON.parse(data) : data;
                 var results = ((d && d.Results) || []).map(function (r) {
-                    var magnet = r.MagnetUri || r.Link || '';
+                    // Chỉ dùng MagnetUri, bỏ qua .torrent link (r.Link)
+                    var magnet = r.MagnetUri || '';
+                    // Nếu không có magnet → thử build từ Guid (một số Jackett instance để hash ở đây)
+                    if (!magnet) {
+                        var guidHash = (r.Guid || '').match(/btih:([a-f0-9]+)/i);
+                        if (guidHash) magnet = makeMagnet(guidHash[1], r.Title);
+                    }
                     if (!magnet) return null;
+
                     var hm   = magnet.match(/btih:([a-f0-9]+)/i);
                     var hash = hm ? hm[1].toLowerCase() : '';
+                    if (!hash) return null; // không có hash → skip
+
                     return {
                         title:   r.Title   || '',
                         seeds:   parseInt(r.Seeders)  || 0,
