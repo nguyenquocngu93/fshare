@@ -2,12 +2,16 @@
     'use strict';
 
     /* ============================================================
-       OneJAV Plugin for Lampa  —  v1.3.0
-       Fix: dùng $.ajax dataType:'text' để fetch HTML đúng cách
+       OneJAV Plugin for Lampa  —  v1.4.0
+       Dùng allorigins proxy (đã test hoạt động)
+       onejav.com = server-side render → HTML có đầy đủ nội dung
     ============================================================ */
 
     var PLUGIN_ID = 'onejav';
     var BASE_URL  = 'https://onejav.com';
+
+    // allorigins trả về JSON: { contents: "<html>..." }
+    var PROXY = 'https://api.allorigins.win/get?url=';
 
     function esc(str) {
         return String(str || '')
@@ -19,31 +23,47 @@
 
 
     /* ============================================================
-       FETCH - $.ajax với dataType:'text'
-       Quan trọng: dataType:'text' tắt auto JSON parse của jQuery
+       FETCH qua allorigins
     ============================================================ */
     function fetchPage(url, ok, fail) {
+        var proxyUrl = PROXY + encodeURIComponent(url);
+
+        // allorigins trả về JSON → dùng $.ajax dataType:'json'
         $.ajax({
-            url:      url,
+            url:      proxyUrl,
             method:   'GET',
-            dataType: 'text',   // ← key fix: không parse JSON
-            timeout:  20000,
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml,*/*'
-            },
+            dataType: 'json',
+            timeout:  25000,
             success: function (data) {
-                if (data && data.length > 100) {
-                    ok(data);
+                var html = data && data.contents;
+                if (html && html.length > 200) {
+                    ok(html);
                 } else {
-                    if (fail) fail('Response rỗng');
+                    // Thử corsproxy.io làm fallback
+                    tryFallback(url, ok, fail);
                 }
             },
-            error: function (xhr, status, err) {
-                // Dù lỗi, nếu có responseText thì vẫn dùng được
-                if (xhr.responseText && xhr.responseText.length > 100) {
+            error: function () {
+                tryFallback(url, ok, fail);
+            }
+        });
+    }
+
+    function tryFallback(url, ok, fail) {
+        $.ajax({
+            url:      'https://corsproxy.io/?' + encodeURIComponent(url),
+            method:   'GET',
+            dataType: 'text',
+            timeout:  25000,
+            success: function (html) {
+                if (html && html.length > 200) ok(html);
+                else if (fail) fail('Cả 2 proxy đều trả về rỗng');
+            },
+            error: function (xhr, status) {
+                if (xhr.responseText && xhr.responseText.length > 200) {
                     ok(xhr.responseText);
                 } else {
-                    if (fail) fail(status + ': ' + err);
+                    if (fail) fail('Proxy lỗi: ' + status);
                 }
             }
         });
@@ -194,19 +214,23 @@
             fetchPage(buildUrl(object, page),
                 function (html) {
                     loading = false;
-                    var movies  = parseList(html);
-                    var nextPg  = parseNextPage(html, page);
+                    var movies = parseList(html);
+                    var nextPg = parseNextPage(html, page);
 
                     if (!movies.length && page === 1) {
-                        setContent('<div style="padding:3em;text-align:center;color:#888">Không tìm thấy phim nào 😔</div>');
+                        // Debug: hiện 300 ký tự đầu
+                        var preview = html.slice(0, 300).replace(/[<>]/g, function(c){ return c==='<'?'&lt;':'&gt;'; });
+                        setContent(
+                            '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all">' +
+                            '<b style="color:#e74c3c">Kết nối OK nhưng không parse được phim.<br>Preview:</b><br>' +
+                            preview + '</div>'
+                        );
                         return;
                     }
 
                     if (page === 1) scroll.render().find('.scroll__content').html('');
-
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
-                    // Nút tải thêm
                     if (nextPg > page) {
                         var $btn = $(
                             '<div class="onejav-more selector" style="display:block;width:88%;' +
@@ -286,9 +310,7 @@
 
                     scroll.render().find('.scroll__content').html(
                         '<div style="padding:1.5em">' +
-                        (card.poster
-                            ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">'
-                            : '') +
+                        (card.poster ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">' : '') +
                         '<div style="font-size:1.1em;font-weight:bold;margin-bottom:.5em">' + esc(card.title) + '</div>' +
                         (actressStr ? '<div style="color:#aaa;margin-bottom:.4em">👤 ' + esc(actressStr) + '</div>' : '') +
                         (tagStr ? '<div style="color:#666;font-size:.8em;margin-bottom:1em">' + esc(tagStr) + '</div>' : '') +
@@ -384,8 +406,8 @@
                 { title: '🔥 Phổ biến',    section: 'popular' },
                 { title: '📅 Hôm nay',     section: 'today', date: d1 },
                 { title: '📅 Hôm qua',     section: 'today', date: yest },
-                { title: '🎭 FC2 Amateur', section: 'tag', tag: 'FC2' },
-                { title: '🔍 Tìm kiếm',    action: 'search' }
+                { title: '🎭 FC2 Amateur', section: 'tag',   tag: 'FC2' },
+                { title: '🔍 Tìm kiếm',    action:  'search' }
             ],
             onSelect: function (item) {
                 if (item.action === 'search') { showSearch(); return; }
@@ -405,16 +427,12 @@
     function showSearch() {
         if (typeof Lampa.Keyboard !== 'undefined') {
             Lampa.Keyboard.show({
-                title:   'Tìm phim JAV',
-                value:   '',
+                title: 'Tìm phim JAV', value: '',
                 onEnter: function (q) {
                     if (!q) return;
                     Lampa.Activity.push({
-                        component: PLUGIN_ID,
-                        title:     '🔍 ' + q,
-                        source:    PLUGIN_ID,
-                        section:   'search',
-                        query:     q
+                        component: PLUGIN_ID, title: '🔍 ' + q,
+                        source: PLUGIN_ID, section: 'search', query: q
                     });
                 },
                 onBack: function () { Lampa.Controller.toggle('menu'); }
@@ -427,11 +445,8 @@
                 ].map(function (t) { return { title: t, q: t }; }),
                 onSelect: function (item) {
                     Lampa.Activity.push({
-                        component: PLUGIN_ID,
-                        title:     '🔍 ' + item.title,
-                        source:    PLUGIN_ID,
-                        section:   'tag',
-                        tag:       item.q
+                        component: PLUGIN_ID, title: '🔍 ' + item.title,
+                        source: PLUGIN_ID, section: 'tag', tag: item.q
                     });
                 },
                 onBack: function () { showMainMenu(); }
@@ -455,6 +470,6 @@
         '.onejav-more.focus,.onejav-play-btn.focus{outline:3px solid #fff}'
     ).appendTo('head');
 
-    console.log('[OneJAV] v1.3.0 loaded');
+    console.log('[OneJAV] v1.4.0 loaded');
 
 })();
