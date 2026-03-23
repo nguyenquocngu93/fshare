@@ -2,16 +2,14 @@
     'use strict';
 
     /* ============================================================
-       OneJAV Plugin for Lampa  —  v1.4.0
-       Dùng allorigins proxy (đã test hoạt động)
-       onejav.com = server-side render → HTML có đầy đủ nội dung
+       OneJAV Plugin for Lampa  —  v1.5.0
+       Fix: không dùng onerror inline trong HTML string
+            dùng element.onerror = function(){} như lnum.js
     ============================================================ */
 
     var PLUGIN_ID = 'onejav';
     var BASE_URL  = 'https://onejav.com';
-
-    // allorigins trả về JSON: { contents: "<html>..." }
-    var PROXY = 'https://api.allorigins.win/get?url=';
+    var PROXY     = 'https://api.allorigins.win/get?url=';
 
     function esc(str) {
         return String(str || '')
@@ -23,14 +21,11 @@
 
 
     /* ============================================================
-       FETCH qua allorigins
+       FETCH - allorigins trả về { contents: "<html>..." }
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        var proxyUrl = PROXY + encodeURIComponent(url);
-
-        // allorigins trả về JSON → dùng $.ajax dataType:'json'
         $.ajax({
-            url:      proxyUrl,
+            url:      PROXY + encodeURIComponent(url),
             method:   'GET',
             dataType: 'json',
             timeout:  25000,
@@ -39,31 +34,39 @@
                 if (html && html.length > 200) {
                     ok(html);
                 } else {
-                    // Thử corsproxy.io làm fallback
-                    tryFallback(url, ok, fail);
+                    // fallback: corsproxy.io
+                    $.ajax({
+                        url:      'https://corsproxy.io/?' + encodeURIComponent(url),
+                        method:   'GET',
+                        dataType: 'text',
+                        timeout:  20000,
+                        success: function (h) {
+                            if (h && h.length > 200) ok(h);
+                            else if (fail) fail('Response rỗng');
+                        },
+                        error: function (xhr) {
+                            var t = xhr && xhr.responseText;
+                            if (t && t.length > 200) ok(t);
+                            else if (fail) fail('Cả 2 proxy lỗi');
+                        }
+                    });
                 }
             },
-            error: function () {
-                tryFallback(url, ok, fail);
-            }
-        });
-    }
-
-    function tryFallback(url, ok, fail) {
-        $.ajax({
-            url:      'https://corsproxy.io/?' + encodeURIComponent(url),
-            method:   'GET',
-            dataType: 'text',
-            timeout:  25000,
-            success: function (html) {
-                if (html && html.length > 200) ok(html);
-                else if (fail) fail('Cả 2 proxy đều trả về rỗng');
-            },
-            error: function (xhr, status) {
-                if (xhr.responseText && xhr.responseText.length > 200) {
-                    ok(xhr.responseText);
-                } else {
-                    if (fail) fail('Proxy lỗi: ' + status);
+            error: function (xhr) {
+                var t = xhr && xhr.responseText;
+                if (t && t.length > 200) ok(t);
+                else {
+                    $.ajax({
+                        url:      'https://corsproxy.io/?' + encodeURIComponent(url),
+                        method:   'GET',
+                        dataType: 'text',
+                        timeout:  20000,
+                        success: function (h) {
+                            if (h && h.length > 200) ok(h);
+                            else if (fail) fail('Response rỗng');
+                        },
+                        error: function () { if (fail) fail('Cả 2 proxy lỗi'); }
+                    });
                 }
             }
         });
@@ -75,13 +78,10 @@
     ============================================================ */
     function parseList(html) {
         var movies = [], seen = {};
-        var $doc = $('<div>').html(html);
-
-        $doc.find('a[href^="/torrent/"]').each(function () {
+        $('<div>').html(html).find('a[href^="/torrent/"]').each(function () {
             var $a   = $(this);
             var href = $a.attr('href') || '';
             if (!/^\/torrent\/.+/.test(href)) return;
-
             var full = BASE_URL + href;
             if (seen[full]) return;
             seen[full] = true;
@@ -90,22 +90,14 @@
             var text   = $a.text().trim().replace(/\s+/g, ' ');
             if (!text || text.length < 2) return;
 
-            var slug = href.replace('/torrent/', '');
-
             movies.push({
-                id:              slug,
-                title:           text,
-                original_title:  slug.toUpperCase(),
-                poster:          poster,
-                poster_path:     poster,
-                background_path: poster,
-                url:             full,
-                slug:            slug,
-                type:            'movie',
-                source:          PLUGIN_ID
+                id:    href.replace('/torrent/', ''),
+                title: text,
+                poster: poster,
+                url:   full,
+                source: PLUGIN_ID
             });
         });
-
         return movies;
     }
 
@@ -116,38 +108,28 @@
         $doc.find('a[href^="magnet:"]').each(function () {
             if (!info.magnet) info.magnet = $(this).attr('href');
         });
-
         if (!info.magnet) {
             $doc.find('a[href$=".torrent"]').each(function () {
                 var h = $(this).attr('href') || '';
-                if (h && !info.torrent) {
-                    info.torrent = h.startsWith('http') ? h : BASE_URL + h;
-                }
+                if (h && !info.torrent) info.torrent = h.startsWith('http') ? h : BASE_URL + h;
             });
         }
-
         $doc.find('a[href^="/tag/"]').each(function () {
             var t = $(this).text().trim();
             if (t) info.tags.push(t);
         });
-
         $doc.find('a[href^="/actress/"]').each(function () {
             var a = $(this).text().trim();
             if (a) info.actresses.push(a);
         });
-
         return info;
     }
 
-    function parseNextPage(html, currentPage) {
+    function parseNextPage(html, cur) {
         var next = 0;
         $('<div>').html(html).find('a').each(function () {
-            var h = $(this).attr('href') || '';
-            var m = h.match(/[?&]page=(\d+)/);
-            if (m) {
-                var n = parseInt(m[1]);
-                if (n > next && n > currentPage) next = n;
-            }
+            var m = (($(this).attr('href') || '').match(/[?&]page=(\d+)/) || [])[1];
+            if (m && +m > cur && +m > next) next = +m;
         });
         return next;
     }
@@ -168,6 +150,39 @@
 
 
     /* ============================================================
+       MAKE CARD - dùng DOM JS, không inline onerror
+    ============================================================ */
+    function makeCard(movie, onClick) {
+        // Tạo element bằng JS thuần như lnum.js
+        var wrap  = document.createElement('div');
+        wrap.className = 'onejav-card selector';
+
+        var imgWrap = document.createElement('div');
+        imgWrap.className = 'onejav-card__img';
+
+        var img = document.createElement('img');
+        // Set src SAU khi gắn onerror - tránh race condition
+        img.onerror = function () { img.style.display = 'none'; };
+        img.onload  = function () { img.style.opacity = '1'; };
+        img.style.opacity = '0';
+        img.style.transition = 'opacity .3s';
+        if (movie.poster) img.src = movie.poster;
+
+        var title = document.createElement('div');
+        title.className = 'onejav-card__name';
+        title.textContent = movie.title || movie.id || '';
+
+        imgWrap.appendChild(img);
+        wrap.appendChild(imgWrap);
+        wrap.appendChild(title);
+
+        var $wrap = $(wrap);
+        $wrap.on('hover:enter click', function () { onClick(movie); });
+        return $wrap;
+    }
+
+
+    /* ============================================================
        COMPONENT: CATALOG
     ============================================================ */
     function CatalogComponent(object) {
@@ -179,28 +194,6 @@
 
         function setContent(html) {
             scroll.render().find('.scroll__content').html(html);
-        }
-
-        function makeCard(movie) {
-            var $card = $(
-                '<div class="onejav-card selector">' +
-                '<div class="onejav-card__img">' +
-                (movie.poster
-                    ? '<img src="' + esc(movie.poster) + '" onerror="this.style.display=\'none\'" />'
-                    : '<div class="onejav-card__noimg">' + esc(movie.original_title) + '</div>') +
-                '</div>' +
-                '<div class="onejav-card__name">' + esc(movie.title) + '</div>' +
-                '</div>'
-            );
-            $card.on('hover:enter click', function () {
-                Lampa.Activity.push({
-                    component: PLUGIN_ID + '_detail',
-                    title:     movie.title,
-                    card:      movie,
-                    source:    PLUGIN_ID
-                });
-            });
-            return $card;
         }
 
         function loadPage(page) {
@@ -218,26 +211,37 @@
                     var nextPg = parseNextPage(html, page);
 
                     if (!movies.length && page === 1) {
-                        // Debug: hiện 300 ký tự đầu
-                        var preview = html.slice(0, 300).replace(/[<>]/g, function(c){ return c==='<'?'&lt;':'&gt;'; });
+                        var preview = html.slice(0, 300)
+                            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                         setContent(
                             '<div style="padding:2em;color:#aaa;font-size:.75em;word-break:break-all">' +
-                            '<b style="color:#e74c3c">Kết nối OK nhưng không parse được phim.<br>Preview:</b><br>' +
+                            '<b style="color:#e74c3c">Kết nối OK, không parse được.<br>Preview:</b><br>' +
                             preview + '</div>'
                         );
                         return;
                     }
 
                     if (page === 1) scroll.render().find('.scroll__content').html('');
-                    movies.forEach(function (m) { scroll.append(makeCard(m)); });
+
+                    movies.forEach(function (m) {
+                        scroll.append(makeCard(m, function (movie) {
+                            Lampa.Activity.push({
+                                component: PLUGIN_ID + '_detail',
+                                title:     movie.title,
+                                card:      movie,
+                                source:    PLUGIN_ID
+                            });
+                        }));
+                    });
 
                     if (nextPg > page) {
-                        var $btn = $(
-                            '<div class="onejav-more selector" style="display:block;width:88%;' +
-                            'margin:14px auto;padding:13px;background:rgba(255,255,255,.08);' +
-                            'color:#fff;border-radius:8px;text-align:center;cursor:pointer">' +
-                            '⬇ Tải thêm</div>'
-                        );
+                        var btn = document.createElement('div');
+                        btn.className = 'onejav-more selector';
+                        btn.textContent = '⬇ Tải thêm';
+                        btn.style.cssText = 'display:block;width:88%;margin:14px auto;padding:13px;' +
+                            'background:rgba(255,255,255,.08);color:#fff;border-radius:8px;text-align:center;cursor:pointer';
+
+                        var $btn = $(btn);
                         $btn.on('hover:enter click', function () {
                             $btn.remove();
                             loadPage(page + 1);
@@ -290,9 +294,7 @@
         this.render = function () { return scroll.render(); };
 
         this.create = function () {
-            scroll.render().find('.scroll__content').html(
-                '<div style="padding:2em;color:#aaa;text-align:center">Đang lấy link torrent...</div>'
-            );
+            setContent('<div style="padding:2em;color:#aaa;text-align:center">Đang tải torrent...</div>');
 
             fetchPage(card.url,
                 function (html) {
@@ -305,22 +307,48 @@
                         return;
                     }
 
-                    var actressStr = info.actresses.join(', ');
-                    var tagStr     = info.tags.slice(0, 8).join(' · ');
+                    // Build detail UI bằng DOM JS
+                    var wrap = document.createElement('div');
+                    wrap.style.cssText = 'padding:1.5em';
 
-                    scroll.render().find('.scroll__content').html(
-                        '<div style="padding:1.5em">' +
-                        (card.poster ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">' : '') +
-                        '<div style="font-size:1.1em;font-weight:bold;margin-bottom:.5em">' + esc(card.title) + '</div>' +
-                        (actressStr ? '<div style="color:#aaa;margin-bottom:.4em">👤 ' + esc(actressStr) + '</div>' : '') +
-                        (tagStr ? '<div style="color:#666;font-size:.8em;margin-bottom:1em">' + esc(tagStr) + '</div>' : '') +
-                        '<div class="onejav-play-btn selector" style="padding:14px;margin-top:1em;' +
-                        'background:#e74c3c;color:#fff;border-radius:8px;font-size:1em;' +
-                        'cursor:pointer;text-align:center">▶ Phát qua TorrServer</div>' +
-                        '</div>'
-                    );
+                    if (card.poster) {
+                        var img = document.createElement('img');
+                        img.style.cssText = 'max-width:180px;border-radius:8px;margin-bottom:1em;display:block';
+                        img.onerror = function () { img.style.display = 'none'; };
+                        img.src = card.poster;
+                        wrap.appendChild(img);
+                    }
 
-                    scroll.render().find('.onejav-play-btn').on('hover:enter click', function () {
+                    var titleEl = document.createElement('div');
+                    titleEl.style.cssText = 'font-size:1.1em;font-weight:bold;margin-bottom:.5em';
+                    titleEl.textContent = card.title || '';
+                    wrap.appendChild(titleEl);
+
+                    if (info.actresses.length) {
+                        var actEl = document.createElement('div');
+                        actEl.style.cssText = 'color:#aaa;margin-bottom:.4em';
+                        actEl.textContent = '👤 ' + info.actresses.join(', ');
+                        wrap.appendChild(actEl);
+                    }
+
+                    if (info.tags.length) {
+                        var tagEl = document.createElement('div');
+                        tagEl.style.cssText = 'color:#666;font-size:.8em;margin-bottom:1em';
+                        tagEl.textContent = info.tags.slice(0, 8).join(' · ');
+                        wrap.appendChild(tagEl);
+                    }
+
+                    var playBtn = document.createElement('div');
+                    playBtn.className = 'onejav-play-btn selector';
+                    playBtn.textContent = '▶ Phát qua TorrServer';
+                    playBtn.style.cssText = 'padding:14px;margin-top:1em;background:#e74c3c;' +
+                        'color:#fff;border-radius:8px;font-size:1em;cursor:pointer;text-align:center';
+                    wrap.appendChild(playBtn);
+
+                    scroll.render().find('.scroll__content').html('');
+                    scroll.append($(wrap));
+
+                    $(playBtn).on('hover:enter click', function () {
                         Lampa.Player.play({
                             title:  card.title,
                             url:    playUrl,
@@ -336,6 +364,10 @@
                 }
             );
         };
+
+        function setContent(html) {
+            scroll.render().find('.scroll__content').html(html);
+        }
 
         this.start = function () {
             Lampa.Controller.add(PLUGIN_ID + '_dc', {
@@ -462,14 +494,12 @@
         '.onejav-card{display:inline-block;vertical-align:top;width:160px;margin:6px;cursor:pointer}' +
         '.onejav-card__img{width:160px;height:220px;border-radius:8px;overflow:hidden;background:#111}' +
         '.onejav-card__img img{width:100%;height:100%;object-fit:cover}' +
-        '.onejav-card__noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;' +
-        'color:#555;font-size:.85em;font-weight:bold;text-align:center;padding:8px;box-sizing:border-box}' +
         '.onejav-card__name{font-size:.72em;color:#bbb;margin-top:5px;max-width:160px;' +
         'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
         '.onejav-card.focus .onejav-card__img{outline:3px solid #e74c3c}' +
         '.onejav-more.focus,.onejav-play-btn.focus{outline:3px solid #fff}'
     ).appendTo('head');
 
-    console.log('[OneJAV] v1.4.0 loaded');
+    console.log('[OneJAV] v1.5.0 loaded');
 
 })();
