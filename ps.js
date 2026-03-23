@@ -179,6 +179,17 @@
         });
     }
 
+    /* ---- PLAY URL ---- */
+    // Dùng đúng player đã cài trong Lampa Settings
+    // Nếu user set MX Player → mở thẳng MX Player, không qua Lampa player
+    function playUrl(url, title) {
+        Lampa.Player.play({
+            title:  title || '',
+            url:    url,
+            poster: ''
+        });
+    }
+
     /* ---- TORRSERVER PLAY ---- */
     function tsPlay(magnet, hash, fileIdx, title) {
         var tsUrl = getTsUrl();
@@ -210,22 +221,19 @@
                                                  index: f.id !== undefined ? f.id : i };
                                     }),
                                     onSelect: function (item) {
-                                        Lampa.Player.play({ title: title,
-                                            url: tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + item.index + '&play',
-                                            poster: '' });
+                                        var url = tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + item.index + '&play';
+                                        playUrl(url, title);
                                     },
                                     onBack: function () { Lampa.Controller.toggle('full'); }
                                 });
                             } else {
-                                Lampa.Player.play({ title: title,
-                                    url: tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + (fileIdx || 0) + '&play',
-                                    poster: '' });
+                                var url = tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + (fileIdx || 0) + '&play';
+                                playUrl(url, title);
                             }
                         },
                         error: function () {
-                            Lampa.Player.play({ title: title,
-                                url: tsUrl + '/stream?link=' + encodeURIComponent(hash) + '&index=' + (fileIdx || 0) + '&play',
-                                poster: '' });
+                            var url = tsUrl + '/stream?link=' + encodeURIComponent(hash) + '&index=' + (fileIdx || 0) + '&play';
+                            playUrl(url, title);
                         }
                     });
                 }, 1500);
