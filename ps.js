@@ -1,19 +1,23 @@
 (function () {
     'use strict';
 
-    if (window.plugin_torrentio_v6_ready) return;
-    window.plugin_torrentio_v6_ready = true;
+    if (window.plugin_torrentio_v7_ready) return;
+    window.plugin_torrentio_v7_ready = true;
 
-    // Không filter providers → lấy TẤT CẢ nguồn Torrentio (TPB, YTS, 1337x, Rutor, Rutracker...)
-    // sort=size → Torrentio sort theo size trước khi trả về
-    // limitcount=100 → lấy tối đa 100 kết quả thay vì mặc định ~20
-    var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|limitcount=100/stream';
+    /* ============================================================
+       Torrentio + jac.red + SolidTorrents for Lampa  v7.0
+       Tất cả dùng Lampa.Reguest (bypass CORS trong APK)
+    ============================================================ */
 
-    var JACRED_URL = 'jacred.xyz';
+    // Config: https://torrentio.strem.fun/sort=size|qualityfilter=480p/manifest.json
+    var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|qualityfilter=480p/stream';
+
+    var JACRED_URL = 'https://jacred.xyz';
     var JACRED_KEY = '';
 
-    // Các tracker được ưu tiên hiển thị đầu
-    var PRIORITY_TRACKERS = ['rutor', 'rutracker'];
+    var SOLID_BASE = 'https://solidtorrents.to';
+
+    var PRIORITY = ['rutor', 'rutracker'];
 
     /* ---- HELPERS ---- */
     function makeMagnet(hash, name) {
@@ -21,6 +25,7 @@
                '&dn=' + encodeURIComponent(name || '') +
                '&tr=' + encodeURIComponent('udp://tracker.opentrackr.org:1337/announce') +
                '&tr=' + encodeURIComponent('udp://open.stealth.si:80/announce') +
+               '&tr=' + encodeURIComponent('udp://tracker.torrent.eu.org:451/announce') +
                '&tr=' + encodeURIComponent('udp://exodus.desync.com:6969/announce');
     }
 
@@ -36,17 +41,18 @@
         var m = String(str).match(/([\d.,]+)\s*(TB|GB|MB|KB)/i);
         if (!m) return 0;
         var n = parseFloat(m[1].replace(',', '.'));
-        var u = m[2].toUpperCase();
-        if (u === 'TB') return n * 1e12;
-        if (u === 'GB') return n * 1e9;
-        if (u === 'MB') return n * 1e6;
-        if (u === 'KB') return n * 1e3;
+        switch (m[2].toUpperCase()) {
+            case 'TB': return n * 1e12;
+            case 'GB': return n * 1e9;
+            case 'MB': return n * 1e6;
+            case 'KB': return n * 1e3;
+        }
         return n;
     }
 
     function isPriority(tracker) {
         var t = (tracker || '').toLowerCase();
-        return PRIORITY_TRACKERS.some(function (p) { return t.indexOf(p) >= 0; });
+        return PRIORITY.some(function (p) { return t.indexOf(p) >= 0; });
     }
 
     function getImdbId(card) {
@@ -74,14 +80,17 @@
         return url;
     }
 
-    /* ---- SORT: rutor/rutracker trước, trong nhóm sort theo size lớn → nhỏ ---- */
-    function sortResults(arr) {
-        return arr.slice().sort(function (a, b) {
-            var pa = isPriority(a.tracker) ? 1 : 0;
-            var pb = isPriority(b.tracker) ? 1 : 0;
-            if (pa !== pb) return pb - pa;       // priority group lên đầu
-            return b.sizeNum - a.sizeNum;        // trong nhóm: size lớn → nhỏ
-        });
+    // Lampa.Reguest wrapper — luôn trả object/string, không bị CORS
+    function reguest(url, onOk, onFail) {
+        var net = new Lampa.Reguest();
+        net.timeout(20000);
+        net.silent(url,
+            function (data) { onOk(data); },
+            function (a, b) {
+                var code = (a && a.status) ? a.status : 0;
+                onFail('HTTP ' + code + (b ? ' ' + b : ''));
+            }
+        );
     }
 
     /* ---- TORRENTIO ---- */
@@ -90,18 +99,16 @@
             ? '/series/' + imdbId + ':' + season + ':' + (episode || 1) + '.json'
             : '/movie/'  + imdbId + '.json';
 
-        var net = new Lampa.Reguest();
-        net.timeout(20000);
-        net.silent(TORRENTIO_BASE + path,
+        reguest(TORRENTIO_BASE + path,
             function (data) {
                 var results = ((data && data.streams) || []).map(function (s) {
                     if (!s.infoHash) return null;
-                    var lines = (s.title || '').split('\n');
-                    var name  = lines[0] || '';
-                    var info  = lines[1] || '';
-                    var sizeM = info.match(/💾\s*([\d.,]+\s*[GMKB]+)/i);
-                    var seedM = info.match(/👤\s*(\d+)/);
-                    var srcM  = info.match(/⚙️\s*(\S+)/);
+                    var lines   = (s.title || '').split('\n');
+                    var name    = lines[0] || '';
+                    var info    = lines[1] || '';
+                    var sizeM   = info.match(/💾\s*([\d.,]+\s*[GMKB]+)/i);
+                    var seedM   = info.match(/👤\s*(\d+)/);
+                    var srcM    = info.match(/⚙️\s*(\S+)/);
                     var sizeStr = sizeM ? sizeM[1].trim() : '';
                     return {
                         title:   name,
@@ -116,31 +123,31 @@
                 }).filter(Boolean);
                 onDone(results);
             },
-            function () { onDone([]); }
+            function (e) {
+                Lampa.Noty.show('Torrentio lỗi: ' + e);
+                onDone([]);
+            }
         );
     }
 
-    /* ---- JAC.RED (dùng $.ajax dataType:json để tránh object parse issues) ---- */
+    /* ---- JAC.RED ---- */
     function fetchJacred(query, onDone) {
-        var url = 'https://' + JACRED_URL +
+        var url = JACRED_URL +
             '/api/v2.0/indexers/all/results' +
             '?apikey=' + JACRED_KEY +
-            '&Query=' + encodeURIComponent(query) +
+            '&Query='  + encodeURIComponent(query) +
             '&Category[]=2000' +
             '&Category[]=5000';
 
-        $.ajax({
-            url:      url,
-            method:   'GET',
-            dataType: 'json',
-            timeout:  20000,
-            success: function (data) {
-                var results = ((data && data.Results) || []).map(function (r) {
+        reguest(url,
+            function (data) {
+                // data có thể là object hoặc string
+                var d = (typeof data === 'string') ? JSON.parse(data) : data;
+                var results = ((d && d.Results) || []).map(function (r) {
                     var magnet = r.MagnetUri || r.Link || '';
                     if (!magnet) return null;
-                    var hash = '';
-                    var hm = magnet.match(/btih:([a-f0-9]+)/i);
-                    if (hm) hash = hm[1].toLowerCase();
+                    var hm   = magnet.match(/btih:([a-f0-9]+)/i);
+                    var hash = hm ? hm[1].toLowerCase() : '';
                     return {
                         title:   r.Title   || '',
                         seeds:   parseInt(r.Seeders)  || 0,
@@ -154,49 +161,56 @@
                 }).filter(Boolean);
                 onDone(results);
             },
-            error: function (xhr, status, err) {
-                Lampa.Noty.show('jac.red lỗi: ' + status + ' ' + err);
+            function (e) {
+                Lampa.Noty.show('jac.red lỗi: ' + e);
                 onDone([]);
             }
-        });
+        );
     }
 
     /* ---- SOLIDTORRENTS ---- */
     function fetchSolid(query, onDone) {
-        var url = 'https://solidtorrents.to/api/v1/search' +
-            '?q=' + encodeURIComponent(query) +
+        var url = SOLID_BASE +
+            '/api/v1/search' +
+            '?q='        + encodeURIComponent(query) +
             '&category=Video' +
-            '&_=1';
+            '&sort=seeders';
 
-        $.ajax({
-            url:      url,
-            method:   'GET',
-            dataType: 'json',
-            timeout:  20000,
-            success: function (data) {
-                var results = ((data && data.results) || []).map(function (r) {
+        reguest(url,
+            function (data) {
+                var d = (typeof data === 'string') ? JSON.parse(data) : data;
+                var results = ((d && d.results) || []).map(function (r) {
                     var hash   = (r.infohash || '').toLowerCase();
                     var magnet = r.magnet || (hash ? makeMagnet(hash, r.title) : '');
                     if (!magnet) return null;
                     var swarm  = r.swarm || {};
                     return {
-                        title:   r.title  || '',
-                        seeds:   parseInt(swarm.seeders)  || 0,
+                        title:   r.title   || '',
+                        seeds:   parseInt(swarm.seeders) || parseInt(r.seeders) || 0,
                         size:    fmtBytes(r.size),
                         sizeNum: parseInt(r.size) || 0,
-                        tracker: r.category || 'SolidTorrents',
+                        tracker: 'SolidTorrents',
                         hash:    hash,
                         fileIdx: 0,
                         magnet:  magnet
                     };
                 }).filter(Boolean);
-                results.sort(function (a, b) { return b.sizeNum - a.sizeNum; });
                 onDone(results);
             },
-            error: function (xhr, status, err) {
-                Lampa.Noty.show('SolidTorrents lỗi: ' + status + ' ' + err);
+            function (e) {
+                Lampa.Noty.show('SolidTorrents lỗi: ' + e);
                 onDone([]);
             }
+        );
+    }
+
+    /* ---- SORT ---- */
+    function sortResults(arr) {
+        return arr.slice().sort(function (a, b) {
+            var pa = isPriority(a.tracker) ? 1 : 0;
+            var pb = isPriority(b.tracker) ? 1 : 0;
+            if (pa !== pb) return pb - pa;
+            return b.sizeNum - a.sizeNum;
         });
     }
 
@@ -254,7 +268,7 @@
         });
     }
 
-    /* ---- HIỂN THỊ KẾT QUẢ ---- */
+    /* ---- HIỂN THỊ ---- */
     function showResults(results, title) {
         if (!results.length) {
             Lampa.Noty.show('Không tìm thấy torrent nào 😔');
@@ -278,7 +292,7 @@
         });
     }
 
-    /* ---- TÌM KIẾM GỘP ---- */
+    /* ---- TÌM KIẾM GỘP 3 NGUỒN ---- */
     function doSearch(card, season, episode) {
         var title  = card.title || card.name || '';
         var type   = getMediaType(card);
@@ -294,8 +308,6 @@
         function onPart(arr) {
             combined = combined.concat(arr);
             if (--pending > 0) return;
-
-            // Dedup theo hash
             var seen = {};
             combined = combined.filter(function (r) {
                 var key = r.hash || r.title;
@@ -303,21 +315,16 @@
                 seen[key] = true;
                 return true;
             });
-
-            // Sort: rutor/rutracker trước → rồi size lớn → nhỏ
             combined = sortResults(combined);
-
             showResults(combined, title);
         }
 
-        // Torrentio
+        // 1. Torrentio
         if (imdbId) {
             fetchTorrentio(imdbId, type, season, episode, onPart);
         } else {
             var tmdbType = type === 'series' ? 'tv' : 'movie';
-            var net = new Lampa.Reguest();
-            net.timeout(8000);
-            net.silent(
+            reguest(
                 'https://api.themoviedb.org/3/' + tmdbType + '/' + card.id +
                 '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
                 function (d) {
@@ -329,10 +336,10 @@
             );
         }
 
-        // jac.red
+        // 2. jac.red
         fetchJacred(query, onPart);
 
-        // SolidTorrents
+        // 3. SolidTorrents
         fetchSolid(query, onPart);
     }
 
@@ -361,10 +368,10 @@
         if (!card) return;
         var $ctx = e.object && e.object.activity ? e.object.activity.render()
                  : (e.object && e.object.render   ? e.object.render() : $('body'));
-        if ($ctx.find('.view--torrentio6').length) return;
+        if ($ctx.find('.view--torrentio7').length) return;
 
         var $btn = $(
-            '<div class="full-start__button selector view--torrentio6">' +
+            '<div class="full-start__button selector view--torrentio7">' +
             '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
             ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
             '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/>' +
@@ -380,5 +387,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+jac.red+SolidTorrents] v6.3 loaded');
+    console.log('[Torrentio+jac.red+Solid] v7.0 loaded');
 })();
