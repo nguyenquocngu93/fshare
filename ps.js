@@ -132,7 +132,12 @@
         net.timeout(20000);
         net.silent(url,
             function (data) {
-                var results = ((data && data.Results) || []).map(function (r) {
+                // Lampa.Reguest có thể trả object (đã parse) hoặc string
+                var parsed = data;
+                if (typeof data === 'string') {
+                    try { parsed = JSON.parse(data); } catch(e) { parsed = {}; }
+                }
+                var results = ((parsed && parsed.Results) || []).map(function (r) {
                     var magnet = r.MagnetUri || r.Link || '';
                     if (!magnet) return null;
                     var hash = '';
@@ -151,8 +156,11 @@
                 }).filter(Boolean);
                 onDone(results);
             },
-            function (e) {
-                Lampa.Noty.show('jac.red lỗi: ' + String(e && e.status || e));
+            function (a, b) {
+                // a = XHR object, b = status text
+                var status = (a && a.status) ? a.status : 0;
+                var msg    = b || (a && a.statusText) || 'unknown';
+                Lampa.Noty.show('jac.red lỗi HTTP ' + status + ': ' + msg);
                 onDone([]);
             }
         );
