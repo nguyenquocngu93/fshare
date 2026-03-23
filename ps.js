@@ -1,19 +1,19 @@
 (function () {
     'use strict';
 
-    if (window.plugin_torrentio_v71_ready) return;
-    window.plugin_torrentio_v71_ready = true;
+    if (window.plugin_torrentio_v72_ready) return;
+    window.plugin_torrentio_v72_ready = true;
 
     /* ============================================================
-       Torrentio + jacred.stream for Lampa  v7.1
+       Torrentio + jac.maxvol.pro for Lampa  v7.2
        Tất cả dùng Lampa.Reguest (bypass CORS trong APK)
     ============================================================ */
 
-    // Config: https://torrentio.strem.fun/sort=size|qualityfilter=480p/manifest.json
+    // Config user: sort=size, bỏ 480p, timeout ngắn hơn
     var TORRENTIO_BASE = 'https://torrentio.strem.fun/sort=size|qualityfilter=480p/stream';
 
-    var JACRED_URL = 'https://jacred.viewbox.dev';
-    var JACRED_KEY = 'viewbox';
+    var JACRED_URL = 'https://jac.maxvol.pro';
+    var JACRED_KEY = '1';
 
     var SOLID_BASE = 'https://solidtorrents.to';
 
@@ -83,7 +83,7 @@
     // Lampa.Reguest wrapper — luôn trả object/string, không bị CORS
     function reguest(url, onOk, onFail) {
         var net = new Lampa.Reguest();
-        net.timeout(20000);
+        net.timeout(15000);
         net.silent(url,
             function (data) { onOk(data); },
             function (a, b) {
@@ -153,7 +153,7 @@
                         seeds:   parseInt(r.Seeders)  || 0,
                         size:    fmtBytes(r.Size),
                         sizeNum: parseInt(r.Size) || 0,
-                        tracker: r.Tracker || 'jac.red',
+                        tracker: r.Tracker || 'maxvol',
                         hash:    hash,
                         fileIdx: 0,
                         magnet:  magnet
@@ -162,7 +162,7 @@
                 onDone(results);
             },
             function (e) {
-                Lampa.Noty.show('jac.red lỗi: ' + e);
+                Lampa.Noty.show('Jackett lỗi: ' + e);
                 onDone([]);
             }
         );
@@ -265,7 +265,7 @@
         var year   = (card.release_date || card.first_air_date || '').slice(0, 4);
 
         // Torrentio: tìm bằng IMDB ID (chính xác nhất)
-        // jac.red: tìm bằng tên + năm (title query)
+        // Jackett (jac.maxvol.pro): tìm bằng tên + năm
         var jacQuery = title + (year ? ' ' + year : '');
 
         Lampa.Noty.show('Đang tìm...');
@@ -309,7 +309,7 @@
             );
         }
 
-        // 2. jac.red — bằng tên + năm (độc lập với Torrentio)
+        // 2. Jackett — bằng tên + năm (độc lập với Torrentio)
         fetchJacred(jacQuery, onPart);
     }
 
@@ -357,5 +357,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+jacred.stream] v7.1 loaded');
+    console.log('[Torrentio+jac.maxvol.pro] v7.2 loaded');
 })();
