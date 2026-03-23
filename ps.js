@@ -83,41 +83,89 @@
     }
 
     /* ---- KNABEN ---- */
+    // Knaben yêu cầu POST JSON → dùng Lampa.Reguest.native() thay $.ajax
+    // vì $.ajax POST có thể bị CORS block trong WebView
     function fetchKnaben(query, onDone) {
-        $.ajax({
-            url: KNABEN_API, method: 'POST',
-            contentType: 'application/json', dataType: 'json', timeout: 15000,
-            data: JSON.stringify({
-                search_type: '100%', search_field: 'title',
-                query: query, order_by: 'seeders', order_direction: 'desc',
-                categories: [2000000, 2010000, 2030000],
-                from: 0, size: 50, hide_unsafe: true,
-                seconds_since_last_seen: 604800
-            }),
-            success: function (data) {
-                var results = ((data && data.hits) || []).map(function (h) {
-                    var hash   = (h.hash || '').toLowerCase();
-                    var magnet = h.magnetUrl || (hash ? makeMagnet(hash, h.title) : '');
-                    if (!magnet) return null;
-                    return {
-                        title:   h.title || '',
-                        seeds:   parseInt(h.seeders)  || 0,
-                        size:    fmtBytes(h.bytes),
-                        tracker: h.cachedOrigin || 'Knaben',
-                        hash:    hash,
-                        fileIdx: 0,
-                        magnet:  magnet
-                    };
-                }).filter(Boolean);
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
-                onDone(results);
-            },
-            error: function (xhr, status, err) {
-                // Hiện lỗi để debug
-                Lampa.Noty.show('Knaben lỗi: ' + status + ' ' + err);
-                onDone([]);
-            }
+        var body = JSON.stringify({
+            search_type:     'score',
+            search_field:    'title',
+            query:           query,
+            order_by:        'seeders',
+            order_direction: 'desc',
+            from:            0,
+            size:            50,
+            hide_unsafe:     false,
+            hide_xxx:        false
         });
+
+        // Thử dùng XMLHttpRequest trực tiếp để có thể set method + body
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', KNABEN_API, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.timeout = 15000;
+
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+
+            // DEBUG: hiện status
+            if (xhr.status === 0) {
+                Lampa.Noty.show('Knaben: bị block (status 0) — CORS');
+                onDone([]);
+                return;
+            }
+
+            if (xhr.status < 200 || xhr.status >= 300) {
+                Lampa.Noty.show('Knaben HTTP ' + xhr.status);
+                onDone([]);
+                return;
+            }
+
+            var data;
+            try { data = JSON.parse(xhr.responseText); }
+            catch (e) {
+                Lampa.Noty.show('Knaben: JSON parse lỗi');
+                onDone([]);
+                return;
+            }
+
+            var total = data.total && data.total.value;
+            var hits  = data.hits || [];
+            Lampa.Noty.show('Knaben: total=' + total + ' hits=' + hits.length);
+
+            var results = hits.map(function (h) {
+                var hash   = (h.hash || '').toLowerCase();
+                var magnet = h.magnetUrl || (hash ? makeMagnet(hash, h.title) : '');
+                if (!magnet) return null;
+                return {
+                    title:   h.title   || '',
+                    seeds:   parseInt(h.seeders)  || 0,
+                    size:    fmtBytes(h.bytes),
+                    tracker: h.cachedOrigin || 'Knaben',
+                    hash:    hash,
+                    fileIdx: 0,
+                    magnet:  magnet
+                };
+            }).filter(Boolean);
+            results.sort(function (a, b) { return b.seeds - a.seeds; });
+            onDone(results);
+        };
+
+        xhr.ontimeout = function () {
+            Lampa.Noty.show('Knaben: timeout');
+            onDone([]);
+        };
+
+        xhr.onerror = function () {
+            Lampa.Noty.show('Knaben: XHR error (có thể CORS)');
+            onDone([]);
+        };
+
+        try { xhr.send(body); }
+        catch (e) {
+            Lampa.Noty.show('Knaben send lỗi: ' + e.message);
+            onDone([]);
+        }
     }
 
     /* ---- TORRSERVER PLAY ---- */
@@ -174,24 +222,21 @@
         });
     }
 
-    /* ---- HIỂN THỊ KẾT QUẢ (Lampa.Select — đơn giản, hoạt động chắc) ---- */
+    /* ---- HIỂN THỊ KẾT QUẢ ---- */
     function showResults(results, title) {
         if (!results.length) {
             Lampa.Noty.show('Không tìm thấy torrent nào 😔');
             return;
         }
-
-        var items = results.map(function (r) {
-            return {
-                title:   '[' + r.tracker + '] ' + r.title,
-                subtitle: '👤 ' + r.seeds + '  💾 ' + r.size,
-                result:  r
-            };
-        });
-
         Lampa.Select.show({
             title: '🧲 ' + title,
-            items: items,
+            items: results.map(function (r) {
+                return {
+                    title:   '[' + r.tracker + '] ' + r.title,
+                    subtitle: '👤 ' + r.seeds + '  💾 ' + r.size,
+                    result:  r
+                };
+            }),
             onSelect: function (item) {
                 var r = item.result;
                 tsPlay(r.magnet, r.hash, r.fileIdx, r.title);
@@ -217,8 +262,6 @@
             Lampa.Noty.show('✅ ' + src + ': ' + arr.length + ' kết quả');
             combined = combined.concat(arr);
             if (--pending > 0) return;
-
-            // Dedup
             var seen = {};
             combined = combined.filter(function (r) {
                 var key = r.hash || r.title;
@@ -230,7 +273,7 @@
             showResults(combined, title);
         }
 
-        // 1. Torrentio
+        // Torrentio
         if (imdbId) {
             fetchTorrentio(imdbId, type, season, episode, function (arr) { onPart(arr, 'Torrentio'); });
         } else {
@@ -249,7 +292,7 @@
             );
         }
 
-        // 2. Knaben
+        // Knaben
         fetchKnaben(query, function (arr) { onPart(arr, 'Knaben'); });
     }
 
@@ -297,5 +340,5 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    console.log('[Torrentio+Knaben] v5.0 loaded');
+    console.log('[Torrentio+Knaben] v5.1 loaded');
 })();
