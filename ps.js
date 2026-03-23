@@ -384,53 +384,44 @@
         fetchJacred(jacQuery, onPart);
     }
 
-    function askSeasonAndSearch(card) {
-        // Lấy số season thực từ TMDB card
+    function getSeasonEpisodeCount(card, season) {
+        if (card.seasons) {
+            var s = card.seasons.filter(function(x){ return x.season_number === season; })[0];
+            if (s && s.episode_count) return s.episode_count;
+        }
+        return 50;
+    }
+
+    // Torrentio: hỏi season+episode → tìm bằng IMDB ID
+    function askTorrentio(card) {
         var totalSeasons = card.number_of_seasons || card.seasons_count || 1;
 
-        // Nếu chỉ có 1 season → bỏ qua bước chọn season, hỏi episode luôn
-        if (totalSeasons === 1) {
-            askEpisode(card, 1);
-            return;
+        function pickEpisode(s) {
+            var totalEps = getSeasonEpisodeCount(card, s);
+            var ee = [];
+            for (var e = 1; e <= totalEps; e++) ee.push({ title: 'Tập ' + e, e: e });
+            Lampa.Select.show({
+                title: 'Season ' + s + ' — Chọn tập', items: ee,
+                onSelect: function (ei) { searchTorrentio(card, s, ei.e); },
+                onBack:   function () { Lampa.Controller.toggle('full'); }
+            });
         }
+
+        if (totalSeasons === 1) { pickEpisode(1); return; }
 
         var ss = [];
         for (var s = 1; s <= totalSeasons; s++) {
-            // Lấy số episode của season nếu có
-            var epCount = '';
-            if (card.seasons) {
-                var seasonData = card.seasons.filter(function(x){ return x.season_number === s; })[0];
-                if (seasonData && seasonData.episode_count) epCount = ' (' + seasonData.episode_count + ' tập)';
-            }
-            ss.push({ title: 'Season ' + s + epCount, s: s });
+            var ep = getSeasonEpisodeCount(card, s);
+            ss.push({ title: 'Season ' + s + ' (' + ep + ' tập)', s: s });
         }
-
         Lampa.Select.show({
-            title: 'Chọn Season', items: ss,
-            onSelect: function (si) { askEpisode(card, si.s); },
+            title: 'Torrentio — Chọn Season', items: ss,
+            onSelect: function (si) { pickEpisode(si.s); },
             onBack:   function () { Lampa.Controller.toggle('full'); }
         });
     }
 
-    function askEpisode(card, season) {
-        // Lấy số episode thực của season này
-        var totalEps = 50;
-        if (card.seasons) {
-            var seasonData = card.seasons.filter(function(x){ return x.season_number === season; })[0];
-            if (seasonData && seasonData.episode_count) totalEps = seasonData.episode_count;
-        }
-
-        var ee = [];
-        for (var e = 1; e <= totalEps; e++) ee.push({ title: 'Tập ' + e, e: e });
-
-        Lampa.Select.show({
-            title: 'Season ' + season + ' — Chọn tập', items: ee,
-            onSelect: function (ei) { doSearch(card, season, ei.e); },
-            onBack:   function () { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    /* ---- HOOK ---- */
+    /* ---- HOOK: 2 nút riêng ---- */
     Lampa.Listener.follow('full', function (e) {
         if (e.type !== 'complite') return;
         var card = e.data && e.data.movie ? e.data.movie : (e.object && e.object.card);
@@ -439,7 +430,10 @@
                  : (e.object && e.object.render   ? e.object.render() : $('body'));
         if ($ctx.find('.view--torrentio7').length) return;
 
-        var $btn = $(
+        var isSeries = getMediaType(card) === 'series';
+
+        // Nút 1: Torrentio (tìm bằng IMDB ID)
+        var $btn1 = $(
             '<div class="full-start__button selector view--torrentio7">' +
             '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
             ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
@@ -447,14 +441,31 @@
             '<line x1="12" y1="8" x2="12" y2="16"/></svg>' +
             '<span>Torrentio</span></div>'
         );
-        $btn.on('hover:enter', function () {
-            if (getMediaType(card) === 'series') askSeasonAndSearch(card);
-            else doSearch(card, null, null);
+        $btn1.on('hover:enter', function () {
+            if (isSeries) askTorrentio(card);
+            else searchTorrentio(card, null, null);
         });
-        var $tor = $ctx.find('.view--torrent');
-        if ($tor.length) $tor.after($btn);
-        else $ctx.find('.full-start__buttons').append($btn);
+
+        // Nút 2: Jackett (tìm bằng tên, chọn tập thủ công)
+        var $btn2 = $(
+            '<div class="full-start__button selector view--jackett7">' +
+            '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
+            ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+            '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+            '<span>Jackett</span></div>'
+        );
+        $btn2.on('hover:enter', function () {
+            searchJackett(card);
+        });
+
+        var $anchor = $ctx.find('.view--torrent');
+        if ($anchor.length) {
+            $anchor.after($btn2);
+            $anchor.after($btn1);
+        } else {
+            $ctx.find('.full-start__buttons').append($btn1).append($btn2);
+        }
     });
 
-    console.log('[Torrentio+jac.maxvol.pro] v7.2 loaded');
+    console.log('[Torrentio + Jackett] v8.0 loaded');
 })();
