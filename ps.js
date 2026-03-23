@@ -2,12 +2,21 @@
     'use strict';
 
     /* ============================================================
-       Torrentio + Knaben Parser for Lampa  —  v3.2.0
-       Fix scroll: controller toggle sau khi items đã vào DOM
+       Torrentio + Knaben Parser for Lampa  —  v4.0.0
+
+       Cách đúng: Override Lampa.Api.sources.parser
+       → Lampa native "torrents" component tự xử lý UI/scroll/filter
+
+       Flow:
+         nút "Torrentio" trên trang phim
+           → Lampa.Activity.push({ component: 'torrents', movie: card })
+           → Lampa gọi Lampa.Api.sources.parser.search(params, ok, fail)
+           → plugin trả về { Results: [...] } đúng Jackett format
+           → Lampa hiển thị với UI native (scroll, filter, sort đầy đủ) ✅
     ============================================================ */
 
-    if (window.plugin_torrentio_v3_ready) return;
-    window.plugin_torrentio_v3_ready = true;
+    if (window.plugin_torrentio_v4_ready) return;
+    window.plugin_torrentio_v4_ready = true;
 
     var TORRENTIO_BASE = 'https://torrentio.strem.fun';
     var KNABEN_API     = 'https://knaben.eu/api/v1';
@@ -15,15 +24,13 @@
     /* ============================================================
        HELPERS
     ============================================================ */
-    function getTorrServerUrl() {
-        var url = Lampa.Storage.field('torrserver_url')
-               || Lampa.Storage.field('ts_url')
-               || Lampa.Storage.field('tsurl')
-               || '';
-        if (!url) return null;
-        url = url.replace(/\/$/, '');
-        if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-        return url;
+    function makeMagnet(hash, name) {
+        return 'magnet:?xt=urn:btih:' + hash.toLowerCase() +
+               '&dn=' + encodeURIComponent(name || '') +
+               '&tr=' + encodeURIComponent('udp://tracker.opentrackr.org:1337/announce') +
+               '&tr=' + encodeURIComponent('udp://open.stealth.si:80/announce') +
+               '&tr=' + encodeURIComponent('udp://tracker.torrent.eu.org:451/announce') +
+               '&tr=' + encodeURIComponent('udp://exodus.desync.com:6969/announce');
     }
 
     function fmtBytes(b) {
@@ -34,13 +41,19 @@
         return b + ' B';
     }
 
-    function makeMagnet(hash, name) {
-        return 'magnet:?xt=urn:btih:' + hash.toLowerCase() +
-               '&dn=' + encodeURIComponent(name || '') +
-               '&tr=' + encodeURIComponent('udp://tracker.opentrackr.org:1337/announce') +
-               '&tr=' + encodeURIComponent('udp://open.stealth.si:80/announce') +
-               '&tr=' + encodeURIComponent('udp://tracker.torrent.eu.org:451/announce') +
-               '&tr=' + encodeURIComponent('udp://exodus.desync.com:6969/announce');
+    // Chuyển size string "4.5 GB" → bytes
+    function parseSize(str) {
+        if (!str) return 0;
+        str = String(str).trim();
+        var m = str.match(/([\d.,]+)\s*(TB|GB|MB|KB|B)/i);
+        if (!m) return 0;
+        var n = parseFloat(m[1].replace(',', '.'));
+        var u = m[2].toUpperCase();
+        if (u === 'TB') return Math.round(n * 1e12);
+        if (u === 'GB') return Math.round(n * 1e9);
+        if (u === 'MB') return Math.round(n * 1e6);
+        if (u === 'KB') return Math.round(n * 1e3);
+        return Math.round(n);
     }
 
     function getImdbId(card) {
@@ -58,68 +71,9 @@
         return 'movie';
     }
 
-    /* ============================================================
-       BADGE PARSER
-    ============================================================ */
-    function parseBadges(title) {
-        var t = title || '';
-        var badges = [];
-
-        // Resolution
-        var res = '';
-        if      (/3840.?2160|2160p|4K/i.test(t))  res = '3840×2160';
-        else if (/1920.?1080|1080p/i.test(t))      res = '1920×1080';
-        else if (/1280.?720|720p/i.test(t))         res = '1280×720';
-        else if (/480p/i.test(t))                   res = '480p';
-        if (res) badges.push({ text: res, cls: 'torr-badge--res' });
-
-        // Audio channels
-        if (/7\.1/.test(t)) badges.push({ text: '7.1', cls: 'torr-badge--audio' });
-        if (/5\.1/.test(t)) badges.push({ text: '5.1', cls: 'torr-badge--audio' });
-        if (/2\.0/.test(t)) badges.push({ text: '2.0', cls: 'torr-badge--audio' });
-
-        // Audio codec
-        if (/TrueHD/i.test(t))      badges.push({ text: 'TrueHD', cls: 'torr-badge--audio' });
-        if (/Atmos/i.test(t))        badges.push({ text: 'Atmos',  cls: 'torr-badge--audio' });
-        if (/DTS-HD/i.test(t))       badges.push({ text: 'DTS-HD', cls: 'torr-badge--audio' });
-        else if (/\bDTS\b/i.test(t)) badges.push({ text: 'DTS',    cls: 'torr-badge--audio' });
-        if (/EAC3|E-AC-3/i.test(t))  badges.push({ text: 'EAC3',   cls: 'torr-badge--audio' });
-        else if (/\bAC3\b/i.test(t)) badges.push({ text: 'AC3',    cls: 'torr-badge--audio' });
-
-        // Video codec
-        if      (/[Xx]265|HEVC/i.test(t)) badges.push({ text: 'HEVC', cls: 'torr-badge--codec' });
-        else if (/[Xx]264|AVC/i.test(t))  badges.push({ text: 'AVC',  cls: 'torr-badge--codec' });
-        else if (/AV1/i.test(t))           badges.push({ text: 'AV1',  cls: 'torr-badge--codec' });
-
-        // Source
-        var src = '';
-        if      (/BDRemux|BD.Remux/i.test(t)) src = 'BDRemux';
-        else if (/BluRay|Blu-Ray/i.test(t))    src = 'BluRay';
-        else if (/BDRip/i.test(t))             src = 'BDRip';
-        else if (/WEB-DL/i.test(t))            src = 'WEB-DL';
-        else if (/WEBRip/i.test(t))            src = 'WEBRip';
-        else if (/HDTV/i.test(t))              src = 'HDTV';
-        else if (/\bCAM\b/i.test(t))           src = 'CAM';
-        else if (/BrRip|BRRip/i.test(t))       src = 'BRRip';
-        else if (/DVDRip/i.test(t))            src = 'DVDRip';
-        if (src) badges.push({ text: src, cls: 'torr-badge--src' });
-
-        // HDR
-        if (/Dolby.?Vision|\bDV\b/i.test(t)) badges.push({ text: 'Dolby Vision', cls: 'torr-badge--hdr' });
-        else if (/HDR10\+/i.test(t))          badges.push({ text: 'HDR10+',       cls: 'torr-badge--hdr' });
-        else if (/\bHDR\b/i.test(t))          badges.push({ text: 'HDR',          cls: 'torr-badge--hdr' });
-
-        // Voice badges từ Torrentio title (dạng "🎙 RUS - HDRezka")
-        var voices = t.match(/\b(RUS|UKR|ENG|FRE|GER|SPA|ITA|JPN|CHI)(?:\s*[-–]\s*[^\s|,\n\[]+)?/gi) || [];
-        voices.forEach(function (v) {
-            badges.push({ text: '🎙 ' + v.trim(), cls: 'torr-badge--voice' });
-        });
-
-        return badges;
-    }
 
     /* ============================================================
-       FETCH: TORRENTIO
+       FETCH: TORRENTIO → Jackett Results format
     ============================================================ */
     function fetchTorrentio(imdbId, type, season, episode, onDone) {
         var path = type === 'series'
@@ -131,35 +85,41 @@
         net.silent(TORRENTIO_BASE + path,
             function (data) {
                 var streams = (data && data.streams) || [];
-                var results = streams.map(function (s) {
-                    if (!s.infoHash) return null;
+                var results = [];
+
+                streams.forEach(function (s) {
+                    if (!s.infoHash) return;
                     var lines  = (s.title || '').split('\n');
                     var name   = lines[0] || '';
                     var info   = lines[1] || '';
                     var sizeM  = info.match(/💾\s*([\d.,]+\s*[GMKB]+)/i);
                     var seedM  = info.match(/👤\s*(\d+)/);
                     var srcM   = info.match(/⚙️\s*(\S+)/);
-                    return {
-                        title:   name,
-                        tracker: srcM  ? srcM[1]         : 'Torrentio',
-                        sizeStr: sizeM ? sizeM[1].trim() : '',
-                        seeds:   seedM ? parseInt(seedM[1]) : 0,
-                        peers:   0,
-                        hash:    s.infoHash.toLowerCase(),
-                        fileIdx: typeof s.fileIdx === 'number' ? s.fileIdx : 0,
-                        magnet:  makeMagnet(s.infoHash, name),
-                        date:    ''
-                    };
-                }).filter(Boolean);
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
+                    var sizeStr = sizeM ? sizeM[1].trim() : '';
+
+                    // Jackett format
+                    results.push({
+                        Title:       name,
+                        Seeders:     seedM ? parseInt(seedM[1]) : 0,
+                        Leechers:    0,
+                        Size:        parseSize(sizeStr),
+                        Tracker:     srcM ? srcM[1] : 'Torrentio',
+                        MagnetUri:   makeMagnet(s.infoHash, name),
+                        Link:        '',
+                        PublishDate: ''
+                    });
+                });
+
+                results.sort(function (a, b) { return b.Seeders - a.Seeders; });
                 onDone(results);
             },
             function () { onDone([]); }
         );
     }
 
+
     /* ============================================================
-       FETCH: KNABEN
+       FETCH: KNABEN → Jackett Results format
     ============================================================ */
     function fetchKnaben(query, onDone) {
         $.ajax({
@@ -173,292 +133,121 @@
                 seconds_since_last_seen: 604800
             }),
             success: function (data) {
-                var hits = (data && data.hits) || [];
+                var hits    = (data && data.hits) || [];
                 var results = hits.map(function (h) {
-                    var hash = (h.hash || '').toLowerCase();
+                    var hash   = (h.hash || '').toLowerCase();
+                    var magnet = h.magnetUrl || (hash ? makeMagnet(hash, h.title) : '');
+                    if (!magnet) return null;
                     return {
-                        title:   h.title   || '',
-                        tracker: h.cachedOrigin || 'Knaben',
-                        sizeStr: h.bytes   ? fmtBytes(h.bytes) : '',
-                        seeds:   parseInt(h.seeders)  || 0,
-                        peers:   parseInt(h.leechers) || 0,
-                        hash:    hash,
-                        fileIdx: 0,
-                        magnet:  h.magnetUrl || (hash ? makeMagnet(hash, h.title) : ''),
-                        date:    (h.date || '').slice(0, 10)
+                        Title:       h.title    || '',
+                        Seeders:     parseInt(h.seeders)  || 0,
+                        Leechers:    parseInt(h.leechers) || 0,
+                        Size:        parseInt(h.bytes)    || 0,
+                        Tracker:     h.cachedOrigin || 'Knaben',
+                        MagnetUri:   magnet,
+                        Link:        '',
+                        PublishDate: (h.date || '').slice(0, 10)
                     };
-                }).filter(function (r) { return r.magnet; });
-                results.sort(function (a, b) { return b.seeds - a.seeds; });
+                }).filter(Boolean);
+                results.sort(function (a, b) { return b.Seeders - a.Seeders; });
                 onDone(results);
             },
             error: function () { onDone([]); }
         });
     }
 
-    /* ============================================================
-       TORRSERVER: ADD → GET → PLAY
-    ============================================================ */
-    function tsPlay(tsUrl, magnet, hash, fileIdx, title) {
-        Lampa.Noty.show('Đang kết nối TorrServer...');
-        $.ajax({
-            url: tsUrl + '/torrents', method: 'POST',
-            contentType: 'application/json', timeout: 12000,
-            data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
-            complete: function () {
-                setTimeout(function () {
-                    $.ajax({
-                        url: tsUrl + '/torrents', method: 'POST',
-                        contentType: 'application/json', timeout: 12000,
-                        data: JSON.stringify({ action: 'get', link: magnet }),
-                        success: function (d) {
-                            var useHash = (d && d.hash) || hash;
-                            var files   = (d && d.file_stats) || [];
-                            var vids    = files.filter(function (f) {
-                                return /\.(mp4|mkv|avi|mov|wmv|m4v|ts)$/i.test(f.path || '');
-                            });
-                            var list = vids.length ? vids : files;
-                            if (list.length > 1) {
-                                Lampa.Select.show({
-                                    title: '📂 Chọn file',
-                                    items: list.map(function (f, i) {
-                                        return { title: (f.path || 'File ' + i).split('/').pop(),
-                                                 index: f.id !== undefined ? f.id : i };
-                                    }),
-                                    onSelect: function (item) {
-                                        Lampa.Player.play({ title: title,
-                                            url: tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + item.index + '&play',
-                                            poster: '' });
-                                    },
-                                    onBack: function () { Lampa.Activity.backward(); }
-                                });
-                            } else {
-                                Lampa.Player.play({ title: title,
-                                    url: tsUrl + '/stream?link=' + encodeURIComponent(useHash) + '&index=' + (fileIdx || 0) + '&play',
-                                    poster: '' });
-                            }
-                        },
-                        error: function () {
-                            Lampa.Player.play({ title: title,
-                                url: tsUrl + '/stream?link=' + encodeURIComponent(hash) + '&index=' + (fileIdx || 0) + '&play',
-                                poster: '' });
-                        }
-                    });
-                }, 1500);
-            }
-        });
-    }
 
     /* ============================================================
-       COMPONENT: KẾT QUẢ
-       FIX: Lampa.Controller.toggle() gọi ở cuối create() sau khi
-            tất cả items đã được append vào scroll
+       OVERRIDE Lampa.Api.sources.parser
+       Lampa gọi parser.search(params, onSuccess, onError)
+       params = { query, movie, ... }
+       onSuccess({ Results: [...] })
     ============================================================ */
-    function ResultsComponent(object) {
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var results = object.results || [];
-        var tsUrl   = getTorrServerUrl();
+    var _originalParser = null;
 
-        this.render = function () {
-            return scroll.render();
-        };
+    function installParser() {
+        // Lưu parser gốc (Jackett/Prowlarr) nếu có
+        if (Lampa.Api && Lampa.Api.sources) {
+            _originalParser = Lampa.Api.sources.parser || null;
 
-        this.create = function () {
-            var self = this;
+            Lampa.Api.sources.parser = {
+                search: function (params, onSuccess, onError) {
+                    var movie  = params.movie || params.card || {};
+                    var query  = params.query
+                              || movie.title
+                              || movie.name
+                              || movie.original_title
+                              || '';
+                    var year   = (movie.release_date || movie.first_air_date || '').slice(0, 4);
+                    var type   = getMediaType(movie);
+                    var imdbId = getImdbId(movie);
+                    var season  = params.season  || null;
+                    var episode = params.episode || null;
 
-            if (!results.length) {
-                scroll.render().find('.scroll__content').html(
-                    '<div style="padding:3em;text-align:center;color:#888">' +
-                    'Không tìm thấy torrent 😔</div>'
-                );
-            } else {
-                results.forEach(function (r) {
-                    scroll.append(makeCard(r));
-                });
-            }
+                    // Tìm đồng thời Torrentio + Knaben
+                    var combined = [];
+                    var pending  = 2;
 
-            // ✅ KEY FIX: đăng ký controller SAU khi items đã append
-            // rồi mới toggle để Navigator nhận diện được các selector
-            Lampa.Controller.add('torr_results', {
-                toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render());
-                    Lampa.Controller.collectionFocus(false, scroll.render());
+                    function onPart(arr) {
+                        combined = combined.concat(arr);
+                        if (--pending > 0) return;
+
+                        // Dedup theo MagnetUri hash
+                        var seen = {};
+                        combined = combined.filter(function (r) {
+                            var key = (r.MagnetUri || '').match(/btih:([a-f0-9]+)/i);
+                            key = key ? key[1] : r.Title;
+                            if (!key || seen[key]) return false;
+                            seen[key] = true;
+                            return true;
+                        });
+                        combined.sort(function (a, b) { return b.Seeders - a.Seeders; });
+
+                        onSuccess({ Results: combined });
+                    }
+
+                    // Torrentio — ưu tiên IMDB ID
+                    if (imdbId) {
+                        fetchTorrentio(imdbId, type, season, episode, onPart);
+                    } else {
+                        // Lấy IMDB ID từ TMDB rồi mới fetch
+                        var tmdbType = type === 'series' ? 'tv' : 'movie';
+                        var net = new Lampa.Reguest();
+                        net.timeout(8000);
+                        net.silent(
+                            'https://api.themoviedb.org/3/' + tmdbType + '/' + movie.id +
+                            '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
+                            function (d) {
+                                var id = d && d.imdb_id;
+                                if (id) {
+                                    movie.imdb_id = id;
+                                    fetchTorrentio(id, type, season, episode, onPart);
+                                } else {
+                                    onPart([]);
+                                }
+                            },
+                            function () { onPart([]); }
+                        );
+                    }
+
+                    // Knaben — dùng title + year
+                    var kQuery = query + (year ? ' ' + year : '');
+                    fetchKnaben(kQuery, onPart);
                 },
-                back: function () {
-                    Lampa.Activity.backward();
-                },
-                up: function () {
-                    if (Navigator.canmove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
-                },
-                down: function () {
-                    if (Navigator.canmove('down')) Navigator.move('down');
-                },
-                left: function () {
-                    if (Navigator.canmove('left')) Navigator.move('left');
-                },
-                right: function () {
-                    if (Navigator.canmove('right')) Navigator.move('right');
+
+                // Lampa cũng gọi các method này — giữ lại nếu parser gốc có
+                clear: function () {
+                    if (_originalParser && _originalParser.clear) _originalParser.clear();
                 }
-            });
-
-            Lampa.Controller.toggle('torr_results');
-        };
-
-        function makeCard(r) {
-            var badges = parseBadges(r.title);
-
-            var wrap = document.createElement('div');
-            wrap.className = 'torr-card selector';
-
-            // Title
-            var titleEl = document.createElement('div');
-            titleEl.className = 'torr-card__title';
-            titleEl.textContent = r.title;
-            wrap.appendChild(titleEl);
-
-            // Badges
-            if (badges.length) {
-                var badgeRow = document.createElement('div');
-                badgeRow.className = 'torr-card__badges';
-                badges.forEach(function (b) {
-                    var el = document.createElement('span');
-                    el.className = 'torr-badge ' + (b.cls || '');
-                    el.textContent = b.text;
-                    badgeRow.appendChild(el);
-                });
-                wrap.appendChild(badgeRow);
-            }
-
-            // Tracker + date
-            var infoEl = document.createElement('div');
-            infoEl.className = 'torr-card__info';
-            infoEl.textContent = [r.date, r.tracker].filter(Boolean).join('  ');
-            wrap.appendChild(infoEl);
-
-            // Stats row
-            var statsEl = document.createElement('div');
-            statsEl.className = 'torr-card__stats';
-            statsEl.innerHTML =
-                'Bitrate: <b>–</b>  ' +
-                'Seeds: <b class="torr-seeds">' + r.seeds + '</b>  ' +
-                'Leechers: <b class="torr-leech">' + r.peers + '</b>';
-            if (r.sizeStr) {
-                var sizeEl = document.createElement('span');
-                sizeEl.className = 'torr-card__size';
-                sizeEl.textContent = r.sizeStr;
-                statsEl.appendChild(sizeEl);
-            }
-            wrap.appendChild(statsEl);
-
-            // Click
-            $(wrap).on('hover:enter click', function () {
-                if (!tsUrl) {
-                    Lampa.Noty.show('⚠️ Chưa cài TorrServer URL trong Settings');
-                    return;
-                }
-                tsPlay(tsUrl, r.magnet, r.hash, r.fileIdx, r.title);
-            });
-
-            return $(wrap);
+            };
         }
-
-        // start() không cần làm gì vì controller đã đăng ký trong create()
-        this.start   = function () {};
-        this.pause   = function () {};
-        this.stop    = function () {};
-        this.back    = function () { Lampa.Activity.backward(); };
-        this.destroy = function () { scroll.destroy(); };
     }
 
-    Lampa.Component.add('torr_results', ResultsComponent);
 
     /* ============================================================
-       TÌM KIẾM: GỘP TORRENTIO + KNABEN
-    ============================================================ */
-    function doSearch(card, season, episode) {
-        var title  = card.title || card.name || '';
-        var type   = getMediaType(card);
-        var imdbId = getImdbId(card);
-        var year   = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query  = title + (year ? ' ' + year : '');
-
-        Lampa.Noty.show('Đang tìm torrent...');
-
-        var combined = [];
-        var pending  = 2;
-
-        function onPart(arr) {
-            combined = combined.concat(arr);
-            if (--pending > 0) return;
-
-            // Dedup theo hash
-            var seen = {};
-            combined = combined.filter(function (r) {
-                var key = r.hash || r.title;
-                if (!key || seen[key]) return false;
-                seen[key] = true;
-                return true;
-            });
-            combined.sort(function (a, b) { return b.seeds - a.seeds; });
-
-            if (!combined.length) {
-                Lampa.Noty.show('Không tìm thấy torrent nào 😔');
-                return;
-            }
-
-            Lampa.Activity.push({
-                component: 'torr_results',
-                title:     '🧲 ' + title,
-                results:   combined,
-                card:      card
-            });
-        }
-
-        // Torrentio
-        if (imdbId) {
-            fetchTorrentio(imdbId, type, season, episode, onPart);
-        } else {
-            var tmdbType = type === 'series' ? 'tv' : 'movie';
-            var net = new Lampa.Reguest();
-            net.timeout(8000);
-            net.silent(
-                'https://api.themoviedb.org/3/' + tmdbType + '/' + card.id +
-                '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
-                function (data) {
-                    var id = data && data.imdb_id;
-                    if (id) { card.imdb_id = id; fetchTorrentio(id, type, season, episode, onPart); }
-                    else onPart([]);
-                },
-                function () { onPart([]); }
-            );
-        }
-
-        // Knaben
-        fetchKnaben(query, onPart);
-    }
-
-    function askSeasonAndSearch(card) {
-        var seasons = [];
-        for (var s = 1; s <= 20; s++) seasons.push({ title: 'Season ' + s, s: s });
-        Lampa.Select.show({
-            title: 'Chọn Season',
-            items: seasons,
-            onSelect: function (si) {
-                var eps = [];
-                for (var e = 1; e <= 50; e++) eps.push({ title: 'Episode ' + e, e: e });
-                Lampa.Select.show({
-                    title: 'Season ' + si.s,
-                    items: eps,
-                    onSelect: function (ei) { doSearch(card, si.s, ei.e); },
-                    onBack:   function () { Lampa.Controller.toggle('full'); }
-                });
-            },
-            onBack: function () { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    /* ============================================================
-       HOOK VÀO TRANG PHIM
+       NÚT "TORRENTIO" TRÊN TRANG PHIM
+       Click → mở native 'torrents' component của Lampa
+       (scroll, filter, sort đều do Lampa xử lý)
     ============================================================ */
     Lampa.Listener.follow('full', function (e) {
         if (e.type !== 'complite') return;
@@ -473,10 +262,10 @@
             : (e.object && e.object.render ? e.object.render() : null);
         if (!$ctx) $ctx = $('body');
 
-        if ($ctx.find('.view--torrentio3').length) return;
+        if ($ctx.find('.view--torrentio4').length) return;
 
         var $btn = $(
-            '<div class="full-start__button selector view--torrentio3">' +
+            '<div class="full-start__button selector view--torrentio4">' +
             '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
             ' stroke="currentColor" stroke-width="1.5"' +
             ' stroke-linecap="round" stroke-linejoin="round">' +
@@ -490,8 +279,13 @@
 
         $btn.on('hover:enter', function () {
             var type = getMediaType(card);
-            if (type === 'series') askSeasonAndSearch(card);
-            else doSearch(card, null, null);
+            if (type === 'series') {
+                askSeasonEpisode(card, function (s, ep) {
+                    openTorrents(card, s, ep);
+                });
+            } else {
+                openTorrents(card, null, null);
+            }
         });
 
         var $tor = $ctx.find('.view--torrent');
@@ -499,33 +293,72 @@
         else $ctx.find('.full-start__buttons').append($btn);
     });
 
-    /* ============================================================
-       CSS
-    ============================================================ */
-    $('<style>').text([
-        '.torr-card{display:block;padding:14px 16px;margin:3px 0;',
-        '  background:rgba(255,255,255,.04);border-radius:8px;cursor:pointer}',
-        '.torr-card.focus{background:rgba(255,255,255,.1);',
-        '  outline:2px solid rgba(255,255,255,.2)}',
-        '.torr-card__title{font-size:.86em;color:#eee;margin-bottom:7px;line-height:1.4}',
-        '.torr-card__badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}',
-        '.torr-badge{padding:2px 7px;border-radius:3px;font-size:.7em;',
-        '  background:rgba(255,255,255,.12);color:#ccc}',
-        '.torr-badge--res  {background:rgba(41,182,246,.25);color:#81d4fa}',
-        '.torr-badge--audio{background:rgba(102,187,106,.25);color:#a5d6a7}',
-        '.torr-badge--voice{background:rgba(186,104,200,.3);color:#ce93d8}',
-        '.torr-badge--codec{background:rgba(239,83,80,.2);color:#ef9a9a}',
-        '.torr-badge--src  {background:rgba(120,144,156,.25);color:#cfd8dc}',
-        '.torr-badge--hdr  {background:rgba(255,213,79,.2);color:#fff176}',
-        '.torr-card__info{font-size:.72em;color:#777;margin-bottom:4px}',
-        '.torr-card__stats{display:flex;align-items:center;gap:12px;',
-        '  font-size:.75em;color:#999}',
-        '.torr-seeds{color:#27ae60!important}',
-        '.torr-leech{color:#e74c3c!important}',
-        '.torr-card__size{margin-left:auto;background:rgba(255,255,255,.08);',
-        '  padding:2px 10px;border-radius:4px;color:#eee;font-size:.95em;white-space:nowrap}'
-    ].join('\n')).appendTo('head');
 
-    console.log('[Torrentio+Knaben] v3.2.0 loaded');
+    function openTorrents(card, season, episode) {
+        // Lưu season/episode vào card để parser đọc được
+        card._torrentio_season  = season;
+        card._torrentio_episode = episode;
+
+        // Dùng native torrents component → scroll/filter đầy đủ
+        Lampa.Activity.push({
+            component: 'torrents',
+            title:     card.title || card.name || '',
+            movie:     card,
+            card:      card,
+            source:    'tmdb'
+        });
+    }
+
+
+    function askSeasonEpisode(card, onDone) {
+        var seasons = [];
+        for (var s = 1; s <= 20; s++) seasons.push({ title: 'Season ' + s, s: s });
+
+        Lampa.Select.show({
+            title: 'Chọn Season',
+            items: seasons,
+            onSelect: function (si) {
+                var eps = [];
+                for (var e = 1; e <= 50; e++) eps.push({ title: 'Episode ' + e, e: e });
+                Lampa.Select.show({
+                    title: 'Season ' + si.s,
+                    items: eps,
+                    onSelect: function (ei) { onDone(si.s, ei.e); },
+                    onBack:   function () { Lampa.Controller.toggle('full'); }
+                });
+            },
+            onBack: function () { Lampa.Controller.toggle('full'); }
+        });
+    }
+
+
+    /* ============================================================
+       KHỞI ĐỘNG
+    ============================================================ */
+    function start() {
+        // Cài parser ngay khi app sẵn sàng
+        installParser();
+        console.log('[Torrentio+Knaben v4] Parser installed');
+    }
+
+    if (window.appready) start();
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') start();
+    });
+
+    // Patch thêm: khi parser.search được gọi, đọc season/episode từ card
+    // (Lampa truyền params.movie nên ta lấy được _torrentio_season)
+    var _origInstall = installParser;
+    installParser = function () {
+        _origInstall();
+        var _search = Lampa.Api.sources.parser.search.bind(Lampa.Api.sources.parser);
+        Lampa.Api.sources.parser.search = function (params, ok, fail) {
+            var movie = params.movie || params.card || {};
+            // Đọc season/episode đã lưu trước đó
+            if (!params.season  && movie._torrentio_season)  params.season  = movie._torrentio_season;
+            if (!params.episode && movie._torrentio_episode) params.episode = movie._torrentio_episode;
+            _search(params, ok, fail);
+        };
+    };
 
 })();
