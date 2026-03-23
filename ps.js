@@ -328,60 +328,47 @@
         });
     }
 
-    /* ---- TÌM KIẾM GỘP ---- */
-    function doSearch(card, season, episode) {
-        var title  = card.title || card.name || '';
-        var type   = getMediaType(card);
-        var imdbId = getImdbId(card);
-        var year   = (card.release_date || card.first_air_date || '').slice(0, 4);
+    /* ---- TORRENTIO: tìm bằng IMDB ID ---- */
+    function searchTorrentio(card, season, episode) {
+        var title    = card.title || card.name || '';
+        var type     = getMediaType(card);
+        var imdbId   = getImdbId(card);
 
-        // Torrentio: tìm bằng IMDB ID (chính xác nhất)
-        // Jackett (jac.maxvol.pro): tìm bằng tên + năm
-        var jacQuery = title + (year ? ' ' + year : '');
+        Lampa.Noty.show('Torrentio: đang tìm...');
 
-        Lampa.Noty.show('Đang tìm...');
-
-        var combined = [];
-        var pending  = 2;
-
-        function onPart(arr) {
-            combined = combined.concat(arr);
-            if (--pending > 0) return;
-            var seen = {};
-            combined = combined.filter(function (r) {
-                var key = r.hash || r.title;
-                if (!key || seen[key]) return false;
-                seen[key] = true;
-                return true;
+        function run(id) {
+            fetchTorrentio(id, type, season, episode, function (arr) {
+                showResults(sortResults(arr), title);
             });
-            combined = sortResults(combined);
-            showResults(combined, title);
-        }
-
-        // 1. Torrentio — bằng IMDB ID
-        function runTorrentio(id) {
-            fetchTorrentio(id, type, season, episode, onPart);
         }
 
         if (imdbId) {
-            runTorrentio(imdbId);
+            run(imdbId);
         } else {
-            // Fetch IMDB ID từ TMDB trước
             var tmdbType = type === 'series' ? 'tv' : 'movie';
             reguest(
                 'https://api.themoviedb.org/3/' + tmdbType + '/' + card.id +
                 '/external_ids?api_key=4ef0d7355d9ffb5151e987764708ce96',
                 function (d) {
                     var id = d && d.imdb_id;
-                    if (id) { card.imdb_id = id; runTorrentio(id); }
-                    else onPart([]); // Torrentio skip
+                    if (id) { card.imdb_id = id; run(id); }
+                    else Lampa.Noty.show('Không tìm thấy IMDB ID');
                 },
-                function () { onPart([]); }
+                function () { Lampa.Noty.show('Lỗi lấy IMDB ID'); }
             );
         }
+    }
 
-        // 2. Jackett — bằng tên + năm (độc lập với Torrentio)
-        fetchJacred(jacQuery, onPart);
+    /* ---- JACKETT: tìm bằng tên+năm, chọn tập thủ công ---- */
+    function searchJackett(card) {
+        var title = card.title || card.name || '';
+        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
+        var query = title + (year ? ' ' + year : '');
+
+        Lampa.Noty.show('Jackett: đang tìm...');
+        fetchJacred(query, function (arr) {
+            showResults(sortResults(arr), title);
+        });
     }
 
     function getSeasonEpisodeCount(card, season) {
