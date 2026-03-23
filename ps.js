@@ -71,9 +71,12 @@
     }
 
     function getTsUrl() {
-        var url = Lampa.Storage.field('torrserver_url')
-               || Lampa.Storage.field('ts_url')
-               || Lampa.Storage.field('tsurl') || '';
+        // Hardcode TorrServer URL, fallback sang Lampa Settings
+        var hardcoded = 'http://gren439e.tsarea.tv:8880';
+        var stored = Lampa.Storage.field('torrserver_url')
+                  || Lampa.Storage.field('ts_url')
+                  || Lampa.Storage.field('tsurl') || '';
+        var url = hardcoded || stored;
         if (!url) return null;
         url = url.replace(/\/$/, '');
         if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
@@ -143,18 +146,14 @@
             function (data) {
                 var d = (typeof data === 'string') ? JSON.parse(data) : data;
                 var results = ((d && d.Results) || []).map(function (r) {
-                    // Chỉ dùng MagnetUri, bỏ qua .torrent link (r.Link)
-                    var magnet = r.MagnetUri || '';
-                    // Nếu không có magnet → thử build từ Guid (một số Jackett instance để hash ở đây)
-                    if (!magnet) {
-                        var guidHash = (r.Guid || '').match(/btih:([a-f0-9]+)/i);
-                        if (guidHash) magnet = makeMagnet(guidHash[1], r.Title);
-                    }
-                    if (!magnet) return null;
+                    // Ưu tiên MagnetUri, fallback dùng Link (.torrent URL)
+                    // TorrServer nhận được cả 2 qua action:add
+                    var link = r.MagnetUri || r.Link || '';
+                    if (!link) return null;
 
-                    var hm   = magnet.match(/btih:([a-f0-9]+)/i);
+                    // Lấy hash nếu có (từ magnet)
+                    var hm   = link.match(/btih:([a-f0-9]+)/i);
                     var hash = hm ? hm[1].toLowerCase() : '';
-                    if (!hash) return null; // không có hash → skip
 
                     return {
                         title:   r.Title   || '',
@@ -164,7 +163,7 @@
                         tracker: r.Tracker || 'maxvol',
                         hash:    hash,
                         fileIdx: 0,
-                        magnet:  magnet
+                        magnet:  link  // có thể là magnet: hoặc http:// .torrent
                     };
                 }).filter(Boolean);
                 onDone(results);
