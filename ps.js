@@ -204,26 +204,27 @@
 
         Lampa.Noty.show('Đang tải torrent...');
 
-        // Step 1: ADD
+        // Step 1: ADD — lấy hash từ response
         $.ajax({
             url: tsUrl + '/torrents', method: 'POST',
             contentType: 'application/json', timeout: 15000,
             data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
             success: function (addResp) {
-                // action:add trả về hash trực tiếp
                 var addedHash = (addResp && addResp.hash) || hash;
-                doGet(addedHash);
+                // Jackett: GET bằng hash vừa nhận được (không dùng .torrent URL)
+                doGet(addedHash, addedHash);
             },
             error: function () {
-                // add lỗi (có thể đã tồn tại) → thử get luôn
-                doGet(hash);
+                doGet(hash, magnet);
             }
         });
 
-        // Step 2: GET với retry — đợi TorrServer parse xong .torrent
-        function doGet(linkOrHash) {
-            var maxRetry = 6;   // thử tối đa 6 lần
-            var interval = 2000; // mỗi 2s
+        // Step 2: GET với retry
+        // useHash = hash dùng để GET (từ ADD response)
+        // fallbackLink = link gốc nếu GET fail hoàn toàn
+        function doGet(useHashForGet, fallbackLink) {
+            var maxRetry = 8;
+            var interval = 2000;
             var attempt  = 0;
 
             function tryGet() {
@@ -231,9 +232,9 @@
                 $.ajax({
                     url: tsUrl + '/torrents', method: 'POST',
                     contentType: 'application/json', timeout: 15000,
-                    data: JSON.stringify({ action: 'get', link: magnet }),
+                    data: JSON.stringify({ action: 'get', link: useHashForGet }),
                     success: function (d) {
-                        var useHash = (d && d.hash) || linkOrHash;
+                        var useHash = (d && d.hash) || useHashForGet;
                         if (!useHash) { Lampa.Noty.show('Lỗi: không lấy được hash'); return; }
 
                         var files = (d && d.file_stats) || [];
@@ -255,13 +256,14 @@
                             })[0];
                         }
 
+                        Lampa.Noty.show('Files: ' + list.length + ' | fileIdx: ' + fileIdx);
                         doPlay(useHash, list, targetFile);
                     },
                     error: function () {
                         if (attempt < maxRetry) {
                             setTimeout(tryGet, interval);
                         } else {
-                            doPlay(linkOrHash, [], null);
+                            doPlay(useHashForGet, [], null);
                         }
                     }
                 });
