@@ -2,66 +2,79 @@
     'use strict';
 
     /* ============================================================
-       OneJAV Plugin for Lampa  —  v1.1.0
+       OneJAV Plugin for Lampa  —  v1.2.0
+       Fix: dùng Lampa.Reguest như KKPhim, bỏ scroll.loadmore
     ============================================================ */
 
     var PLUGIN_ID = 'onejav';
     var BASE_URL  = 'https://onejav.com';
 
-    // Tự viết escapeHtml vì Lampa.Utils.escapeHtml không tồn tại
     function esc(str) {
         return String(str || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+            .replace(/"/g, '&quot;');
     }
 
 
     /* ============================================================
-       FETCH
+       FETCH - dùng Lampa.Reguest.silent() như KKPhim
+       Khi HTML không parse được JSON, Lampa vẫn trả về
+       responseText trong error callback hoặc raw string trong success
     ============================================================ */
     function fetchPage(url, ok, fail) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', url, true);
-        xhr.timeout = 20000;
-        xhr.setRequestHeader('Accept', 'text/html,*/*');
+        var net = new Lampa.Reguest();
+        net.timeout(20000);
+        net.silent(
+            url,
+            function (data) {
+                // success: data có thể là string HTML hoặc parsed object
+                if (typeof data === 'string' && data.length > 100) {
+                    ok(data);
+                } else if (data && typeof data === 'object') {
+                    // Lampa parse thành object - thử stringify rồi xem có HTML không
+                    var s = JSON.stringify(data);
+                    if (s.indexOf('<!DOCTYPE') >= 0 || s.indexOf('<html') >= 0) {
+                        ok(s);
+                    } else {
+                        // Thử lấy responseText từ object nếu có
+                        ok(data.responseText || data.contents || s);
+                    }
+                } else {
+                    if (fail) fail('Empty response');
+                }
+            },
+            function (error) {
+                // error callback: thử lấy responseText từ XHR object
+                var text = '';
+                if (error && typeof error === 'object') {
+                    text = error.responseText || '';
+                } else if (typeof error === 'string') {
+                    text = error;
+                }
 
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
-            if (xhr.status >= 200 && xhr.status < 400) {
-                ok(xhr.responseText || '');
-            } else if (xhr.responseText && xhr.responseText.length > 100) {
-                ok(xhr.responseText);
-            } else {
-                if (fail) fail('HTTP ' + xhr.status);
+                if (text && text.length > 100) {
+                    ok(text);
+                } else {
+                    if (fail) fail('Reguest error: ' + (error && error.status ? 'HTTP ' + error.status : String(error)));
+                }
             }
-        };
-        xhr.ontimeout = function () { if (fail) fail('Timeout'); };
-        xhr.onerror   = function () {
-            try {
-                var req = new Lampa.Reguest();
-                req.timeout(20000);
-                req.native(url, function (resp) {
-                    var text = typeof resp === 'string' ? resp : (resp && resp.responseText) || '';
-                    if (text.length > 100) ok(text);
-                    else if (fail) fail('Response rỗng');
-                }, function () {
-                    if (fail) fail('XHR + Reguest đều lỗi');
-                }, false);
-            } catch (e) {
-                if (fail) fail('XHR error');
-            }
-        };
-
-        try { xhr.send(); } catch (e) { if (fail) fail(e.message); }
+        );
     }
 
 
     /* ============================================================
        PARSER
     ============================================================ */
+    function esc(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     function parseList(html) {
         var movies = [], seen = {};
         var $doc = $('<div>').html(html);
@@ -85,7 +98,6 @@
                 id:              slug,
                 title:           text,
                 original_title:  slug.toUpperCase(),
-                overview:        '',
                 poster:          poster,
                 poster_path:     poster,
                 background_path: poster,
@@ -101,7 +113,7 @@
 
     function parseDetail(html) {
         var $doc = $('<div>').html(html);
-        var info = { magnet: '', torrent: '', tags: [], actresses: [], desc: '' };
+        var info = { magnet: '', torrent: '', tags: [], actresses: [] };
 
         $doc.find('a[href^="magnet:"]').each(function () {
             if (!info.magnet) info.magnet = $(this).attr('href');
@@ -127,14 +139,18 @@
         return info;
     }
 
-    function parseMaxPage(html) {
-        var max = 1;
+    function parseNextPage(html) {
+        // onejav dùng ?page=N
+        var next = 0;
         $('<div>').html(html).find('a').each(function () {
             var h = $(this).attr('href') || '';
             var m = h.match(/[?&]page=(\d+)/);
-            if (m && +m[1] > max) max = +m[1];
+            if (m) {
+                var n = parseInt(m[1]);
+                if (n > next) next = n;
+            }
         });
-        return max;
+        return next; // 0 = không có trang tiếp
     }
 
     function buildUrl(obj, page) {
@@ -156,10 +172,13 @@
        COMPONENT: CATALOG
     ============================================================ */
     function CatalogComponent(object) {
-        var scroll  = new Lampa.Scroll({ mask: true, over: true });
-        var loading = false;
+        var scroll   = new Lampa.Scroll({ mask: true, over: true });
+        var loading  = false;
+        var curPage  = 1;
+        var maxPage  = 1;
 
         this.render = function () { return scroll.render(); };
+
         this.create = function () { loadPage(1); };
 
         function setContent(html) {
@@ -188,6 +207,21 @@
             return $card;
         }
 
+        function makeLoadMoreBtn(page) {
+            var $btn = $(
+                '<div class="onejav-more selector" style="' +
+                'display:block;width:90%;margin:16px auto;padding:14px;' +
+                'background:rgba(255,255,255,.1);color:#fff;border-radius:8px;' +
+                'text-align:center;cursor:pointer;font-size:.95em">' +
+                '⬇ Tải thêm (trang ' + page + ')</div>'
+            );
+            $btn.on('hover:enter click', function () {
+                $btn.remove();
+                loadPage(page);
+            });
+            return $btn;
+        }
+
         function loadPage(page) {
             if (loading) return;
             loading = true;
@@ -198,25 +232,33 @@
 
             fetchPage(buildUrl(object, page),
                 function (html) {
-                    loading = false;
+                    loading  = false;
+                    curPage  = page;
                     var movies  = parseList(html);
-                    var maxPage = parseMaxPage(html);
+                    maxPage     = parseNextPage(html);
 
                     if (!movies.length && page === 1) {
                         setContent('<div style="padding:3em;text-align:center;color:#888">Không tìm thấy phim nào 😔</div>');
                         return;
                     }
 
-                    if (page === 1) setContent('');
+                    if (page === 1) {
+                        scroll.render().find('.scroll__content').html('');
+                    }
+
                     movies.forEach(function (m) { scroll.append(makeCard(m)); });
 
-                    if (page < maxPage) {
-                        scroll.loadmore(function () { loadPage(page + 1); });
+                    // Thêm nút "Tải thêm" nếu còn trang tiếp
+                    if (maxPage > page) {
+                        scroll.append(makeLoadMoreBtn(page + 1));
                     }
                 },
                 function (err) {
                     loading = false;
-                    setContent('<div style="padding:3em;text-align:center;color:#e74c3c">❌ ' + esc(err || 'Lỗi kết nối') + '</div>');
+                    setContent(
+                        '<div style="padding:3em;text-align:center;color:#e74c3c;font-size:.85em;line-height:2">' +
+                        '❌ ' + esc(err || 'Lỗi kết nối') + '</div>'
+                    );
                 }
             );
         }
@@ -276,7 +318,9 @@
 
                     scroll.render().find('.scroll__content').html(
                         '<div style="padding:1.5em">' +
-                        (card.poster ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">' : '') +
+                        (card.poster
+                            ? '<img src="' + esc(card.poster) + '" style="max-width:180px;border-radius:8px;margin-bottom:1em;display:block">'
+                            : '') +
                         '<div style="font-size:1.1em;font-weight:bold;margin-bottom:.5em">' + esc(card.title) + '</div>' +
                         (actressStr ? '<div style="color:#aaa;margin-bottom:.4em">👤 ' + esc(actressStr) + '</div>' : '') +
                         (tagStr     ? '<div style="color:#666;font-size:.8em;margin-bottom:1em">' + esc(tagStr) + '</div>' : '') +
@@ -368,13 +412,13 @@
         Lampa.Select.show({
             title: 'OneJAV',
             items: [
-                { title: '🏠 Trang chủ',  section: '' },
-                { title: '🆕 Mới nhất',   section: 'new' },
-                { title: '🔥 Phổ biến',   section: 'popular' },
-                { title: '📅 Hôm nay',    section: 'today', date: d1 },
-                { title: '📅 Hôm qua',    section: 'today', date: yest },
-                { title: '🎭 FC2 Amateur',section: 'tag',   tag: 'FC2' },
-                { title: '🔍 Tìm kiếm',   action:  'search' }
+                { title: '🏠 Trang chủ',   section: '' },
+                { title: '🆕 Mới nhất',    section: 'new' },
+                { title: '🔥 Phổ biến',    section: 'popular' },
+                { title: '📅 Hôm nay',     section: 'today', date: d1 },
+                { title: '📅 Hôm qua',     section: 'today', date: yest },
+                { title: '🎭 FC2 Amateur', section: 'tag', tag: 'FC2' },
+                { title: '🔍 Tìm kiếm',    action: 'search' }
             ],
             onSelect: function (item) {
                 if (item.action === 'search') { showSearch(); return; }
@@ -439,9 +483,10 @@
         '.onejav-card__noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;font-size:.85em;font-weight:bold;text-align:center;padding:8px;box-sizing:border-box}' +
         '.onejav-card__name{font-size:.72em;color:#bbb;margin-top:5px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
         '.onejav-card.focus .onejav-card__img{outline:3px solid #e74c3c}' +
+        '.onejav-more.focus{outline:3px solid #e74c3c}' +
         '.onejav-play-btn.focus{outline:3px solid #fff}'
     ).appendTo('head');
 
-    console.log('[OneJAV] v1.1.0 loaded');
+    console.log('[OneJAV] v1.2.0 loaded');
 
 })();
