@@ -383,20 +383,48 @@
     }
 
     function askSeasonAndSearch(card) {
+        // Lấy số season thực từ TMDB card
+        var totalSeasons = card.number_of_seasons || card.seasons_count || 1;
+
+        // Nếu chỉ có 1 season → bỏ qua bước chọn season, hỏi episode luôn
+        if (totalSeasons === 1) {
+            askEpisode(card, 1);
+            return;
+        }
+
         var ss = [];
-        for (var s = 1; s <= 20; s++) ss.push({ title: 'Season ' + s, s: s });
+        for (var s = 1; s <= totalSeasons; s++) {
+            // Lấy số episode của season nếu có
+            var epCount = '';
+            if (card.seasons) {
+                var seasonData = card.seasons.filter(function(x){ return x.season_number === s; })[0];
+                if (seasonData && seasonData.episode_count) epCount = ' (' + seasonData.episode_count + ' tập)';
+            }
+            ss.push({ title: 'Season ' + s + epCount, s: s });
+        }
+
         Lampa.Select.show({
             title: 'Chọn Season', items: ss,
-            onSelect: function (si) {
-                var ee = [];
-                for (var e = 1; e <= 50; e++) ee.push({ title: 'Episode ' + e, e: e });
-                Lampa.Select.show({
-                    title: 'Season ' + si.s, items: ee,
-                    onSelect: function (ei) { doSearch(card, si.s, ei.e); },
-                    onBack:   function () { Lampa.Controller.toggle('full'); }
-                });
-            },
-            onBack: function () { Lampa.Controller.toggle('full'); }
+            onSelect: function (si) { askEpisode(card, si.s); },
+            onBack:   function () { Lampa.Controller.toggle('full'); }
+        });
+    }
+
+    function askEpisode(card, season) {
+        // Lấy số episode thực của season này
+        var totalEps = 50;
+        if (card.seasons) {
+            var seasonData = card.seasons.filter(function(x){ return x.season_number === season; })[0];
+            if (seasonData && seasonData.episode_count) totalEps = seasonData.episode_count;
+        }
+
+        var ee = [];
+        for (var e = 1; e <= totalEps; e++) ee.push({ title: 'Tập ' + e, e: e });
+
+        Lampa.Select.show({
+            title: 'Season ' + season + ' — Chọn tập', items: ee,
+            onSelect: function (ei) { doSearch(card, season, ei.e); },
+            onBack:   function () { Lampa.Controller.toggle('full'); }
         });
     }
 
