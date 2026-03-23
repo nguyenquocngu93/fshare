@@ -187,8 +187,6 @@
     }
 
     /* ---- PLAY URL ---- */
-    // Dùng đúng player đã cài trong Lampa Settings
-    // Nếu user set MX Player → mở thẳng MX Player, không qua Lampa player
     function playUrl(url, title) {
         Lampa.Player.play({
             title:  title || '',
@@ -211,7 +209,6 @@
             data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
             success: function (addResp) {
                 var addedHash = (addResp && addResp.hash) || hash;
-                // Jackett: GET bằng hash vừa nhận được (không dùng .torrent URL)
                 doGet(addedHash, addedHash);
             },
             error: function () {
