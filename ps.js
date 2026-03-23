@@ -5,7 +5,7 @@
     window.plugin_torrentio_v5_ready = true;
 
     var TORRENTIO_BASE = 'https://torrentio.strem.fun';
-    var KNABEN_API     = 'https://knaben.eu/api/v1';
+    var KNABEN_API     = 'https://knaben.org/api/v1';
 
     /* ---- HELPERS ---- */
     function makeMagnet(hash, name) {
