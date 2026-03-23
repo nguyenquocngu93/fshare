@@ -8,23 +8,17 @@
         var html    = $('<div></div>');
         var body    = $('<div class="category-full"></div>');
         
-        // 1. Khởi tạo Component
         this.create = function () {
             var _this = this;
 
-            // Hiển thị loading
-            this.activity.loader(true);
-
-            // Giả lập lấy dữ liệu từ JavLibrary (Bạn sẽ thay bằng link Scraper của bạn)
-            // Lưu ý: Cần qua Proxy để tránh CORS nếu chạy trên Web
-            var url = 'https://www.javlibrary.com/vi/vl_update.php'; 
-
-            // Ở đây mình demo dữ liệu mẫu theo cấu trúc Lampa
+            // Dữ liệu mẫu để đảm bảo Plugin luôn hiện nội dung khi test
             var demoData = [
-                {title: 'SSNI-123 Nàng Tiên Cá', code: 'SSNI-123', img: 'https://v2.vcdn.vn/images/2023/05/ssni-123.jpg'},
-                {title: 'IPX-999 Cô Giáo Thảo', code: 'IPX-999', img: 'https://v2.vcdn.vn/images/2023/05/ipx-999.jpg'}
+                {title: 'SSNI-123 Nàng Tiên Cá', code: 'SSNI-123', img: 'https://jable.tv/contents/videos_screenshots/20000/20345/preview.jpg'},
+                {title: 'IPX-999 Cô Giáo Thảo', code: 'IPX-999', img: 'https://jable.tv/contents/videos_screenshots/15000/15888/preview.jpg'},
+                {title: 'STARS-555 Tuyệt Đỉnh', code: 'STARS-555', img: 'https://jable.tv/contents/videos_screenshots/10000/10234/preview.jpg'}
             ];
 
+            // Xử lý hiển thị từng thẻ phim
             demoData.forEach(function (element) {
                 var card = Lampa.Template.get('card', {
                     title: element.title,
@@ -33,9 +27,32 @@
 
                 card.find('.card__img').attr('src', element.img);
                 
-                // Khi bấm vào phim -> Gọi tìm kiếm Torrent
+                // Sự kiện khi bấm vào phim
                 card.on('hover:enter', function () {
-                    _this.searchTorrent(element.code);
+                    Lampa.Select.show({
+                        title: 'Tùy chọn cho ' + element.code,
+                        items: [
+                            {title: 'Tìm Torrent (Sukebei)', source: 'torrent'},
+                            {title: 'Xem thông tin trên JavLibrary', source: 'info'}
+                        ],
+                        onSelect: function(a) {
+                            if(a.source == 'torrent') {
+                                // Gọi trình tìm kiếm Torrent mặc định của Lampa
+                                Lampa.Activity.push({
+                                    url: '',
+                                    title: 'Torrent: ' + element.code,
+                                    component: 'torrents',
+                                    search: element.code,
+                                    page: 1
+                                });
+                            } else {
+                                Lampa.Noty.show('Chức năng thông tin đang phát triển');
+                            }
+                        },
+                        onBack: function() {
+                            Lampa.Controller.toggle('content');
+                        }
+                    });
                 });
 
                 body.append(card);
@@ -45,35 +62,13 @@
             scroll.append(body);
             html.append(scroll.render());
             
-            this.activity.loader(false);
             return html;
         };
 
-        // 2. Logic tìm Torrent (Kết nối với Sukebei/Nyaa)
-        this.searchTorrent = function(code) {
-            Lampa.Select.show({
-                title: 'Tìm kiếm Torrent cho ' + code,
-                items: [
-                    {title: 'Tìm trên Sukebei (Nyaa)', source: 'sukebei'},
-                    {title: 'Tìm trên Jackett (Nếu có)', source: 'jackett'}
-                ],
-                onSelect: function(a){
-                    // Lampa có trình tìm kiếm Torrent mặc định
-                    // Bạn có thể "mượn" nó để tìm theo mã code
-                    Lampa.Activity.push({
-                        url: '',
-                        title: 'Torrent: ' + code,
-                        component: 'torrents', // Component mặc định của Lampa
-                        search: code,
-                        page: 1
-                    });
-                }
-            });
-        };
-
-        this.pause = function () {};
-        this.stop = function () {};
+        // Các hàm bắt buộc theo cấu trúc Lampa
         this.render = function () { return html; };
+        this.pause  = function () {};
+        this.stop   = function () {};
         
         this.destroy = function () {
             network.clear();
@@ -85,29 +80,29 @@
         };
     }
 
-    // 3. Đăng ký Menu theo chuẩn kkphim.js
+    // Hàm khởi tạo Plugin
     function startPlugin() {
-        window.jav_plugin_installed = true;
+        window.jav_torrent_plugin = true;
 
-        // Thêm Component vào hệ thống
-        Lampa.Component.add('jav_plugin', JavPlugin);
+        // Đăng ký Component vào hệ thống Lampa
+        Lampa.Component.add('jav_torrent', JavPlugin);
 
-        // Thêm vào Menu chính
+        // Đăng ký vào Menu chính
         var menu_item = {
-            id: 'jav_plugin',
-            title: 'Kho JAV (Torrent)',
-            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg>',
-            component: 'jav_plugin'
+            id: 'jav_torrent',
+            title: 'JAV Torrent',
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" fill="#fff"/></svg>',
+            component: 'jav_torrent'
         };
 
         Lampa.Menu.add(menu_item);
     }
 
-    // Chờ app sẵn sàng
-    if (window.appready && !window.jav_plugin_installed) startPlugin();
+    // Kiểm tra và chạy Plugin khi App sẵn sàng
+    if (window.appready) startPlugin();
     else {
         Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready' && !window.jav_plugin_installed) startPlugin();
+            if (e.type == 'ready') startPlugin();
         });
     }
 })();
