@@ -23,8 +23,6 @@ url = TORRENTIO + '/stream/movie/' + tmdb + '.json';
 url = TORRENTIO + '/stream/series/' + tmdb + ':' + season + ':' + episode + '.json';
 }
 
-log(url);
-
 $.getJSON(url,function(data){
 
 if(!data || !data.streams){
@@ -39,7 +37,7 @@ data.streams.forEach(function(s){
 if(!s.infoHash) return;
 
 list.push({
-title:s.title || 'torrent',
+title:s.title,
 hash:s.infoHash
 });
 
@@ -59,11 +57,10 @@ var url = TORRSERVER + '/stream?link=' + hash + '&index=1&play';
 
 log(url);
 
-if(window.Android){
-Android.open(url);
-}else{
-window.open(url);
-}
+Lampa.Player.play({
+url:url,
+title:'Torrent Stream'
+});
 
 }
 
@@ -80,7 +77,6 @@ list.forEach(function(t){
 
 items.push({
 title:t.title,
-subtitle:'torrent',
 icon:'play_arrow',
 onSelect:function(){
 playTorrent(t.hash);
@@ -96,21 +92,27 @@ items:items
 
 }
 
-function interceptPlay(){
+function createButton(movie){
 
-Lampa.Listener.follow('play',function(e){
+var btn = $('<div class="torrent-search-btn selector">')
+.text('Torrent')
+.css({
+marginLeft:'10px',
+padding:'6px 14px',
+background:'#1f1f1f',
+borderRadius:'6px',
+cursor:'pointer'
+});
 
-if(!e.data || !e.data.movie) return;
-
-var movie = e.data.movie;
+btn.on('hover:enter',function(){
 
 var tmdb = movie.id;
 var type = movie.name ? 'tv' : 'movie';
 
-var season = e.data.season || 1;
-var episode = e.data.episode || 1;
+var season = movie.season || 1;
+var episode = movie.episode || 1;
 
-log('play intercept');
+Lampa.Noty.show('Searching torrent...');
 
 searchTorrent(tmdb,type,season,episode,function(list){
 
@@ -118,7 +120,29 @@ showList(list);
 
 });
 
-return false;
+});
+
+return btn;
+
+}
+
+function injectButton(){
+
+Lampa.Listener.follow('full',function(e){
+
+if(e.type !== 'complite') return;
+
+var movie = e.data.movie;
+
+var playButton = $('.full-start-new__buttons .selector').first();
+
+if(!playButton.length) return;
+
+if($('.torrent-search-btn').length) return;
+
+var btn = createButton(movie);
+
+playButton.after(btn);
 
 });
 
@@ -128,7 +152,7 @@ function start(){
 
 log('plugin start');
 
-interceptPlay();
+injectButton();
 
 }
 
