@@ -1,170 +1,143 @@
-(function(){
-
+(function () {
 'use strict';
 
-var TORRSERVER='http://gren439e.tsarea.tv:8880';
+var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
+var TORRENTIO = 'https://torrentio.strem.fun/sort=seeders';
 
-function addButton(){
+function log(a){
+console.log('TORRENT_PLUGIN:',a);
+}
 
-if($('.torrent-clean').length) return;
+function getHash(magnet){
+var m = magnet.match(/btih:([a-zA-Z0-9]+)/);
+return m ? m[1] : null;
+}
 
-var btn=$('<div class="selector torrent-clean">')
-.append('<span>Torrent</span>');
+function searchTorrent(tmdb,type,season,episode,callback){
 
-btn.on('hover:enter',function(){
+var url;
 
-var movie=Lampa.Activity.active().card;
+if(type == 'movie'){
+url = TORRENTIO + '/stream/movie/' + tmdb + '.json';
+}else{
+url = TORRENTIO + '/stream/series/' + tmdb + ':' + season + ':' + episode + '.json';
+}
 
-if(!movie) return;
+log(url);
 
-search(movie);
+$.getJSON(url,function(data){
+
+if(!data || !data.streams){
+callback([]);
+return;
+}
+
+var list = [];
+
+data.streams.forEach(function(s){
+
+if(!s.infoHash) return;
+
+list.push({
+title:s.title || 'torrent',
+hash:s.infoHash
+});
 
 });
 
-$('.full-start-new__buttons').append(btn);
-
-}
-
-/* SEARCH */
-
-function search(movie){
-
-var imdb=movie.imdb_id;
-
-if(!imdb){
-
-Lampa.Noty.show('No IMDB id');
-return;
-
-}
-
-var url='https://torrentio.strem.fun/sort=seeders%7Csize/stream/movie/'+imdb+'.json';
-
-Lampa.Noty.show('Searching torrents...');
-
-$.get(url,function(data){
-
-if(!data || !data.streams || !data.streams.length){
-
-Lampa.Noty.show('No torrents found');
-return;
-
-}
-
-showList(data.streams);
+callback(list);
 
 }).fail(function(){
-
-Lampa.Noty.show('Network error');
-
+callback([]);
 });
 
 }
 
-/* SHOW LIST */
+function playTorrent(hash){
 
-function showList(streams){
+var url = TORRSERVER + '/stream?link=' + hash + '&index=1&play';
 
-var items=[];
+log(url);
 
-streams.forEach(function(s){
+if(window.Android){
+Android.open(url);
+}else{
+window.open(url);
+}
+
+}
+
+function showList(list){
+
+if(!list.length){
+Lampa.Noty.show('No torrent found');
+return;
+}
+
+var items = [];
+
+list.forEach(function(t){
 
 items.push({
-
-title:s.title || 'Torrent',
-
-subtitle:s.name || '',
-
-data:s.url
-
+title:t.title,
+subtitle:'torrent',
+icon:'play_arrow',
+onSelect:function(){
+playTorrent(t.hash);
+}
 });
 
 });
 
 Lampa.Select.show({
-
 title:'Torrent Streams',
-
-items:items,
-
-onSelect:function(a){
-
-sendTorrent(a.data);
+items:items
+});
 
 }
+
+function interceptPlay(){
+
+Lampa.Listener.follow('play',function(e){
+
+if(!e.data || !e.data.movie) return;
+
+var movie = e.data.movie;
+
+var tmdb = movie.id;
+var type = movie.name ? 'tv' : 'movie';
+
+var season = e.data.season || 1;
+var episode = e.data.episode || 1;
+
+log('play intercept');
+
+searchTorrent(tmdb,type,season,episode,function(list){
+
+showList(list);
+
+});
+
+return false;
 
 });
 
 }
 
-/* ADD TORRENT */
+function start(){
 
-function sendTorrent(magnet){
+log('plugin start');
 
-if(!magnet){
-
-Lampa.Noty.show('Magnet error');
-return;
+interceptPlay();
 
 }
 
-var hashMatch=magnet.match(/btih:([a-zA-Z0-9]+)/);
-
-if(!hashMatch){
-
-Lampa.Noty.show('Magnet invalid');
-return;
-
-}
-
-var hash=hashMatch[1];
-
-var add=TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
-
-Lampa.Noty.show('Adding torrent...');
-
-$.get(add,function(){
-
-setTimeout(function(){
-
-play(hash);
-
-},4000);
-
+if(window.appready){
+start();
+}else{
+Lampa.Listener.follow('app',function(e){
+if(e.type=='ready') start();
 });
-
 }
-
-/* PLAY */
-
-function play(hash){
-
-var url=TORRSERVER+'/stream?link='+hash+'&index=1&play';
-
-Lampa.Player.play({
-
-url:url,
-
-title:'Torrent Stream',
-
-type:'video',
-
-player:'android'
-
-});
-
-}
-
-/* INIT */
-
-Lampa.Listener.follow('activity',function(e){
-
-if(e.component=='full'){
-
-setTimeout(addButton,500);
-
-}
-
-});
 
 })();
