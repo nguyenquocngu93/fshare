@@ -1,22 +1,10 @@
 (function () {
     'use strict';
 
-    if (window.torrentio_ts_plugin) return;
-    window.torrentio_ts_plugin = true;
+    if (window.torrentio_parser) return;
+    window.torrentio_parser = true;
 
-    console.log('[TORRENTIO+TS] loaded');
-
-    // =========================
-    // CONFIG
-    // =========================
-    const TORRSERVER_URL = 'http://127.0.0.1:8090'; // đổi nếu cần
-
-    // =========================
-    // HELPERS
-    // =========================
-    function log() {
-        console.log('[TORRENTIO+TS]', ...arguments);
-    }
+    console.log('[TORRENTIO] Parser ready');
 
     function parseQuality(title) {
         if (!title) return 'SD';
@@ -67,142 +55,57 @@
         return `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
     }
 
-    // =========================
-    // TORRSERVER PLAY
-    // =========================
-    function playMagnet(magnet, title) {
+    Lampa.Parser.extend({
+        name: 'torrentio',
 
-        const url = TORRSERVER_URL + '/stream?link=' + encodeURIComponent(magnet);
+        search: function (params, oncomplete) {
 
-        log('play:', url);
+            const card = params.card || {};
+            let imdb = params.imdb_id || card.imdb_id;
 
-        Lampa.Player.play({
-            url: url,
-            title: title
-        });
-    }
-
-    function openList(results) {
-        if (!results.length) {
-            Lampa.Noty.show('Không có torrent');
-            return;
-        }
-
-        if (results.length === 1) {
-            playMagnet(results[0].magnet, results[0].title);
-            return;
-        }
-
-        Lampa.Select.show({
-            title: 'Torrentio',
-            items: results.map((r, i) => ({
-                title: `${r.title} (${r.quality})`,
-                index: i
-            })),
-            onSelect: function (item) {
-                const r = results[item.index];
-                playMagnet(r.magnet, r.title);
+            function done(list) {
+                console.log('[TORRENTIO] results:', list.length);
+                oncomplete(list || []);
             }
-        });
-    }
 
-    // =========================
-    // CORE
-    // =========================
-    function searchAndPlay(card) {
+            function fetchData(imdbId) {
+                if (!imdbId) return done([]);
 
-        let imdb = card.imdb_id;
+                const url = buildUrl(imdbId, card);
 
-        function run(imdbId) {
-            if (!imdbId) {
-                Lampa.Noty.show('Không có IMDB');
+                console.log('[TORRENTIO] fetch:', url);
+
+                fetch(url)
+                    .then(r => r.json())
+                    .then(data => {
+
+                        if (!data || !data.streams) return done([]);
+
+                        const results = data.streams.map(item => ({
+                            title: item.title || 'Torrentio',
+                            quality: parseQuality(item.title),
+                            size: parseSize(item.title),
+                            seeders: item.seeders || 0,
+
+                            // 🔥 QUAN TRỌNG NHẤT
+                            url: `magnet:?xt=urn:btih:${item.infoHash}`
+                        }));
+
+                        done(results);
+                    })
+                    .catch(() => done([]));
+            }
+
+            if (imdb) {
+                fetchData(imdb);
                 return;
             }
 
-            const url = buildUrl(imdbId, card);
-            log('fetch:', url);
+            const tmdbId = card.tmdb_id || card.tmdb;
+            const type = (card.media_type === 'tv') ? 'tv' : 'movie';
 
-            fetch(url)
-                .then(r => r.json())
-                .then(data => {
-
-                    if (!data || !data.streams) {
-                        Lampa.Noty.show('Không có stream');
-                        return;
-                    }
-
-                    const results = data.streams.map(item => ({
-                        title: item.title || 'Torrentio',
-                        quality: parseQuality(item.title),
-                        size: parseSize(item.title),
-                        magnet: `magnet:?xt=urn:btih:${item.infoHash}`
-                    }));
-
-                    openList(results);
-                })
-                .catch(() => {
-                    Lampa.Noty.show('Lỗi Torrentio');
-                });
+            getImdb(tmdbId, type).then(fetchData);
         }
-
-        if (imdb) {
-            run(imdb);
-            return;
-        }
-
-        const tmdbId = card.tmdb_id || card.tmdb;
-        const type = (card.media_type === 'tv') ? 'tv' : 'movie';
-
-        getImdb(tmdbId, type).then(run);
-    }
-
-    // =========================
-    // ADD BUTTON
-    // =========================
-    function injectButton() {
-
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type !== 'complite') return;
-
-            const obj = e.object || {};
-            const card = (e.data && e.data.movie) || obj.card;
-
-            if (!card) return;
-
-            const $ctx = obj.activity ? obj.activity.render() : $('body');
-
-            if ($ctx.find('.view--torrentio').length) return;
-
-            const $btn = $(`
-                <div class="full-start__button selector view--torrentio">
-                    <span>TORRENTIO</span>
-                </div>
-            `);
-
-            $btn.on('hover:enter', function () {
-                searchAndPlay(card);
-            });
-
-            const $torrent = $ctx.find('.view--torrent');
-
-            if ($torrent.length) $torrent.after($btn);
-            else $ctx.find('.full-start__buttons').append($btn);
-        });
-    }
-
-    // =========================
-    // INIT
-    // =========================
-    function start() {
-        injectButton();
-    }
-
-    if (window.appready) {
-        start();
-    } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') start();
-        });
-    }
+    });
 
 })();
