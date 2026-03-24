@@ -4,26 +4,14 @@
 
 var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-function log(){
-console.log('[Torrent V4.6]',arguments);
-}
-
 /* ADD BUTTON */
 
 function addButton(){
 
-if($('.torrent-v46').length) return;
+if($('.torrent-clean').length) return;
 
-var btn = $('<div class="selector torrent-v46">')
-.text('🔎 Torrent')
-.css({
-padding:'0.6em',
-margin:'1em',
-background:'#E50914',
-color:'#fff',
-'border-radius':'6px',
-'text-align':'center'
-});
+var btn = $('<div class="selector torrent-clean">')
+.append('<span>Torrent</span>');
 
 btn.on('hover:enter',function(){
 
@@ -43,15 +31,19 @@ $('.full-start-new__buttons').append(btn);
 
 function search(movie){
 
-var title = movie.title || movie.original_title || '';
+var imdb = movie.imdb_id;
 
-var year = movie.release_date ? movie.release_date.split('-')[0] : '';
+if(!imdb){
 
-var query = encodeURIComponent(title + ' ' + year);
+Lampa.Noty.show('No IMDB id');
 
-Lampa.Noty.show('🔎 Searching Torrentio...');
+return;
 
-var url='https://torrentio.strem.fun/sort=size/stream/movie/'+query+'.json';
+}
+
+Lampa.Noty.show('Searching torrents...');
+
+var url = 'https://torrentio.strem.fun/sort=seeders%7Csize/stream/movie/'+imdb+'.json';
 
 $.get(url,function(data){
 
@@ -59,7 +51,8 @@ try{
 
 if(!data.streams || !data.streams.length){
 
-Lampa.Noty.show('❌ No torrents found');
+Lampa.Noty.show('No torrents found');
+
 return;
 
 }
@@ -68,9 +61,13 @@ showList(data.streams);
 
 }catch(e){
 
-Lampa.Noty.show('❌ Torrentio error');
+Lampa.Noty.show('Torrentio error');
 
 }
+
+}).fail(function(){
+
+Lampa.Noty.show('Network error');
 
 });
 
@@ -86,11 +83,11 @@ streams.forEach(function(s){
 
 items.push({
 
-title:s.title,
+title: s.title || 'Torrent',
 
-subtitle:s.name,
+subtitle: s.name || '',
 
-magnet:s.url
+magnet: s.url
 
 });
 
@@ -98,7 +95,7 @@ magnet:s.url
 
 Lampa.Select.show({
 
-title:'Torrentio Streams',
+title:'Torrent Streams',
 
 items:items,
 
@@ -112,7 +109,7 @@ sendTorrent(a.magnet);
 
 }
 
-/* SEND TORRENT */
+/* ADD TORRENT */
 
 function sendTorrent(magnet){
 
@@ -120,7 +117,7 @@ var hashMatch = magnet.match(/btih:([a-zA-Z0-9]+)/);
 
 if(!hashMatch){
 
-Lampa.Noty.show('❌ Magnet error');
+Lampa.Noty.show('Magnet error');
 
 return;
 
@@ -130,7 +127,7 @@ var hash = hashMatch[1];
 
 var add = TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
 
-Lampa.Noty.show('⬇ Adding torrent...');
+Lampa.Noty.show('Adding torrent...');
 
 $.get(add,function(){
 
@@ -144,13 +141,11 @@ play(hash);
 
 }
 
-/* PLAY */
+/* PLAY STREAM */
 
 function play(hash){
 
 var url = TORRSERVER+'/stream?link='+hash+'&index=1&play';
-
-log('PLAY',url);
 
 Lampa.Player.play({
 
