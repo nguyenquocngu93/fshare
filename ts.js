@@ -1,36 +1,20 @@
 (function () {
     'use strict';
 
-    if (window.torrentio_ts_fixed) return;
-    window.torrentio_ts_fixed = true;
+    if (window.torrentio_fix) return;
+    window.torrentio_fix = true;
 
-    const TS = 'http://gren439e.tsarea.tv:8880';
-
-    console.log('[TORRENTIO+TS] ready:', TS);
+    console.log('[TORRENTIO] loaded');
 
     function parseQuality(title) {
         if (!title) return 'SD';
         title = title.toLowerCase();
 
-        if (title.includes('2160') || title.includes('4k')) return '4K';
-        if (title.includes('1080')) return '1080p';
-        if (title.includes('720')) return '720p';
+        if (title.indexOf('2160') >= 0 || title.indexOf('4k') >= 0) return '4K';
+        if (title.indexOf('1080') >= 0) return '1080p';
+        if (title.indexOf('720') >= 0) return '720p';
 
         return 'SD';
-    }
-
-    function parseSize(title) {
-        if (!title) return 0;
-
-        var m = title.match(/(\d+(\.\d+)?)\s?(gb|mb)/i);
-        if (!m) return 0;
-
-        var size = parseFloat(m[1]);
-
-        if (m[3].toLowerCase() === 'gb') size *= 1024 * 1024 * 1024;
-        if (m[3].toLowerCase() === 'mb') size *= 1024 * 1024;
-
-        return size;
     }
 
     function buildUrl(imdb, card) {
@@ -45,25 +29,22 @@
         return 'https://torrentio.strem.fun/stream/movie/' + imdb + '.json';
     }
 
-    function toTorrServer(magnet) {
-        return TS + '/torrent/play?link=' + encodeURIComponent(magnet);
-    }
-
     function init() {
 
+        if (!window.Lampa || !Lampa.Parser) return;
+
         Lampa.Parser.extend({
-            name: 'torrentio_ts',
+            name: 'torrentio',
 
             search: function (params, oncomplete) {
 
-                var card = params.card || {};
+                var card = params && params.card ? params.card : {};
                 var imdb = params.imdb_id || card.imdb_id;
 
-                function done(list) {
-                    oncomplete(list || []);
+                if (!imdb) {
+                    oncomplete([]);
+                    return;
                 }
-
-                if (!imdb) return done([]);
 
                 var url = buildUrl(imdb, card);
 
@@ -73,34 +54,36 @@
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
 
-                        if (!data || !data.streams) return done([]);
+                        if (!data || !data.streams) {
+                            oncomplete([]);
+                            return;
+                        }
 
                         var results = [];
 
                         for (var i = 0; i < data.streams.length; i++) {
                             var item = data.streams[i];
 
-                            var magnet = 'magnet:?xt=urn:btih:' + item.infoHash;
-
                             results.push({
                                 title: item.title || 'Torrentio',
                                 quality: parseQuality(item.title),
-                                size: parseSize(item.title),
+                                size: 0,
+                                seeders: item.seeders || 0,
 
-                                // 🔥 KEY: trả link TorrServer luôn
-                                url: toTorrServer(magnet)
+                                // 🔥 QUAN TRỌNG: giữ magnet
+                                url: 'magnet:?xt=urn:btih:' + item.infoHash
                             });
                         }
 
-                        done(results);
+                        oncomplete(results);
                     })
                     .catch(function () {
-                        done([]);
+                        oncomplete([]);
                     });
             }
         });
 
-        console.log('[TORRENTIO+TS] parser added');
+        console.log('[TORRENTIO] parser added');
     }
 
     if (window.appready) {
