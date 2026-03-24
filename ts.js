@@ -115,7 +115,7 @@
                     });
 
                     container.append(button);
-                     
+                    
                     // Kích hoạt lại Controller để di chuyển remote được vào nút mới
                     Lampa.Controller.enable('full');
                 }
