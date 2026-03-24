@@ -4,17 +4,19 @@
 
 var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-var VIDEO_EXT = ['.mkv','.mp4','.avi','.ts','.mov','.wmv','.webm'];
+var VIDEO_EXT = ['.mkv','.mp4','.avi','.ts','.webm','.mov'];
 
 function log(){
-console.log('[TORRENT V4]',arguments);
+console.log('[TORRENT V4.5]',arguments);
 }
+
+/* BUTTON */
 
 function addButton(){
 
-if($('.torrent-v4-btn').length) return;
+if($('.torrent-v45').length) return;
 
-var btn = $('<div class="selector torrent-v4-btn">')
+var btn = $('<div class="selector torrent-v45">')
 .text('🔎 Torrent')
 .css({
 padding:'0.6em',
@@ -39,6 +41,8 @@ $('.full-start-new__buttons').append(btn);
 
 }
 
+/* SEARCH */
+
 function search(movie){
 
 var title = movie.title || movie.original_title || '';
@@ -48,13 +52,7 @@ var q = encodeURIComponent(title+' '+year);
 
 Lampa.Noty.show('🔎 Searching torrent...');
 
-var sources = [
-torrentio,
-yts,
-tpb,
-x1337,
-eztv
-];
+var sources=[torrentio,yts,tpb,x1337,eztv];
 
 runSources(sources,q);
 
@@ -69,7 +67,7 @@ return;
 
 }
 
-var fn = list.shift();
+var fn=list.shift();
 
 fn(q,function(magnet){
 
@@ -87,9 +85,11 @@ runSources(list,q);
 
 }
 
+/* SOURCES */
+
 function torrentio(q,cb){
 
-var url = 'https://torrentio.strem.fun/sort=size/stream/movie/'+q+'.json';
+var url='https://torrentio.strem.fun/sort=size/stream/movie/'+q+'.json';
 
 $.get(url,function(data){
 
@@ -112,7 +112,7 @@ cb(null);
 
 function yts(q,cb){
 
-var url = 'https://yts.mx/api/v2/list_movies.json?query_term='+q;
+var url='https://yts.mx/api/v2/list_movies.json?query_term='+q;
 
 $.get(url,function(data){
 
@@ -120,9 +120,10 @@ try{
 
 if(data.data.movies.length){
 
-var hash = data.data.movies[0].torrents[0].hash;
+var hash=data.data.movies[0].torrents[0].hash;
 
 cb('magnet:?xt=urn:btih:'+hash);
+
 return;
 
 }
@@ -137,13 +138,14 @@ cb(null);
 
 function tpb(q,cb){
 
-var url = 'https://apibay.org/q.php?q='+q;
+var url='https://apibay.org/q.php?q='+q;
 
 $.get(url,function(data){
 
 if(data.length){
 
 cb('magnet:?xt=urn:btih:'+data[0].info_hash);
+
 return;
 
 }
@@ -160,7 +162,7 @@ var url='https://api.allorigins.win/raw?url=https://1337x.to/search/'+q+'/1/';
 
 $.get(url,function(html){
 
-var m = html.match(/magnet:\?xt=urn:btih:[^"]+/);
+var m=html.match(/magnet:\?xt=urn:btih:[^"]+/);
 
 cb(m?m[0]:null);
 
@@ -179,6 +181,7 @@ try{
 if(data.torrents.length){
 
 cb(data.torrents[0].magnet_url);
+
 return;
 
 }
@@ -191,20 +194,23 @@ cb(null);
 
 }
 
+/* TORRENT ADD */
+
 function sendTorrent(magnet){
 
-var hash = magnet.match(/btih:([a-zA-Z0-9]+)/);
+var hashMatch=magnet.match(/btih:([a-zA-Z0-9]+)/);
 
-if(!hash){
+if(!hashMatch){
 
 Lampa.Noty.show('❌ Magnet error');
+
 return;
 
 }
 
-hash = hash[1];
+var hash=hashMatch[1];
 
-var add = TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
+var add=TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
 
 Lampa.Noty.show('⬇ Adding torrent...');
 
@@ -212,29 +218,32 @@ $.get(add,function(){
 
 setTimeout(function(){
 
-getFiles(hash);
+getTorrentFiles(hash);
 
-},4000);
+},5000);
 
 });
 
 }
 
-function getFiles(hash){
+/* GET FILE LIST */
 
-var url = TORRSERVER+'/torrent/list';
+function getTorrentFiles(hash){
+
+var url=TORRSERVER+'/torrent/list';
 
 $.get(url,function(data){
 
 try{
 
-var torrent;
+var torrent=null;
 
 for(var i in data){
 
 if(data[i].hash.toLowerCase()==hash.toLowerCase()){
 
 torrent=data[i];
+
 break;
 
 }
@@ -244,11 +253,12 @@ break;
 if(!torrent){
 
 play(hash,1);
+
 return;
 
 }
 
-detectFile(hash,torrent.files);
+detectVideo(hash,torrent.files);
 
 }catch(e){
 
@@ -260,20 +270,33 @@ play(hash,1);
 
 }
 
-function detectFile(hash,files){
+/* DETECT VIDEO */
 
-var index = 1;
+function detectVideo(hash,files){
+
+if(!files || !files.length){
+
+play(hash,1);
+
+return;
+
+}
+
+var bestIndex=1;
+var bestSize=0;
 
 for(var i=0;i<files.length;i++){
 
-var name = files[i].name.toLowerCase();
+var name=files[i].name.toLowerCase();
 
 for(var j=0;j<VIDEO_EXT.length;j++){
 
 if(name.indexOf(VIDEO_EXT[j])>-1){
 
-index = i+1;
-break;
+if(files[i].size>bestSize){
+
+bestSize=files[i].size;
+bestIndex=i+1;
 
 }
 
@@ -281,28 +304,41 @@ break;
 
 }
 
-play(hash,index);
+}
+
+play(hash,bestIndex);
 
 }
+
+/* PLAY */
 
 function play(hash,index){
 
-var url = TORRSERVER+'/stream?link='+hash+'&index='+index+'&play';
+var url=TORRSERVER+'/stream?link='+hash+'&index='+index+'&play';
 
 log('PLAY',url);
 
 Lampa.Player.play({
+
 url:url,
-title:'Torrent Stream'
+
+title:'Torrent Stream',
+
+type:'video',
+
+player:'android'
+
 });
 
 }
+
+/* INIT */
 
 Lampa.Listener.follow('full',function(e){
 
 if(e.type=='complite'){
 
-setTimeout(addButton,500);
+setTimeout(addButton,600);
 
 }
 
