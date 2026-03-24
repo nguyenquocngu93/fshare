@@ -2,20 +2,18 @@
 
 'use strict';
 
-var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
-
-/* ADD BUTTON */
+var TORRSERVER='http://gren439e.tsarea.tv:8880';
 
 function addButton(){
 
 if($('.torrent-clean').length) return;
 
-var btn = $('<div class="selector torrent-clean">')
+var btn=$('<div class="selector torrent-clean">')
 .append('<span>Torrent</span>');
 
 btn.on('hover:enter',function(){
 
-var movie = Lampa.Activity.active().card;
+var movie=Lampa.Activity.active().card;
 
 if(!movie) return;
 
@@ -27,43 +25,33 @@ $('.full-start-new__buttons').append(btn);
 
 }
 
-/* SEARCH TORRENTIO */
+/* SEARCH */
 
 function search(movie){
 
-var imdb = movie.imdb_id;
+var imdb=movie.imdb_id;
 
 if(!imdb){
 
 Lampa.Noty.show('No IMDB id');
-
 return;
 
 }
 
-Lampa.Noty.show('Searching torrents...');
+var url='https://torrentio.strem.fun/sort=seeders%7Csize/stream/movie/'+imdb+'.json';
 
-var url = 'https://torrentio.strem.fun/sort=seeders%7Csize/stream/movie/'+imdb+'.json';
+Lampa.Noty.show('Searching torrents...');
 
 $.get(url,function(data){
 
-try{
-
-if(!data.streams || !data.streams.length){
+if(!data || !data.streams || !data.streams.length){
 
 Lampa.Noty.show('No torrents found');
-
 return;
 
 }
 
 showList(data.streams);
-
-}catch(e){
-
-Lampa.Noty.show('Torrentio error');
-
-}
 
 }).fail(function(){
 
@@ -83,11 +71,11 @@ streams.forEach(function(s){
 
 items.push({
 
-title: s.title || 'Torrent',
+title:s.title || 'Torrent',
 
-subtitle: s.name || '',
+subtitle:s.name || '',
 
-magnet: s.url
+data:s.url
 
 });
 
@@ -101,7 +89,7 @@ items:items,
 
 onSelect:function(a){
 
-sendTorrent(a.magnet);
+sendTorrent(a.data);
 
 }
 
@@ -113,19 +101,25 @@ sendTorrent(a.magnet);
 
 function sendTorrent(magnet){
 
-var hashMatch = magnet.match(/btih:([a-zA-Z0-9]+)/);
-
-if(!hashMatch){
+if(!magnet){
 
 Lampa.Noty.show('Magnet error');
-
 return;
 
 }
 
-var hash = hashMatch[1];
+var hashMatch=magnet.match(/btih:([a-zA-Z0-9]+)/);
 
-var add = TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
+if(!hashMatch){
+
+Lampa.Noty.show('Magnet invalid');
+return;
+
+}
+
+var hash=hashMatch[1];
+
+var add=TORRSERVER+'/torrent/add?link='+encodeURIComponent(magnet);
 
 Lampa.Noty.show('Adding torrent...');
 
@@ -141,11 +135,11 @@ play(hash);
 
 }
 
-/* PLAY STREAM */
+/* PLAY */
 
 function play(hash){
 
-var url = TORRSERVER+'/stream?link='+hash+'&index=1&play';
+var url=TORRSERVER+'/stream?link='+hash+'&index=1&play';
 
 Lampa.Player.play({
 
@@ -163,9 +157,9 @@ player:'android'
 
 /* INIT */
 
-Lampa.Listener.follow('full',function(e){
+Lampa.Listener.follow('activity',function(e){
 
-if(e.type=='complite'){
+if(e.component=='full'){
 
 setTimeout(addButton,500);
 
