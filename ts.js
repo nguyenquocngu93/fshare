@@ -117,31 +117,45 @@
   }
 
   function search() {
+    log('Search function called');
+
     if (!window.Lampa || !Lampa.Activity) {
       log('Error: Lampa not ready');
       return;
     }
 
     var active = Lampa.Activity.active();
-    if (!active || !active.card) {
-      log('Error: No active card');
+    if (!active) {
+      log('Error: No active activity');
       return;
     }
 
-    var card = active.card;
-    var title = card.original_title || card.title;
-    var year = card.release_date ? card.release_date.split('-')[0] : '';
+    var card = active.card || active.data;
+    
+    if (!card) {
+      log('Error: No card/data found');
+      log('Active object keys:', Object.keys(active));
+      return;
+    }
+
+    var title = card.original_title || card.title || card.name;
+    var year = card.release_date ? card.release_date.split('-')[0] : 
+               card.year ? card.year : '';
 
     if (!title) {
-      log('Error: No title found');
+      log('Error: No title found in card');
+      log('Card keys:', Object.keys(card));
       return;
     }
 
+    log('Searching for:', title, year);
+
     if (Lampa.Noty) {
-      Lampa.Noty.show('Searching torrent...');
+      Lampa.Noty.show('Searching torrent for: ' + title);
     }
 
     searchTorrent(title, year, function(list) {
+      log('Search callback with', list.length, 'results');
       openList(list);
     });
   }
@@ -152,23 +166,80 @@
       return;
     }
 
-    Lampa.Listener.follow('full', function(e) {
-      if (e.type !== 'complete') return; // FIXED: was 'complite'
+    // Try multiple event types and selectors
+    var selectors = [
+      '.full-start__buttons',
+      '.full__buttons',
+      '.buttons-container',
+      '[class*="button"]'
+    ];
 
-      setTimeout(function() {
-        var container = document.querySelector('.full-start__buttons');
+    function injectButton() {
+      // Check if button already exists
+      if (document.querySelector('.torrent-btn')) {
+        log('Button already exists, skipping');
+        return;
+      }
 
-        if (!container) return;
-        if (document.querySelector('.torrent-btn')) return; // Prevent duplicates
+      // Try to find container with multiple selectors
+      var container = null;
+      for (var i = 0; i < selectors.length; i++) {
+        var el = document.querySelector(selectors[i]);
+        if (el && el.offsetParent !== null) { // Check if visible
+          container = el;
+          log('Found container with selector:', selectors[i]);
+          break;
+        }
+      }
 
-        var btn = document.createElement('div');
-        btn.className = 'full-start__button selector torrent-btn';
-        btn.innerHTML = '<span>TORRENT</span>';
-        btn.onclick = search;
+      if (!container) {
+        log('Warning: No button container found');
+        return;
+      }
 
-        container.appendChild(btn);
-      }, 500);
+      var btn = document.createElement('div');
+      btn.className = 'full-start__button selector torrent-btn';
+      btn.innerHTML = '<span>TORRENT</span>';
+      btn.style.cursor = 'pointer';
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        search();
+      };
+
+      container.appendChild(btn);
+      log('Torrent button injected successfully');
+    }
+
+    // Listen to multiple events
+    var events = ['full', 'complite', 'complete'];
+    events.forEach(function(eventName) {
+      Lampa.Listener.follow(eventName, function(e) {
+        if (e && e.type) {
+          log('Event received:', eventName, e.type);
+        }
+        
+        // Retry with multiple timeouts
+        setTimeout(injectButton, 300);
+        setTimeout(injectButton, 600);
+        setTimeout(injectButton, 1000);
+      });
     });
+
+    // Also try direct DOM monitoring
+    var observer = new MutationObserver(function(mutations) {
+      injectButton();
+    });
+
+    // Monitor changes in body
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    log('Button listener initialized');
   }
 
   function init() {
@@ -182,13 +253,46 @@
     addButton();
   }
 
+  // Expose functions for debugging
+  window.TorrentPlugin = {
+    search: search,
+    init: init,
+    log: log,
+    injectButton: addButton,
+    status: function() {
+      return {
+        lampaAvailable: !!window.Lampa,
+        lampaActivity: !!(window.Lampa && Lampa.Activity),
+        lampaListener: !!(window.Lampa && Lampa.Listener),
+        lampaPlayer: !!(window.Lampa && Lampa.Player),
+        lampaSelect: !!(window.Lampa && Lampa.Select),
+        lampaNoty: !!(window.Lampa && Lampa.Noty),
+        buttonExists: !!document.querySelector('.torrent-btn')
+      };
+    }
+  };
+
+  log('TorrentPlugin exposed to window.TorrentPlugin');
+
   // Initialize when app is ready
   if (window.appready) {
+    log('App already ready, initializing...');
     init();
   } else if (window.Lampa && Lampa.Listener) {
-    Lampa.Listener.follow('app', init);
+    log('Waiting for app ready event...');
+    Lampa.Listener.follow('app', function(e) {
+      log('App event:', e);
+      init();
+    });
   } else {
-    log('Error: Cannot initialize - Lampa not available');
+    log('Error: Cannot initialize - Lampa not available yet');
+    // Retry after delay
+    setTimeout(function() {
+      if (window.Lampa && Lampa.Listener) {
+        log('Lampa available now, initializing...');
+        init();
+      }
+    }, 2000);
   }
 
 })();
