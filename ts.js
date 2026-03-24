@@ -1,197 +1,114 @@
 (function () {
     'use strict';
 
-    if (window.torrentio_pub_full) return;
-    window.torrentio_pub_full = true;
+    const TORRENTIO_URL = 'https://torrentio.strem.fun/sort=qualitysize|qualityfilter=1080p,2160p';
+    const TORRSERVER_URL = 'http://gren439e.tsarea.tv:8880';
 
-    console.log('[TORRENTIO PUB] init');
-
-    // =========================
-    // CONFIG
-    // =========================
-    var CONFIG = {
-        name: 'torrentio',
-        timeout: 15000,
-        debug: true
-    };
-
-    // =========================
-    // LOGGER
-    // =========================
     function log() {
-        if (CONFIG.debug) console.log('[TORRENTIO PUB]', ...arguments);
+        console.log.apply(console, arguments);
     }
 
-    // =========================
-    // PARSE HELPERS
-    // =========================
-    function parseQuality(title) {
-        if (!title) return 'SD';
-
-        title = title.toLowerCase();
-
-        if (title.indexOf('2160') >= 0 || title.indexOf('4k') >= 0) return '4K';
-        if (title.indexOf('1080') >= 0) return '1080p';
-        if (title.indexOf('720') >= 0) return '720p';
-
-        return 'SD';
+    function searchTorentio(imdb_id) {
+        return fetch(`${TORRENTIO_URL}/stream/movie/${imdb_id}.json`)
+            .then(res => res.json())
+            .then(data => data.streams || [])
+            .catch(() => []);
     }
 
-    function parseSize(title) {
-        if (!title) return 0;
-
-        var m = title.match(/(\d+(\.\d+)?)\s?(gb|mb)/i);
-        if (!m) return 0;
-
-        var size = parseFloat(m[1]);
-
-        if (m[3].toLowerCase() === 'gb') size *= 1024 * 1024 * 1024;
-        if (m[3].toLowerCase() === 'mb') size *= 1024 * 1024;
-
-        return size;
-    }
-
-    // =========================
-    // URL BUILDER
-    // =========================
-    function buildUrl(imdb, card) {
-        var isSeries = card && (card.season !== undefined || card.media_type === 'tv');
-
-        if (isSeries) {
-            var season = card.season || 1;
-            var episode = card.episode || 1;
-
-            return 'https://torrentio.strem.fun/stream/series/' +
-                imdb + ':' + season + ':' + episode + '.json';
+    function toMagnet(stream) {
+        if (stream.infoHash) {
+            return `magnet:?xt=urn:btih:${stream.infoHash}`;
         }
-
-        return 'https://torrentio.strem.fun/stream/movie/' + imdb + '.json';
+        return stream.url || '';
     }
 
-    // =========================
-    // FETCH WITH TIMEOUT
-    // =========================
-    function fetchWithTimeout(url, callback) {
-
-        var done = false;
-
-        var timer = setTimeout(function () {
-            if (!done) {
-                done = true;
-                log('timeout');
-                callback(null);
-            }
-        }, CONFIG.timeout);
-
-        fetch(url)
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (done) return;
-
-                clearTimeout(timer);
-                done = true;
-
-                callback(data);
-            })
-            .catch(function () {
-                if (done) return;
-
-                clearTimeout(timer);
-                done = true;
-
-                callback(null);
-            });
+    function toTorrServerLink(magnet) {
+        return `${TORRSERVER_URL}/stream?link=${encodeURIComponent(magnet)}`;
     }
 
-    // =========================
-    // RESULT BUILDER
-    // =========================
-    function buildResults(data) {
+    function parse(streams) {
+        return streams.map(s => {
+            let magnet = toMagnet(s);
 
-        var results = [];
-
-        if (!data || !data.streams) return results;
-
-        for (var i = 0; i < data.streams.length; i++) {
-
-            var item = data.streams[i];
-            var title = item.title || 'Torrentio';
-
-            results.push({
-                title: title,
-                quality: parseQuality(title),
-                size: parseSize(title),
-                seeders: item.seeders || 0,
-                url: 'magnet:?xt=urn:btih:' + item.infoHash
-            });
-        }
-
-        return results;
+            return {
+                title: s.title || s.name || 'Torrent',
+                quality: (s.name || '').match(/(2160|1080|720)/)?.[0] || 'HD',
+                size: s.size || '',
+                url: toTorrServerLink(magnet)
+            };
+        });
     }
 
-    // =========================
-    // MAIN SEARCH
-    // =========================
-    function search(params, oncomplete) {
+    function sortStreams(list) {
+        return list.sort((a, b) => {
+            const q = { '2160': 3, '1080': 2, '720': 1 };
+            return (q[b.quality] || 0) - (q[a.quality] || 0);
+        });
+    }
 
-        try {
+    function showList(items) {
+        let html = items.map((item, i) => {
+            return `
+                <div class="tor-item" data-index="${i}">
+                    <div><b>${item.quality}p</b> - ${item.title}</div>
+                    <div style="opacity:0.6">${item.size || ''}</div>
+                </div>
+            `;
+        }).join('');
 
-            var card = params.card || {};
-            var imdb = params.imdb_id || card.imdb_id;
+        let modal = $(`
+            <div class="tor-modal">
+                <div class="tor-list">${html}</div>
+            </div>
+        `);
 
-            if (!imdb) {
-                log('no imdb');
-                oncomplete([]);
+        $('body').append(modal);
+
+        modal.on('click', '.tor-item', function () {
+            let index = $(this).data('index');
+            let item = items[index];
+
+            Lampa.Player.play(item.url);
+            modal.remove();
+        });
+    }
+
+    function load(imdb_id) {
+        Lampa.Noty.show('🔎 Đang tìm torrent...');
+
+        searchTorentio(imdb_id).then(streams => {
+            if (!streams.length) {
+                Lampa.Noty.show('❌ Không có nguồn');
                 return;
             }
 
-            var url = buildUrl(imdb, card);
+            let items = sortStreams(parse(streams));
 
-            log('fetch:', url);
+            log('Streams:', items);
 
-            fetchWithTimeout(url, function (data) {
+            // Auto play link tốt nhất
+            Lampa.Player.play(items[0].url);
 
-                var results = buildResults(data);
+            // Hiện list để chọn lại
+            showList(items);
+        });
+    }
 
-                log('results:', results.length);
+    // Hook vào khi mở phim
+    Lampa.Listener.follow('full', function (e) {
+        if (e.type === 'complite') {
+            let movie = e.data.movie;
 
-                oncomplete(results);
+            if (!movie || !movie.imdb_id) return;
+
+            // Thêm nút
+            Lampa.Controller.add('tor_play', {
+                name: '▶ Torrent',
+                onSelect: function () {
+                    load(movie.imdb_id);
+                }
             });
-
-        } catch (e) {
-            log('error:', e);
-            oncomplete([]);
         }
-    }
-
-    // =========================
-    // REGISTER (PUBTORR STYLE)
-    // =========================
-    function register() {
-
-        if (!window.Lampa || !Lampa.Component) {
-            log('Lampa not ready');
-            return;
-        }
-
-        Lampa.Component.add(CONFIG.name, {
-            name: 'Torrentio',
-            type: 'parser',
-            search: search
-        });
-
-        log('registered');
-    }
-
-    // =========================
-    // INIT
-    // =========================
-    if (window.appready) {
-        register();
-    } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') register();
-        });
-    }
+    });
 
 })();
