@@ -1,122 +1,109 @@
 (function () {
     'use strict';
 
-    function TorrentioFinalMod() {
+    function TorrentioPlugin() {
         var torrserver_url = 'http://gren439e.tsarea.tv:8880';
 
-        function getBytes(sizeStr) {
-            if (!sizeStr) return 0;
-            let m = sizeStr.match(/([\d.]+)\s*([GB|MB]+)/i);
-            if (!m) return 0;
-            let n = parseFloat(m[1]);
-            return m[2].toUpperCase() === 'GB' ? n * 1073741824 : n * 1048576;
-        }
+        // 1. Khởi tạo Component riêng cho Torrentio
+        Lampa.Component.add('torrentio_component', function (object, str) {
+            var network = new Lampa.Reguest();
+            var scroll = new Lampa.Scroll({mask:true, over:true});
+            var items = [];
+            var html = $('<div></div>');
+            
+            this.create = function () {
+                var _this = this;
+                // Khi mở component này, nó sẽ tự đi tìm kiếm
+                this.search();
+                return scroll.render();
+            };
 
-        // --- HÀM CHÈN NÚT THÔNG MINH ---
-        function injectButton(container, data) {
-            if (container.find('.torrentio-btn').length > 0) return; // Tránh chèn trùng
+            this.search = function () {
+                var movie = object.movie;
+                var type = movie.number_of_seasons ? 'series' : 'movie';
+                var s = Lampa.Storage.get('online_last_season_' + movie.id, 1);
+                var ep = Lampa.Storage.get('online_last_episode_' + movie.id, 1);
+                var query = type === 'series' ? `${movie.imdb_id}:${s}:${ep}` : movie.imdb_id;
 
-            var button = $(`<div class="full-start__button selector torrentio-btn">
-                <svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" fill="white"/></svg>
-                <span>Torrentio</span>
-            </div>`);
+                var url = `https://torrentio.strem.io/streams/${type}/${query}.json`;
 
-            button.on('hover:enter', function () {
-                startSearch(data.movie);
-            });
-
-            // Tìm mọi vị trí có thể chèn (Online, Trailers, hoặc Buttons chung)
-            var targets = [
-                container.find('.full-start__buttons'),
-                container.find('.full-info__actions'),
-                container.find('.view--online'),
-                container.find('.view--torrent')
-            ];
-
-            for (var i = 0; i < targets.length; i++) {
-                if (targets[i].length) {
-                    targets[i].append(button);
-                    // Ép Lampa cập nhật lại trình điều khiển để nút có thể chọn được
-                    Lampa.Controller.add('full_start', {
-                        toggle: function () {
-                            Lampa.Controller.collectionSet(container);
-                            Lampa.Controller.render();
-                        }
-                    });
-                    break;
-                }
-            }
-        }
-
-        // --- THEO DÕI GIAO DIỆN ---
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'complite') {
-                // Thử chèn ngay lập tức
-                injectButton(e.container, e.data);
-                
-                // Đề phòng giao diện render chậm, dùng Observer để chờ
-                var observer = new MutationObserver(function() {
-                    injectButton(e.container, e.data);
+                network.silent(url, function (json) {
+                    if (json.streams && json.streams.length > 0) {
+                        _this.build(json.streams);
+                    } else {
+                        Lampa.Noty.show('Không tìm thấy link từ Torrentio');
+                    }
+                }, function () {
+                    Lampa.Noty.show('Lỗi kết nối API Torrentio');
                 });
-                observer.observe(e.container[0], { childList: true, subtree: true });
-            }
+            };
+
+            this.build = function (data) {
+                var _this = this;
+                // Sắp xếp size trước khi hiển thị
+                data.sort(function(a, b) {
+                    return b.title.length - a.title.length; // Sort tạm theo độ dài title nếu không parse được size
+                });
+
+                data.forEach(function (stream) {
+                    var item = Lampa.Template.get('button', {title: stream.title.split('\n')[0]});
+                    item.on('hover:enter', function () {
+                        var magnet = `magnet:?xt=urn:btih:${stream.infoHash}`;
+                        var play_url = `${torrserver_url}/stream/magnet?link=${encodeURIComponent(magnet)}&play`;
+                        Lampa.Player.play({
+                            url: play_url,
+                            title: object.movie.title,
+                            subtitle: stream.title.split('\n')[0]
+                        });
+                    });
+                    html.append(item);
+                });
+                scroll.append(html);
+                Lampa.Controller.enable('content');
+            };
+
+            this.render = function () { return scroll.render(); };
+            this.pause = function () {};
+            this.stop = function () {};
         });
 
-        function startSearch(movie) {
-            var type = movie.number_of_seasons ? 'series' : 'movie';
-            var s = Lampa.Storage.get('online_last_season_' + movie.id, 1);
-            var ep = Lampa.Storage.get('online_last_episode_' + movie.id, 1);
-            var query = type === 'series' ? `${movie.imdb_id}:${s}:${ep}` : movie.imdb_id;
+        // 2. CHÈN NÚT VÀO MENU "TRỰC TUYẾN" (ONLINE) CỦA LAMPA
+        // Đây là cách chắc chắn nhất để hiện nút nếu chèn vào trang chính bị lỗi
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type == 'complite') {
+                var movie = e.data.movie;
+                
+                // Tạo nút bấm
+                var btn = $(`<div class="full-start__button selector torrentio-style">
+                    <svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" fill="white"/></svg>
+                    <span>Torrentio v2</span>
+                </div>`);
 
-            if (!movie.imdb_id) {
-                Lampa.Noty.show('Phim này không có IMDB ID.');
-                return;
-            }
+                btn.on('hover:enter', function () {
+                    // Mở Component Torrentio đã tạo ở trên
+                    Lampa.Component.item({
+                        type: 'torrentio_component',
+                        title: 'Torrentio',
+                        movie: movie,
+                        id: movie.id
+                    });
+                });
 
-            Lampa.Select.show({
-                title: 'Tìm kiếm Torrentio...',
-                items: [{ title: 'Đang tải dữ liệu...' }],
-                onBack: () => Lampa.Controller.toggle('full_start')
-            });
-
-            fetch(`https://torrentio.strem.io/streams/${type}/${query}.json`)
-                .then(r => r.json())
-                .then(json => {
-                    if (json.streams && json.streams.length > 0) {
-                        let list = json.streams.map(s => {
-                            let lines = s.title.split('\n');
-                            let info = lines[1] || "";
-                            let sizeTxt = (info.match(/💾\s*([\d.]+\s*[GB|MB]+)/) || [0, '0 MB'])[1];
-                            let seeders = (info.match(/👤\s*(\d+)/) || [0, '0'])[1];
-
-                            return {
-                                title: lines[0],
-                                subtitle: `[${sizeTxt}] - Seeds: ${seeders}`,
-                                magnet: s.infoHash,
-                                sizeBytes: getBytes(sizeTxt)
-                            };
-                        });
-
-                        list.sort((a, b) => b.sizeBytes - a.sizeBytes);
-
-                        Lampa.Select.show({
-                            title: 'Kết quả: ' + (type === 'series' ? `S${s}E${ep}` : movie.title),
-                            items: list,
-                            onSelect: (item) => {
-                                var link = `magnet:?xt=urn:btih:${item.magnet}`;
-                                var play_url = `${torrserver_url}/stream/magnet?link=${encodeURIComponent(link)}&play`;
-                                Lampa.Player.play({ url: play_url, title: movie.title, subtitle: item.title });
-                            },
-                            onBack: () => Lampa.Controller.toggle('full_start')
-                        });
-                    } else {
-                        Lampa.Noty.show('Không tìm thấy link.');
+                // Cố gắng chèn vào cả 2 vị trí để đảm bảo nó xuất hiện
+                var place = e.container.find('.full-start__buttons');
+                if (place.length) place.append(btn);
+                
+                // Cập nhật Controller
+                Lampa.Controller.add('full_start', {
+                    toggle: function () {
+                        Lampa.Controller.collectionSet(e.container);
+                        Lampa.Controller.render();
                     }
-                })
-                .catch(() => Lampa.Noty.show('Lỗi API Torrentio'));
-        }
+                });
+            }
+        });
     }
 
-    if (window.appready) TorrentioFinalMod();
-    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') TorrentioFinalMod(); });
+    if (window.appready) TorrentioPlugin();
+    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') TorrentioPlugin(); });
 })();
