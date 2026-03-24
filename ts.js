@@ -1,10 +1,12 @@
 (function () {
     'use strict';
 
-    if (window.torrentio_parser) return;
-    window.torrentio_parser = true;
+    if (window.torrentio_ts_fixed) return;
+    window.torrentio_ts_fixed = true;
 
-    console.log('[TORRENTIO] Parser ready');
+    const TS = 'http://gren439e.tsarea.tv:8880';
+
+    console.log('[TORRENTIO+TS] ready:', TS);
 
     function parseQuality(title) {
         if (!title) return 'SD';
@@ -18,94 +20,95 @@
     }
 
     function parseSize(title) {
-        const m = title && title.match(/(\d+(\.\d+)?)\s?(gb|mb)/i);
+        if (!title) return 0;
+
+        var m = title.match(/(\d+(\.\d+)?)\s?(gb|mb)/i);
         if (!m) return 0;
 
-        let size = parseFloat(m[1]);
+        var size = parseFloat(m[1]);
+
         if (m[3].toLowerCase() === 'gb') size *= 1024 * 1024 * 1024;
         if (m[3].toLowerCase() === 'mb') size *= 1024 * 1024;
 
         return size;
     }
 
-    function getImdb(tmdbId, type) {
-        return new Promise(resolve => {
-            if (!tmdbId) return resolve(null);
-
-            fetch(`https://api.themoviedb.org/3/${type}/${tmdbId}/external_ids`, {
-                headers: {
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzYWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0'
-                }
-            })
-            .then(r => r.json())
-            .then(d => resolve(d.imdb_id))
-            .catch(() => resolve(null));
-        });
-    }
-
     function buildUrl(imdb, card) {
-        const isSeries = card && (card.season !== undefined || card.media_type === 'tv');
+        var isSeries = card && (card.season !== undefined || card.media_type === 'tv');
 
         if (isSeries) {
-            const season = card.season || 1;
-            const episode = card.episode || 1;
-            return `https://torrentio.strem.fun/stream/series/${imdb}:${season}:${episode}.json`;
+            var season = card.season || 1;
+            var episode = card.episode || 1;
+            return 'https://torrentio.strem.fun/stream/series/' + imdb + ':' + season + ':' + episode + '.json';
         }
 
-        return `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
+        return 'https://torrentio.strem.fun/stream/movie/' + imdb + '.json';
     }
 
-    Lampa.Parser.extend({
-        name: 'torrentio',
+    function toTorrServer(magnet) {
+        return TS + '/torrent/play?link=' + encodeURIComponent(magnet);
+    }
 
-        search: function (params, oncomplete) {
+    function init() {
 
-            const card = params.card || {};
-            let imdb = params.imdb_id || card.imdb_id;
+        Lampa.Parser.extend({
+            name: 'torrentio_ts',
 
-            function done(list) {
-                console.log('[TORRENTIO] results:', list.length);
-                oncomplete(list || []);
-            }
+            search: function (params, oncomplete) {
 
-            function fetchData(imdbId) {
-                if (!imdbId) return done([]);
+                var card = params.card || {};
+                var imdb = params.imdb_id || card.imdb_id;
 
-                const url = buildUrl(imdbId, card);
+                function done(list) {
+                    oncomplete(list || []);
+                }
+
+                if (!imdb) return done([]);
+
+                var url = buildUrl(imdb, card);
 
                 console.log('[TORRENTIO] fetch:', url);
 
                 fetch(url)
-                    .then(r => r.json())
-                    .then(data => {
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
 
                         if (!data || !data.streams) return done([]);
 
-                        const results = data.streams.map(item => ({
-                            title: item.title || 'Torrentio',
-                            quality: parseQuality(item.title),
-                            size: parseSize(item.title),
-                            seeders: item.seeders || 0,
+                        var results = [];
 
-                            // 🔥 QUAN TRỌNG NHẤT
-                            url: `magnet:?xt=urn:btih:${item.infoHash}`
-                        }));
+                        for (var i = 0; i < data.streams.length; i++) {
+                            var item = data.streams[i];
+
+                            var magnet = 'magnet:?xt=urn:btih:' + item.infoHash;
+
+                            results.push({
+                                title: item.title || 'Torrentio',
+                                quality: parseQuality(item.title),
+                                size: parseSize(item.title),
+
+                                // 🔥 KEY: trả link TorrServer luôn
+                                url: toTorrServer(magnet)
+                            });
+                        }
 
                         done(results);
                     })
-                    .catch(() => done([]));
+                    .catch(function () {
+                        done([]);
+                    });
             }
+        });
 
-            if (imdb) {
-                fetchData(imdb);
-                return;
-            }
+        console.log('[TORRENTIO+TS] parser added');
+    }
 
-            const tmdbId = card.tmdb_id || card.tmdb;
-            const type = (card.media_type === 'tv') ? 'tv' : 'movie';
-
-            getImdb(tmdbId, type).then(fetchData);
-        }
-    });
+    if (window.appready) {
+        init();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') init();
+        });
+    }
 
 })();
