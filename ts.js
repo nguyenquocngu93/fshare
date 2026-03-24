@@ -82,9 +82,15 @@
                         Lampa.Player.play({
                             url: item.url,
                             title: obj.title,
-                            source: 'torrentio'
+                            source: 'torrentio',
+                            type: 'video'
                         });
                     }
+                });
+
+                // Also bind to click events to ensure play button works
+                card.click(function () {
+                    card.trigger('hover:enter');
                 });
 
                 body.append(card);
@@ -108,12 +114,13 @@
     }
 
     // Đăng ký plugin vào hệ thống Lampa
-    if (window.lampa_plugins) {
+    if (window.Lampa) {
         Lampa.Component.add('torrentio', Torrentio);
         Lampa.Search.addSource(Torrentio);
-        // Register as a playback source in Lampa player
-        if (Lampa.Player && Lampa.Player.registerSource) {
-            Lampa.Player.registerSource('torrentio', Torrentio);
+        
+        // Ensure Player exists before registering
+        if (Lampa.Player && typeof Lampa.Player.play === 'function') {
+            // Player.play is ready to use
         }
     }
 })();
