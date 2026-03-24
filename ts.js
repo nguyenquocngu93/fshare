@@ -5,7 +5,7 @@
     window.plugin_torrentio_v72_ready = true;
 
     /* ============================================================
-       Torrentio + Jackett (native) for Lampa  v8.1
+       Torrentio + Jackett (native) for Lampa  v8.2
        Tất cả dùng Lampa.Reguest (bypass CORS trong APK)
     ============================================================ */
 
@@ -200,22 +200,47 @@
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('⚠️ Chưa cài TorrServer URL'); return; }
 
-        // Add torrent vào TorrServer rồi phát thẳng
+        // Step 1: ADD
         $.ajax({
             url: tsUrl + '/torrents', method: 'POST',
             contentType: 'application/json', timeout: 12000,
             data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
             complete: function (addResp) {
-                var addedHash = (addResp.responseJSON && addResp.responseJSON.hash) || hash;
-                var useHash   = addedHash || hash;
+                var useHash = (addResp.responseJSON && addResp.responseJSON.hash) || hash;
                 if (!useHash) { Lampa.Noty.show('Lỗi: không có hash'); return; }
 
-                var fname = title + '.mkv';
-                var url   = tsUrl + '/stream/' + encodeURIComponent(fname) +
-                            '?link=' + useHash +
-                            '&index=' + (fileIdx || 0) +
-                            '&play';
-                playUrl(url, title);
+                // Step 2: GET để lấy file list → tìm đúng tên file + extension
+                setTimeout(function () {
+                    $.ajax({
+                        url: tsUrl + '/torrents', method: 'POST',
+                        contentType: 'application/json', timeout: 10000,
+                        data: JSON.stringify({ action: 'get', link: useHash }),
+                        complete: function (getResp) {
+                            var files = (getResp.responseJSON && getResp.responseJSON.file_stats) || [];
+                            var vids  = files.filter(function (f) {
+                                return /\.(mp4|mkv|avi|mov|ts|m4v|wmv|flv|webm)$/i.test(f.path || '');
+                            });
+                            var list = vids.length ? vids : files;
+
+                            // Tìm file theo fileIdx
+                            var target = null;
+                            if (fileIdx !== null && fileIdx !== undefined && list.length) {
+                                target = list.filter(function (f) { return f.id === fileIdx; })[0];
+                                if (!target) target = list[0]; // fallback index 0
+                            }
+
+                            var idx   = target ? target.id : (list.length ? list[0].id : 0);
+                            var fpath = target ? (target.path || '') : (list.length ? (list[0].path || '') : '');
+                            var fname = fpath.split('/').pop() || (title + '.mkv');
+
+                            var url = tsUrl + '/stream/' + encodeURIComponent(fname) +
+                                      '?link=' + useHash +
+                                      '&index=' + idx +
+                                      '&play';
+                            playUrl(url, fname || title);
+                        }
+                    });
+                }, 1500);
             }
         });
     }
@@ -383,5 +408,5 @@
         }
     });
 
-    console.log('[Torrentio + Jackett native] v8.1 loaded');
+    console.log('[Torrentio + Jackett native] v8.2 loaded');
 })();
