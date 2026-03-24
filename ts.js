@@ -3,67 +3,62 @@
 
 /*
 ========================================
-LAMPA TORRENT SEARCH PLUGIN
+LAMPA TORRENT PRO
 Torrentio + TorrServer
-Author: ChatGPT
 ========================================
 */
 
-var plugin_name = 'torrent_search_plugin';
-var torrserver = 'http://gren439e.tsarea.tv:8880';
+var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-var config = {
-    auto_play: false,
+var CONFIG = {
     min_seeders: 5,
-    sort: 'seeders'
+    auto_play: false,
+    cache_time: 600000
 };
 
-var cache = {};
+var CACHE = {};
 
-function log(){
-    console.log.apply(console, arguments);
-}
-
-function ready(callback){
-    if(window.appready) callback();
+function ready(cb){
+    if(window.appready) cb();
     else{
-        Lampa.Listener.follow('app', function(e){
-            if(e.type == 'ready') callback();
+        Lampa.Listener.follow('app',function(e){
+            if(e.type=='ready') cb();
         });
     }
 }
 
 function init(){
 
-    log('Torrent plugin init');
+    console.log('Torrent PRO loaded');
 
-    Lampa.Listener.follow('full', function(e){
+    Lampa.Listener.follow('full',function(e){
 
-        if(e.type == 'complite'){
+        if(e.type !== 'complite') return;
 
-            var movie = e.data.movie;
+        var movie = e.data.movie;
 
-            setTimeout(function(){
-                createButton(movie);
-            },200);
+        setTimeout(function(){
 
-        }
+            addButton(movie);
+
+        },300);
 
     });
 
 }
 
-function createButton(movie){
+function addButton(movie){
 
-    if($('.torrent-search-btn').length) return;
+    if($('.torrent-pro-btn').length) return;
 
-    var btn = $('<div class="full-start__button selector torrent-search-btn">'+
-        '<div class="full-start__button-icon"></div>'+
+    var btn = $('<div class="full-start__button selector torrent-pro-btn">'+
         '<div class="full-start__button-text">Torrent</div>'+
     '</div>');
 
-    btn.on('hover:enter', function(){
+    btn.on('hover:enter',function(){
+
         startSearch(movie);
+
     });
 
     var container = $('.full-start__buttons');
@@ -78,21 +73,18 @@ function createButton(movie){
 
 function startSearch(movie){
 
-    if(!movie){
-        Lampa.Noty.show('Movie data missing');
+    if(!movie || !movie.imdb_id){
+        Lampa.Noty.show('No IMDB id');
         return;
     }
 
     var imdb = movie.imdb_id;
 
-    if(!imdb){
-        Lampa.Noty.show('IMDB id not found');
-        return;
-    }
+    if(CACHE[imdb] && Date.now()-CACHE[imdb].time < CONFIG.cache_time){
 
-    if(cache[imdb]){
-        showResults(cache[imdb]);
+        showResults(CACHE[imdb].data);
         return;
+
     }
 
     Lampa.Noty.show('Searching torrents...');
@@ -106,23 +98,28 @@ function searchTorrentio(imdb){
     var url = 'https://torrentio.strem.fun/sort=seeders/stream/movie/'+imdb+'.json';
 
     fetch(url)
-    .then(function(r){ return r.json(); })
+    .then(function(r){return r.json()})
     .then(function(data){
 
         if(!data || !data.streams){
-            Lampa.Noty.show('No torrents found');
+            Lampa.Noty.show('No torrents');
             return;
         }
 
         var list = parseStreams(data.streams);
 
-        cache[imdb] = list;
+        CACHE[imdb] = {
+            time: Date.now(),
+            data: list
+        };
 
         showResults(list);
 
     })
     .catch(function(){
-        Lampa.Noty.show('Torrent search error');
+
+        Lampa.Noty.show('Search error');
+
     });
 
 }
@@ -133,66 +130,71 @@ function parseStreams(streams){
 
     streams.forEach(function(s){
 
-        var title = s.title || 'Torrent';
+        var title = s.title || 'torrent';
 
-        var size = extractSize(title);
-        var quality = extractQuality(title);
-        var seed = extractSeeders(title);
+        var seed = getSeed(title);
 
         list.push({
+
             title: title,
-            size: size,
-            quality: quality,
             seeders: seed,
+            size: getSize(title),
+            quality: getQuality(title),
             hash: s.infoHash
+
         });
 
     });
 
     list = list.filter(function(t){
-        return t.seeders >= config.min_seeders;
+
+        return t.seeders >= CONFIG.min_seeders;
+
     });
 
     list.sort(function(a,b){
+
         return b.seeders - a.seeders;
+
     });
 
     return list;
 
 }
 
-function extractSize(title){
+function getSeed(t){
 
-    var match = title.match(/([0-9.]+)\s?(GB|MB)/i);
+    var m = t.match(/👤\s?(\d+)/);
 
-    if(match) return match[0];
+    return m ? parseInt(m[1]) : 0;
 
-    return '';
 }
 
-function extractQuality(title){
+function getSize(t){
 
-    if(/2160|4k/i.test(title)) return '4K';
-    if(/1080/i.test(title)) return '1080p';
-    if(/720/i.test(title)) return '720p';
+    var m = t.match(/([0-9.]+)\s?(GB|MB)/i);
 
-    return '';
+    return m ? m[0] : '';
+
 }
 
-function extractSeeders(title){
+function getQuality(t){
 
-    var match = title.match(/👤\s?(\d+)/);
+    if(/2160|4k/i.test(t)) return '4K';
+    if(/1080/i.test(t)) return '1080p';
+    if(/720/i.test(t)) return '720p';
 
-    if(match) return parseInt(match[1]);
+    return '';
 
-    return 0;
 }
 
 function showResults(list){
 
     if(!list.length){
+
         Lampa.Noty.show('No good torrents');
         return;
+
     }
 
     var items = [];
@@ -200,86 +202,110 @@ function showResults(list){
     list.forEach(function(t){
 
         items.push({
+
             title: buildTitle(t),
             hash: t.hash
+
         });
 
     });
 
     Lampa.Select.show({
-        title: 'Torrent Results',
-        items: items,
-        onSelect: function(item){
 
-            playTorrent(item.hash);
+        title:'Torrent Results',
+
+        items:items,
+
+        onSelect:function(a){
+
+            playTorrent(a.hash);
 
         }
+
     });
 
 }
 
 function buildTitle(t){
 
-    var text = '';
+    var s='';
 
-    if(t.quality) text += '['+t.quality+'] ';
-    text += t.title;
+    if(t.quality) s+='['+t.quality+'] ';
 
-    if(t.size) text += ' • '+t.size;
+    s+=t.title;
 
-    if(t.seeders) text += ' • 👤 '+t.seeders;
+    if(t.size) s+=' • '+t.size;
 
-    return text;
+    if(t.seeders) s+=' • 👤 '+t.seeders;
+
+    return s;
+
 }
 
 function playTorrent(hash){
 
     var magnet = 'magnet:?xt=urn:btih:'+hash;
 
-    var stream = torrserver + '/stream?link=' + encodeURIComponent(magnet);
+    var add = TORRSERVER + '/torrent/add?link='+encodeURIComponent(magnet);
 
-    Lampa.Noty.show('Starting torrent...');
+    Lampa.Noty.show('Loading torrent...');
 
-    setTimeout(function(){
+    fetch(add)
+    .then(function(r){return r.json()})
+    .then(function(data){
 
-        Lampa.Player.play(stream);
+        if(!data || !data.hash){
 
-    },500);
+            Lampa.Noty.show('Torrent add error');
+            return;
 
-}
-
-function addSettings(){
-
-    Lampa.SettingsApi.addComponent({
-        component: plugin_name,
-        name: 'Torrent'
-    });
-
-    Lampa.SettingsApi.addParam({
-        component: plugin_name,
-        param: {
-            name: 'auto_play',
-            type: 'trigger',
-            default: false
-        },
-        field: {
-            name: 'Auto play best torrent'
-        },
-        onChange: function(v){
-            config.auto_play = v;
         }
+
+        selectFile(data.hash);
+
     });
 
 }
 
-function start(){
+function selectFile(hash){
 
-    addSettings();
+    var list = TORRSERVER + '/torrent/files?hash='+hash;
 
-    init();
+    fetch(list)
+    .then(function(r){return r.json()})
+    .then(function(files){
+
+        if(!files || !files.length){
+
+            Lampa.Noty.show('No video files');
+            return;
+
+        }
+
+        var biggest = files[0];
+
+        files.forEach(function(f){
+
+            if(f.length > biggest.length){
+
+                biggest = f;
+
+            }
+
+        });
+
+        var stream = TORRSERVER + '/torrent/play?hash='+hash+'&file='+biggest.id;
+
+        setTimeout(function(){
+
+            Lampa.Player.play(stream);
+
+        },500);
+
+    });
 
 }
 
-ready(start);
+ready(init);
 
 })();
