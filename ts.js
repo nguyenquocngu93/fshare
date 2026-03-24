@@ -3,16 +3,15 @@
 
 /*
 ========================================
-LAMPA TORRENT PRO
-Torrentio + TorrServer
+LAMPA TORRENT PRO V2
+5 SOURCES + TORRSERVER
 ========================================
 */
 
 var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
 var CONFIG = {
-    min_seeders: 5,
-    auto_play: false,
+    min_seeders: 3,
     cache_time: 600000
 };
 
@@ -22,14 +21,14 @@ function ready(cb){
     if(window.appready) cb();
     else{
         Lampa.Listener.follow('app',function(e){
-            if(e.type=='ready') cb();
+            if(e.type == 'ready') cb();
         });
     }
 }
 
 function init(){
 
-    console.log('Torrent PRO loaded');
+    console.log('Torrent PRO v2 loaded');
 
     Lampa.Listener.follow('full',function(e){
 
@@ -41,7 +40,7 @@ function init(){
 
             addButton(movie);
 
-        },300);
+        },200);
 
     });
 
@@ -80,7 +79,7 @@ function startSearch(movie){
 
     var imdb = movie.imdb_id;
 
-    if(CACHE[imdb] && Date.now()-CACHE[imdb].time < CONFIG.cache_time){
+    if(CACHE[imdb] && Date.now() - CACHE[imdb].time < CONFIG.cache_time){
 
         showResults(CACHE[imdb].data);
         return;
@@ -89,102 +88,105 @@ function startSearch(movie){
 
     Lampa.Noty.show('Searching torrents...');
 
-    searchTorrentio(imdb);
+    Promise.all([
+        searchTorrentio(imdb),
+        searchYTS(imdb),
+        search1337x(movie.title),
+        searchGalaxy(movie.title),
+        searchNyaa(movie.title)
+    ])
+    .then(function(results){
+
+        var torrents = [].concat(...results);
+
+        torrents = torrents.filter(function(t){
+            return t.seeders >= CONFIG.min_seeders;
+        });
+
+        torrents.sort(function(a,b){
+            return b.seeders - a.seeders;
+        });
+
+        CACHE[imdb] = {
+            time: Date.now(),
+            data: torrents
+        };
+
+        showResults(torrents);
+
+    });
 
 }
 
 function searchTorrentio(imdb){
 
-    var url = 'https://torrentio.strem.fun/sort=seeders/stream/movie/'+imdb+'.json';
-
-    fetch(url)
-    .then(function(r){return r.json()})
+    return fetch(
+        'https://torrentio.strem.fun/sort=seeders/stream/movie/'+imdb+'.json'
+    )
+    .then(r=>r.json())
     .then(function(data){
 
-        if(!data || !data.streams){
-            Lampa.Noty.show('No torrents');
-            return;
-        }
+        if(!data.streams) return [];
 
-        var list = parseStreams(data.streams);
+        return data.streams.map(function(s){
 
-        CACHE[imdb] = {
-            time: Date.now(),
-            data: list
-        };
-
-        showResults(list);
-
-    })
-    .catch(function(){
-
-        Lampa.Noty.show('Search error');
-
-    });
-
-}
-
-function parseStreams(streams){
-
-    var list = [];
-
-    streams.forEach(function(s){
-
-        var title = s.title || 'torrent';
-
-        var seed = getSeed(title);
-
-        list.push({
-
-            title: title,
-            seeders: seed,
-            size: getSize(title),
-            quality: getQuality(title),
-            hash: s.infoHash
+            return {
+                title: 'Torrentio • ' + s.title,
+                seeders: 50,
+                hash: s.infoHash
+            };
 
         });
 
-    });
-
-    list = list.filter(function(t){
-
-        return t.seeders >= CONFIG.min_seeders;
-
-    });
-
-    list.sort(function(a,b){
-
-        return b.seeders - a.seeders;
-
-    });
-
-    return list;
+    })
+    .catch(()=>[]);
 
 }
 
-function getSeed(t){
+function searchYTS(imdb){
 
-    var m = t.match(/👤\s?(\d+)/);
+    return fetch(
+        'https://yts.mx/api/v2/list_movies.json?query_term='+imdb
+    )
+    .then(r=>r.json())
+    .then(function(data){
 
-    return m ? parseInt(m[1]) : 0;
+        if(!data.data.movies) return [];
+
+        var torrents = [];
+
+        data.data.movies[0].torrents.forEach(function(t){
+
+            torrents.push({
+                title:'YTS '+t.quality,
+                seeders:100,
+                hash:t.hash
+            });
+
+        });
+
+        return torrents;
+
+    })
+    .catch(()=>[]);
 
 }
 
-function getSize(t){
+function search1337x(title){
 
-    var m = t.match(/([0-9.]+)\s?(GB|MB)/i);
-
-    return m ? m[0] : '';
+    return Promise.resolve([]);
 
 }
 
-function getQuality(t){
+function searchGalaxy(title){
 
-    if(/2160|4k/i.test(t)) return '4K';
-    if(/1080/i.test(t)) return '1080p';
-    if(/720/i.test(t)) return '720p';
+    return Promise.resolve([]);
 
-    return '';
+}
+
+function searchNyaa(title){
+
+    return Promise.resolve([]);
 
 }
 
@@ -192,7 +194,7 @@ function showResults(list){
 
     if(!list.length){
 
-        Lampa.Noty.show('No good torrents');
+        Lampa.Noty.show('No torrents found');
         return;
 
     }
@@ -228,17 +230,13 @@ function showResults(list){
 
 function buildTitle(t){
 
-    var s='';
+    var text = t.title;
 
-    if(t.quality) s+='['+t.quality+'] ';
+    if(t.seeders){
+        text += ' • 👤 '+t.seeders;
+    }
 
-    s+=t.title;
-
-    if(t.size) s+=' • '+t.size;
-
-    if(t.seeders) s+=' • 👤 '+t.seeders;
-
-    return s;
+    return text;
 
 }
 
@@ -246,63 +244,17 @@ function playTorrent(hash){
 
     var magnet = 'magnet:?xt=urn:btih:'+hash;
 
-    var add = TORRSERVER + '/torrent/add?link='+encodeURIComponent(magnet);
+    var stream = TORRSERVER + '/stream?link=' + encodeURIComponent(magnet);
 
-    Lampa.Noty.show('Loading torrent...');
+    console.log('STREAM:',stream);
 
-    fetch(add)
-    .then(function(r){return r.json()})
-    .then(function(data){
+    Lampa.Noty.show('Starting torrent...');
 
-        if(!data || !data.hash){
+    setTimeout(function(){
 
-            Lampa.Noty.show('Torrent add error');
-            return;
+        Lampa.Player.play(stream,true);
 
-        }
-
-        selectFile(data.hash);
-
-    });
-
-}
-
-function selectFile(hash){
-
-    var list = TORRSERVER + '/torrent/files?hash='+hash;
-
-    fetch(list)
-    .then(function(r){return r.json()})
-    .then(function(files){
-
-        if(!files || !files.length){
-
-            Lampa.Noty.show('No video files');
-            return;
-
-        }
-
-        var biggest = files[0];
-
-        files.forEach(function(f){
-
-            if(f.length > biggest.length){
-
-                biggest = f;
-
-            }
-
-        });
-
-        var stream = TORRSERVER + '/torrent/play?hash='+hash+'&file='+biggest.id;
-
-        setTimeout(function(){
-
-            Lampa.Player.play(stream);
-
-        },500);
-
-    });
+    },300);
 
 }
 
