@@ -2,315 +2,185 @@
 
 'use strict';
 
-if (window.lampa_torrent_plugin65) return;
-window.lampa_torrent_plugin65 = true;
-
-var TORRENTIO = 'https://torrentio.strem.fun/sort=seeders/stream';
 var TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-/* ---------------- HELPERS ---------------- */
-
-function log(a){
-console.log('TORRENT65:',a);
+function log(){
+    console.log('TORRENT_PLUGIN', arguments);
 }
 
-function getImdb(card){
-var id = card.imdb_id
-|| (card.ids && card.ids.imdb)
-|| '';
+/* =========================
+   TORRENT SEARCH (TORRENTIO)
+========================= */
 
-if(id && !/^tt/.test(id)) id = 'tt'+id;
+function searchTorrent(title, year, callback){
 
-return id || null;
-}
+    var query = encodeURIComponent(title + ' ' + year);
 
-function getType(card){
-if(card.name || card.first_air_date) return 'series';
-return 'movie';
-}
+    var url = 'https://torrentio.strem.fun/sort=size%7Cqualityfilter=480p,scr,cam/stream/movie/' + query + '.json';
 
-function makeMagnet(hash,name){
+    fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
 
-return 'magnet:?xt=urn:btih:'+hash+
-'&dn='+encodeURIComponent(name||'')+
-'&tr='+encodeURIComponent('udp://tracker.opentrackr.org:1337/announce')+
-'&tr='+encodeURIComponent('udp://open.stealth.si:80/announce');
+        if(!data || !data.streams){
+            callback([]);
+            return;
+        }
 
-}
+        var list = [];
 
-/* ---------------- NETWORK ---------------- */
+        data.streams.forEach(function(item){
 
-function request(url,ok,fail){
+            if(item.infoHash){
 
-var net = new Lampa.Reguest();
+                list.push({
+                    name: item.title || 'Torrent',
+                    hash: item.infoHash,
+                    size: item.size || 0
+                });
 
-net.timeout(15000);
+            }
 
-net.silent(url,function(data){
+        });
 
-ok(data);
+        callback(list);
 
-},function(){
-
-fail();
-
-});
-
-}
-
-/* ---------------- TORRENTIO ---------------- */
-
-function searchTorrent(card,season,episode){
-
-var imdb = getImdb(card);
-
-if(!imdb){
-
-Lampa.Noty.show('Không có IMDB id');
-return;
+    })
+    .catch(function(){
+        callback([]);
+    });
 
 }
 
-var type = getType(card);
+/* =========================
+   TORRSERVER STREAM LINK
+========================= */
 
-var path;
+function buildStream(hash){
 
-if(type=='series'){
-
-path='/series/'+imdb+':'+season+':'+episode+'.json';
-
-}else{
-
-path='/movie/'+imdb+'.json';
+    return TORRSERVER + '/stream?link=' + hash + '&index=1&play';
 
 }
 
-var url = TORRENTIO + path;
+/* =========================
+   OPEN PLAYER
+========================= */
 
-Lampa.Noty.show('Searching torrent...');
+function play(hash){
 
-request(url,function(data){
+    var url = buildStream(hash);
 
-var streams = data && data.streams ? data.streams : [];
-
-var list = [];
-
-streams.forEach(function(s){
-
-if(!s.infoHash) return;
-
-var lines = (s.title||'').split('\n');
-
-var name = lines[0] || 'torrent';
-
-list.push({
-
-title:name,
-hash:s.infoHash,
-file:s.fileIdx||0,
-magnet:makeMagnet(s.infoHash,name)
-
-});
-
-});
-
-showList(list,card.title||card.name);
-
-},function(){
-
-Lampa.Noty.show('Torrentio error');
-
-});
+    Lampa.Player.play({
+        url: url,
+        title: 'Torrent Stream'
+    });
 
 }
 
-/* ---------------- TORRSERVER ---------------- */
+/* =========================
+   TORRENT LIST WINDOW
+========================= */
 
-function playTorrent(t){
+function showList(torrents){
 
-var url = TORRSERVER +
-'/stream?link=' +
-t.hash +
-'&index=' +
-t.file +
-'&play';
+    if(!torrents.length){
 
-Lampa.Player.play({
+        Lampa.Noty.show('No torrent found');
 
-title:t.title,
-url:url
+        return;
+    }
 
-});
+    var items = torrents.map(function(t){
 
-}
+        return {
+            title: t.name,
+            subtitle: 'Hash: ' + t.hash.substring(0,8),
+            hash: t.hash
+        };
 
-/* ---------------- UI ---------------- */
+    });
 
-function showList(arr,title){
+    var select = new Lampa.Select({
+        title: 'Torrent List',
+        items: items,
+        onSelect: function(a){
 
-if(!arr.length){
+            play(a.hash);
 
-Lampa.Noty.show('No torrent found');
+        }
+    });
 
-return;
-
-}
-
-Lampa.Select.show({
-
-title:'Torrent ('+arr.length+')',
-
-items:arr.map(function(t){
-
-return {
-
-title:t.title,
-result:t
-
-};
-
-}),
-
-onSelect:function(a){
-
-playTorrent(a.result);
-
-},
-
-onBack:function(){
-
-Lampa.Controller.toggle('full');
+    select.open();
 
 }
 
-});
+/* =========================
+   MAIN SEARCH
+========================= */
+
+function startSearch(){
+
+    var card = Lampa.Activity.active().card;
+
+    if(!card){
+        Lampa.Noty.show('No movie');
+        return;
+    }
+
+    var title = card.title || card.original_title;
+    var year = card.release_date ? card.release_date.substr(0,4) : '';
+
+    Lampa.Noty.show('Searching torrent...');
+
+    searchTorrent(title, year, function(list){
+
+        showList(list);
+
+    });
 
 }
 
-/* ---------------- SEASON PICK ---------------- */
+/* =========================
+   ADD SOURCE BUTTON
+========================= */
 
-function askSeason(card){
+function addSource(){
 
-var seasons = card.number_of_seasons || 1;
+    Lampa.Listener.follow('player_sources', function(e){
 
-if(seasons==1){
+        e.sources.push({
 
-askEpisode(card,1);
-return;
+            title: 'Torrent Search',
+            icon: 'search',
+            onSelect: function(){
 
-}
+                startSearch();
 
-var items=[];
+            }
 
-for(var i=1;i<=seasons;i++){
+        });
 
-items.push({
-
-title:'Season '+i,
-s:i
-
-});
+    });
 
 }
 
-Lampa.Select.show({
+/* =========================
+   INIT
+========================= */
 
-title:'Select Season',
+function init(){
 
-items:items,
+    log('INIT');
 
-onSelect:function(a){
-
-askEpisode(card,a.s);
-
-}
-
-});
+    addSource();
 
 }
 
-function askEpisode(card,s){
-
-var items=[];
-
-for(var i=1;i<=30;i++){
-
-items.push({
-
-title:'Episode '+i,
-e:i
-
-});
-
+if(window.appready){
+    init();
 }
-
-Lampa.Select.show({
-
-title:'Season '+s,
-
-items:items,
-
-onSelect:function(a){
-
-searchTorrent(card,s,a.e);
-
+else{
+    Lampa.Listener.follow('app', init);
 }
-
-});
-
-}
-
-/* ---------------- BUTTON ---------------- */
-
-function createButton(card){
-
-var btn=$('<div class="full-start__button selector view--torrent65">'+
-'<span>Torrent</span></div>');
-
-btn.on('hover:enter',function(){
-
-var type=getType(card);
-
-if(type=='series'){
-
-askSeason(card);
-
-}else{
-
-searchTorrent(card,1,1);
-
-}
-
-});
-
-return btn;
-
-}
-
-/* ---------------- HOOK ---------------- */
-
-Lampa.Listener.follow('full',function(e){
-
-if(e.type!=='complite') return;
-
-var card = e.data && e.data.movie
-? e.data.movie
-: (e.object && e.object.card);
-
-if(!card) return;
-
-var $ctx = e.object && e.object.activity
-? e.object.activity.render()
-: $('body');
-
-if($ctx.find('.view--torrent65').length) return;
-
-var btn=createButton(card);
-
-$ctx.find('.full-start__buttons').append(btn);
-
-});
-
-console.log('Torrent Plugin v6.5 loaded');
 
 })();
