@@ -1,77 +1,82 @@
 (function () {
     'use strict';
 
-    function TorrentioPlugin(object) {
+    function Torrentio(object) {
         var network = new Lampa.Reguest();
-        var scroll  = new Lampa.Scroll({mask: true, over: true});
-        var items   = [];
-        var html    = $('<div></div>');
-        var info    = object.movie; // Lấy thông tin phim từ card Lampa
-
+        var modal   = $('<div></div>');
+        
         this.create = function () {
             var _this = this;
-            this.start();
-            return this.render();
-        };
+            var info  = object.movie;
+            var type  = info.number_of_seasons ? 'series' : 'movie';
+            var id    = info.imdb_id;
 
-        this.start = function () {
-            var type = info.number_of_seasons ? 'series' : 'movie';
-            var id = info.imdb_id;
-            
-            // Nếu không có IMDB ID, thử lấy qua API khác hoặc báo lỗi
-            if(!id) {
-                Lampa.Noty.show('Không tìm thấy mã IMDB cho phim này.');
+            if (!id) {
+                Lampa.Noty.show('Không tìm thấy IMDB ID.');
                 return;
             }
 
-            // Gọi API Torrentio (mặc định lấy tất cả providers)
+            // Hiển thị loading
+            Lampa.Select.show({
+                title: 'Torrentio: ' + info.title,
+                items: [{title: 'Đang tìm kiếm luồng...'}]
+            });
+
             var url = 'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrent9,horriblesubs,nyaasi,megatorrents,limetorrents,zooqle/stream/' + type + '/' + id + '.json';
 
             network.silent(url, function (json) {
                 if (json.streams && json.streams.length > 0) {
-                    _this.displayStreams(json.streams);
+                    _this.showStreams(json.streams, info.title);
                 } else {
-                    Lampa.Noty.show('Không tìm thấy luồng torrent nào từ Torrentio.');
+                    Lampa.Noty.show('Không tìm thấy kết quả.');
                 }
             }, function () {
-                Lampa.Noty.show('Lỗi kết nối tới API Torrentio.');
+                Lampa.Noty.show('Lỗi kết nối Torrentio.');
             });
         };
 
-        this.displayStreams = function (streams) {
-            var _this = this;
-            streams.forEach(function (stream) {
-                var item = Lampa.Template.get('button_category', {title: stream.title});
-                item.on('hover:enter', function () {
-                    // Xử lý khi chọn một stream (thường là mở link magnet/video)
+        this.showStreams = function (streams, title) {
+            var items = streams.map(function (stream) {
+                return {
+                    title: stream.title.split('\n')[0], // Lấy dòng đầu của tiêu đề
+                    subtitle: stream.title.split('\n').slice(1).join(' '),
+                    url: stream.url
+                };
+            });
+
+            Lampa.Select.show({
+                title: 'Kết quả từ Torrentio',
+                items: items,
+                onSelect: function (item) {
                     Lampa.Player.play({
-                        url: stream.url || stream.infoHash, // Torrentio trả về URL hoặc Hash
-                        title: info.title
+                        url: item.url,
+                        title: title
                     });
-                });
-                html.append(item);
+                }
             });
-            Lampa.Controller.enable('content');
-        };
-
-        this.render = function () {
-            return html;
         };
     }
 
-    // Đăng ký Plugin vào hệ thống Lampa
     function startPlugin() {
-        window.torrentio_plugin = true;
-
-        // Thêm nút vào card phim (Full info)
+        // Lắng nghe sự kiện khi mở thẻ phim (Full Info)
         Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'complite') {
-                var button = $('<div class="full-start__button selector"><span>Torrentio</span></div>');
-                button.on('hover:enter', function () {
-                    Lampa.Component.add('torrentio_view', TorrentioPlugin, {movie: e.data.movie});
-                    Lampa.Controller.enable('torrentio_view');
-                });
-                e.object.find('.full-start__buttons').append(button);
+            if (e.type == 'complite') { // Lampa dùng 'complite' thay vì 'complete'
+                var container = e.object.find('.full-start__buttons');
+                
+                // Kiểm tra nếu nút chưa tồn tại thì mới thêm
+                if (container.length && !container.find('.button--torrentio').length) {
+                    var button = $(`<div class="full-start__button selector button--torrentio">
+                        <svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style="fill: currentColor; margin-right: 10px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z"/></svg>
+                        <span>Torrentio</span>
+                    </div>`);
+
+                    button.on('hover:enter', function () {
+                        var search = new Torrentio(e.data);
+                        search.create();
+                    });
+
+                    container.append(button);
+                }
             }
         });
     }
