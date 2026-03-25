@@ -1,101 +1,65 @@
 (function () {
     'use strict';
 
-    // 1. Đăng ký thông tin Plugin vào hệ thống Lampa
-    Lampa.Manifest.plugins = Object.assign(Lampa.Manifest.plugins || {}, {
-        'torrentio_custom': {
-            type: 'video',
-            version: '1.0.0',
-            name: 'Torrentio Parser (Custom)',
-            description: 'Lấy nguồn torrent tiếng Anh và chuyển qua TorrServer',
-            component: 'torrentio'
-        }
-    });
-
-    // 2. Lắng nghe sự kiện khi render trang chi tiết phim (Component: Full)
+    // Đợi trang chi tiết phim sẵn sàng
     Lampa.Listener.follow('full', function (e) {
-        if (e.type == 'build') {
+        if (e.type == 'ready') {
             
-            // Render nút bấm (Button Registration)
-            var btn_html = '<div class="full-button selector" data-action="torrentio_custom">' +
-                           '<div class="full-button__icon"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M11,16.5L6.5,12L7.91,10.59L11,13.67L16.59,8.09L18,9.5L11,16.5Z" /></svg></div>' +
-                           '<div class="full-button__text">Torrentio EN</div>' +
-                           '</div>';
+            // Tạo nút với style rõ ràng để dễ bấm bằng chuột/tay
+            var button = $(`
+                <div class="full-start__button selector torrentio-sensor" style="background: #2c3e50; margin-left: 10px; cursor: pointer;">
+                    <svg height="24" viewBox="0 0 24 24" width="24" style="vertical-align: middle; margin-right: 5px;">
+                        <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" fill="white"/>
+                    </svg>
+                    <span style="font-weight: bold;">Torrentio EN</span>
+                </div>
+            `);
 
-            var button = $(btn_html);
-
-            // Gắn sự kiện khi click/enter vào nút
-            button.on('hover:enter', function () {
+            // Vì bạn dùng Sensor, ta dùng trực tiếp sự kiện 'click'
+            button.on('click', function (event) {
+                event.preventDefault();
                 var card = e.object;
-                var imdb_id = card.imdb_id;
-
-                if (!imdb_id) {
-                    Lampa.Noty.show('Không tìm thấy IMDB ID để lấy link Torrentio.');
+                
+                if (!card.imdb_id) {
+                    Lampa.Noty.show('Phim này không có IMDB ID.');
                     return;
                 }
 
-                // Logic phân biệt Movie và TV Series
-                var type = card.name ? 'movie' : 'series';
-                var api_url = '';
-
-                if (type === 'movie') {
-                    api_url = 'https://torrentio.strem.fun/stream/movie/' + imdb_id + '.json';
-                } else {
-                    // Mặc định gọi thử Season 1 - Tập 1. (Có thể mở rộng thêm logic chọn tập sau)
-                    api_url = 'https://torrentio.strem.fun/stream/series/' + imdb_id + ':1:1.json';
-                }
-
-                Lampa.Modal.show({ title: 'Torrentio', html: '<div class="broadcast__text">Đang tìm kiếm nguồn...</div>' });
-
-                // 3. Gọi API lấy dữ liệu từ mạng lưới Torrent
-                var network = new Lampa.Reguest();
-                network.request(api_url, function (data) {
-                    Lampa.Modal.close();
-
+                Lampa.Noty.show('Đang quét nguồn quốc tế...');
+                
+                // Gọi API Torrentio
+                var url = 'https://torrentio.strem.fun/stream/movie/' + card.imdb_id + '.json';
+                
+                $.getJSON(url, function (data) {
                     if (data && data.streams && data.streams.length > 0) {
-                        var items = [];
-
-                        data.streams.forEach(function (stream) {
-                            // Tạo Magnet link từ infoHash để TorrServer có thể đọc được
-                            var magnet = stream.infoHash ? 'magnet:?xt=urn:btih:' + stream.infoHash : stream.url;
-                            var title_parts = stream.title ? stream.title.split('\n') : ['Unknown'];
-
-                            items.push({
-                                title: stream.name + ' - ' + title_parts[0], // Tên tracker & Chất lượng (vd: YTS - 1080p)
-                                description: title_parts.slice(1).join(' | '), // Thông số dung lượng, số lượng Seeders
-                                magnet: magnet,
-                                hash: stream.infoHash
-                            });
+                        var list = data.streams.map(function (s) {
+                            return {
+                                title: s.name + ' - ' + s.title.split('\n')[0],
+                                magnet: 'magnet:?xt=urn:btih:' + s.infoHash,
+                                hash: s.infoHash
+                            };
                         });
 
-                        // 4. Render danh sách Menu kết quả
+                        // Hiển thị danh sách kết quả dạng Select
                         Lampa.Select.show({
-                            title: 'Chọn nguồn xem',
-                            items: items,
-                            onSelect: function (selected) {
-                                // Truyền URL magnet vào Lampa Player, hệ thống sẽ tự động bắt luồng và đẩy sang TorrServer
+                            title: 'Chọn chất lượng phim',
+                            items: list,
+                            onSelect: function (item) {
                                 Lampa.Player.play({
                                     title: card.title || card.name,
-                                    url: selected.magnet,
-                                    timeline: { hash: selected.hash, time: 0 }
+                                    url: item.magnet,
+                                    timeline: { hash: item.hash }
                                 });
-                            },
-                            onBack: function () {
-                                Lampa.Controller.toggle('full');
                             }
                         });
                     } else {
-                        Lampa.Noty.show('Không có kết quả nào.');
+                        Lampa.Noty.show('Không tìm thấy link torrent nào.');
                     }
-                }, function () {
-                    Lampa.Modal.close();
-                    Lampa.Noty.show('Lỗi kết nối đến server Torrentio.');
                 });
             });
 
-            // Chèn nút Torrentio vào cạnh nút "Play" hiện tại
+            // Chèn nút vào thanh công cụ
             e.html.find('.full-start__buttons').append(button);
         }
     });
-
 })();
