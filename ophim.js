@@ -12,19 +12,27 @@
 
     console.log('[Lampa] Torrentio STABLE started');
 
-    // ===== FIX ID =====
+    // ===== FIX TMDB =====
     function getTmdbId(data) {
       if (!data) return null;
 
+      // ưu tiên id chuẩn
+      if (data.id && typeof data.id === 'number') {
+        return data.id;
+      }
+
+      // parse từ url
+      if (data.url) {
+        const match = data.url.match(/(movie|tv)\/(\d+)/);
+        if (match) return parseInt(match[2]);
+      }
+
+      // fallback
       return (
-        data.id ||
         data.tmdb_id ||
         data.movie?.id ||
-        data.movie?.tmdb_id ||
         data.card?.id ||
-        data.card?.tmdb_id ||
         data.data?.id ||
-        data.data?.tmdb_id ||
         null
       );
     }
@@ -53,7 +61,7 @@
       }, 100);
     }
 
-    // ===== ADD BUTTON (KHÔNG ĐƯỢC SỬA 😆) =====
+    // ===== ADD BUTTON (GIỮ NGUYÊN) =====
     function addButton(container) {
       $('.torrentio-stable').remove();
 
@@ -68,13 +76,13 @@
     function open() {
       const tmdb = getTmdbId(current);
 
-      if (!tmdb) {
-        console.log('DEBUG DATA:', current);
-        Lampa.Noty.show('Không lấy được TMDB ID');
+      if (!tmdb || isNaN(tmdb)) {
+        console.log('BAD TMDB:', current);
+        Lampa.Noty.show('TMDB ID lỗi');
         return;
       }
 
-      const isTV = !!current.name;
+      const isTV = current.seasons && current.seasons.length;
 
       if (isTV) {
         chooseSeason(tmdb);
@@ -129,9 +137,12 @@
         url = `https://torrentio.strem.fun/sort=qualitysize/stream/series/tmdb:${tmdb}:${season}:${episode}.json`;
       }
 
+      console.log('TORRENT URL:', url);
       Lampa.Noty.show('Đang tải torrent...');
 
       $.get(url, function (res) {
+        console.log('TORRENT RES:', res);
+
         if (!res?.streams?.length) {
           Lampa.Noty.show('Không có torrent');
           return;
@@ -173,6 +184,8 @@
       }
 
       const url = `${TORRSERVER}/stream?link=${encodeURIComponent(magnet)}`;
+
+      console.log('PLAY:', url);
 
       Lampa.Player.play({
         url: url,
