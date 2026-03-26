@@ -1,10 +1,10 @@
 (function () {
   'use strict';
 
-  if (window.plugin_knaben_ready) return;
-  window.plugin_knaben_ready = true;
+  if (window.plugin_knaben_fixed) return;
+  window.plugin_knaben_fixed = true;
 
-  const KNABEN = 'https://knaben.org/api/search';
+  const KNABEN = 'https://knaben.org/api/v1/search';
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
   /* ===== HELPERS ===== */
@@ -27,10 +27,16 @@
     return title + (year ? ' ' + year : '');
   }
 
+  function makeMagnet(hash, name) {
+    return 'magnet:?xt=urn:btih:' + hash +
+           '&dn=' + encodeURIComponent(name || '');
+  }
+
   function play(item, title) {
+    const magnet = makeMagnet(item.hash, title);
     const name = encodeURIComponent(title || 'video');
 
-    const url = `${TORRSERVER}/stream/${name}?link=${item.hash}&index=0&play`;
+    const url = `${TORRSERVER}/stream/${name}?link=${magnet}&index=0&play`;
 
     Lampa.Player.play({ url });
   }
@@ -39,22 +45,27 @@
 
   function searchKnaben(query, callback) {
 
-    var url = KNABEN + '?q=' + encodeURIComponent(query);
+    var url = KNABEN +
+      '?q=' + encodeURIComponent(query) +
+      '&cat=2000';
 
     var net = new Lampa.Reguest();
     net.timeout(15000);
 
     net.silent(url,
       function (data) {
+
         var res = typeof data === 'string' ? JSON.parse(data) : data;
 
-        var list = (res || []).map(function (r) {
+        var list = ((res && res.results) || []).map(function (r) {
           return {
             title: r.title,
             size: r.size || '',
             seed: r.seeders || 0,
-            hash: r.infohash
+            hash: r.hash
           };
+        }).filter(function (r) {
+          return r.hash;
         });
 
         callback(list);
@@ -71,12 +82,12 @@
   function show(list, title) {
 
     if (!list.length) {
-      Lampa.Noty.show('Không có torrent');
+      Lampa.Noty.show('Không có torrent 😔');
       return;
     }
 
     Lampa.Select.show({
-      title: '🧲 Knaben - ' + title,
+      title: '🧲 Knaben (' + list.length + ')',
       items: list.map(function (r) {
         return {
           title: r.title,
@@ -93,7 +104,7 @@
     });
   }
 
-  /* ===== EPISODE MENU ===== */
+  /* ===== EP MENU ===== */
 
   function ask(card) {
 
@@ -101,7 +112,7 @@
 
     function pickEpisode(season) {
 
-      var total = 20; // đơn giản (knaben không cần chính xác)
+      var total = 20;
 
       var list = [];
       for (var i = 1; i <= total; i++) {
@@ -130,6 +141,7 @@
     }
 
     var list = [];
+
     for (var s = 1; s <= totalSeasons; s++) {
       list.push({ title: 'Season ' + s, s: s });
     }
@@ -146,7 +158,7 @@
     });
   }
 
-  /* ===== MAIN SEARCH ===== */
+  /* ===== MAIN ===== */
 
   function search(card) {
     var q = buildQuery(card);
@@ -157,7 +169,7 @@
     });
   }
 
-  /* ---- HOOK: NÚT KNABEN ---- */
+  /* ---- HOOK ---- */
   Lampa.Listener.follow('full', function (e) {
     if (e.type !== 'complite') return;
 
@@ -193,6 +205,6 @@
     }
   });
 
-  console.log('[Knaben Plugin] loaded');
+  console.log('[Knaben FIXED] loaded');
 
 })();
