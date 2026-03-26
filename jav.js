@@ -1,210 +1,180 @@
 (function () {
   'use strict';
 
-  if (window.plugin_knaben_fixed) return;
-  window.plugin_knaben_fixed = true;
+  if (window.plugin_knaben_stable) return;
+  window.plugin_knaben_stable = true;
 
-  const KNABEN = 'https://knaben.org/api/v1/search';
+  const API = 'https://knaben.org/api/v1/search';
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-  /* ===== HELPERS ===== */
+  let current = null;
 
-  function getMediaType(card) {
-    if (card.number_of_seasons || card.first_air_date) return 'series';
-    return 'movie';
+  /* ===== GET TITLE SAFE ===== */
+  function getTitle(card) {
+    return (
+      card.title ||
+      card.name ||
+      card.original_title ||
+      card.original_name ||
+      ''
+    ).trim();
+  }
+
+  function getYear(card) {
+    return (card.release_date || card.first_air_date || '').slice(0, 4);
   }
 
   function buildQuery(card, season, episode) {
-    var title = card.title || card.name || '';
-    var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
+    const title = getTitle(card);
+    const year = getYear(card);
+
+    if (!title) return '';
 
     if (season && episode) {
-      var s = String(season).padStart(2, '0');
-      var e = String(episode).padStart(2, '0');
+      const s = String(season).padStart(2, '0');
+      const e = String(episode).padStart(2, '0');
       return `${title} S${s}E${e}`;
     }
 
     return title + (year ? ' ' + year : '');
   }
 
-  function makeMagnet(hash, name) {
+  /* ===== MAGNET ===== */
+  function magnet(hash, name) {
     return 'magnet:?xt=urn:btih:' + hash +
            '&dn=' + encodeURIComponent(name || '');
   }
 
-  function play(item, title) {
-    const magnet = makeMagnet(item.hash, title);
-    const name = encodeURIComponent(title || 'video');
+  /* ===== PLAY ===== */
+  function play(item) {
+    const name = encodeURIComponent(getTitle(current));
 
-    const url = `${TORRSERVER}/stream/${name}?link=${magnet}&index=0&play`;
+    const url = `${TORRSERVER}/stream/${name}?link=${magnet(item.hash, item.title)}&index=0&play`;
 
     Lampa.Player.play({ url });
   }
 
-  /* ===== FETCH ===== */
+  /* ===== SEARCH ===== */
+  function search(card, season, episode) {
 
-  function searchKnaben(query, callback) {
+    const q = buildQuery(card, season, episode);
 
-    var url = KNABEN +
-      '?q=' + encodeURIComponent(query) +
-      '&cat=2000';
+    if (!q) {
+      Lampa.Noty.show('❌ Không có tên phim');
+      return;
+    }
 
-    var net = new Lampa.Reguest();
-    net.timeout(15000);
+    Lampa.Noty.show('🔎 Knaben...');
+
+    const url = API + '?q=' + encodeURIComponent(q) + '&cat=2000';
+
+    const net = new Lampa.Reguest();
+    net.timeout(10000);
 
     net.silent(url,
       function (data) {
 
-        var res = typeof data === 'string' ? JSON.parse(data) : data;
+        let res = typeof data === 'string' ? JSON.parse(data) : data;
 
-        var list = ((res && res.results) || []).map(function (r) {
-          return {
+        let list = ((res && res.results) || [])
+          .map(r => ({
             title: r.title,
-            size: r.size || '',
+            hash: r.hash,
             seed: r.seeders || 0,
-            hash: r.hash
-          };
-        }).filter(function (r) {
-          return r.hash;
-        });
+            size: r.size || ''
+          }))
+          .filter(x => x.hash && x.title);
 
-        callback(list);
+        if (!list.length) {
+          Lampa.Noty.show('❌ Không có torrent');
+          return;
+        }
+
+        // sort seed cao trước
+        list.sort((a, b) => b.seed - a.seed);
+
+        Lampa.Select.show({
+          title: '🧲 Knaben (' + list.length + ')',
+          items: list.map(r => ({
+            title: r.title,
+            subtitle: '👤 ' + r.seed + ' | 💾 ' + r.size,
+            result: r
+          })),
+          onSelect: i => play(i.result),
+          onBack: () => Lampa.Controller.toggle('full')
+        });
       },
       function () {
-        Lampa.Noty.show('Knaben lỗi');
-        callback([]);
+        Lampa.Noty.show('❌ API lỗi');
       }
     );
   }
 
-  /* ===== SHOW ===== */
-
-  function show(list, title) {
-
-    if (!list.length) {
-      Lampa.Noty.show('Không có torrent 😔');
-      return;
-    }
-
-    Lampa.Select.show({
-      title: '🧲 Knaben (' + list.length + ')',
-      items: list.map(function (r) {
-        return {
-          title: r.title,
-          subtitle: '👤 ' + r.seed + ' | 💾 ' + r.size,
-          result: r
-        };
-      }),
-      onSelect: function (item) {
-        play(item.result, item.result.title);
-      },
-      onBack: function () {
-        Lampa.Controller.toggle('full');
-      }
-    });
-  }
-
-  /* ===== EP MENU ===== */
-
+  /* ===== SERIES MENU ===== */
   function ask(card) {
 
-    var totalSeasons = card.number_of_seasons || 1;
+    const seasons = card.number_of_seasons || 1;
 
-    function pickEpisode(season) {
+    function pickEpisode(s) {
 
-      var total = 20;
-
-      var list = [];
-      for (var i = 1; i <= total; i++) {
+      let list = [];
+      for (let i = 1; i <= 20; i++) {
         list.push({ title: 'Tập ' + i, e: i });
       }
 
       Lampa.Select.show({
-        title: 'Season ' + season,
+        title: 'Season ' + s,
         items: list,
-        onSelect: function (item) {
-          var q = buildQuery(card, season, item.e);
-          Lampa.Noty.show('Đang tìm...');
-          searchKnaben(q, function (res) {
-            show(res, q);
-          });
-        },
-        onBack: function () {
-          Lampa.Controller.toggle('full');
-        }
+        onSelect: it => search(card, s, it.e),
+        onBack: () => Lampa.Controller.toggle('full')
       });
     }
 
-    if (totalSeasons === 1) {
+    if (seasons === 1) {
       pickEpisode(1);
       return;
     }
 
-    var list = [];
-
-    for (var s = 1; s <= totalSeasons; s++) {
-      list.push({ title: 'Season ' + s, s: s });
+    let list = [];
+    for (let i = 1; i <= seasons; i++) {
+      list.push({ title: 'Season ' + i, s: i });
     }
 
     Lampa.Select.show({
       title: 'Chọn Season',
       items: list,
-      onSelect: function (item) {
-        pickEpisode(item.s);
-      },
-      onBack: function () {
-        Lampa.Controller.toggle('full');
-      }
+      onSelect: it => pickEpisode(it.s),
+      onBack: () => Lampa.Controller.toggle('full')
     });
   }
 
-  /* ===== MAIN ===== */
-
-  function search(card) {
-    var q = buildQuery(card);
-
-    Lampa.Noty.show('Đang tìm...');
-    searchKnaben(q, function (res) {
-      show(res, q);
-    });
-  }
-
-  /* ---- HOOK ---- */
+  /* ===== BUTTON ===== */
   Lampa.Listener.follow('full', function (e) {
     if (e.type !== 'complite') return;
 
-    var card = e.data && e.data.movie ? e.data.movie : (e.object && e.object.card);
-    if (!card) return;
+    current = e.data.movie || (e.object && e.object.card);
+    if (!current) return;
 
-    var $ctx = e.object && e.object.activity ? e.object.activity.render()
-             : (e.object && e.object.render ? e.object.render() : $('body'));
+    let $ctx = e.object.activity.render();
 
-    if ($ctx.find('.view--knaben').length) return;
+    if ($ctx.find('.view--knaben-fix').length) return;
 
-    var isSeries = getMediaType(card) === 'series';
+    let isSeries = current.number_of_seasons;
 
-    var $btn = $(
-      '<div class="full-start__button selector view--knaben">' +
-      '<svg viewBox="0 0 24 24" fill="none" width="44" height="44"' +
-      ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
-      '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-      '<span>Knaben</span></div>'
-    );
+    let btn = $(`
+      <div class="full-start__button selector view--knaben-fix">
+        <span>Knaben</span>
+      </div>
+    `);
 
-    $btn.on('hover:enter', function () {
-      if (isSeries) ask(card);
-      else search(card);
+    btn.on('hover:enter', function () {
+      if (isSeries) ask(current);
+      else search(current);
     });
 
-    var $anchor = $ctx.find('.view--torrent');
-
-    if ($anchor.length) {
-      $anchor.after($btn);
-    } else {
-      $ctx.find('.full-start__buttons').append($btn);
-    }
+    $ctx.find('.full-start__buttons').append(btn);
   });
 
-  console.log('[Knaben FIXED] loaded');
+  console.log('[Knaben Stable] loaded');
 
 })();
