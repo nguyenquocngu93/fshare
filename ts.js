@@ -133,6 +133,59 @@
         );
     }
 
+
+/* =========================
+     KNABEN
+  ========================= */
+
+  function searchKnaben(callback) {
+    const query = buildQuery();
+
+    const url = `https://knaben.org/api/v1?query=${encodeURIComponent(query)}&limit=30`;
+
+    Lampa.Reguest.silent(url, function (res) {
+      try {
+        const data = typeof res === 'string' ? JSON.parse(res) : res;
+
+        if (!data?.hits) return callback([]);
+
+        const list = data.hits.map(item => ({
+          title: '🟣 Knaben | ' + item.title,
+          magnet: item.magnetUrl,
+          size: item.size,
+          seeders: item.seeders || 0
+        }));
+
+        callback(list);
+      } catch (e) {
+        console.log('Knaben error', e);
+        callback([]);
+      }
+    }, function () {
+      callback([]);
+    });
+  }
+
+  /* =========================
+     MERGE + FILTER
+  ========================= */
+
+  function mergeStreams(tor, kb) {
+    let list = [...tor, ...kb];
+
+    // lọc rác
+    list = list.filter(i =>
+      i.magnet &&
+      i.size > 300 * 1024 * 1024 && // >300MB
+      !/480p/i.test(i.title)
+    );
+
+    // sort seed
+    list.sort((a, b) => (b.seeders || 0) - (a.seeders || 0));
+
+    return list.slice(0, 50);
+  }
+
     /* ---- JAC.RED ---- */
     function fetchJacred(query, onDone) {
         var url = JACRED_URL +
