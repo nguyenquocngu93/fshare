@@ -1,31 +1,28 @@
 (function() {
-    if (window.torrentio_play_plugin) return;
-    window.torrentio_play_plugin = true;
+    if (window.torrentio_full_plugin) return;
+    window.torrentio_full_plugin = true;
 
-    // URL API Torrentio
     const TORRENTIO_API = 'https://torrentio.strem.fun';
-    
-    // Hàm tìm kiếm torrent từ Torrentio
-    async function searchTorrentio(imdbId, type, season, episode) {
+
+    function searchTorrentio(imdbId, type, season, episode) {
         return new Promise((resolve) => {
             var searchQuery = '';
-            if (type === 'movie') {
-                searchQuery = `movie:${imdbId}`;
-            } else if (type === 'tv') {
+            if (type === 'movie') searchQuery = `movie:${imdbId}`;
+            else if (type === 'tv') {
                 searchQuery = `series:${imdbId}`;
                 if (season) searchQuery += `:${season}`;
                 if (episode) searchQuery += `:${episode}`;
             }
-            
+            if (!searchQuery) return resolve([]);
+
             var url = `${TORRENTIO_API}/stream/${searchQuery}`;
-            
             Lampa.Network.get(url, function(response) {
                 var sources = [];
                 if (response && response.streams) {
-                    response.streams.forEach(function(stream, idx) {
+                    response.streams.forEach((stream, idx) => {
                         sources.push({
                             id: idx,
-                            title: stream.title || 'Torrentio Source',
+                            title: stream.title || 'Torrentio',
                             quality: stream.quality || 'Auto',
                             seeders: stream.seeders || 0,
                             size: stream.size || 'Unknown',
@@ -35,94 +32,65 @@
                     });
                 }
                 resolve(sources);
-            }, function(error) {
-                console.error('Torrentio search error:', error);
+            }, function(err) {
+                console.error(err);
                 resolve([]);
             });
         });
     }
-    
-    // Hàm chính để hook vào nút phát
-    function hookIntoPlayButton() {
-        // Cách 1: Override hoặc mở rộng danh sách parser
-        // Kiểm tra nếu Torrentio chưa được thêm vào providers
+
+    // Đăng ký parser
+    function registerParser() {
         if (Lampa.Parser && Lampa.Parser.providers && !Lampa.Parser.providers.torrentio) {
             Lampa.Parser.providers.torrentio = {
                 name: 'Torrentio',
                 search: function(params, callback) {
-                    var imdbId = params.imdb_id || (params.card?.imdb_id);
-                    var type = params.type;
-                    var season = params.season;
-                    var episode = params.episode;
-                    
-                    searchTorrentio(imdbId, type, season, episode).then(function(sources) {
-                        callback(sources);
-                    });
+                    searchTorrentio(params.imdb_id, params.type, params.season, params.episode).then(callback);
                 }
             };
             console.log('Torrentio parser registered');
         }
-        
-        // Cách 2: Thêm vào menu settings để người dùng chọn
-        addToParserSettings();
     }
-    
-    // Thêm tùy chọn Torrentio vào Settings → Parser
-    function addToParserSettings() {
-        if (Lampa.SettingsApi && Lampa.SettingsApi.add) {
-            Lampa.SettingsApi.add({
-                tab: 'parser',
-                name: 'torrentio',
-                title: 'Torrentio Parser',
-                html: function() {
-                    return `
-                        <div class="settings-item">
-                            <div class="settings-item__title">Torrentio</div>
-                            <div class="settings-item__field">
-                                <div class="selector">
-                                    <div class="selector__value">Enabled</div>
-                                </div>
-                            </div>
+
+    // Thêm nút riêng
+    function addCustomButton() {
+        Lampa.Listener.follow('full', function(e) {
+            if (e.type === 'complite' || e.type === 'open') {
+                if ($('.full-start-new__buttons [data-action="torrentio-custom"]').length === 0) {
+                    $('.full-start-new__buttons').append(`
+                        <div class="full-start-new__button" data-action="torrentio-custom">
+                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/>
+                            </svg>
+                            <span>Torrentio</span>
                         </div>
-                    `;
+                    `);
+                    $('[data-action="torrentio-custom"]').on('click', function() {
+                        var movie = Lampa.Activity.active().object;
+                        if (!movie) return;
+                        Lampa.Loading.show();
+                        searchTorrentio(movie.imdb_id, movie.type, movie.season, movie.episode).then(function(sources) {
+                            Lampa.Loading.hide();
+                            if (sources.length === 0) {
+                                Lampa.Notify.show('Không tìm thấy nguồn Torrentio', null, 3000);
+                                return;
+                            }
+                            Lampa.Select.show(sources.map(s => `${s.title} (${s.seeders} seeders)`), function(index) {
+                                Lampa.Player.play(sources[index].url);
+                            });
+                        });
+                    });
                 }
-            });
-        }
-        
-        // Thêm vào dropdown parser_torrent_type
-        modifyParserDropdown();
-    }
-    
-    // Thêm Torrentio vào dropdown chọn parser
-    function modifyParserDropdown() {
-        Lampa.Listener.follow('settings', function(e) {
-            if (e.type === 'parser') {
-                setTimeout(function() {
-                    var selector = document.querySelector('[data-setting="parser_torrent_type"] .selector');
-                    if (selector && !selector.querySelector('[data-value="torrentio"]')) {
-                        var option = document.createElement('div');
-                        option.className = 'selector__value';
-                        option.innerText = 'Torrentio';
-                        option.setAttribute('data-value', 'torrentio');
-                        selector.appendChild(option);
-                    }
-                }, 500);
             }
         });
     }
-    
-    // Hook vào sự kiện mở card chi tiết để đảm bảo parser được load
+
     function init() {
-        hookIntoPlayButton();
-        console.log('Torrentio Play Plugin loaded - ready for play button');
+        registerParser();
+        addCustomButton();
+        console.log('Torrentio plugin with custom button loaded');
     }
-    
-    // Khởi động plugin khi Lampa sẵn sàng
-    if (window.appready) {
-        init();
-    } else {
-        Lampa.Listener.follow('app', function(e) {
-            if (e.type === 'ready') init();
-        });
-    }
+
+    if (window.appready) init();
+    else Lampa.Listener.follow('app', e => { if (e.type === 'ready') init(); });
 })();
