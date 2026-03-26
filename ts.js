@@ -2,7 +2,12 @@
   'use strict';
 
   const PLUGIN_KEY = 'torrentio_full_menu_pro';
+
+  // ⚡ TORRSERVER
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
+
+  // 🔥 TORRENTIO CONFIG (ĐÃ FIX)
+  const TORRENTIO = 'https://torrentio.strem.fun/sort=qualitysize|qualityfilter=1080p,720p|exclude=cam|limit=25';
 
   function start() {
     if (window[PLUGIN_KEY]) return;
@@ -77,7 +82,7 @@
       }
     }
 
-    // ===== GET SEASON FROM CARD =====
+    // ===== SEASON FROM CARD =====
     function getSeasons(card) {
 
       if (Array.isArray(card?.seasons) && card.seasons.length) {
@@ -138,17 +143,17 @@
       });
     }
 
-    // ===== LOAD STREAM =====
+    // ===== LOAD STREAM (ĐÃ FIX TORRENTIO) =====
     function loadStreams(type, tmdb, imdb, s, e) {
 
       let url = '';
 
       if (type === 'movie') {
-        if (tmdb) url = `https://torrentio.strem.fun/stream/movie/tmdb:${tmdb}.json`;
-        else if (imdb) url = `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
+        if (tmdb) url = `${TORRENTIO}/stream/movie/tmdb:${tmdb}.json`;
+        else if (imdb) url = `${TORRENTIO}/stream/movie/${imdb}.json`;
       } else {
-        if (tmdb) url = `https://torrentio.strem.fun/stream/series/tmdb:${tmdb}:${s}:${e}.json`;
-        else if (imdb) url = `https://torrentio.strem.fun/stream/series/${imdb}:${s}:${e}.json`;
+        if (tmdb) url = `${TORRENTIO}/stream/series/tmdb:${tmdb}:${s}:${e}.json`;
+        else if (imdb) url = `${TORRENTIO}/stream/series/${imdb}:${s}:${e}.json`;
       }
 
       if (!url) {
