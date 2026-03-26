@@ -1,99 +1,60 @@
-(function() {
-    if (window.torrentio_fixed) return;
-    window.torrentio_fixed = true;
+(function () {
+  'use strict';
 
-    const TORRENTIO_API = 'https://torrentio.strem.fun';
+  const PLUGIN_KEY = 'torrentio_button_plugin';
 
-    // Hàm tìm kiếm Torrentio
-    function searchTorrentio(imdbId, type, season, episode) {
-        return new Promise((resolve) => {
-            var searchQuery = '';
-            if (type === 'movie') searchQuery = `movie:${imdbId}`;
-            else if (type === 'tv') {
-                searchQuery = `series:${imdbId}`;
-                if (season) searchQuery += `:${season}`;
-                if (episode) searchQuery += `:${episode}`;
-            }
-            if (!searchQuery) return resolve([]);
+  function start() {
+    if (window[PLUGIN_KEY]) return;
+    window[PLUGIN_KEY] = true;
 
-            var url = `${TORRENTIO_API}/stream/${searchQuery}`;
-            Lampa.Network.get(url, function(response) {
-                var sources = [];
-                if (response && response.streams) {
-                    response.streams.forEach((stream, idx) => {
-                        sources.push({
-                            id: idx,
-                            title: stream.title || 'Torrentio',
-                            quality: stream.quality || 'Auto',
-                            seeders: stream.seeders || 0,
-                            size: stream.size || 'Unknown',
-                            url: stream.url || stream.infoHash,
-                            tracker: 'Torrentio'
-                        });
-                    });
-                }
-                resolve(sources);
-            }, function(err) {
-                console.error(err);
-                resolve([]);
+    console.log('[Lampa] Torrentio plugin started');
+
+    // Lắng nghe khi mở card phim
+    Lampa.Listener.follow('full', function (e) {
+      if (e.type === 'complite') {
+        try {
+          const data = e.data || {};
+
+          // Lấy ID phim
+          const tmdb_id = data.id;
+          const imdb_id = data.imdb_id;
+
+          console.log('TMDB:', tmdb_id, 'IMDB:', imdb_id);
+
+          // Tạo nút
+          const button = $('<div class="full-start__button selector">')
+            .text('🔎 Torrentio')
+            .on('hover:enter', function () {
+              // Ưu tiên imdb, nếu không có thì dùng tmdb
+              let url = '';
+
+              if (imdb_id) {
+                url = `https://torrentio.strem.fun/sort=qualitysize/stream/movie/${imdb_id}.json`;
+              } else if (tmdb_id) {
+                url = `https://torrentio.strem.fun/sort=qualitysize/stream/movie/tmdb:${tmdb_id}.json`;
+              }
+
+              if (url) {
+                window.open(url, '_blank');
+              } else {
+                Lampa.Noty.show('Không tìm thấy ID phim');
+              }
             });
-        });
-    }
 
-    // Hàm thêm nút vào card
-    function addCustomButton() {
-        Lampa.Listener.follow('full', function(e) {
-            // e.type có thể là 'complite' (do Lampa viết sai) hoặc 'open'
-            if (e.type === 'complite' || e.type === 'open') {
-                var movie = e.object;  // Lấy trực tiếp từ sự kiện
-                if (!movie) return;
+          // Gắn nút vào UI
+          $('.full-start-new__buttons').append(button);
+        } catch (err) {
+          console.log('Torrentio error:', err);
+        }
+      }
+    });
+  }
 
-                // Kiểm tra nếu nút đã tồn tại thì không thêm lại
-                if ($('.full-start-new__buttons [data-action="torrentio-custom"]').length > 0) return;
-
-                // Tìm container chứa nút phát (có thể khác tên class)
-                var buttonsContainer = $('.full-start-new__buttons');
-                if (buttonsContainer.length === 0) {
-                    // Thử với class khác nếu không tìm thấy
-                    buttonsContainer = $('.full-start__buttons');
-                }
-                if (buttonsContainer.length === 0) return;
-
-                // Thêm nút
-                buttonsContainer.append(`
-                    <div class="full-start-new__button" data-action="torrentio-custom">
-                        <svg width="24" height="24" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/>
-                        </svg>
-                        <span>Torrentio</span>
-                    </div>
-                `);
-
-                // Xử lý sự kiện click
-                $('[data-action="torrentio-custom"]').on('click', function() {
-                    Lampa.Loading.show();
-                    searchTorrentio(movie.imdb_id, movie.type, movie.season, movie.episode).then(function(sources) {
-                        Lampa.Loading.hide();
-                        if (sources.length === 0) {
-                            Lampa.Notify.show('Không tìm thấy nguồn Torrentio', null, 3000);
-                            return;
-                        }
-                        // Hiển thị danh sách nguồn để chọn
-                        Lampa.Select.show(sources.map(s => `${s.title} (${s.seeders} seeders)`), function(index) {
-                            Lampa.Player.play(sources[index].url);
-                        });
-                    });
-                });
-            }
-        });
-    }
-
-    // Khởi tạo plugin
-    function init() {
-        addCustomButton();
-        console.log('Torrentio plugin with fixed card data loaded');
-    }
-
-    if (window.appready) init();
-    else Lampa.Listener.follow('app', e => { if (e.type === 'ready') init(); });
+  if (window.appready) {
+    start();
+  } else {
+    Lampa.Listener.follow('app', function (e) {
+      if (e.type === 'ready') start();
+    });
+  }
 })();
