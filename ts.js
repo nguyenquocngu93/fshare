@@ -133,7 +133,6 @@
         );
     }
 
-
     /* ---- JAC.RED ---- */
     function fetchJacred(query, onDone) {
         var url = JACRED_URL +
@@ -196,15 +195,18 @@
         });
     }
 
-   
-     // ===== PLAY =====
+    
+// ===== PLAY =====
 function play(item) {
-  const name = encodeURIComponent(current?.title || current?.name || 'video');
+const name = encodeURIComponent(current?.title || current?.name || 'video');
 
-  const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
+const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;  
 
-  Lampa.Player.play({ url });
+Lampa.Player.play({ url });
+
 }
+
+
     /* ---- HIỂN THỊ ---- */
     function showResults(results, title) {
         if (!results.length) {
