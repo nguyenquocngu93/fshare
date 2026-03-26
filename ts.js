@@ -1,45 +1,34 @@
 (function() {
     'use strict';
 
-    // ==================== CẤU HÌNH API ====================
     const API_BASE_URL = 'https://phimapi.com/api';
     const SOURCE_NAME = 'KKPhim';
     const SOURCE_ID = 'kkphim';
 
-    // ==================== SERVICE CLASS ====================
     class KkphimApiService {
         constructor() {
             this.name = SOURCE_NAME;
             this.id = SOURCE_ID;
         }
 
-        // Phương thức lấy danh sách phim theo danh mục (được Lampa gọi khi chọn nguồn)
         list(params, onComplete, onError) {
-            // params.url có dạng "category__sort" ví dụ: "phim-le__new"
             let [category, sortType] = (params.url || 'phim-le__new').split('__');
             let page = params.page || 1;
 
-            // Xây dựng endpoint
             let url = '';
             if (category === 'search') {
-                // Nếu là tìm kiếm, params.url sẽ có dạng "search__keyword"
                 let keyword = sortType || '';
                 url = `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}&page=${page}`;
             } else {
-                // Danh sách theo category
                 url = `${API_BASE_URL}/categories/${category}/films?page=${page}`;
-                // Nếu có sort, thêm tham số (tuỳ API hỗ trợ)
-                if (sortType && sortType !== 'new') {
-                    url += `&sort=${sortType}`;
-                }
+                if (sortType && sortType !== 'new') url += `&sort=${sortType}`;
             }
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.items) {
-                        const normalized = this._normalizeListData(data, page);
-                        onComplete(normalized);
+                        onComplete(this._normalizeListData(data, page));
                     } else {
                         onError('Không có dữ liệu từ API');
                     }
@@ -50,7 +39,6 @@
                 });
         }
 
-        // Phương thức lấy chi tiết phim
         full(params, onSuccess, onError) {
             let id = params.id;
             if (!id) {
@@ -58,14 +46,12 @@
                 return;
             }
 
-            // Có thể dùng slug thay vì id; API thường dùng slug
             const url = `${API_BASE_URL}/films/${id}`;
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data._id) {
-                        const detail = this._normalizeDetailData(data);
-                        onSuccess(detail);
+                        onSuccess(this._normalizeDetailData(data));
                     } else {
                         onError('Không tìm thấy chi tiết phim');
                     }
@@ -76,11 +62,9 @@
                 });
         }
 
-        // ==================== CHUẨN HÓA DỮ LIỆU ====================
         _normalizeListData(apiResponse, page) {
             const items = apiResponse.items || [];
             const pagination = apiResponse.pagination || {};
-
             return {
                 results: items.map(item => ({
                     id: item._id,
@@ -101,10 +85,8 @@
 
         _normalizeDetailData(apiResponse) {
             const item = apiResponse;
-            // Xử lý tập phim (episodes) nếu có
             let seasons = [];
             if (item.episodes && Array.isArray(item.episodes)) {
-                // Nếu có cấu trúc seasons, ánh xạ. Giả sử API trả về mảng các tập, mỗi tập có season
                 const seasonMap = new Map();
                 item.episodes.forEach(ep => {
                     const seasonNum = ep.season || 1;
@@ -140,66 +122,54 @@
         }
     }
 
-    // ==================== ĐĂNG KÝ NGUỒN ====================
     function registerSource() {
         if (Lampa.Api.sources[SOURCE_ID]) {
             console.log(`[${SOURCE_NAME}] Đã được đăng ký trước đó`);
             return;
         }
 
+        // 1. Đăng ký service vào Lampa.Api.sources
         Lampa.Api.sources[SOURCE_ID] = new KkphimApiService();
+        console.log(`[${SOURCE_NAME}] Service đã đăng ký vào Lampa.Api.sources`);
 
-        // Tuỳ chọn: thêm vào danh sách nguồn trong cài đặt (nếu có)
-        if (Lampa.SettingsApi && Lampa.SettingsApi.addParam) {
-            // Có thể thêm tùy chọn bật/tắt nguồn trong phần "Nguồn phim"
-            console.log(`[${SOURCE_NAME}] Đã đăng ký thành công`);
+        // 2. Thêm nguồn vào danh sách nguồn của Lampa (quan trọng để xuất hiện trong dropdown)
+        if (Lampa.Source && Lampa.Source.list) {
+            // Kiểm tra xem nguồn đã tồn tại chưa
+            const exists = Lampa.Source.list.some(s => s.id === SOURCE_ID);
+            if (!exists) {
+                Lampa.Source.list.push({
+                    id: SOURCE_ID,
+                    name: SOURCE_NAME,
+                    // Có thể thêm các thông tin khác nếu cần
+                    type: 'torrent', // hoặc 'online', tuỳ vào loại nguồn
+                });
+                console.log(`[${SOURCE_NAME}] Đã thêm vào Lampa.Source.list`);
+            } else {
+                console.log(`[${SOURCE_NAME}] Đã tồn tại trong Lampa.Source.list`);
+            }
+
+            // Gọi hàm cập nhật nguồn (nếu có) để giao diện refresh
+            if (typeof Lampa.Source.update === 'function') {
+                Lampa.Source.update();
+            }
+        } else {
+            console.warn('[KKPhim] Lampa.Source.list không tồn tại, không thể thêm nguồn.');
         }
 
+        // 3. Gửi sự kiện (tuỳ chọn)
         Lampa.Listener.send('source_added', { source: SOURCE_ID, name: SOURCE_NAME });
+        console.log(`[${SOURCE_NAME}] Đã đăng ký thành công`);
     }
 
-    // ==================== THÊM DANH MỤC VÀO MENU CHÍNH (TÙY CHỌN) ====================
-    // Nếu muốn thêm mục riêng "KKPhim" trong menu bên trái
-    function addMenu() {
-        // Lampa.Listener.follow('activity', ...) để chèn khi activity load
-        // Hoặc có thể can thiệp trực tiếp vào DOM
-        Lampa.Listener.follow('activity', function(e) {
-            if (e.type === 'start' && e.component === 'full') {
-                setTimeout(() => {
-                    if ($('.menu-item[data-source="kkphim"]').length === 0) {
-                        const menuItems = $('.menu-items');
-                        if (menuItems.length) {
-                            const newItem = $(`
-                                <div class="menu-item" data-source="kkphim">
-                                    <div class="menu-item__icon"><svg>...</svg></div>
-                                    <div class="menu-item__name">KKPhim</div>
-                                </div>
-                            `);
-                            newItem.on('click', () => {
-                                // Khi click vào mục, chuyển sang nguồn kkphim
-                                Lampa.Source.active(SOURCE_ID);
-                                Lampa.Controller.toggle('menu');
-                            });
-                            menuItems.append(newItem);
-                        }
-                    }
-                }, 100);
-            }
-        });
-    }
-
-    // ==================== KHỞI TẠO ====================
     function init() {
         if (!window.Lampa || !Lampa.Api) {
             Lampa.Listener.follow('app', function(e) {
                 if (e.type === 'ready') {
                     registerSource();
-                    // addMenu(); // Bỏ comment nếu muốn thêm menu riêng
                 }
             });
         } else {
             registerSource();
-            // addMenu();
         }
     }
 
