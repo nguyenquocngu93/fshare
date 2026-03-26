@@ -1,10 +1,10 @@
 (function () {
   'use strict';
 
-  const PLUGIN_KEY = 'torrentio_force_tv';
+  const PLUGIN_KEY = 'torrentio_full_menu_pro';
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-  const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
+  const TMDB_TOKEN = 'YOUR_TOKEN_HERE';
 
   function start() {
     if (window[PLUGIN_KEY]) return;
@@ -20,16 +20,16 @@
       return d?.imdb_id || d?.movie?.imdb_id || d?.card?.imdb_id || null;
     }
 
-    function tmdbFetch(url, ok) {
+    function tmdbFetch(url, ok, fail) {
       $.ajax({
         url: url,
-        method: 'GET',
         headers: {
-          'Authorization': 'Bearer ' + TMDB_TOKEN,
-          'Content-Type': 'application/json'
+          Authorization: 'Bearer ' + TMDB_TOKEN
         },
         success: ok,
-        error: () => Lampa.Noty.show('Lỗi TMDB')
+        error: fail || function () {
+          Lampa.Noty.show('Lỗi TMDB');
+        }
       });
     }
 
@@ -63,173 +63,232 @@
       container.append(btn);
     }
 
-    // ===== CLICK (ÉP TV) =====
+    // ===== 🧠 DATA RIÊNG CỦA BẠN =====
+    function getCustomSeasons() {
+      // 👉 BẠN TỰ GÁN DATA Ở ĐÂY
+      return null;
+
+      /*
+      return [
+        { season: 1, episodes: 10 },
+        { season: 2, episodes: 8 }
+      ];
+      */
+    }
+
+    // ===== CLICK =====
     function open() {
       const tmdb = getTmdbId(current);
       const imdb = getImdbId(current);
 
-      const isTV = current?.seasons && current.seasons.length;
+      const isTV = current?.seasons || current?.name;
 
       if (isTV) {
-        selectSeason(tmdb, imdb);
+        // ƯU TIÊN DATA CỦA BẠN
+        const custom = getCustomSeasons();
+
+        if (custom) {
+          selectSeasonCustom(tmdb, imdb, custom);
+        } else if (current?.seasons?.length) {
+          selectSeasonFromLampa(tmdb, imdb);
+        } else {
+          selectSeasonTMDB(tmdb, imdb);
+        }
       } else {
         loadStreams('movie', tmdb, imdb);
       }
     }
 
-    // ===== SEASON =====
-    function selectSeason(tmdb, imdb) {
-      if (!tmdb) {
-        Lampa.Noty.show('Không có TMDB');
-        return;
+    // ===== 🟢 CUSTOM =====
+    function selectSeasonCustom(tmdb, imdb, data) {
+      const seasons = data.map(s => ({
+        title: `Season ${s.season} (${s.episodes} tập)`,
+        season: s.season,
+        count: s.episodes
+      }));
+
+      Lampa.Select.show({
+        title: 'Chọn Season',
+        items: seasons,
+        onSelect: (item) =>
+          selectEpisodeCustom(tmdb, imdb, item.season, item.count)
+      });
+    }
+
+    function selectEpisodeCustom(tmdb, imdb, season, count) {
+      const eps = [];
+
+      for (let i = 1; i <= count; i++) {
+        eps.push({ title: 'Episode ' + i, episode: i });
       }
 
-      const url = `https://api.themoviedb.org/3/tv/${tmdb}?language=vi-VN`;
+      Lampa.Select.show({
+        title: 'Season ' + season,
+        items: eps,
+        onSelect: (item) =>
+          loadStreams('series', tmdb, imdb, season, item.episode)
+      });
+    }
 
-      Lampa.Noty.show('Đang tải season...');
+    // ===== 🟡 LAMPA =====
+    function selectSeasonFromLampa(tmdb, imdb) {
+      const seasons = current.seasons
+        .filter(s => s.season_number > 0)
+        .map(s => ({
+          title: `Season ${s.season_number}`,
+          season: s.season_number,
+          episodes: s.episodes || []
+        }));
+
+      Lampa.Select.show({
+        title: 'Chọn Season',
+        items: seasons,
+        onSelect: (item) => {
+          if (item.episodes.length) {
+            selectEpisodeFromLampa(tmdb, imdb, item);
+          } else {
+            selectSeasonTMDB(tmdb, imdb);
+          }
+        }
+      });
+    }
+
+    function selectEpisodeFromLampa(tmdb, imdb, seasonObj) {
+      const eps = seasonObj.episodes.map(e => ({
+        title: `E${e.episode_number} - ${e.name || ''}`,
+        episode: e.episode_number
+      }));
+
+      Lampa.Select.show({
+        title: 'Season ' + seasonObj.season,
+        items: eps,
+        onSelect: (item) =>
+          loadStreams('series', tmdb, imdb, seasonObj.season, item.episode)
+      });
+    }
+
+    // ===== 🔵 TMDB =====
+    function selectSeasonTMDB(tmdb, imdb) {
+
+      if (!tmdb) return fallbackSeason(tmdb, imdb);
+
+      const url = `https://api.themoviedb.org/3/tv/${tmdb}`;
 
       tmdbFetch(url, function (res) {
 
-        if (!res?.seasons) {
-          Lampa.Noty.show('Không có season');
-          return;
-        }
+        if (!res?.seasons) return fallbackSeason(tmdb, imdb);
 
         const seasons = res.seasons
           .filter(s => s.season_number > 0)
           .map(s => ({
-            title: `Season ${s.season_number} (${s.episode_count} tập)`,
+            title: `Season ${s.season_number}`,
             season: s.season_number
           }));
 
         Lampa.Select.show({
           title: 'Chọn Season',
           items: seasons,
-          onSelect: (item) => selectEpisode(tmdb, imdb, item.season)
+          onSelect: (item) =>
+            selectEpisodeTMDB(tmdb, imdb, item.season)
         });
-      });
+
+      }, () => fallbackSeason(tmdb, imdb));
     }
 
-    // ===== EPISODE =====
-    function selectEpisode(tmdb, imdb, season) {
-      const url = `https://api.themoviedb.org/3/tv/${tmdb}/season/${season}?language=vi-VN`;
-
-      Lampa.Noty.show('Đang tải tập...');
+    function selectEpisodeTMDB(tmdb, imdb, season) {
+      const url = `https://api.themoviedb.org/3/tv/${tmdb}/season/${season}`;
 
       tmdbFetch(url, function (res) {
 
-        if (!res?.episodes) {
-          Lampa.Noty.show('Không có episode');
-          return;
-        }
+        if (!res?.episodes) return fallbackEpisode(tmdb, imdb, season);
 
-        const episodes = res.episodes.map(e => ({
+        const eps = res.episodes.map(e => ({
           title: `E${e.episode_number} - ${e.name}`,
           episode: e.episode_number
         }));
 
         Lampa.Select.show({
           title: 'Season ' + season,
-          items: episodes,
+          items: eps,
           onSelect: (item) =>
             loadStreams('series', tmdb, imdb, season, item.episode)
         });
+
+      }, () => fallbackEpisode(tmdb, imdb, season));
+    }
+
+    // ===== 🔴 FALLBACK =====
+    function fallbackSeason(tmdb, imdb) {
+      const seasons = [];
+
+      for (let i = 1; i <= 5; i++) {
+        seasons.push({ title: 'Season ' + i, season: i });
+      }
+
+      Lampa.Select.show({
+        title: 'Season (fallback)',
+        items: seasons,
+        onSelect: (item) =>
+          fallbackEpisode(tmdb, imdb, item.season)
+      });
+    }
+
+    function fallbackEpisode(tmdb, imdb, season) {
+      const eps = [];
+
+      for (let i = 1; i <= 20; i++) {
+        eps.push({ title: 'Episode ' + i, episode: i });
+      }
+
+      Lampa.Select.show({
+        title: 'Season ' + season,
+        items: eps,
+        onSelect: (item) =>
+          loadStreams('series', tmdb, imdb, season, item.episode)
       });
     }
 
     // ===== LOAD =====
-    function loadStreams(type, tmdb, imdb, season, episode) {
+    function loadStreams(type, tmdb, imdb, s, e) {
 
-      let url_tmdb = '';
-      let url_imdb = '';
+      let url = '';
 
       if (type === 'movie') {
-        if (tmdb)
-          url_tmdb = `https://torrentio.strem.fun/sort=qualitysize/stream/movie/tmdb:${tmdb}.json`;
-        if (imdb)
-          url_imdb = `https://torrentio.strem.fun/sort=qualitysize/stream/movie/${imdb}.json`;
+        url = tmdb
+          ? `https://torrentio.strem.fun/stream/movie/tmdb:${tmdb}.json`
+          : `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
       } else {
-        if (tmdb)
-          url_tmdb = `https://torrentio.strem.fun/sort=qualitysize/stream/series/tmdb:${tmdb}:${season}:${episode}.json`;
-        if (imdb)
-          url_imdb = `https://torrentio.strem.fun/sort=qualitysize/stream/series/${imdb}:${season}:${episode}.json`;
+        url = tmdb
+          ? `https://torrentio.strem.fun/stream/series/tmdb:${tmdb}:${s}:${e}.json`
+          : `https://torrentio.strem.fun/stream/series/${imdb}:${s}:${e}.json`;
       }
-
-      Lampa.Noty.show('Đang tải torrent...');
-
-      if (url_tmdb) {
-        $.get(url_tmdb, function (res) {
-          if (res?.streams?.length) {
-            showStreams(res.streams);
-          } else {
-            tryImdb(url_imdb);
-          }
-        }).fail(() => tryImdb(url_imdb));
-      } else {
-        tryImdb(url_imdb);
-      }
-    }
-
-    function tryImdb(url) {
-      if (!url) return;
 
       $.get(url, function (res) {
         if (!res?.streams?.length) {
           Lampa.Noty.show('Không có torrent');
           return;
         }
-        showStreams(res.streams);
-      });
-    }
 
-    // ===== LIST =====
-    function showStreams(streams) {
-
-      streams.sort((a, b) => {
-        const score = (s) => {
-          const t = (s.title || '').toLowerCase();
-          if (t.includes('rutor')) return 100;
-          if (t.includes('rutracker')) return 90;
-          return 0;
-        };
-        return score(b) - score(a);
-      });
-
-      const items = streams.map(s => {
-        let title = s.title || '';
-        let size = (title.match(/💾\s([^|]+)/) || [])[1] || '';
-        let seed = (title.match(/👤\s(\d+)/) || [])[1] || '';
-
-        return {
-          title: s.name || 'Torrent',
-          subtitle: `${size} | 👤 ${seed}`,
+        const items = res.streams.map(s => ({
+          title: s.name,
           infoHash: s.infoHash,
           fileIdx: s.fileIdx || 0
-        };
-      });
+        }));
 
-      Lampa.Select.show({
-        title: 'Streams',
-        items: items,
-        onSelect: (item) => play(item)
+        Lampa.Select.show({
+          title: 'Streams',
+          items: items,
+          onSelect: (i) => play(i)
+        });
       });
     }
 
-    // ===== PLAY =====
     function play(item) {
-      if (!item?.infoHash) {
-        Lampa.Noty.show('Không có hash');
-        return;
-      }
-
-      const name = encodeURIComponent(current.title || current.name || 'video.mkv');
+      const name = encodeURIComponent(current.title || current.name || 'video');
 
       const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
 
-      Lampa.Player.play({
-        url: url,
-        title: current.title || current.name
-      });
+      Lampa.Player.play({ url });
     }
   }
 
