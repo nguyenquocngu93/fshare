@@ -14,4 +14,378 @@ var icon_add_torrent_plugin = '<div class="settings-folder" style="padding:0!imp
 var icon_add_tv_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><g fill="none"><path stroke="currentColor" stroke-width="1.5" d="M22 16c0 2.828 0 4.243-.879 5.121C20.243 22 18.828 22 16 22H8c-2.828 0-4.243 0-5.121-.879C2 20.243 2 18.828 2 16v-4c0-2.828 0-4.243.879-5.121C3.757 6 5.172 6 8 6h8c2.828 0 4.243 0 5.121.879C22 7.757 22 9.172 22 12z"/><path stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m9 2l3 3.5L15 2m1 4v16"/><path fill="currentColor" d="M20 16a1 1 0 1 0-2 0a1 1 0 0 0 2 0m0-4a1 1 0 1 0-2 0a1 1 0 0 0 2 0"/></g></svg></div><div style="font-size:1.3em">TV</div></div>'
 var icon_add_music_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.25a.75.75 0 0 0-.75.75v11.26a4.25 4.25 0 1 0 1.486 2.888A1 1 0 0 0 12.75 17V7.75H18a2.75 2.75 0 1 0 0-5.5z"/></svg></div><div style="font-size:1.3em">Âm nhạc</div></div>'
 var icon_add_radio_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 26 26"><path fill="currentColor" d="M23.5.063c-.794 0-1.438.643-1.438 1.437L4.657 6.313c-.2-.076-.43-.125-.656-.125A1.81 1.81 0 0 0 2.187 8v.125C.933 8.484 0 9.63 0 11v11c0 1.656 1.344 3 3 3h20c1.656 0 3-1.344 3-3V11c0-1.656-1.344-3-3-3H5.812c0-.277-.076-.546-.187-.781l16.656-5c.25.428.688.719 1.219.719a1.437 1.437 0 1 0 0-2.876zm-6 10.75a5.696 5.696 0 0 1 5.688 5.687a5.696 5.696 0 0 1-5.688 5.688a5.697 5.697 0 0 1-5.688-5.688a5.697 5.697 0 0 1 5.688-5.688zm-13 .093c.877 0 1.594.717 1.594 1.594s-.717 1.594-1.594 1.594A1.597 1.597 0 0 1 2.906 12.5c0-.877.716-1.594 1.594-1.594m13 1.281c-.937 0-1.793.306-2.5.813h5a4.26 4.26 0 0 0-2.5-.813M14 14a4.3 4.3 0 0 0-.531 1h8.062A4.4 4.4 0 0 0 21 14zm-9.5 1.906c.877 0 1.594.717 1.594 1.594s-.717 1.594-1.594 1.594A1.597 1.597 0 0 1 2.906 17.5c0-.877.716-1.594 1.594-1.594m8.75.094c-.02.166-.063.328-.063.5s.043.334.063.5h8.5c.02-.166.063-.328.063-.5s-.044-.334-.063-.5zm.219 2q.202.538.531 1h7q.33-.462.531-1H13.47zM15 20a4.27 4.27 0 0 0 2.5.813c.938 0 1.793-.306 2.5-.813z"/></svg></div><div style="font-size:1.3em">Radio</div></div>'
-var icon_add_sisi_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><path fill="currentColor" d="M51.348 15.912c-3.332-3.347-7.33-4.796-11.498-4.796c-.359 0-.721.016-1.08.038C37.734 6.492 36.295 2 36.295 2s-6.291 3.991-9.97 7.716c-4.255-3.327-9.149-6.391-9.149-6.391s-1.044 7.646-.678 13.247c-5.577-.361-13.188.692-13.188.692s3.051 4.912 6.368 9.185C5.97 30.146 2 36.47 2 36.47s4.646 1.497 9.382 2.538c-.159 4.421 1.261 8.681 4.776 12.213C23.599 58.692 36.494 62 46.373 62c5.729-.001 10.445-1.113 12.492-3.17c5.522-5.549 4.184-31.161-7.517-42.918m6.074 41.482c-1.236 1.242-4.789 2.57-11.049 2.571c-9.275 0-21.77-3.147-28.771-10.18c-8.058-8.096-3.363-20.183 4.41-27.987c5.389-5.413 12.057-8.646 17.838-8.646c3.9.001 7.283 1.411 10.055 4.198c4.908 4.93 8.424 13.172 9.643 22.61c1.147 8.891-.2 15.499-2.126 17.434"/><path fill="currentColor" d="M40.172 18.321c.578.403 1.215.606 1.771.607c.541 0 1.006-.19 1.271-.573c.545-.775.063-2.052-1.072-2.848c-.58-.405-1.215-.607-1.773-.607c-.539 0-1.006.19-1.273.572c-.543.776-.063 2.054 1.076 2.849m3.902 14.408a1.34 1.34 0 0 0-.891.31c-.715.621-.557 1.976.352 3.025c.604.695 1.389 1.081 2.057 1.08c.34.001.65-.
+var icon_add_sisi_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><path fill="currentColor" d="M51.348 15.912c-3.332-3.347-7.33-4.796-11.498-4.796c-.359 0-.721.016-1.08.038C37.734 6.492 36.295 2 36.295 2s-6.291 3.991-9.97 7.716c-4.255-3.327-9.149-6.391-9.149-6.391s-1.044 7.646-.678 13.247c-5.577-.361-13.188.692-13.188.692s3.051 4.912 6.368 9.185C5.97 30.146 2 36.47 2 36.47s4.646 1.497 9.382 2.538c-.159 4.421 1.261 8.681 4.776 12.213C23.599 58.692 36.494 62 46.373 62c5.729-.001 10.445-1.113 12.492-3.17c5.522-5.549 4.184-31.161-7.517-42.918m6.074 41.482c-1.236 1.242-4.789 2.57-11.049 2.571c-9.275 0-21.77-3.147-28.771-10.18c-8.058-8.096-3.363-20.183 4.41-27.987c5.389-5.413 12.057-8.646 17.838-8.646c3.9.001 7.283 1.411 10.055 4.198c4.908 4.93 8.424 13.172 9.643 22.61c1.147 8.891-.2 15.499-2.126 17.434"/><path fill="currentColor" d="M40.172 18.321c.578.403 1.215.606 1.771.607c.541 0 1.006-.19 1.271-.573c.545-.775.063-2.052-1.072-2.848c-.58-.405-1.215-.607-1.773-.607c-.539 0-1.006.19-1.273.572c-.543.776-.063 2.054 1.076 2.849m3.902 14.408a1.34 1.34 0 0 0-.891.31c-.715.621-.557 1.976.352 3.025c.604.695 1.389 1.081 2.057 1.08c.34.001.65-.099.891-.309c.717-.621.557-1.975-.352-3.024c-.604-.696-1.387-1.081-2.057-1.082m-8.781-8.797a1.3 1.3 0 0 0-.865.294c-.727.609-.592 1.968.303 3.031c.602.715 1.391 1.114 2.064 1.115c.33 0 .629-.097.867-.295c.727-.61.59-1.966-.303-3.033c-.601-.714-1.392-1.113-2.066-1.112m17.111 2.537c-.518-.945-1.369-1.53-2.111-1.53a1.26 1.26 0 0 0-.604.148c-.832.456-.967 1.813-.301 3.032c.52.945 1.367 1.529 2.111 1.529c.213 0 .418-.047.604-.148c.833-.455.967-1.812.301-3.031m2.551 11.924q-.153 0-.303.039c-.918.24-1.379 1.521-1.027 2.866c.313 1.198 1.162 2.037 1.994 2.038q.153 0 .303-.038c.918-.239 1.379-1.523 1.027-2.868c-.312-1.196-1.164-2.037-1.994-2.037M53.76 51.021c-.354.001-.674.105-.918.327c-.703.636-.518 1.987.414 3.019c.607.671 1.381 1.038 2.041 1.039c.354-.001.676-.106.922-.329c.701-.636.516-1.987-.418-3.017c-.606-.669-1.379-1.039-2.041-1.039m-20.837-.979c-.569-.384-1.189-.573-1.736-.572c-.559 0-1.041.198-1.309.598c-.527.788-.02 2.054 1.135 2.825c.57.383 1.191.573 1.736.573c.561 0 1.042-.2 1.309-.6c.528-.786.02-2.053-1.135-2.824m-11.758-3.359c-.569-.382-1.189-.571-1.735-.571c-.561 0-1.042.199-1.309.597c-.527.787-.02 2.055 1.134 2.825c.57.382 1.191.574 1.738.573c.559 0 1.041-.199 1.307-.6c.526-.786.02-2.052-1.135-2.824m21.382 7.939a3.4 3.4 0 0 0-1.275-.259c-.797-.001-1.463.326-1.701.91c-.354.877.404 2.013 1.691 2.531c.434.175.871.258 1.275.257c.797 0 1.465-.324 1.699-.908c.356-.878-.4-2.012-1.689-2.531m2.617-9.926c-.543-.323-1.119-.481-1.633-.481c-.617-.001-1.143.229-1.406.672c-.486.814.09 2.053 1.283 2.763c.543.322 1.119.48 1.635.48c.615 0 1.141-.229 1.404-.672c.485-.816-.09-2.054-1.283-2.762m-10.596-6.943c-.602-.5-1.295-.758-1.895-.757c-.465-.001-.873.155-1.138.474c-.604.729-.229 2.042.839 2.928c.603.498 1.297.758 1.897.758c.465 0 .871-.156 1.137-.475c.604-.73.231-2.043-.84-2.928m-10.701-14.53c-.385.001-.73.119-.982.368c-.676.665-.434 2.008.539 2.997c.611.618 1.364.953 2.009.954c.384-.001.729-.119.981-.368c.676-.666.435-2.008-.539-2.996c-.612-.621-1.364-.954-2.008-.955m-1.055 11.751c-.598-.473-1.275-.716-1.863-.715c-.484 0-.909.163-1.175.5c-.589.741-.184 2.046.904 2.906c.598.474 1.276.715 1.864.715c.484 0 .908-.161 1.174-.499c.587-.742.184-2.045-.904-2.907"/></svg></div><div style="font-size:1.3em">18+</div></div>'
+var ads = '<div style="padding: 0.3em 0.3em; padding-top: 0;"><div style="background: #3e3e3e; padding: 0.5em; border-radius: 1em;"><div style="line-height: 1.2;"><span style="color: #ffffff"><div style="text-align: center;">Tham gia nhóm của chúng tôi<br> PLUGIN KHÔNG KIỂM DUYỆT</br><span style="color: #f3d900">@lampa_plugins_uncensored</span></span></div></div></div></div>'	
+var nthChildIndex = null; // Khai báo biến để lưu chỉ số nth-child
+
+/* Các hàm được gọi thường xuyên */
+	Lampa.Storage.set('needReboot', false);
+	Lampa.Storage.set('needRebootSettingExit', false);
+
+/* Yêu cầu tải lại trong cửa sổ modal */
+function showReload(reloadText){
+  if (document.querySelector('.modal') == null) {
+   Lampa.Modal.open({
+      title: '',
+      align: 'center',
+      zIndex: 300,
+      html: $('<div class="about">' + reloadText + '</div>'),
+      buttons: [{
+        name: 'Không',
+        onSelect: function onSelect() {
+         //Lampa.Modal.close();
+          $('.modal').remove();
+	  Lampa.Controller.toggle('content')
+        }
+      }, {
+        name: 'Có',
+        onSelect: function onSelect() {
+          window.location.reload();
+        }
+      }]
+   });
+  }
+}
+
+/* Hàm hiệu ứng cài đặt plugin */	
+function showLoadingBar() {
+  // Tạo phần tử cho thanh tải
+  var loadingBar = document.createElement('div');
+  loadingBar.className = 'loading-bar';
+  loadingBar.style.position = 'fixed';
+  loadingBar.style.top = '50%';
+  loadingBar.style.left = '50%';
+  loadingBar.style.transform = 'translate(-50%, -50%)'; // Căn giữa
+  loadingBar.style.zIndex = '9999';
+  loadingBar.style.display = 'none';
+  loadingBar.style.width = '30em';
+  loadingBar.style.height = '2.5em'; 
+  loadingBar.style.backgroundColor = '#595959';
+  loadingBar.style.borderRadius = '4em';
+
+  // Tạo phần tử cho chỉ báo tải
+  var loadingIndicator = document.createElement('div');
+  loadingIndicator.className = 'loading-indicator';
+  loadingIndicator.style.position = 'absolute';
+  loadingIndicator.style.left = '0';
+  loadingIndicator.style.top = '0';
+  loadingIndicator.style.bottom = '0';
+  loadingIndicator.style.width = '0';
+  loadingIndicator.style.backgroundColor = '#64e364';
+  loadingIndicator.style.borderRadius = '4em';
+
+  // Tạo phần tử hiển thị phần trăm tải
+  var loadingPercentage = document.createElement('div');
+  loadingPercentage.className = 'loading-percentage';
+  loadingPercentage.style.position = 'absolute';
+  loadingPercentage.style.top = '50%';
+  loadingPercentage.style.left = '50%';
+  loadingPercentage.style.transform = 'translate(-50%, -50%)';
+  loadingPercentage.style.color = '#fff';
+  loadingPercentage.style.fontWeight = 'bold';
+  loadingPercentage.style.fontSize = '1.7em';
+
+  // Thêm các phần tử vào trang
+  loadingBar.appendChild(loadingIndicator);
+  loadingBar.appendChild(loadingPercentage);
+  document.body.appendChild(loadingBar);
+
+  // Hiển thị thanh tải
+  loadingBar.style.display = 'block';
+
+  // Hoạt ảnh sử dụng setTimeout
+  var startTime = Date.now();
+  var duration = 1000; // 1 giây
+  var interval = setInterval(function() {
+  var elapsed = Date.now() - startTime;
+  var progress = Math.min((elapsed / duration) * 100, 100);
+
+    loadingIndicator.style.width = progress + '%';
+    loadingPercentage.textContent = Math.round(progress) + '%';
+
+    if (elapsed >= duration) {
+      clearInterval(interval);
+      setTimeout(function() {
+        loadingBar.style.display = 'none';
+        loadingBar.parentNode.removeChild(loadingBar);
+      }, 250);
+    }
+  }, 16);
+}
+
+/* Hàm hiệu ứng xóa plugin */	
+function showDeletedBar() {
+  // Tạo phần tử cho thanh tải
+  var loadingBar = document.createElement('div');
+  loadingBar.className = 'loading-bar';
+  loadingBar.style.position = 'fixed';
+  loadingBar.style.top = '50%';
+  loadingBar.style.left = '50%';
+  loadingBar.style.transform = 'translate(-50%, -50%)'; // Căn giữa
+  loadingBar.style.zIndex = '9999';
+  loadingBar.style.display = 'none';
+  loadingBar.style.width = '30em';
+  loadingBar.style.height = '2.5em';
+  loadingBar.style.backgroundColor = '#595959';
+  loadingBar.style.borderRadius = '4em';
+
+  // Tạo phần tử cho chỉ báo tải
+  var loadingIndicator = document.createElement('div');
+  loadingIndicator.className = 'loading-indicator';
+  loadingIndicator.style.position = 'absolute';
+  loadingIndicator.style.left = '0';
+  loadingIndicator.style.top = '0';
+  loadingIndicator.style.bottom = '0';
+  loadingIndicator.style.width = '0';
+  loadingIndicator.style.backgroundColor = '#ff2121';
+  loadingIndicator.style.borderRadius = '4em';
+
+  // Tạo phần tử hiển thị phần trăm tải
+  var loadingPercentage = document.createElement('div');
+  loadingPercentage.className = 'loading-percentage';
+  loadingPercentage.style.position = 'absolute';
+  loadingPercentage.style.top = '50%';
+  loadingPercentage.style.left = '50%';
+  loadingPercentage.style.transform = 'translate(-50%, -50%)';
+  loadingPercentage.style.color = '#fff';
+  loadingPercentage.style.fontWeight = 'bold';
+  loadingPercentage.style.fontSize = '1.7em';
+
+  // Thêm các phần tử vào trang
+  loadingBar.appendChild(loadingIndicator);
+  loadingBar.appendChild(loadingPercentage);
+  document.body.appendChild(loadingBar);
+
+  // Hiển thị thanh tải
+  loadingBar.style.display = 'block';
+
+  // Hoạt ảnh sử dụng setTimeout
+  var startTime = Date.now();
+  var duration = 1000; // 1 giây
+  var interval = setInterval(function() {
+  var elapsed = Date.now() - startTime;
+  var progress = 100 - Math.min((elapsed / duration) * 100, 100);
+
+    loadingIndicator.style.width = progress + '%';
+    loadingPercentage.textContent = Math.round(progress) + '%';
+
+    if (elapsed >= duration) {
+      clearInterval(interval);
+      setTimeout(function() {
+        loadingBar.style.display = 'none';
+        loadingBar.parentNode.removeChild(loadingBar);
+      }, 250);
+    }
+  }, 16);
+}
+
+/* Theo dõi cài đặt */
+function settingsWatch() {
+	/* kiểm tra cờ tải lại và chờ thoát khỏi cài đặt */
+	if (Lampa.Storage.get('needRebootSettingExit')) {
+  		var intervalSettings = setInterval(function() {
+  			var elementSettings = $('#app > div.settings > div.settings__content.layer--height > div.settings__body > div');
+  			if (!elementSettings.length > 0){
+    				clearInterval(intervalSettings);
+				showReload('Để xóa plugin hoàn toàn, vui lòng tải lại ứng dụng!');
+  			}
+		}, 1000)
+	}
+}
+
+function itemON(sourceURL, sourceName, sourceAuthor, itemName) {
+if ($('DIV[data-name="' + itemName + '"]').find('.settings-param__status').hasClass('active')) {
+  Lampa.Noty.show("Plugin đã được cài đặt!");
+} else if ($('DIV[data-name="' + itemName + '"]').find('.settings-param__status').css('background-color') === 'rgb(255, 165, 0)') {
+  Lampa.Noty.show("Plugin đã được cài đặt, nhưng đã tắt trong phần mở rộng!");
+} else {	
+	// Nếu không yêu cầu tải lại - kiểm soát sau khi xóa plugin
+   if (!Lampa.Storage.get('needReboot')) {
+	// Lấy danh sách plugin
+		var pluginsArray = Lampa.Storage.get('plugins');
+	// Thêm phần tử mới vào danh sách
+		pluginsArray.push({
+			"author": sourceAuthor,
+			"url": sourceURL,
+			"name": sourceName,
+			"status": 1
+		});
+	// Áp dụng danh sách đã sửa vào Lampa
+		Lampa.Storage.set('plugins', pluginsArray);
+	// Chèn script để hoạt động ngay lập tức
+		var script = document.createElement ('script');
+		script.src = sourceURL;
+		document.getElementsByTagName ('head')[0].appendChild (script);
+	        showLoadingBar();
+	          setTimeout(function() {
+			Lampa.Settings.update();
+			Lampa.Noty.show("Plugin " + sourceName + " đã được cài đặt thành công")
+		  }, 1500);
+	          setTimeout(function() {
+                    if (nthChildIndex) {
+                        var F = document.querySelector("#app > div.settings.animate > div.settings__content.layer--height > div.settings__body > div > div > div > div > div:nth-child(" + nthChildIndex + ")")
+                        Lampa.Controller.focus(F);
+                        Lampa.Controller.toggle('settings_component');
+                    } else {
+                        console.error("Lỗi: Không tìm thấy phần tử với chỉ số nth-child " + nthChildIndex + ".");
+                    }
+                  }, 2000);
+   }
+}
+}	
+function hideInstall() {
+	$("#hideInstall").remove();
+	$('body').append('<div id="hideInstall"><style>div.settings-param__value{opacity: 0%!important;display: none;}</style><div>')
+}
+
+function deletePlugin(pluginToRemoveUrl) {
+	var plugins = Lampa.Storage.get('plugins');
+	var updatedPlugins = plugins.filter(function(obj) {return obj.url !== pluginToRemoveUrl});
+	Lampa.Storage.set('plugins', updatedPlugins);
+	setTimeout(function() {
+	  Lampa.Settings.update();
+	  Lampa.Noty.show("Plugin đã được gỡ bỏ thành công");
+	}, 1500);
+	setTimeout(function() {
+                    if (nthChildIndex) {
+                        var F = document.querySelector("#app > div.settings.animate > div.settings__content.layer--height > div.settings__body > div > div > div > div > div:nth-child(" + nthChildIndex + ")")
+                        Lampa.Controller.focus(F);
+                        Lampa.Controller.toggle('settings_component');
+                    } else {
+                        console.error("Lỗi: Không tìm thấy phần tử với chỉ số nth-child " + nthChildIndex + ".");
+                    }
+         }, 2000);
+	Lampa.Storage.set('needRebootSettingExit', true);
+	   settingsWatch();
+	   showDeletedBar();
+};
+
+function checkPlugin(pluginToCheck) {
+	var plugins = Lampa.Storage.get('plugins');
+	var checkResult = plugins.filter(function(obj) {return obj.url == pluginToCheck});
+	console.log('search', 'checkResult: ' + JSON.stringify(checkResult));
+	console.log('search', 'pluginToCheck: ' + pluginToCheck);
+	if (JSON.stringify(checkResult) !== '[]') {return true} else {return false}
+};
+
+// Hàm lấy chỉ số của tham số
+function focus_back(event) {
+    var targetElement = event.target; // Lấy đối tượng sự kiện
+
+    // Tìm phần tử cha
+    var parentElement = targetElement.parentElement;
+
+    // Lấy danh sách tất cả phần tử con
+    var children = Array.from(parentElement.children);
+
+    // Tìm chỉ số (bắt đầu từ 0) của phần tử hiện tại
+    var index = children.indexOf(targetElement);
+
+    // nth-child sử dụng chỉ số bắt đầu từ 1
+    var nthChildIndex = index + 1;
+
+    // Trả về chỉ số tìm được
+    return nthChildIndex;
+}
+
+/* Component */
+Lampa.SettingsApi.addComponent({
+            component: 'add_plugin',
+            name: 'Plugin',
+            icon: icon_add_plugin
+       });
+/* Giao diện */
+        Lampa.Settings.listener.follow('open', function (e) {
+            if (e.name == 'main') {
+                Lampa.SettingsApi.addComponent({
+                    component: 'add_interface_plugin',
+                    name: 'Giao diện'
+				});
+				setTimeout(function() {
+					$('div[data-component="add_interface_plugin"]').remove();
+					$('div[data-component="add_management_plugin"]').remove();
+					$('div[data-component="add_online_plugin"]').remove();
+					$('div[data-component="add_torrent_plugin"]').remove();
+					$('div[data-component="add_tv_plugin"]').remove();
+					$('div[data-component="add_music_plugin"]').remove();
+					$('div[data-component="add_radio_plugin"]').remove();
+					$('div[data-component="add_sisi_plugin"]').remove();
+					$('div[data-component="pirate_store"]').remove();
+				}, 0);
+				$("#hideInstall").remove();
+		                /* Di chuyển phần lên trên */
+				        setTimeout(function() {
+					  $('div[data-component=plugins]').before($('div[data-component=add_plugin]'))
+					}, 30)
+			}
+		});
+
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_interface_plugin',
+						type: 'static',
+						default: true
+                         },
+					field: {
+						name: icon_add_interface_plugin
+                        },
+					onRender: function(item) {
+					item.on('hover:enter', function () {
+						Lampa.Settings.create('add_interface_plugin');
+						Lampa.Controller.enabled().controller.back = function(){
+							Lampa.Settings.create('add_plugin');
+						}
+                            });
+					}
+		});
+
+		Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'TMDB',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'TMDB Proxy',
+						description: 'Proxy ảnh poster cho trang TMDB'
+                            },
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/tmdb-proxy.js', 'TMDB Proxy', '@lampa', 'TMDB', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/tmdb-proxy.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {
+						$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/tmdb-proxy.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="TMDB"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/tmdb-proxy.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="TMDB"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="TMDB"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="TMDB"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
