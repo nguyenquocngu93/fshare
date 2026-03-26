@@ -2,7 +2,7 @@
   'use strict';
 
   const PLUGIN_KEY = 'torrentio_fix_play_season';
-  const TORRSERVER = 'http://gren439.tsarea.tv:8880';
+  const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
   function start() {
     if (window[PLUGIN_KEY]) return;
