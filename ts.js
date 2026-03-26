@@ -2,193 +2,395 @@
     'use strict';
 
     const API_BASE_URL = 'https://phimapi.com/api';
-    const SOURCE_NAME = 'KKPhim';
-    const SOURCE_ID = 'kkphim';
+    const PLUGIN_NAME = 'KKPhim';
+    const PLUGIN_ID = 'kkphim';
 
-    // ========== PARSER ĐỊNH NGHĨA CÁC PHƯƠNG THỨC CẦN THIẾT ==========
-    const KkphimParser = {
-        name: SOURCE_NAME,
-        id: SOURCE_ID,
-
-        // Lấy danh sách phim (dùng cho các danh mục)
-        list: function(params, onComplete, onError) {
-            let [category, sortType] = (params.url || 'phim-le__new').split('__');
-            let page = params.page || 1;
-
-            let url = '';
-            if (category === 'search') {
-                let keyword = sortType || '';
-                url = `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}&page=${page}`;
-            } else {
-                url = `${API_BASE_URL}/categories/${category}/films?page=${page}`;
-                if (sortType && sortType !== 'new') url += `&sort=${sortType}`;
+    // ============ THÊM CSS ============
+    function addStyles() {
+        const styleId = 'kkphim-styles';
+        if (document.getElementById(styleId)) return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .kkphim-container {
+                padding: 20px;
+                color: #fff;
+                min-height: 100vh;
             }
+            .kkphim-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .kkphim-header h2 {
+                margin: 0;
+                font-size: 24px;
+                background: linear-gradient(135deg, #f3d900, #ff6b6b);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .kkphim-categories {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .kkphim-categories button {
+                background: rgba(255,255,255,0.1);
+                border: none;
+                color: #fff;
+                padding: 8px 16px;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 14px;
+            }
+            .kkphim-categories button:hover,
+            .kkphim-categories button.active {
+                background: #f3d900;
+                color: #000;
+            }
+            .kkphim-movies-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .kkphim-card {
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+                background: #1a1a1a;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+            .kkphim-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            }
+            .kkphim-card img {
+                width: 100%;
+                aspect-ratio: 2 / 3;
+                object-fit: cover;
+                display: block;
+            }
+            .kkphim-card-info {
+                padding: 10px;
+            }
+            .kkphim-card-info .title {
+                font-weight: bold;
+                font-size: 14px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-bottom: 4px;
+            }
+            .kkphim-card-info .year {
+                font-size: 12px;
+                color: #aaa;
+            }
+            .kkphim-card-info .quality {
+                font-size: 10px;
+                background: rgba(243,217,0,0.2);
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-top: 6px;
+                color: #f3d900;
+            }
+            .kkphim-pagination {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 30px;
+                flex-wrap: wrap;
+            }
+            .kkphim-pagination button {
+                background: rgba(255,255,255,0.1);
+                border: none;
+                color: #fff;
+                padding: 6px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                min-width: 36px;
+            }
+            .kkphim-pagination button:hover,
+            .kkphim-pagination button.active {
+                background: #f3d900;
+                color: #000;
+            }
+            .kkphim-loading, .kkphim-error {
+                text-align: center;
+                padding: 50px;
+                font-size: 16px;
+                color: #aaa;
+            }
+            .kkphim-error {
+                color: #ff6b6b;
+            }
+            @media (max-width: 768px) {
+                .kkphim-movies-grid {
+                    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                    gap: 12px;
+                }
+                .kkphim-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.items) {
-                        const items = data.items.map(item => ({
-                            id: item._id,
-                            title: item.name,
-                            poster_path: item.poster_url || item.thumb_url,
-                            overview: item.content || '',
-                            year: item.year,
-                            source: SOURCE_ID,
-                            raw: item
-                        }));
-                        const result = {
-                            results: items,
-                            page: data.pagination?.currentPage || page,
-                            total_pages: data.pagination?.totalPages || 1,
-                            total_results: data.pagination?.totalItems || items.length
-                        };
-                        onComplete(result);
-                    } else {
-                        onError('Không có dữ liệu từ API');
-                    }
-                })
-                .catch(err => {
-                    console.error('KKPhim list error:', err);
-                    onError(err.message);
-                });
-        },
+    // ============ COMPONENT CHÍNH ============
+    class KkphimComponent {
+        constructor() {
+            this.name = PLUGIN_NAME;
+            this.id = PLUGIN_ID;
+            this.currentCategory = 'phim-le';
+            this.currentPage = 1;
+            this.totalPages = 1;
+            this.container = null;
+        }
 
-        // Lấy chi tiết phim
-        full: function(params, onSuccess, onError) {
-            let id = params.id;
-            if (!id) {
-                onError('Thiếu ID phim');
+        onLoad() {
+            addStyles();
+            this.render();
+            this.loadMovies(this.currentCategory, this.currentPage);
+        }
+
+        render() {
+            const contentArea = document.querySelector('.lampa-content') || document.querySelector('#app .content');
+            if (!contentArea) {
+                console.error('[KKPhim] Không tìm thấy vùng nội dung');
                 return;
             }
-            fetch(`${API_BASE_URL}/films/${id}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data._id) {
-                        const detail = {
-                            id: data._id,
-                            title: data.name,
-                            original_title: data.origin_name,
-                            overview: data.content,
-                            poster_path: data.poster_url,
-                            backdrop_path: data.thumb_url,
-                            vote_average: data.tmdb?.vote_average || null,
-                            vote_count: data.tmdb?.vote_count || null,
-                            release_date: data.year ? `${data.year}-01-01` : null,
-                            runtime: data.time || null,
-                            genres: (data.category || []).map(c => c.name),
-                            source: SOURCE_ID,
-                            raw: data
-                        };
-                        // Xử lý tập phim nếu có
-                        if (data.episodes && Array.isArray(data.episodes)) {
-                            const seasons = [];
-                            const epMap = new Map();
-                            data.episodes.forEach(ep => {
-                                const seasonNum = ep.season || 1;
-                                if (!epMap.has(seasonNum)) {
-                                    epMap.set(seasonNum, { season_number: seasonNum, episodes: [] });
-                                }
-                                epMap.get(seasonNum).episodes.push({
-                                    episode_number: ep.episode || ep.number,
-                                    title: ep.title || `Tập ${ep.episode || ep.number}`,
-                                    still_path: ep.thumb_url,
-                                    runtime: null
-                                });
-                            });
-                            detail.seasons = Array.from(epMap.values()).sort((a,b) => a.season_number - b.season_number);
-                        } else {
-                            detail.seasons = [];
-                        }
-                        onSuccess(detail);
-                    } else {
-                        onError('Không tìm thấy chi tiết phim');
-                    }
-                })
-                .catch(err => {
-                    console.error('KKPhim full error:', err);
-                    onError(err.message);
-                });
-        },
 
-        // Tìm kiếm (tuỳ chọn)
-        search: function(params, onComplete, onError) {
-            let keyword = params.keyword || '';
-            let page = params.page || 1;
-            let url = `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}&page=${page}`;
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.items) {
-                        const items = data.items.map(item => ({
-                            id: item._id,
-                            title: item.name,
-                            poster_path: item.poster_url || item.thumb_url,
-                            overview: item.content || '',
-                            year: item.year,
-                            source: SOURCE_ID,
-                            raw: item
-                        }));
-                        const result = {
-                            results: items,
-                            page: data.pagination?.currentPage || page,
-                            total_pages: data.pagination?.totalPages || 1,
-                            total_results: data.pagination?.totalItems || items.length
-                        };
-                        onComplete(result);
-                    } else {
-                        onError('Không tìm thấy kết quả');
-                    }
-                })
-                .catch(err => {
-                    console.error('KKPhim search error:', err);
-                    onError(err.message);
-                });
-        }
-    };
-
-    // ========== ĐĂNG KÝ VÀO LAMPA ==========
-    function registerSource() {
-        // 1. Đăng ký parser
-        if (!Lampa.Parser) Lampa.Parser = { parsers: {} };
-        if (Lampa.Parser.parsers[SOURCE_ID]) {
-            console.log(`[${SOURCE_NAME}] Parser đã tồn tại, bỏ qua`);
-            return;
-        }
-        Lampa.Parser.parsers[SOURCE_ID] = KkphimParser;
-        console.log(`[${SOURCE_NAME}] Parser đã đăng ký thành công`);
-
-        // 2. Thêm nguồn vào danh sách nguồn (dropdown chọn nguồn)
-        if (!Lampa.Source) Lampa.Source = { list: [] };
-        const exists = Lampa.Source.list.some(s => s.id === SOURCE_ID);
-        if (!exists) {
-            Lampa.Source.list.push({
-                id: SOURCE_ID,
-                name: SOURCE_NAME,
-                type: 'torrent',      // hoặc 'online' tùy loại nội dung
-                parser: SOURCE_ID     // liên kết với parser vừa đăng ký
-            });
-            console.log(`[${SOURCE_NAME}] Đã thêm vào Lampa.Source.list`);
-
-            // 3. Làm mới danh sách nguồn nếu có hàm update
-            if (typeof Lampa.Source.update === 'function') {
-                Lampa.Source.update();
+            if (this.container) {
+                contentArea.innerHTML = '';
+                contentArea.appendChild(this.container);
+                return;
             }
-        } else {
-            console.log(`[${SOURCE_NAME}] Đã tồn tại trong Lampa.Source.list`);
+
+            this.container = document.createElement('div');
+            this.container.className = 'kkphim-container';
+            this.container.innerHTML = `
+                <div class="kkphim-header">
+                    <h2>🎬 ${PLUGIN_NAME}</h2>
+                    <div class="kkphim-categories">
+                        <button data-cat="phim-le">📽️ Phim lẻ</button>
+                        <button data-cat="phim-bo">📺 Phim bộ</button>
+                        <button data-cat="hoat-hinh">🐉 Hoạt hình</button>
+                        <button data-cat="tv-shows">📡 TV Shows</button>
+                    </div>
+                </div>
+                <div class="kkphim-movies-grid"></div>
+                <div class="kkphim-pagination"></div>
+            `;
+
+            // Gán sự kiện cho các nút thể loại
+            const categoryBtns = this.container.querySelectorAll('[data-cat]');
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const cat = btn.getAttribute('data-cat');
+                    this.currentCategory = cat;
+                    this.currentPage = 1;
+                    this.loadMovies(cat, 1);
+                    // Cập nhật trạng thái active cho nút
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+
+            contentArea.innerHTML = '';
+            contentArea.appendChild(this.container);
+        }
+
+        async loadMovies(category, page) {
+            const grid = this.container.querySelector('.kkphim-movies-grid');
+            grid.innerHTML = '<div class="kkphim-loading">⏳ Đang tải phim...</div>';
+
+            try {
+                let url = `${API_BASE_URL}/categories/${category}/films?page=${page}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data || !data.items || data.items.length === 0) {
+                    grid.innerHTML = '<div class="kkphim-error">😢 Không tìm thấy phim</div>';
+                    return;
+                }
+
+                const movies = data.items;
+                this.totalPages = data.pagination?.totalPages || 1;
+
+                grid.innerHTML = '';
+                movies.forEach(movie => {
+                    const card = this.createMovieCard(movie);
+                    grid.appendChild(card);
+                });
+
+                this.renderPagination();
+            } catch (error) {
+                console.error('[KKPhim] Lỗi tải phim:', error);
+                grid.innerHTML = '<div class="kkphim-error">❌ Lỗi kết nối API. Vui lòng thử lại sau.</div>';
+            }
+        }
+
+        createMovieCard(movie) {
+            const card = document.createElement('div');
+            card.className = 'kkphim-card';
+            const posterUrl = movie.poster_url || movie.thumb_url || '';
+            const year = movie.year || '';
+            const quality = movie.quality || 'HD';
+            const title = movie.name || 'Không có tiêu đề';
+
+            card.innerHTML = `
+                <img src="${posterUrl}" alt="${title}" onerror="this.src='https://via.placeholder.com/300x450?text=No+Poster'">
+                <div class="kkphim-card-info">
+                    <div class="title">${title}</div>
+                    <div class="year">${year}</div>
+                    <div class="quality">${quality}</div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => this.showDetail(movie._id));
+            return card;
+        }
+
+        renderPagination() {
+            const paginationDiv = this.container.querySelector('.kkphim-pagination');
+            paginationDiv.innerHTML = '';
+
+            if (this.totalPages <= 1) return;
+
+            const maxVisible = 5;
+            let startPage = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(this.totalPages, startPage + maxVisible - 1);
+
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            // Nút Trang đầu
+            if (this.currentPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.textContent = '«';
+                firstBtn.addEventListener('click', () => this.goToPage(1));
+                paginationDiv.appendChild(firstBtn);
+
+                const prevBtn = document.createElement('button');
+                prevBtn.textContent = '‹';
+                prevBtn.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                paginationDiv.appendChild(prevBtn);
+            }
+
+            // Các số trang
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.classList.toggle('active', i === this.currentPage);
+                btn.addEventListener('click', () => this.goToPage(i));
+                paginationDiv.appendChild(btn);
+            }
+
+            // Nút Trang cuối
+            if (this.currentPage < this.totalPages) {
+                const nextBtn = document.createElement('button');
+                nextBtn.textContent = '›';
+                nextBtn.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                paginationDiv.appendChild(nextBtn);
+
+                const lastBtn = document.createElement('button');
+                lastBtn.textContent = '»';
+                lastBtn.addEventListener('click', () => this.goToPage(this.totalPages));
+                paginationDiv.appendChild(lastBtn);
+            }
+        }
+
+        goToPage(page) {
+            if (page === this.currentPage) return;
+            this.currentPage = page;
+            this.loadMovies(this.currentCategory, page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async showDetail(id) {
+            try {
+                const url = `${API_BASE_URL}/films/${id}`;
+                const response = await fetch(url);
+                const movie = await response.json();
+
+                if (!movie || !movie._id) {
+                    alert('Không thể tải chi tiết phim');
+                    return;
+                }
+
+                // Hiển thị chi tiết bằng alert tạm thời (bạn có thể thay bằng modal đẹp hơn)
+                const message = `
+🎬 ${movie.name}
+📅 Năm: ${movie.year || 'N/A'}
+⭐ Điểm: ${movie.tmdb?.vote_average || 'N/A'}
+📝 Nội dung: ${movie.content?.substring(0, 200) || 'Không có mô tả'}...
+                `;
+                alert(message);
+            } catch (error) {
+                console.error('[KKPhim] Lỗi chi tiết phim:', error);
+                alert('Lỗi khi tải chi tiết phim');
+            }
         }
     }
 
-    // ========== KHỞI CHẠY ==========
+    // ============ THÊM MENU VÀO GIAO DIỆN ============
+    function addMenuItem() {
+        const checkExist = setInterval(() => {
+            const menuContainer = document.querySelector('.menu-items, .menu__list, .lampa-menu');
+            if (menuContainer) {
+                clearInterval(checkExist);
+
+                if (document.querySelector(`.menu-item[data-id="${PLUGIN_ID}"]`)) {
+                    console.log('[KKPhim] Menu đã tồn tại');
+                    return;
+                }
+
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.setAttribute('data-id', PLUGIN_ID);
+                menuItem.innerHTML = `
+                    <div class="menu-item__icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 6h16v2H4V6zm0 4h16v2H4v-2zm0 4h10v2H4v-2zm13 0h3v2h-3v-2zm-3-4h6v2h-6v-2z"/>
+                        </svg>
+                    </div>
+                    <div class="menu-item__name">${PLUGIN_NAME}</div>
+                `;
+
+                menuItem.addEventListener('click', () => {
+                    if (!window.kkphimComponent) {
+                        window.kkphimComponent = new KkphimComponent();
+                    }
+                    window.kkphimComponent.onLoad();
+                    Lampa.Controller.toggle('menu');
+                });
+
+                menuContainer.appendChild(menuItem);
+                console.log('[KKPhim] Đã thêm mục vào menu');
+            }
+        }, 500);
+    }
+
+    // ============ KHỞI CHẠY ============
     function init() {
-        if (!window.Lampa) {
+        if (typeof Lampa === 'undefined') {
             Lampa.Listener.follow('app', function(e) {
                 if (e.type === 'ready') {
-                    registerSource();
+                    addMenuItem();
                 }
             });
         } else {
-            registerSource();
+            addMenuItem();
         }
     }
 
