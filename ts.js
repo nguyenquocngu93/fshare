@@ -163,47 +163,45 @@
         }
 
         render() {
-            const contentArea = document.querySelector('.lampa-content') || document.querySelector('#app .content');
+            const contentArea = document.querySelector('.lampa-content') || 
+                                document.querySelector('#app .content') ||
+                                document.querySelector('.content');
+            
             if (!contentArea) {
                 console.error('[KKPhim] Không tìm thấy vùng nội dung');
                 return;
             }
 
-            if (this.container) {
-                contentArea.innerHTML = '';
-                contentArea.appendChild(this.container);
-                return;
-            }
-
-            this.container = document.createElement('div');
-            this.container.className = 'kkphim-container';
-            this.container.innerHTML = `
-                <div class="kkphim-header">
-                    <h2>🎬 ${PLUGIN_NAME}</h2>
-                    <div class="kkphim-categories">
-                        <button data-cat="phim-le">📽️ Phim lẻ</button>
-                        <button data-cat="phim-bo">📺 Phim bộ</button>
-                        <button data-cat="hoat-hinh">🐉 Hoạt hình</button>
-                        <button data-cat="tv-shows">📡 TV Shows</button>
+            if (!this.container) {
+                this.container = document.createElement('div');
+                this.container.className = 'kkphim-container';
+                this.container.innerHTML = `
+                    <div class="kkphim-header">
+                        <h2>🎬 ${PLUGIN_NAME}</h2>
+                        <div class="kkphim-categories">
+                            <button data-cat="phim-le">📽️ Phim lẻ</button>
+                            <button data-cat="phim-bo">📺 Phim bộ</button>
+                            <button data-cat="hoat-hinh">🐉 Hoạt hình</button>
+                            <button data-cat="tv-shows">📡 TV Shows</button>
+                        </div>
                     </div>
-                </div>
-                <div class="kkphim-movies-grid"></div>
-                <div class="kkphim-pagination"></div>
-            `;
+                    <div class="kkphim-movies-grid"></div>
+                    <div class="kkphim-pagination"></div>
+                `;
 
-            // Gán sự kiện cho các nút thể loại
-            const categoryBtns = this.container.querySelectorAll('[data-cat]');
-            categoryBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const cat = btn.getAttribute('data-cat');
-                    this.currentCategory = cat;
-                    this.currentPage = 1;
-                    this.loadMovies(cat, 1);
-                    // Cập nhật trạng thái active cho nút
-                    categoryBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+                // Gán sự kiện cho các nút thể loại
+                const categoryBtns = this.container.querySelectorAll('[data-cat]');
+                categoryBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const cat = btn.getAttribute('data-cat');
+                        this.currentCategory = cat;
+                        this.currentPage = 1;
+                        this.loadMovies(cat, 1);
+                        categoryBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
                 });
-            });
+            }
 
             contentArea.innerHTML = '';
             contentArea.appendChild(this.container);
@@ -274,7 +272,6 @@
                 startPage = Math.max(1, endPage - maxVisible + 1);
             }
 
-            // Nút Trang đầu
             if (this.currentPage > 1) {
                 const firstBtn = document.createElement('button');
                 firstBtn.textContent = '«';
@@ -287,7 +284,6 @@
                 paginationDiv.appendChild(prevBtn);
             }
 
-            // Các số trang
             for (let i = startPage; i <= endPage; i++) {
                 const btn = document.createElement('button');
                 btn.textContent = i;
@@ -296,7 +292,6 @@
                 paginationDiv.appendChild(btn);
             }
 
-            // Nút Trang cuối
             if (this.currentPage < this.totalPages) {
                 const nextBtn = document.createElement('button');
                 nextBtn.textContent = '›';
@@ -328,13 +323,7 @@
                     return;
                 }
 
-                // Hiển thị chi tiết bằng alert tạm thời (bạn có thể thay bằng modal đẹp hơn)
-                const message = `
-🎬 ${movie.name}
-📅 Năm: ${movie.year || 'N/A'}
-⭐ Điểm: ${movie.tmdb?.vote_average || 'N/A'}
-📝 Nội dung: ${movie.content?.substring(0, 200) || 'Không có mô tả'}...
-                `;
+                const message = `🎬 ${movie.name}\n📅 Năm: ${movie.year || 'N/A'}\n⭐ Điểm: ${movie.tmdb?.vote_average || 'N/A'}\n\n📝 Nội dung: ${movie.content?.substring(0, 200) || 'Không có mô tả'}...`;
                 alert(message);
             } catch (error) {
                 console.error('[KKPhim] Lỗi chi tiết phim:', error);
@@ -343,42 +332,40 @@
         }
     }
 
-    // ============ THÊM MENU VÀO GIAO DIỆN ============
-    function addMenuItem() {
-        const checkExist = setInterval(() => {
-            const menuContainer = document.querySelector('.menu-items, .menu__list, .lampa-menu');
-            if (menuContainer) {
-                clearInterval(checkExist);
+    // ============ ĐĂNG KÝ MENU BẰNG API CỦA LAMPA ============
+    function registerMenu() {
+        // Đợi Lampa.Menu có sẵn
+        if (!Lampa.Menu || !Lampa.Menu.list) {
+            setTimeout(registerMenu, 500);
+            return;
+        }
 
-                if (document.querySelector(`.menu-item[data-id="${PLUGIN_ID}"]`)) {
-                    console.log('[KKPhim] Menu đã tồn tại');
-                    return;
+        // Kiểm tra xem đã có menu chưa
+        const exists = Lampa.Menu.list.some(item => item.id === PLUGIN_ID);
+        if (exists) {
+            console.log('[KKPhim] Menu đã tồn tại');
+            return;
+        }
+
+        // Thêm menu mới
+        Lampa.Menu.list.push({
+            id: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4V6zm0 4h16v2H4v-2zm0 4h10v2H4v-2zm13 0h3v2h-3v-2zm-3-4h6v2h-6v-2z"/></svg>',
+            onSelect: function() {
+                if (!window.kkphimComponent) {
+                    window.kkphimComponent = new KkphimComponent();
                 }
-
-                const menuItem = document.createElement('div');
-                menuItem.className = 'menu-item';
-                menuItem.setAttribute('data-id', PLUGIN_ID);
-                menuItem.innerHTML = `
-                    <div class="menu-item__icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M4 6h16v2H4V6zm0 4h16v2H4v-2zm0 4h10v2H4v-2zm13 0h3v2h-3v-2zm-3-4h6v2h-6v-2z"/>
-                        </svg>
-                    </div>
-                    <div class="menu-item__name">${PLUGIN_NAME}</div>
-                `;
-
-                menuItem.addEventListener('click', () => {
-                    if (!window.kkphimComponent) {
-                        window.kkphimComponent = new KkphimComponent();
-                    }
-                    window.kkphimComponent.onLoad();
-                    Lampa.Controller.toggle('menu');
-                });
-
-                menuContainer.appendChild(menuItem);
-                console.log('[KKPhim] Đã thêm mục vào menu');
+                window.kkphimComponent.onLoad();
             }
-        }, 500);
+        });
+
+        // Làm mới menu nếu có hàm update
+        if (typeof Lampa.Menu.update === 'function') {
+            Lampa.Menu.update();
+        }
+
+        console.log('[KKPhim] Đã đăng ký menu thành công');
     }
 
     // ============ KHỞI CHẠY ============
@@ -386,11 +373,11 @@
         if (typeof Lampa === 'undefined') {
             Lampa.Listener.follow('app', function(e) {
                 if (e.type === 'ready') {
-                    addMenuItem();
+                    registerMenu();
                 }
             });
         } else {
-            addMenuItem();
+            registerMenu();
         }
     }
 
