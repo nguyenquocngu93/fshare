@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const PLUGIN_KEY = 'torrentio_ultra_plugin';
+  const PLUGIN_KEY = 'torrentio_final_plugin';
   const TORRSERVER = 'http://gren439.tsarea.tv:8880';
 
   function start() {
@@ -10,7 +10,7 @@
 
     let current = null;
 
-    console.log('[Lampa] Torrentio ULTRA started');
+    console.log('[Lampa] Torrentio FINAL started');
 
     // ===== GET TMDB =====
     function getTmdbId(data) {
@@ -81,9 +81,11 @@
       const isTV = current.seasons && current.seasons.length;
 
       if (isTV) {
-        if (tmdb) chooseSeason(tmdb, imdb);
-        else if (imdb) chooseSeasonImdb(imdb);
-        else Lampa.Noty.show('Không có ID');
+        if (!tmdb && !imdb) {
+          Lampa.Noty.show('Không có ID');
+          return;
+        }
+        chooseSeason(tmdb, imdb);
       } else {
         loadStreamsWithFallback('movie', tmdb, imdb);
       }
@@ -145,16 +147,11 @@
 
       Lampa.Noty.show('Đang tải torrent...');
 
-      // 👉 thử TMDB trước
       if (url_tmdb) {
-        console.log('TRY TMDB:', url_tmdb);
-
         $.get(url_tmdb, function (res) {
           if (res?.streams?.length) {
-            console.log('TMDB OK');
             showStreams(res.streams);
           } else {
-            console.log('TMDB FAIL → fallback IMDB');
             tryImdb(url_imdb);
           }
         }).fail(() => tryImdb(url_imdb));
@@ -169,8 +166,6 @@
         return;
       }
 
-      console.log('TRY IMDB:', url);
-
       $.get(url, function (res) {
         if (!res?.streams?.length) {
           Lampa.Noty.show('Không có torrent');
@@ -183,8 +178,24 @@
       });
     }
 
-    // ===== LIST =====
+    // ===== LIST + SORT SOURCE =====
     function showStreams(streams) {
+
+      streams.sort((a, b) => {
+        const score = (s) => {
+          const t = (s.title || '').toLowerCase();
+
+          if (t.includes('rutor')) return 100;
+          if (t.includes('rutracker')) return 90;
+          if (t.includes('1337x')) return 70;
+          if (t.includes('pirate')) return 60;
+
+          return 0;
+        };
+
+        return score(b) - score(a);
+      });
+
       const items = streams.map(s => {
         let title = s.title || '';
 
@@ -206,11 +217,18 @@
     }
 
     // ===== PLAY =====
-    function play(magnet) {
-      const url = `${TORRSERVER}/stream?link=${encodeURIComponent(magnet)}`;
+    function play(link) {
+      if (!link) {
+        Lampa.Noty.show('Link lỗi');
+        return;
+      }
+
+      console.log('PLAY LINK:', link);
+
+      const play_url = `${TORRSERVER}/stream?link=${encodeURIComponent(link)}`;
 
       Lampa.Player.play({
-        url: url,
+        url: play_url,
         title: current.title || current.name
       });
     }
