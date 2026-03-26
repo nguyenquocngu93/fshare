@@ -1,10 +1,9 @@
 (function () {
   'use strict';
 
-  const PLUGIN_KEY = 'torrentio_tmdb_bearer';
+  const PLUGIN_KEY = 'torrentio_force_tv';
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-  // 🔥 TOKEN CỦA BẠN
   const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
 
   function start() {
@@ -21,8 +20,7 @@
       return d?.imdb_id || d?.movie?.imdb_id || d?.card?.imdb_id || null;
     }
 
-    // ===== FETCH TMDB =====
-    function tmdbFetch(url, callback) {
+    function tmdbFetch(url, ok) {
       $.ajax({
         url: url,
         method: 'GET',
@@ -30,10 +28,8 @@
           'Authorization': 'Bearer ' + TMDB_TOKEN,
           'Content-Type': 'application/json'
         },
-        success: callback,
-        error: function () {
-          Lampa.Noty.show('Lỗi TMDB');
-        }
+        success: ok,
+        error: () => Lampa.Noty.show('Lỗi TMDB')
       });
     }
 
@@ -67,11 +63,12 @@
       container.append(btn);
     }
 
+    // ===== CLICK (ÉP TV) =====
     function open() {
       const tmdb = getTmdbId(current);
       const imdb = getImdbId(current);
 
-      const isTV = current.name;
+      const isTV = current?.seasons && current.seasons.length;
 
       if (isTV) {
         selectSeason(tmdb, imdb);
@@ -92,6 +89,12 @@
       Lampa.Noty.show('Đang tải season...');
 
       tmdbFetch(url, function (res) {
+
+        if (!res?.seasons) {
+          Lampa.Noty.show('Không có season');
+          return;
+        }
+
         const seasons = res.seasons
           .filter(s => s.season_number > 0)
           .map(s => ({
@@ -114,6 +117,12 @@
       Lampa.Noty.show('Đang tải tập...');
 
       tmdbFetch(url, function (res) {
+
+        if (!res?.episodes) {
+          Lampa.Noty.show('Không có episode');
+          return;
+        }
+
         const episodes = res.episodes.map(e => ({
           title: `E${e.episode_number} - ${e.name}`,
           episode: e.episode_number
@@ -188,7 +197,6 @@
 
       const items = streams.map(s => {
         let title = s.title || '';
-
         let size = (title.match(/💾\s([^|]+)/) || [])[1] || '';
         let seed = (title.match(/👤\s(\d+)/) || [])[1] || '';
 
@@ -209,12 +217,18 @@
 
     // ===== PLAY =====
     function play(item) {
+      if (!item?.infoHash) {
+        Lampa.Noty.show('Không có hash');
+        return;
+      }
+
       const name = encodeURIComponent(current.title || current.name || 'video.mkv');
 
       const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
 
       Lampa.Player.play({
-        url: url
+        url: url,
+        title: current.title || current.name
       });
     }
   }
