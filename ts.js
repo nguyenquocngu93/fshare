@@ -195,31 +195,15 @@
         });
     }
 
-    /* ---- TORRSERVER PLAY ---- */
-    function tsPlay(magnet, hash, fileIdx, title) {
-        var tsUrl = getTsUrl();
-        if (!tsUrl) { Lampa.Noty.show('⚠️ Chưa cài TorrServer URL'); return; }
+   
+     // ===== PLAY =====
+function play(item) {
+  const name = encodeURIComponent(current?.title || current?.name || 'video');
 
-        // Add torrent vào TorrServer rồi phát thẳng
-        $.ajax({
-            url: tsUrl + '/torrents', method: 'POST',
-            contentType: 'application/json', timeout: 12000,
-            data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
-            complete: function (addResp) {
-                var addedHash = (addResp.responseJSON && addResp.responseJSON.hash) || hash;
-                var useHash   = addedHash || hash;
-                if (!useHash) { Lampa.Noty.show('Lỗi: không có hash'); return; }
+  const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
 
-                var fname = title + '.mkv';
-                var url   = tsUrl + '/stream/' + encodeURIComponent(fname) +
-                            '?link=' + useHash +
-                            '&index=' + (fileIdx || 0) +
-                            '&play';
-                playUrl(url, title);
-            }
-        });
-    }
-
+  Lampa.Player.play({ url });
+}
     /* ---- HIỂN THỊ ---- */
     function showResults(results, title) {
         if (!results.length) {
