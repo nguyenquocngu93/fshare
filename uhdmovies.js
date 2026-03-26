@@ -8,23 +8,33 @@
 
     var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
-    function injectCSS() {
-        if (document.getElementById('uhd-style')) return;
-        var s = document.createElement('style');
-        s.id = 'uhd-style';
-        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}';
-        document.head.appendChild(s);
-    }
+    // =====================================================================
+    // DANH MỤC - LẤY TRỰC TIẾP TỪ MENU WEBSITE
+    // =====================================================================
+    var CATEGORIES = [
+        { url: '/',           title: '📽️ Phim mới' },
+        { url: '/collection/', title: '📀 Collection' },
+        { url: '/tv-shows/',   title: '📺 TV Shows' },
+        { url: '/4k-hdr/',     title: '✨ 4K HDR' },
+        { url: '/category/4k-uhd/', title: '🔥 4K UHD' },
+        { url: '/category/1080p/',  title: '🎬 1080p' },
+        { url: '/category/2160p/',  title: '🎞️ 2160p' },
+        { url: '/category/dual-audio/', title: '🌐 Dual Audio' },
+        { url: '/category/web-dl/',     title: '💾 WEB-DL' },
+        { url: '/english-movies/',      title: '🇬🇧 English Movies' }
+    ];
 
+    // =====================================================================
+    // HELPER
+    // =====================================================================
     function getPoster(url) {
         if (!url) return '';
         if (url.indexOf('http') === 0) return url;
         if (url.indexOf('//') === 0) return 'https:' + url;
-        return IMG_URL + url;
+        return url;
     }
 
     function normalizeItem(item) {
-        if (!item) return {};
         return {
             id: item.slug || '',
             title: item.title || '',
@@ -32,23 +42,14 @@
             img: getPoster(item.poster),
             poster: getPoster(item.poster),
             year: item.year || '',
-            overview: item.description || '',
             source: SOURCE_NAME,
             uhd_slug: item.slug || ''
         };
     }
 
-    var CATEGORIES = [
-        { url: '/', title: 'Phim mới' },
-        { url: '/category/4k-uhd/', title: '4K UHD' },
-        { url: '/category/1080p/', title: '1080p' },
-        { url: '/category/2160p/', title: '2160p' },
-        { url: '/category/dual-audio/', title: 'Dual Audio' },
-        { url: '/category/web-dl/', title: 'WEB-DL' },
-        { url: '/category/hindi-dubbed/', title: 'Hindi Dubbed' }
-    ];
-
-    // ========== FETCH PAGE - CẢI THIỆN NHIỀU FALLBACK ==========
+    // =====================================================================
+    // FETCH PAGE - PARSE ĐÚNG CẤU TRÚC .post
+    // =====================================================================
     function fetchPage(catUrl, page, onOk, onFail) {
         var net = new Lampa.Reguest();
         var fullUrl = catUrl;
@@ -57,8 +58,14 @@
             fullUrl = BASE_URL + fullUrl;
         }
         
+        // Xử lý phân trang: /page/2/
         if (page > 1) {
-            fullUrl += (fullUrl.indexOf('?') === -1 ? '?page=' : '&page=') + page;
+            // Nếu URL đã có trailing slash thì thêm page, nếu không thì thêm /
+            if (fullUrl.slice(-1) === '/') {
+                fullUrl = fullUrl + 'page/' + page + '/';
+            } else {
+                fullUrl = fullUrl + '/page/' + page + '/';
+            }
         }
         
         console.log('[UHD] Fetching:', fullUrl);
@@ -69,65 +76,64 @@
             try {
                 var $html = $(data);
                 
-                // ===== SELECTOR 1: Article/Post =====
-                var $articles = $html.find('article, .post, .item, .blog-post, .entry, .movie-item, .grid-item, .bs');
+                // Tìm tất cả bài viết có class 'post'
+                var $posts = $html.find('.post, article, .hentry');
                 
-                // ===== SELECTOR 2: Nếu không có, tìm các link bài viết =====
-                if ($articles.length === 0) {
-                    $html.find('a').each(function() {
+                $posts.each(function() {
+                    var $post = $(this);
+                    
+                    // Lấy link và title
+                    var $titleLink = $post.find('.entry-title a, h2 a, h3 a').first();
+                    var href = $titleLink.attr('href');
+                    var title = $titleLink.text().trim();
+                    
+                    // Lấy poster
+                    var $img = $post.find('.post-thumbnail img, .entry-image img, img').first();
+                    var poster = $img.attr('src') || $img.attr('data-src') || '';
+                    
+                    if (href && title) {
+                        var slug = href.split('/').filter(function(p) { return p; }).pop();
+                        items.push({
+                            slug: slug,
+                            title: title,
+                            poster: poster
+                        });
+                    }
+                });
+                
+                // Nếu không tìm thấy .post, fallback tìm tất cả link bài viết
+                if (items.length === 0) {
+                    $html.find('a[href*="uhdmovies.ink/"]').each(function() {
                         var href = $(this).attr('href');
-                        if (href && href.indexOf(BASE_URL) === 0 && href !== '/' && href.split('/').length >= 4) {
-                            var parent = $(this).closest('div, li, section');
-                            if (parent.find('img').length > 0 || parent.find('h2, h3').length > 0) {
-                                $articles = $articles.add(parent);
+                        var title = $(this).text().trim();
+                        // Lọc link bài viết (có dạng /slug/ và không phải category)
+                        if (href && href !== '/' && 
+                            href.indexOf('/category/') === -1 && 
+                            href.indexOf('/tag/') === -1 &&
+                            href.split('/').length === 4 && title.length > 5) {
+                            var slug = href.split('/').filter(function(p) { return p; }).pop();
+                            if (!items.some(function(i) { return i.slug === slug; })) {
+                                var poster = $(this).closest('div').find('img').first().attr('src') || '';
+                                items.push({
+                                    slug: slug,
+                                    title: title,
+                                    poster: poster
+                                });
                             }
                         }
                     });
                 }
                 
-                // ===== SELECTOR 3: Fallback cuối =====
-                if ($articles.length === 0) {
-                    $html.find('.content, .main, #content').find('a').each(function() {
-                        var href = $(this).attr('href');
-                        if (href && href.indexOf(BASE_URL) === 0 && href !== '/' && href.split('/').length >= 4) {
-                            var parent = $(this).parent();
-                            $articles = $articles.add(parent);
-                        }
-                    });
-                }
-                
-                // Parse từng item
-                $articles.each(function() {
-                    var $art = $(this);
-                    var $link = $art.find('a').first();
-                    var href = $link.attr('href');
-                    
-                    // Lấy title từ nhiều nguồn
-                    var title = $art.find('h2, h3, .title, .entry-title').first().text().trim();
-                    if (!title) title = $link.text().trim();
-                    if (!title) title = $art.text().trim().substring(0, 50);
-                    
-                    // Lấy poster
-                    var poster = $art.find('img').first().attr('src') || '';
-                    if (!poster) poster = $art.find('img').first().attr('data-src') || '';
-                    
-                    if (href && title && href !== '/' && href !== BASE_URL + '/') {
-                        var slug = href.split('/').filter(function(p) { return p; }).pop();
-                        if (slug && !items.some(function(i) { return i.slug === slug; })) {
-                            items.push({ slug: slug, title: title, poster: poster });
-                        }
-                    }
-                });
-                
-                // Lấy phân trang
-                var pagination = $html.find('.pagination .page-numbers:not(.next):not(.prev)').last();
-                if (pagination.length) {
-                    var lastPage = parseInt(pagination.text());
+                // Lấy tổng số trang từ pagination
+                var $pagination = $html.find('.pagination .page-numbers:not(.next):not(.prev)').last();
+                if ($pagination.length) {
+                    var lastPage = parseInt($pagination.text());
                     if (!isNaN(lastPage)) totalPages = lastPage;
                 } else {
-                    var nextLink = $html.find('.pagination .next, a:contains("Next")').attr('href');
-                    if (nextLink && nextLink.match(/page=(\d+)/)) {
-                        totalPages = 2;
+                    // Fallback: tìm link Next để ước lượng
+                    var $next = $html.find('.pagination .next, a:contains("Next")');
+                    if ($next.length && $next.attr('href')) {
+                        totalPages = page + 1; // tạm thời cho phép load thêm
                     }
                 }
                 
@@ -151,7 +157,9 @@
         });
     }
 
-    // ========== FETCH DETAIL - CẢI THIỆN LẤY LINK ==========
+    // =====================================================================
+    // FETCH DETAIL - LẤY LINK TẢI
+    // =====================================================================
     var _detailCache = {};
 
     function fetchDetail(slug, callback) {
@@ -176,31 +184,24 @@
                 var $html = $(html);
                 
                 // Tiêu đề
-                result.title = $html.find('h1.entry-title, h1.title, .post-title, .entry-title').first().text().trim();
+                result.title = $html.find('h1.entry-title, h1.title').first().text().trim();
                 
                 // Poster
-                var posterImg = $html.find('.poster img, .featured-image img, .post-thumbnail img, .entry-image img').first();
-                result.poster = posterImg.attr('src') || posterImg.attr('data-src') || '';
+                var $posterImg = $html.find('.post-thumbnail img, .featured-image img, .entry-image img').first();
+                result.poster = $posterImg.attr('src') || $posterImg.attr('data-src') || '';
                 
                 // Mô tả
                 result.description = $html.find('.entry-content p').first().text().trim();
-                if (!result.description) {
-                    result.description = $html.find('.description, .summary, .movie-description').text().trim();
-                }
                 
-                // Năm
-                var yearText = $html.find('.year, .release-year, .date').text().trim();
-                result.year = yearText.match(/\d{4}/) ? yearText.match(/\d{4}/)[0] : '';
-                
-                // ===== LẤY LINK TẢI =====
+                // Lấy tất cả link tải
                 var links = [];
                 
-                // Cách 1: Tìm trong entry-content
-                $html.find('.entry-content a, .download-links a, .post-content a, .movie-links a').each(function() {
+                $html.find('.entry-content a, .download-links a, .post-content a').each(function() {
                     var $a = $(this);
                     var href = $a.attr('href');
                     var text = $a.text().trim();
                     
+                    // Chỉ lấy link ngoài (không phải link nội bộ)
                     if (href && href.indexOf('http') === 0 && href.indexOf(BASE_URL) === -1) {
                         var quality = '';
                         var lower = text.toLowerCase();
@@ -216,26 +217,7 @@
                     }
                 });
                 
-                // Cách 2: Fallback - regex toàn bộ html
-                if (links.length === 0) {
-                    var raw = html;
-                    var urlMatches = raw.match(/https?:\/\/[^\s"'<>]+/g);
-                    if (urlMatches) {
-                        var unique = [...new Set(urlMatches)];
-                        unique.forEach(function(u) {
-                            if (u.indexOf(BASE_URL) === -1 && 
-                                !u.includes('wp-content') && 
-                                !u.includes('.jpg') && 
-                                !u.includes('.png') && 
-                                !u.includes('.css') &&
-                                !u.includes('.js')) {
-                                links.push({ quality: 'Download', url: u });
-                            }
-                        });
-                    }
-                }
-                
-                // Gom nhóm link
+                // Gom nhóm link theo chất lượng
                 if (links.length) {
                     var groups = {};
                     links.forEach(function(link) {
@@ -262,9 +244,12 @@
         });
     }
 
+    // =====================================================================
+    // HIỂN THỊ MENU SERVER
+    // =====================================================================
     function showServerMenu(card, detail) {
         if (!detail || !detail.servers || !detail.servers.length) {
-            Lampa.Noty.show('Không có link');
+            Lampa.Noty.show('Không tìm thấy link tải');
             return;
         }
         
@@ -281,11 +266,11 @@
         }
         
         var items = detail.servers.map(function(s, i) {
-            return { title: s.name + (s.links.length > 1 ? ' (' + s.links.length + ')' : ''), index: i };
+            return { title: s.name + (s.links.length > 1 ? ' (' + s.links.length + ' chất lượng)' : ''), index: i };
         });
         
         Lampa.Select.show({
-            title: 'Chọn server',
+            title: 'Chọn chất lượng',
             items: items,
             onSelect: function(item) {
                 var server = detail.servers[item.index];
@@ -300,7 +285,7 @@
                         return { title: l.quality || 'Link ' + (j + 1), index: j };
                     });
                     Lampa.Select.show({
-                        title: 'Chọn chất lượng',
+                        title: 'Chọn link - ' + server.name,
                         items: qItems,
                         onSelect: function(qItem) {
                             var link = server.links[qItem.index];
@@ -316,6 +301,9 @@
         });
     }
 
+    // =====================================================================
+    // API SOURCE
+    // =====================================================================
     function UHDMoviesApi() {
         var self = this;
         
@@ -368,7 +356,6 @@
                     poster: getPoster(detail.poster),
                     img: getPoster(detail.poster),
                     overview: detail.description,
-                    year: detail.year,
                     source: SOURCE_NAME,
                     servers: detail.servers
                 };
@@ -384,10 +371,10 @@
             net.silent(url, function(html) {
                 var items = [];
                 var $html = $(html);
-                $html.find('article, .post').each(function() {
-                    var link = $(this).find('h2 a, h3 a').first();
-                    var href = link.attr('href');
-                    var title = link.text().trim();
+                $html.find('.post, article').each(function() {
+                    var $link = $(this).find('.entry-title a, h2 a').first();
+                    var href = $link.attr('href');
+                    var title = $link.text().trim();
                     var poster = $(this).find('img').first().attr('src') || '';
                     if (href && title) {
                         var slug = href.split('/').filter(function(p) { return p; }).pop();
@@ -400,6 +387,9 @@
         };
     }
 
+    // =====================================================================
+    // COMPONENT LIST
+    // =====================================================================
     function UHDMoviesListComponent(object) {
         var catUrl = object.cat_url || object.url || '/';
         var catTitle = object.title || 'UHDMovies';
@@ -412,7 +402,7 @@
             '<div class="uhd-list-wrap" style="min-height:100vh;">' +
             '<div class="uhd-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;"></div>' +
             '<div class="uhd-loader" style="text-align:center;padding:1.5em;display:none;">Đang tải...</div>' +
-            '<div class="uhd-end" style="text-align:center;padding:1em;display:none;">— Hết phim —</div>' +
+            '<div class="uhd-end" style="text-align:center;padding:1em;display:none;">— Đã tải hết phim —</div>' +
             '</div>'
         );
         var $grid = $html.find('.uhd-grid');
@@ -426,7 +416,7 @@
                 '<img src="' + (item.img || '') + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/>' +
                 '</div>' +
                 '<div style="padding:6px 8px;">' +
-                '<div style="font-size:13px;font-weight:600;">' + (item.title || '') + '</div>' +
+                '<div style="font-size:13px;font-weight:600;line-height:1.3;">' + (item.title || '') + '</div>' +
                 '<div style="font-size:11px;opacity:.5;">' + (item.year || '') + '</div>' +
                 '</div></div>'
             );
@@ -512,6 +502,9 @@
         this.destroy = function() { detachScroll(); };
     }
 
+    // =====================================================================
+    // INJECT XEM THÊM
+    // =====================================================================
     function injectViewMore() {
         Lampa.Listener.follow('activity', function(e) {
             if (e.type !== 'start') return;
@@ -535,14 +528,17 @@
         });
     }
 
+    // =====================================================================
+    // KHỞI ĐỘNG
+    // =====================================================================
     function startPlugin() {
         if (window.uhdmovies_started) return;
         window.uhdmovies_started = true;
         
-        injectCSS();
         Lampa.Api.sources[SOURCE_NAME] = new UHDMoviesApi();
         Lampa.Component.add('uhdmovies_list', UHDMoviesListComponent);
         
+        // Thêm menu
         var $item = $(
             '<li data-action="' + SOURCE_NAME + '" class="menu__item selector">' +
             '<div class="menu__ico">' + ICON + '</div>' +
@@ -555,6 +551,7 @@
         
         injectViewMore();
         
+        // Nút play
         Lampa.Listener.follow('full', function(e) {
             var obj = e.object || {};
             var card = (e.data && e.data.movie) ? e.data.movie : (obj.card || (obj.activity && obj.activity.card));
@@ -581,7 +578,7 @@
                 $btn.on('hover:enter click', function() {
                     fetchDetail(slug, function(detail) {
                         if (!detail || !detail.servers || !detail.servers.length) {
-                            Lampa.Noty.show('Không có link');
+                            Lampa.Noty.show('Không tìm thấy link tải');
                             return;
                         }
                         showServerMenu(card, detail);
