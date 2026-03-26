@@ -1,128 +1,195 @@
 (function () {
   'use strict';
 
-  if (window.torrentio_patch_final) return;
-  window.torrentio_patch_final = true;
+  const PLUGIN_KEY = 'torrentio_full_menu_pro';
+  const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
-  let current = null;
+  function start() {
+    if (window[PLUGIN_KEY]) return;
+    window[PLUGIN_KEY] = true;
 
-  // ===== PLAY (GIỮ NGUYÊN CỦA BẠN) =====
-  function play(item) {
-    const name = encodeURIComponent(current?.title || current?.name || 'video');
+    let current = null;
 
-    const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
-
-    Lampa.Player.play({ url });
-  }
-
-  // ===== GET EP COUNT (FIX) =====
-  function getEpisodeCount(card, season) {
-
-    if (card.seasons) {
-      const s = card.seasons.find(x => x.season_number === season);
-      if (s && s.episode_count) return s.episode_count;
+    function getTmdbId(d) {
+      return d?.id || d?.card?.id || d?.movie?.id || null;
     }
 
-    const totalSeasons = card.number_of_seasons || 1;
-    const totalEpisodes = card.number_of_episodes || 0;
-
-    if (totalEpisodes > 0) {
-      let avg = Math.ceil(totalEpisodes / totalSeasons);
-
-      if (avg < 6) avg = 6;
-      if (avg > 30) avg = 30;
-
-      return avg;
+    function getImdbId(d) {
+      return d?.imdb_id || d?.movie?.imdb_id || d?.card?.imdb_id || d?.imdb || null;
     }
 
-    return 20;
-  }
+    function getCard() {
+      return current?.movie || current?.card || current?.data?.movie || current || {};
+    }
 
-  // ===== MENU =====
-  function askSeasonEpisode(card) {
+    // ===== LISTENER =====
+    Lampa.Listener.follow('full', function (e) {
+      if (e.type === 'complite') {
+        current = e.data || {};
+        waitFor(addButton);
+      }
+    });
 
-    const totalSeasons = card.number_of_seasons || 1;
+    function waitFor(cb) {
+      let t = 0;
+      const i = setInterval(() => {
+        const c = $('.full-start-new__buttons');
+        if (c.length) {
+          clearInterval(i);
+          cb(c);
+        }
+        if (++t > 10) clearInterval(i);
+      }, 100);
+    }
 
-    function pickEpisode(season) {
+    function addButton(container) {
+      $('.torrentio-stable').remove();
 
-      const total = getEpisodeCount(card, season);
-      const list = [];
+      const btn = $('<div class="full-start__button selector torrentio-stable">')
+        .text('🔎 Torrentio')
+        .on('hover:enter', open);
 
-      for (let i = 1; i <= total; i++) {
-        list.push({
-          title: 'Tập ' + i,
-          e: i
+      container.append(btn);
+    }
+
+    // ===== OPEN =====
+    function open() {
+      const card = getCard();
+      const tmdb = getTmdbId(card);
+      const imdb = getImdbId(card);
+
+      const seasons = getSeasons(card);
+
+      if (seasons.length) {
+        Lampa.Select.show({
+          title: 'Chọn Season',
+          items: seasons,
+          onSelect: (item) => {
+            if (item.episodes.length) {
+              selectEpisodeCard(tmdb, imdb, item);
+            } else {
+              fallbackEpisode(tmdb, imdb, item.season);
+            }
+          }
         });
+      } else {
+        loadStreams('movie', tmdb, imdb);
+      }
+    }
+
+    // ===== GET SEASON FROM CARD =====
+    function getSeasons(card) {
+
+      if (Array.isArray(card?.seasons) && card.seasons.length) {
+        return card.seasons
+          .filter(s => s.season_number > 0)
+          .map(s => ({
+            title: `Season ${s.season_number}${s.episodes?.length ? ` (${s.episodes.length} tập)` : ''}`,
+            season: s.season_number,
+            episodes: s.episodes || []
+          }));
+      }
+
+      const total = card?.number_of_seasons || card?.seasons_count;
+
+      if (total) {
+        const arr = [];
+        for (let i = 1; i <= total; i++) {
+          arr.push({
+            title: `Season ${i}`,
+            season: i,
+            episodes: []
+          });
+        }
+        return arr;
+      }
+
+      return [];
+    }
+
+    // ===== EPISODE FROM CARD =====
+    function selectEpisodeCard(tmdb, imdb, seasonObj) {
+      const eps = seasonObj.episodes.map(e => ({
+        title: `E${e.episode_number} - ${e.name || ''}`,
+        episode: e.episode_number
+      }));
+
+      Lampa.Select.show({
+        title: 'Season ' + seasonObj.season,
+        items: eps,
+        onSelect: (item) =>
+          loadStreams('series', tmdb, imdb, seasonObj.season, item.episode)
+      });
+    }
+
+    // ===== FALLBACK =====
+    function fallbackEpisode(tmdb, imdb, season) {
+      const eps = [];
+
+      for (let i = 1; i <= 20; i++) {
+        eps.push({ title: 'Episode ' + i, episode: i });
       }
 
       Lampa.Select.show({
         title: 'Season ' + season,
-        items: list,
-        onSelect: function (item) {
-          loadStreams(card, season, item.e); // 🔥 gọi lại hàm của bạn
-        },
-        onBack: function () {
-          Lampa.Controller.toggle('full');
-        }
+        items: eps,
+        onSelect: (item) =>
+          loadStreams('series', tmdb, imdb, season, item.episode)
       });
     }
 
-    if (totalSeasons === 1) {
-      pickEpisode(1);
-      return;
-    }
+    // ===== LOAD STREAM =====
+    function loadStreams(type, tmdb, imdb, s, e) {
 
-    const list = [];
+      let url = '';
 
-    for (let s = 1; s <= totalSeasons; s++) {
-      const ep = getEpisodeCount(card, s);
-
-      list.push({
-        title: 'Season ' + s + ' (' + ep + ' tập)',
-        s: s
-      });
-    }
-
-    Lampa.Select.show({
-      title: 'Chọn Season',
-      items: list,
-      onSelect: function (item) {
-        pickEpisode(item.s);
-      },
-      onBack: function () {
-        Lampa.Controller.toggle('full');
+      if (type === 'movie') {
+        if (tmdb) url = `https://torrentio.strem.fun/stream/movie/tmdb:${tmdb}.json`;
+        else if (imdb) url = `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
+      } else {
+        if (tmdb) url = `https://torrentio.strem.fun/stream/series/tmdb:${tmdb}:${s}:${e}.json`;
+        else if (imdb) url = `https://torrentio.strem.fun/stream/series/${imdb}:${s}:${e}.json`;
       }
+
+      if (!url) {
+        Lampa.Noty.show('Không có ID hợp lệ');
+        return;
+      }
+
+      $.get(url, function (res) {
+        if (!res?.streams?.length) {
+          Lampa.Noty.show('Không có torrent');
+          return;
+        }
+
+        const items = res.streams.map(s => ({
+          title: s.name,
+          infoHash: s.infoHash,
+          fileIdx: s.fileIdx || 0
+        }));
+
+        Lampa.Select.show({
+          title: 'Streams',
+          items: items,
+          onSelect: (i) => play(i)
+        });
+      });
+    }
+
+    // ===== PLAY =====
+    function play(item) {
+      const name = encodeURIComponent(current?.title || current?.name || 'video');
+
+      const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
+
+      Lampa.Player.play({ url });
+    }
+  }
+
+  if (window.appready) start();
+  else {
+    Lampa.Listener.follow('app', function (e) {
+      if (e.type === 'ready') start();
     });
   }
-
-  // ===== OPEN =====
-  function open() {
-    if (!current) return;
-
-    if (current.number_of_seasons) {
-      askSeasonEpisode(current);
-    } else {
-      loadStreams(current); // 🔥 giữ nguyên logic phim lẻ
-    }
-  }
-
-  // ===== BUTTON (GIỮ NGUYÊN CỦA BẠN) =====
-  function addButton() {
-    $('.torrentio-btn').remove();
-
-    const btn = $('<div class="full-start__button selector torrentio-btn">')
-      .text('🔎 Torrentio')
-      .on('hover:enter', open);
-
-    $('.full-start-new__buttons').append(btn);
-  }
-
-  // ===== INIT =====
-  Lampa.Listener.follow('full', function (e) {
-    if (e.type === 'complite') {
-      current = e.data.movie || e.data.card || e.data;
-      setTimeout(addButton, 300); // 🔥 giữ nguyên fix của bạn
-    }
-  });
-
 })();
