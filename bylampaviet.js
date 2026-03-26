@@ -1701,3 +1701,3162 @@ Lampa.SettingsApi.addParam({
 				    });
 			}
 });
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'inter_movie',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Bộ sưu tập quốc tế',
+						description: 'Plugin thêm vào menu trái một mục với các bộ sưu tập phim quốc tế'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/inter_movie.js', 'Bộ sưu tập quốc tế', '@bylampa', 'inter_movie', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/inter_movie.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/inter_movie.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="inter_movie"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/inter_movie.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="inter_movie"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="inter_movie"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="inter_movie"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'rate_lampa',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Điểm Lampa',
+						description: 'Plugin thêm vào thẻ phim điểm Lampa, dựa trên đánh giá của người dùng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/rate_lampa.js', 'Điểm Lampa', '@AndreyURL54', 'rate_lampa', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/rate_lampa.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/rate_lampa.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="rate_lampa"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/rate_lampa.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="rate_lampa"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="rate_lampa"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="rate_lampa"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'old_cards_status',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Trạng thái trên thẻ cũ',
+						description: 'Thêm trạng thái phim, series,... trên thẻ với phong cách cũ'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/old_card_status.js', 'Trạng thái trên thẻ cũ', '@bylampa', 'old_cards_status', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/old_card_status.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/old_card_status.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="old_cards_status"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/old_card_status.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="old_cards_status"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="old_cards_status"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="old_cards_status"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'eps_and_seas',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Trạng thái series',
+						description: 'Plugin hiển thị trạng thái hiện tại của series (mùa/tập). Có thể bật/tắt trong cài đặt ứng dụng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/seas_and_eps.js', 'Trạng thái series', '@bylampa', 'eps_and_seas', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/seas_and_eps.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/seas_and_eps.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="eps_and_seas"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/seas_and_eps.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="eps_and_seas"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="eps_and_seas"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="eps_and_seas"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'anime_tmdb',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Anime',
+						description: 'Plugin thêm vào menu trái các bộ sưu tập anime từ TMDB'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/anime.js', 'Anime', '@bylampa', 'anime_tmdb', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/anime.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/anime.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="anime_tmdb"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/anime.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="anime_tmdb"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="anime_tmdb"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="anime_tmdb"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'my_bookmarks',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Đánh dấu của tôi',
+						description: 'Plugin cho phép tạo các thư mục riêng trong đánh dấu'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/my_bookmarks.js', 'Đánh dấu của tôi', '@bylampa', 'my_bookmarks', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/my_bookmarks.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/my_bookmarks.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="my_bookmarks"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/my_bookmarks.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="my_bookmarks"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="my_bookmarks"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="my_bookmarks"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'color_vote',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Điểm màu',
+						description: 'Plugin tô màu điểm đánh giá trên thẻ phim tùy theo giá trị'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/color_vote.js', 'Điểm màu', '@fovway', 'color_vote', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/color_vote.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/color_vote.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="color_vote"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/color_vote.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="color_vote"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="color_vote"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="color_vote"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'tr_itunes',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Trailer Itunes',
+						description: 'Plugin cho phép xem trailer từ Itunes trong thẻ phim'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://plugin.rootu.top/trailers.js', 'Trailer Itunes', '@rootu', 'tr_itunes', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://plugin.rootu.top/trailers.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://plugin.rootu.top/trailers.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="tr_itunes"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://plugin.rootu.top/trailers.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="tr_itunes"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="tr_itunes"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="tr_itunes"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'tr_rutube',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Trailer Rutube',
+						description: 'Plugin cho phép xem trailer từ Rutube trong thẻ phim'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://plugin.rootu.top/rutube.js', 'Trailer Rutube', '@rootu', 'tr_rutube', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://plugin.rootu.top/rutube.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://plugin.rootu.top/rutube.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="tr_rutube"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://plugin.rootu.top/rutube.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="tr_rutube"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="tr_rutube"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="tr_rutube"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'surs',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Aviamovie Surs',
+						description: 'Plugin tạo các bộ sưu tập phim và series độc đáo trên trang chính theo thể loại, dịch vụ phát trực tuyến, độ phổ biến, lượt xem và doanh thu phòng vé'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://aviamovie.github.io/surs.js', 'Aviamovie Surs', '@pilot_valliko', 'surs', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://aviamovie.github.io/surs.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://aviamovie.github.io/surs.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="surs"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://aviamovie.github.io/surs.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="surs"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="surs"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="surs"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+                Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'size',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Kích thước cố định',
+						description: 'Plugin thay đổi kích thước giao diện'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://nb557.github.io/plugins/fix_size.js', 'Kích thước cố định', '@t_anton', 'size', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://nb557.github.io/plugins/fix_size.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://nb557.github.io/plugins/fix_size.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="size"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://nb557.github.io/plugins/fix_size.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="size"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="size"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="size"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'stat',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Thống kê',
+						description: 'Plugin để thống kê lịch sử xem phim trong ứng dụng, và vào cuối năm - tạo trang tổng kết năm'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://and7ey.github.io/lampa/stats.js', 'Thống kê', '@alukyanov', 'stat', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://and7ey.github.io/lampa/stats.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://and7ey.github.io/lampa/stats.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="stat"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://and7ey.github.io/lampa/stats.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="stat"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="stat"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="stat"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'lable_tv',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Nhãn series',
+						description: 'Plugin thay đổi tên nhãn trên thẻ series (từ TV thành Series)'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/lable_serial.js', 'Nhãn series', '@bylampa', 'lable_tv', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/lable_serial.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/lable_serial.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="lable_tv"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/lable_serial.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="lable_tv"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="lable_tv"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="lable_tv"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'full_center',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Căn giữa thẻ',
+						description: 'Plugin căn giữa các phần tử trong thẻ phim cho phiên bản di động của ứng dụng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/full_center.js', 'Căn giữa thẻ', '@bylampa', 'full_center', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/full_center.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/full_center.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="full_center"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/full_center.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="full_center"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="full_center"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="full_center"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'bylampa_source',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Nguồn ByLAMPA',
+						description: 'Plugin thêm nguồn ByLAMPA, nơi bạn có thể sắp xếp/thay đổi cách hiển thị các phần theo ý thích'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/bylampa_source.js', 'Nguồn ByLAMPA', '@bylampa', 'bylampa_source', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/bylampa_source.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/bylampa_source.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="bylampa_source"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/bylampa_source.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="bylampa_source"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="bylampa_source"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="bylampa_source"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'trailers_on_main',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Trailer',
+						description: 'Plugin thêm vào menu chính mục Trailer với các phần khác nhau (Phim phổ biến, Đang chiếu, Sắp ra rạp, Series phổ biến, Series mới và mùa mới, Sắp chiếu trên TV)'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://mastermagic98.github.io/l_plugins/upcoming.js', 'Trailer', '@myroslav_kuzyshyn', 'trailers_on_main', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://mastermagic98.github.io/l_plugins/upcoming.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://mastermagic98.github.io/l_plugins/upcoming.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="trailers_on_main"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://mastermagic98.github.io/l_plugins/upcoming.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="trailers_on_main"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="trailers_on_main"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="trailers_on_main"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'tr_off',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Tắt trailer',
+						description: 'Plugin loại bỏ trailer trong thẻ phim'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/trailer_off.js', 'Tắt trailer', '@bylampa', 'tr_off', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/trailer_off.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/trailer_off.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="tr_off"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/trailer_off.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="tr_off"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="tr_off"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="tr_off"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'quality',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Quality',
+						description: 'Plugin đặt nhãn chất lượng phim trên thẻ và bên trong thẻ'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/quality.js', 'Quality', '@bylampa', 'quality', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/quality.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/quality.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="quality"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/quality.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="quality"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="quality"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="quality"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'filter_content',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Lọc nội dung',
+						description: 'Plugin cho phép lọc hiển thị thẻ phim trong ứng dụng thông qua cài đặt trong phần giao diện - mục Lọc nội dung'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/filter_content.js', 'Lọc nội dung', '@bylampa', 'filter_content', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/filter_content.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/filter_content.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="filter_content"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/filter_content.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="filter_content"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="filter_content"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="filter_content"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'rate_on_main',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Nguồn điểm',
+						description: 'Plugin thay đổi nguồn điểm trên trang chính thông qua cài đặt giao diện'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/rate_on_main.js', 'Nguồn điểm', '@bylampa', 'rate_on_main', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/rate_on_main.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/rate_on_main.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="rate_on_main"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/rate_on_main.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="rate_on_main"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="rate_on_main"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="rate_on_main"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'orig_title',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Tên gốc',
+						description: 'Plugin hiển thị tên gốc không dịch bên trong thẻ phim'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/orig_title.js', 'Tên gốc', '@bylampa', 'orig_title', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/orig_title.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/orig_title.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="orig_title"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/orig_title.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="orig_title"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="orig_title"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="orig_title"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+        Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'animated_reaction',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Phản hồi hoạt hình',
+						description: 'Plugin tạo hiệu ứng hoạt hình cho phản hồi từ CUB'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/animated_reaction.js', 'Phản hồi hoạt hình', '@AndreyURL54', 'animated_reaction', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/animated_reaction.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/animated_reaction.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="animated_reaction"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/animated_reaction.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="animated_reaction"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="animated_reaction"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="animated_reaction"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_interface_plugin',
+					param: {
+						name: 'time2end',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Time2end',
+						description: 'Plugin hiển thị thời gian kết thúc phim trong trình phát tích hợp của Lampa'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/time2end.js', 'Time2End', '@AndreyURL54', 'time2end', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/time2end.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+			                onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/time2end.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="time2end"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/time2end.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="time2end"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="time2end"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="time2end"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+        Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+							component: 'add_management_plugin',
+							name: 'Quản lý'
+						});
+					}
+		});
+/* Quản lý */
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_management_plugin',
+      		                        	type: 'static',
+						default: true
+                        		},
+					field: {
+                                name: icon_add_management_plugin
+                        },
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_management_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+      
+		Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+                               		name: 'Exit_Menu',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    name: 'Thoát',
+                                    description: 'Plugin thêm mục Thoát vào menu chính'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://tsynik.github.io/lampa/e.js', 'Thoát', '@tsynik', 'Exit_Menu', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://tsynik.github.io/lampa/e.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://tsynik.github.io/lampa/e.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Exit_Menu"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://tsynik.github.io/lampa/e.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Exit_Menu"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Exit_Menu"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Exit_Menu"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+      
+		Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+                               			name: 'Hot_Buttons',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+                            		field: {
+                                    		name: 'Phím tắt',
+                                    		description: 'Plugin gọi menu trình phát Lampa bằng các nút trên remote: 5 - danh sách phát, 8 - track âm thanh, 0 - phụ đề, channel+/- - tập tiếp theo/trước đó trong danh sách phát'
+                            		},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://nnmdd.github.io/lampa_hotkeys/hotkeys.js', 'Phím tắt', '@nnmd', 'Hot_Buttons', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://nnmdd.github.io/lampa_hotkeys/hotkeys.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://nnmdd.github.io/lampa_hotkeys/hotkeys.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Hot_Buttons"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://nnmdd.github.io/lampa_hotkeys/hotkeys.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Hot_Buttons"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Hot_Buttons"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Hot_Buttons"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+      
+		Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'DLNA',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'DLNA (Tizen, Orsay)',
+                                    		description: 'Plugin hoạt động trên thiết bị Orsay, đối với Tizen cần cập nhật widget lên phiên bản 1.9.1'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/dlna.js', 'DLNA', '@lampa', 'DLNA', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/dlna.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/dlna.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="DLNA"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/dlna.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="DLNA"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="DLNA"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="DLNA"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Select_Weapon',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Loại điều khiển',
+                                    		description: 'Plugin khi cài đặt cho phép chọn loại điều khiển (Remote không chuột, Remote có chuột, Cảm ứng), cũng như đặt lại loại điều khiển đã chọn trước đó'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://nemiroff.github.io/lampa/select_weapon.js', 'Loại điều khiển', '@nemiroff', 'Select_Weapon', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://nemiroff.github.io/lampa/select_weapon.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://nemiroff.github.io/lampa/select_weapon.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Select_Weapon"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://nemiroff.github.io/lampa/select_weapon.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Select_Weapon"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Select_Weapon"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Select_Weapon"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Touch_off',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Tắt cảm ứng',
+                                    		description: 'Plugin tắt điều khiển cảm ứng nếu nó đã được bật do nhầm lẫn'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://nb557.github.io/plugins/not_mobile.js', 'Tắt cảm ứng', '@t_anton', 'Touch_off', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://nb557.github.io/plugins/not_mobile.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://nb557.github.io/plugins/not_mobile.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Touch_off"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://nb557.github.io/plugins/not_mobile.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Touch_off"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Touch_off"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Touch_off"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Wsoff',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Wsoff',
+                                    		description: 'Plugin tắt lỗi (Request was denied for security) trên các phiên bản Android cũ. Không cài đặt nếu không có lỗi'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('http://plugin.rootu.top/wsoff.js', 'Wsoff', '@rootu', 'Wsoff', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://plugin.rootu.top/wsoff.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://plugin.rootu.top/wsoff.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Wsoff"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://plugin.rootu.top/wsoff.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Wsoff"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Wsoff"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Wsoff"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Redirect',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Đổi server',
+                                    		description: 'Plugin cho phép thay đổi server của ứng dụng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/redirect.js', 'Đổi server', '@scabrum', 'Redirect', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/redirect.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/redirect.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Redirect"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/redirect.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Redirect"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Redirect"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Redirect"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	       
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'setprotect',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Truy cập cài đặt',
+						description: 'Plugin khóa truy cập cài đặt bằng mật khẩu đã nhập khi kích hoạt mục tương ứng trong menu cài đặt kiểm soát của phụ huynh'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://193.233.134.21/plugins/setprotect', 'Truy cập cài đặt', '@AndreyURL54', 'setprotect', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://193.233.134.21/plugins/setprotect";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}	
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900');  hideInstall()
+						var myResult = checkPlugin('http://193.233.134.21/plugins/setprotect');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="setprotect"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://193.233.134.21/plugins/setprotect') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="setprotect"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="setprotect"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="setprotect"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Sort_mainmenu',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Sắp xếp menu chính',
+						description: 'Plugin cho phép tùy chỉnh menu chính (ẩn, di chuyển các mục menu). Hoạt động trên thiết bị cảm ứng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://193.233.134.21/plugins/menusort', 'Sắp xếp menu chính', '@AndreyURL54', 'Sort_mainmenu', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://193.233.134.21/plugins/menusort";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}	
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900');  hideInstall()
+						var myResult = checkPlugin('http://193.233.134.21/plugins/menusort');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Sort_mainmenu"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://193.233.134.21/plugins/menusort') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Sort_mainmenu"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Sort_mainmenu"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Sort_mainmenu"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'bind_but',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Gán nút',
+						description: 'Plugin cho phép điều khiển bằng các nút màu trên remote TV với các bộ lọc trong thẻ phim trực tuyến hoặc torrent'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://apxubatop.github.io/lmpPlugs/tvbuttontst.js', 'Gán nút', '@Juri_Z', 'bind_but', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://apxubatop.github.io/lmpPlugs/tvbuttontst.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}	
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900');  hideInstall()
+						var myResult = checkPlugin('https://apxubatop.github.io/lmpPlugs/tvbuttontst.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="bind_but"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://apxubatop.github.io/lmpPlugs/tvbuttontst.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="bind_but"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="bind_but"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="bind_but"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+                Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'infuse_save',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Infuse save',
+                                    		description: 'Plugin để lưu torrent, thông qua Torrserver vào Infuse. Được cài đặt sẵn, không có cấu hình. Gọi bằng cách nhấn giữ trong danh sách file'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://lampame.github.io/main/infuseSave.js', 'Infuse Save', '@lme', 'infuse_save', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://lampame.github.io/main/infuseSave.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://lampame.github.io/main/infuseSave.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="infuse_save"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://lampame.github.io/main/infuseSave.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="infuse_save"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="infuse_save"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="infuse_save"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+                Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'cub_sync',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'CUB Sync',
+                                    		description: 'Đồng bộ đánh dấu và lịch sử với CUB vào bộ nhớ cục bộ của ứng dụng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/cub_sync.js', 'CUB Sync', '@levende', 'cub_sync', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/cub_sync.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/cub_sync.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="cub_sync"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/cub_sync.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="cub_sync"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="cub_sync"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="cub_sync"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'Reload',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Tải lại ứng dụng',
+                                    		description: 'Plugin tạo biểu tượng trên thanh trên cùng để tải lại ứng dụng'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/reload.js', 'Tải lại ứng dụng', '@bylampa', 'Reload', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/reload.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/reload.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Reload"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/reload.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Reload"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Reload"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Reload"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'sort_main_menu',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+                                    		name: 'Sort main menu',
+                                    		description: 'Một plugin khác để sắp xếp menu chính. Cài đặt nằm trong phần giao diện, mục - Quản lý menu chính'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+						       itemON('https://bylampa.github.io/sort_main_menu.js', 'Sort Main Menu', '@bylampa', 'sort_main_menu', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/sort_main_menu.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/sort_main_menu.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="sort_main_menu"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/sort_main_menu.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="sort_main_menu"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="sort_main_menu"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="sort_main_menu"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	    Lampa.SettingsApi.addParam({
+					component: 'add_management_plugin',
+					param: {
+						name: 'speedtest',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+						},
+					field: {
+						name: 'Speedtest',
+						description: 'Plugin tạo nút trên thanh trên cùng để đo tốc độ internet'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/speedtest.js', 'Speedtest', '@AndreyURL54', 'speedtest', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/speedtest.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}	
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900');  hideInstall()
+						var myResult = checkPlugin('https://bylampa.github.io/speedtest.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="speedtest"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/speedtest.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="speedtest"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="speedtest"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="speedtest"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+        Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+							component: 'add_online_plugin',
+							name: 'Trực tuyến'
+						});
+					}
+		});
+/* Trực tuyến */
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_online_plugin',
+						type: 'static',
+						default: true
+                          		},
+					field: {
+						name: icon_add_online_plugin
+                          		},
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_online_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+                
+		Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                                		name: 'Online_Mod',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+					},
+              				},
+					field: {
+						name: 'Online_Mod',
+						description: 'Plugin cho phép xem phim và series trực tuyến. Có 7 máy chủ để lựa chọn'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/online_mod.js', 'Online Mod', '@t_anton', 'Online_Mod', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/online_mod.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/online_mod.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Online_Mod"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/online_mod.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Online_Mod"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Online_Mod"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Online_Mod"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+        });
+       
+		Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                                		name: 'Online_Prestige',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+					},
+					},
+					field: {
+						name: 'Online Filmix',
+						description: 'Plugin trực tuyến với một nguồn Filmix (hoạt động với tài khoản riêng)'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/fx.js', 'Online Filmix', '@rik', 'Online_Prestige', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/fx.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+               },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/fx.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Online_Prestige"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/fx.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Online_Prestige"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Online_Prestige"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Online_Prestige"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+        });
+       
+		Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                               			name: 'online_cinema',
+                   				type: 'select',
+                   				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                   				},
+               				},
+					field: {
+                                  		name: 'Online Cinema',
+                                  		description: 'Plugin để xem phim và series trực tuyến'
+					},
+                           		onChange: function(value) {
+					if (value == '1') {
+						itemON('https://bylampa.github.io/cinema.js', 'Online Cinema', '@cinema', 'online_cinema', nthChildIndex);
+					}
+					if (value == '2') {
+						var pluginToRemoveUrl = "https://bylampa.github.io/cinema.js";
+						deletePlugin(pluginToRemoveUrl, nthChildIndex);
+					}
+                },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/cinema.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="online_cinema"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/cinema.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="online_cinema"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="online_cinema"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="online_cinema"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        
+	        Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                               			name: 'Showy',
+                   				type: 'select',
+                   				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                   				},
+               				},
+					field: {
+                                  		name: 'Showy',
+                                  		description: 'Plugin để xem phim và series trực tuyến'
+					},
+                           		onChange: function(value) {
+					if (value == '1') {
+						itemON('http://showwwy.com/m.js', 'Showy', '@showy', 'Showy', nthChildIndex);
+					}
+					if (value == '2') {
+						var pluginToRemoveUrl = "http://showwwy.com/m.js";
+						deletePlugin(pluginToRemoveUrl, nthChildIndex);
+					}
+                },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://showwwy.com/m.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Showy"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://showwwy.com/m.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Showy"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Showy"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Showy"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                               			name: 'smotret_eu',
+                   				type: 'select',
+                   				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                   				},
+               				},
+					field: {
+                                  		name: 'Smotret EU',
+                                  		description: 'Plugin để xem phim và series trực tuyến, sử dụng một nguồn ổn định. Phù hợp hơn cho khu vực gần Hà Lan'
+					},
+                           		onChange: function(value) {
+					if (value == '1') {
+						itemON('http://smotret24.com/online.js', 'Smotret EU', '@showy', 'smotret_eu', nthChildIndex);
+					}
+					if (value == '2') {
+						var pluginToRemoveUrl = "http://smotret24.com/online.js";
+						deletePlugin(pluginToRemoveUrl, nthChildIndex);
+					}
+                },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://smotret24.com/online.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="smotret_eu"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://smotret24.com/online.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="smotret_eu"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="smotret_eu"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="smotret_eu"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+					            item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+                Lampa.SettingsApi.addParam({
+					component: 'add_online_plugin',
+					param: {
+                               			name: 'smotret_4k',
+                   				type: 'select',
+                   				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                   				},
+               				},
+					field: {
+                                  		name: 'Smotret 4K',
+                                  		description: 'Plugin để xem phim và series trực tuyến, sử dụng một nguồn ổn định với chất lượng 4K'
+					},
+                           		onChange: function(value) {
+					if (value == '1') {
+						itemON('http://smotretk.com/online.js', 'Smotret 4K', '@showy', 'smotret_4k', nthChildIndex);
+					}
+					if (value == '2') {
+						var pluginToRemoveUrl = "http://smotretk.com/online.js";
+						deletePlugin(pluginToRemoveUrl, nthChildIndex);
+					}
+                },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://smotretk.com/online.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="smotret_4k"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://smotretk.com/online.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="smotret_4k"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="smotret_4k"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="smotret_4k"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+/* Torrent */
+		Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+							component: 'add_torrent_plugin',
+							name: 'Torrent'
+						});
+					}
+		});
+                    
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+                                   		name: 'add_torrent_plugin',
+                                   		type: 'static',
+                                   		default: true
+                           		},
+					field: {
+                                   		name: icon_add_torrent_plugin
+                           		},
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_torrent_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+                    
+		Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'Switch_Parser',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+                  			},
+					field: {
+						name: 'Chuyển đổi trình phân tích',
+						description: 'Plugin cho phép chuyển đổi giữa các trình phân tích jackett từ danh sách đã có sẵn các tham số đúng. Trong cài đặt trình phân tích sẽ xuất hiện mục với danh sách các jackett công khai'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/jackett.js', 'Chuyển đổi trình phân tích', '@AndreyURL54', 'Switch_Parser', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/jackett.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/jackett.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Switch_Parser"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/jackett.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Switch_Parser"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Switch_Parser"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Switch_Parser"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+        
+		Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'Tracks',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Tracks',
+						description: 'Plugin thay đổi tên track âm thanh và phụ đề trong trình phát (chỉ hoạt động với torrent)'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/tracks.js', 'Tracks', '@lampa', 'Tracks', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/tracks.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/tracks.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Tracks"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/tracks.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Tracks"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Tracks"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Tracks"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'Setting_torrents',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Cài đặt torrent (Web OS, Tizen)',
+						description: 'Plugin dành cho TV, nơi Lampa được cài đặt qua cửa hàng chính thức LG Store và Tizen App Store. Bật trong cài đặt hiển thị các mục Parser và Torrserver, cần thiết để xem torrent'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/etor.js', 'Cài đặt torrent', '@lampa', 'Setting_torrents', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/etor.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/etor.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Setting_torrents"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/etor.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Setting_torrents"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Setting_torrents"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Setting_torrents"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'Check_server',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Tìm TorrServer cục bộ',
+						description: 'Plugin cho phép tìm TorrServer cục bộ của bạn'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://193.233.134.21/plugins/checker.js', 'Tìm TorrServer cục bộ', '@AndreyURL54', 'Check_server', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://193.233.134.21/plugins/checker.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://193.233.134.21/plugins/checker.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Check_server"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://193.233.134.21/plugins/checker.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Check_server"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Check_server"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Check_server"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	         Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'Torr_download',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Tải torrent',
+						description: 'Plugin thêm kết nối các trình torrent client như qBittorent, Transmission với khả năng tải torrent qua nó để xem cục bộ'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://lampame.github.io/main/torrentmanager/torrentmanager.js', 'Tải torrent', '@feliks', 'Torr_download', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://lampame.github.io/main/torrentmanager/torrentmanager.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://lampame.github.io/main/torrentmanager/torrentmanager.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Torr_download"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://lampame.github.io/main/torrentmanager/torrentmanager.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Torr_download"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Torr_download"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Torr_download"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'second_but_torrents',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Nút Torrent thứ hai',
+						description: 'Plugin thêm nút Torrent thứ hai'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://github.freebie.tom.ru/torrents.js', 'Nút Torrent thứ hai', '@VitalikPVA', 'second_but_torrents', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://github.freebie.tom.ru/torrents.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://github.freebie.tom.ru/torrents.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="second_but_torrents"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://github.freebie.tom.ru/torrents.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="second_but_torrents"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="second_but_torrents"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="second_but_torrents"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'free_torr',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Free Torrserver',
+						description: 'Plugin tự động cung cấp torrserver từ cơ sở dữ liệu của nó'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/freetorr.js', 'Free Torrserver', '@scabrum', 'free_torr', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/freetorr.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/freetorr.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="free_torr"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/freetorr.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="free_torr"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="free_torr"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="free_torr"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_torrent_plugin',
+					param: {
+						name: 'visual_ts',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Trực quan hóa tải TS',
+						description: 'Plugin hiển thị trực quan quá trình tải TS trước khi phát video qua torrent'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://plugin.rootu.top/ts-preload.js', 'Trực quan hóa tải TS', '@rootu', 'visual_ts', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://plugin.rootu.top/ts-preload.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+                                                }
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://plugin.rootu.top/ts-preload.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="visual_ts"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://plugin.rootu.top/ts-preload.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="visual_ts"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="visual_ts"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="visual_ts"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+		Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+							component: 'add_tv_plugin',
+							name: 'TV'
+						});
+					}
+		});
+/* TV */
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_tv_plugin',
+						type: 'static',
+						default: true
+					},
+					field: {
+						name: icon_add_tv_plugin
+					},
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_tv_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+	
+		Lampa.SettingsApi.addParam({
+					component: 'add_tv_plugin',
+					param: {
+						name: 'Diesel',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: 'Diesel TV',
+						description: 'Plugin để xem miễn phí các kênh TV và danh sách phát thương mại với chương trình TV và ghi hình lưu trữ'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://andreyurl54.github.io/diesel5/diesel.js', 'Diesel TV', '@AndreyURL54', 'Diesel', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://andreyurl54.github.io/diesel5/diesel.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://andreyurl54.github.io/diesel5/diesel.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Diesel"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://andreyurl54.github.io/diesel5/diesel.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Diesel"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Diesel"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Diesel"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+		Lampa.SettingsApi.addParam({
+					component: 'add_tv_plugin',
+					param: {
+						name: 'Kulik',
+                        			type: 'select',
+                        			values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                        		},
+					},
+					field: {
+						name: 'Kulik',
+						description: 'Plugin để xem các kênh IPTV, được sắp xếp theo nhiều danh mục khác nhau. Có thể thay đổi phong cách plugin, máy chủ phát sóng, cũng như thêm kênh vào mục yêu thích'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://cdn.kulik.uz/cors', 'Kulik TV', '@SawamuraRen', 'Kulik', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://cdn.kulik.uz/cors";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://cdn.kulik.uz/cors');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Kulik"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://cdn.kulik.uz/cors') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Kulik"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Kulik"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Kulik"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+		Lampa.SettingsApi.addParam({
+					component: 'add_tv_plugin',
+					param: {
+						name: 'IPTV',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+							name: 'IPTV',
+							description: 'Plugin để xem các kênh IPTV. Sắp xếp kênh theo nhóm và khả năng thêm kênh vào mục yêu thích. Chỉ hoạt động với danh sách phát của riêng bạn, được thêm trên trang https://cub.watch/iptv'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://cub.red/plugin/iptv', 'IPTV', '@lampa', 'IPTV', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://cub.red/plugin/iptv";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://cub.red/plugin/iptv');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="IPTV"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://cub.red/plugin/iptv') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="IPTV"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="IPTV"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="IPTV"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	        Lampa.SettingsApi.addParam({
+					component: 'add_tv_plugin',
+					param: {
+						name: 'Hack_TV',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+							name: 'Hack TV',
+							description: 'Plugin để xem các kênh IPTV'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/tv.js', 'Hack TV', '@scabrum', 'Hack_TV', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/tv.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/tv.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Hack_TV"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/tv.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Hack_TV"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Hack_TV"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Hack_TV"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+		Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+							component: 'add_radio_plugin',
+							name: 'Radio'
+						});
+					}
+		});
+/* Radio */
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_radio_plugin',
+						type: 'static',
+					default: true
+                         		},
+					field: {
+						name: icon_add_radio_plugin
+                         		},
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_radio_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+	
+		Lampa.SettingsApi.addParam({
+					component: 'add_radio_plugin',
+					param: {
+						name: 'Record',
+                        			type: 'select',
+                        			values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                        			},
+					},
+					field: {
+						name: 'Radio Record',
+						description: 'Nghe radio từ đài phát thanh Radio Record. Có hơn 50 thể loại, sẽ tìm được gu của bạn'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('http://cub.red/plugin/radio', 'Radio Record', '@lampa', 'Record', nthChildIndex);
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "http://cub.red/plugin/radio";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('http://cub.red/plugin/radio');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Record"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'http://cub.red/plugin/radio') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Record"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Record"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Record"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+	
+		Lampa.SettingsApi.addParam({
+					component: 'add_radio_plugin',
+					param: {
+						name: 'Record_Mod',
+       				                type: 'select',
+                       				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                        			},
+					},
+					field: {
+						name: 'Radio Record Mod',
+						description: 'Vẫn là plugin Radio Record, nhưng với một danh sách đài duy nhất không phân chia theo thể loại'
+					},
+					onChange: function(value) {
+                        			if (value == '1') {
+							itemON('https://lampame.github.io/main/rradio.js', 'Radio Record Mod', '@GwynnBleiidd', 'Record_Mod', nthChildIndex);
+                     				}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://lampame.github.io/main/rradio.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+                                        },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://lampame.github.io/main/rradio.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Record_Mod"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://lampame.github.io/main/rradio.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Record_Mod"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Record_Mod"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Record_Mod"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+
+	        Lampa.SettingsApi.addParam({
+					component: 'add_radio_plugin',
+					param: {
+						name: 'Radio_Soma',
+       				                type: 'select',
+                       				values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+                        			},
+					},
+					field: {
+						name: 'Radio SomaFM',
+						description: 'Hơn 30 kênh phát thanh độc đáo/alternative trên toàn thế giới, được hỗ trợ bởi người nghe, không quảng cáo.'
+					},
+					onChange: function(value) {
+                        			if (value == '1') {
+							itemON('https://tsynik.github.io/lampa/soma.js', 'Radio SomaFM', '@tsynik', 'Radio_Soma', nthChildIndex);
+                     				}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://tsynik.github.io/lampa/soma.js";
+							deletePlugin(pluginToRemoveUrl, nthChildIndex);
+						}
+                                        },
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://tsynik.github.io/lampa/soma.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="Radio_Soma"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://tsynik.github.io/lampa/soma.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="Radio_Soma"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="Radio_Soma"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="Radio_Soma"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);
+						    item.on("hover:enter", function (event) {
+                                                        nthChildIndex = focus_back(event);
+						    });
+					}
+		});
+/* 18+ */
+		Lampa.Settings.listener.follow('open', function (e) {
+					if (e.name == 'main') {
+						Lampa.SettingsApi.addComponent({
+                            component: 'add_sisi_plugin',
+							name: '18+'
+						});
+					}
+		});
+	
+		Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_sisi_plugin',
+						type: 'static',
+						default: true
+					},
+					field: {
+						name: icon_add_sisi_plugin
+					},
+					onRender: function(item) {
+						item.on('hover:enter', function () {
+							Lampa.Settings.create('add_sisi_plugin');
+							Lampa.Controller.enabled().controller.back = function(){
+								Lampa.Settings.create('add_plugin');
+							}
+						});
+					}
+		});
+	
+                Lampa.SettingsApi.addParam({
+					component: 'add_sisi_plugin',
+					param: {
+						name: 'sisi_durex',
+						type: 'select',
+						values: {
+							1:	'Cài đặt',
+							2:	'Gỡ bỏ',
+						},
+					},
+					field: {
+						name: '18+',
+						description: 'Plugin để xem nội dung 18+'
+					},
+					onChange: function(value) {
+						if (value == '1') {
+							itemON('https://bylampa.github.io/sisi.js', '18+', '@rik', 'sisi_durex');
+						}
+						if (value == '2') {
+							var pluginToRemoveUrl = "https://bylampa.github.io/sisi.js";
+							deletePlugin(pluginToRemoveUrl);
+						}
+					},
+					onRender: function (item) {$('.settings-param__name', item).css('color','f3d900'); hideInstall();
+						var myResult = checkPlugin('https://bylampa.github.io/sisi.js');
+                                                var pluginsArray = Lampa.Storage.get('plugins');
+                                                    setTimeout(function() {
+                                                       $('div[data-name="sisi_durex"]').append('<div class="settings-param__status one"></div>');
+                                                       var pluginStatus = null;
+                                                       for (var i = 0; i < pluginsArray.length; i++) {
+                                                          if (pluginsArray[i].url === 'https://bylampa.github.io/sisi.js') {
+                                                             pluginStatus = pluginsArray[i].status;
+                                                             break;
+                                                          }
+                                                       }
+                                                       if (myResult && pluginStatus !== 0) {
+                                                          $('div[data-name="sisi_durex"]').find('.settings-param__status').removeClass('active error').addClass('active');
+                                                       } else if (pluginStatus === 0) {
+                                                          $('div[data-name="sisi_durex"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
+                                                       } else {
+                                                          $('div[data-name="sisi_durex"]').find('.settings-param__status').removeClass('active error').addClass('error');
+                                                       }
+                                                    }, 100);	
+					}
+		});
+	
+/* Quảng cáo */
+      Lampa.SettingsApi.addParam({
+					component: 'add_plugin',
+					param: {
+						name: 'add_ads',
+      		                        	type: 'title'
+                        		},
+					field: {
+                                            name: ads
+                                        },
+                                        onRender: function (item) {
+                                            setTimeout(function() {
+                                               $('.settings-param-title').insertAfter($('.settings-param').last())
+                                            },0);
+                                        }
+         });	
+
+	 Lampa.Settings.listener.follow('open', function(e) {
+	    if (e.name == 'add_plugin') {
+                setTimeout(function() {
+			        if (document.querySelector("div > span > div > span")) {
+					if (document.querySelector("div > span > div > span").innerText == '@lampa_plugins_uncensored') {
+						$('div > span:contains("Еще")').parent().remove()
+						$('div > span:contains("Редактировать")').parent().remove()
+						$('div > span:contains("История")').parent().remove()
+						$('div > span:contains("Статус")').parent().remove()
+					}
+				}
+                }, 0);
+            }
+	   
+        });
+/* Yandex counter */   
+	(function(m, e, t, r, i, k, a) {
+                       m[i] = m[i] || function() {
+                               (m[i].a = m[i].a || []).push(arguments)
+                       };
+                       m[i].l = 1 * new Date();
+                       for(var j = 0; j < document.scripts.length; j++) {
+                               if(document.scripts[j].src === r) {
+                                       return;
+                               }
+                       }
+                       k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
+    })
+    (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    ym(93937344, "init", {clickmap: true,trackLinks: true,accurateTrackBounce: true})
+    var METRIKA = '<noscript><div><img src="https://mc.yandex.ru/watch/93937344" style="position:absolute; left:-9999px;" alt="" /></div></noscript>';
+    $('body').append(METRIKA);
+
+} // /* addonStart */
+
+if (!!window.appready) addonStart();
+else Lampa.Listener.follow('app', function(e){if (e.type === 'ready') addonStart()});	
+
+})();
