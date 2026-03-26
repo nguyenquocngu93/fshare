@@ -7,7 +7,7 @@
   const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
 
   // 🔥 TORRENTIO CONFIG (ĐÃ FIX)
-  const TORRENTIO = 'https://torrentio.strem.fun/sort=qualitysize|qualityfilter=1080p,720p|exclude=cam|limit=25';
+  const TORRENTIO = 'https://torrentio.strem.fun/sort=qualitysize|qualityfilter=1080p,720p|exclude=cam|limit=255';
 
   function start() {
     if (window[PLUGIN_KEY]) return;
