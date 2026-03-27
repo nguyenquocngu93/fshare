@@ -1,121 +1,95 @@
 (function () {
     'use strict';
 
-    // 1. ĐỊNH NGHĨA COMPONENT HIỂN THỊ (KKPhim Content)
     function KKPhimComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({mask: true, over: true});
         var items   = [];
-        var html    = $('<div></div>');
+        var html    = $('<div class="category-full"></div>');
         
         this.create = function () {
             var _this = this;
-            html.append(scroll.render());
 
-            // Hiển thị loading trong khi đợi API
-            Lampa.Select.show({
-                title: 'Đang tải KKPhim...',
-                items: []
-            });
-
-            // Gọi API lấy danh sách phim mới nhất
+            // Gọi API lấy danh sách phim mới
             network.silent('https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1', function (data) {
-                Lampa.Select.hide();
-                
                 if (data && data.items) {
-                    scroll.clear();
-                    
-                    // Tạo grid để chứa các poster phim
-                    var grid = $('<div class="category-full"></div>');
-                    
+                    // Tạo container chuẩn của Lampa để chứa card
+                    var body = $('<div class="items"></div>');
+
                     data.items.forEach(function (item) {
-                        // Chuẩn bị dữ liệu chuẩn cho Card của Lampa
-                        var card_data = {
+                        // FIX: Link ảnh poster từ KKPhim thường cần prefix nếu nó ko có http
+                        var img = item.poster_url;
+                        if(img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
+
+                        var card = Lampa.Template.get('card', {
                             title: item.name,
-                            original_title: item.origin_name,
-                            release_year: item.year || '2024',
-                            img: item.poster_url // Link poster trực tiếp từ KKPhim
-                        };
+                            release_year: item.year
+                        });
 
-                        // Tạo đối tượng Card (Poster)
-                        var card = Lampa.Template.get('card', card_data);
-                        card.addClass('selector');
+                        // Ép kiểu hiển thị poster
+                        card.addClass('card--fixed selector');
+                        card.find('.card__img').attr('src', img);
 
-                        // Xử lý khi bấm chọn phim
                         card.on('hover:enter', function () {
                             Lampa.Activity.push({
                                 url: 'https://phimapi.com/phim/' + item.slug,
                                 title: item.name,
-                                component: 'full_start', // Mở trang chi tiết nội dung của Lampa
+                                component: 'full_start',
                                 id: item._id,
                                 method: 'GET'
                             });
                         });
 
-                        grid.append(card);
+                        body.append(card);
                         items.push(card);
                     });
 
-                    scroll.append(grid);
+                    scroll.append(body);
+                    html.append(scroll.render());
 
-                    // Cấu hình điều khiển (Remote/Keyboard)
-                    Lampa.Controller.add('content', {
+                    // Kích hoạt điều khiển Remote
+                    Lampa.Controller.add('kk_content', {
                         toggle: function () {
-                            Lampa.Controller.collectionSet(scroll.render());
+                            Lampa.Controller.collectionSet(html);
                             Lampa.Controller.render();
                         },
-                        up: function () {},
-                        down: function () {},
                         back: function () {
                             Lampa.Activity.backward();
                         }
                     });
-                    Lampa.Controller.toggle('content');
-
-                } else {
-                    Lampa.Noty.show('Không tìm thấy dữ liệu phim.');
+                    Lampa.Controller.toggle('kk_content');
                 }
             }, function () {
-                Lampa.Select.hide();
-                Lampa.Noty.show('Lỗi kết nối đến máy chủ KKPhim.');
+                Lampa.Noty.show('Lỗi tải phim!');
             });
 
             return this.render();
         };
 
-        this.render = function () {
-            return html;
-        };
+        this.render = function () { return html; };
 
         this.destroy = function () {
             network.clear();
             scroll.destroy();
-            if (html) html.remove();
+            html.remove();
             items = [];
         };
     }
 
-    // 2. HÀM KHỞI CHẠY PLUGIN (Ghim Menu Sidebar)
+    // --- PHẦN MENU (GIỮ NGUYÊN NHƯ ĐÃ GHIM) ---
     function startPlugin() {
-        // Đăng ký component vào hệ thống Lampa
         Lampa.Component.add('kkphim_component', KKPhimComponent);
 
         function addMenuItem() {
-            // Kiểm tra tránh trùng lặp menu
             if ($('.menu .menu__list [data-action="kkphim"]').length > 0) return;
 
             var menu_item = $(`
                 <div class="menu__item selector" data-action="kkphim">
-                    <div class="menu__ico">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/>
-                        </svg>
-                    </div>
+                    <div class="menu__ico"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg></div>
                     <div class="menu__text">KKPhim</div>
                 </div>
             `);
 
-            // Sự kiện click menu
             menu_item.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: '',
@@ -126,24 +100,13 @@
                 Lampa.Menu.hide();
             });
 
-            // Chèn vào sidebar
             $('.menu .menu__list').append(menu_item);
         }
 
         if (window.appready) addMenuItem();
-        else {
-            Lampa.Listener.follow('app', function (e) {
-                if (e.type == 'ready') addMenuItem();
-            });
-        }
+        else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') addMenuItem(); });
     }
 
-    // KÍCH HOẠT PLUGIN TOÀN CỤC
     if (window.appready) startPlugin();
-    else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') startPlugin();
-        });
-    }
-
+    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') startPlugin(); });
 })();
