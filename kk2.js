@@ -1,31 +1,46 @@
 (function () {
     'use strict';
 
-    function kkphimPlugin() {
-        // 1. Tạo Component hiển thị nội dung khi bấm vào menu
-        Lampa.Component.add('kkphim_component', function (object) {
-            var network = new Lampa.Reguest();
-            var scroll  = new Lampa.Scroll({mask: true, over: true});
-            var items   = [];
-            var html    = $('<div></div>');
+    // ĐỊNH NGHĨA COMPONENT KKPHIM (Cấu trúc hiển thị nội dung)
+    function KKPhimComponent(object) {
+        var network = new Lampa.Reguest();
+        var scroll  = new Lampa.Scroll({mask: true, over: true});
+        var items   = [];
+        var html    = $('<div></div>');
+        
+        this.create = function () {
+            var _this = this;
+            html.append(scroll.render());
             
-            this.create = function () {
-                var _this = this;
-                html.append(scroll.render());
-                
-                // Hiển thị nội dung tạm thời
-                var info = $('<div class="category-full" style="padding: 20px; text-align: center;"><h2>KKPhim</h2><p>Dữ liệu sẽ hiển thị tại đây...</p></div>');
-                scroll.append(info);
-                return this.render();
-            };
+            // PHẦN NÀY ĐỂ CODE HIỂN THỊ DỮ LIỆU SAU NÀY
+            var info = $('<div class="category-full" style="padding: 20px; text-align: center;"><h2>KKPhim</h2><p>Dữ liệu sẽ hiển thị tại đây...</p></div>');
+            scroll.append(info);
+            
+            return this.render();
+        };
 
-            this.render = function () {
-                return html;
-            };
-        });
+        this.render = function () {
+            return html;
+        };
 
-        // 2. Hàm chèn Menu vào sidebar
+        this.destroy = function () {
+            network.clear();
+            scroll.destroy();
+            html.remove();
+            items = [];
+        };
+    }
+
+    // HÀM KHỞI CHẠY PLUGIN
+    function startPlugin() {
+        // 1. Đăng ký component với hệ thống Lampa
+        Lampa.Component.add('kkphim_component', KKPhimComponent);
+
+        // 2. Hàm chèn Menu vào Sidebar
         function addMenuItem() {
+            // Kiểm tra nếu menu đã tồn tại thì không chèn nữa
+            if ($('.menu .menu__list [data-action="kkphim"]').length > 0) return;
+
             var menu_item = $(`
                 <div class="menu__item selector" data-action="kkphim">
                     <div class="menu__ico">
@@ -37,6 +52,7 @@
                 </div>
             `);
 
+            // Sự kiện khi nhấn vào menu
             menu_item.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: '',
@@ -44,15 +60,14 @@
                     component: 'kkphim_component',
                     page: 1
                 });
-                // Đóng menu sau khi chọn (trên mobile)
-                Lampa.Menu.hide();
+                Lampa.Menu.hide(); // Ẩn sidebar sau khi chọn
             });
 
-            // Chèn vào cuối danh sách menu
+            // Chèn menu vào danh sách
             $('.menu .menu__list').append(menu_item);
         }
 
-        // Đợi app sẵn sàng thì chèn menu
+        // Chờ app sẵn sàng để chèn menu
         if (window.appready) addMenuItem();
         else {
             Lampa.Listener.follow('app', function (e) {
@@ -61,11 +76,12 @@
         }
     }
 
-    // Khởi chạy script
-    if (window.appready) kkphimPlugin();
+    // KÍCH HOẠT PLUGIN
+    if (window.appready) startPlugin();
     else {
         Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') kkphimPlugin();
+            if (e.type == 'ready') startPlugin();
         });
     }
+
 })();
