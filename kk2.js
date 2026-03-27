@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. CHÈN CSS NHÃN SỐ TẬP (Học từ lnum.js)
+    // 1. CSS DÁN NHÃN (Lấy cảm hứng từ lnum.js)
     Lampa.Template.add('kkphim_style', `
         <style>
             .card__kk-label {
@@ -22,41 +22,45 @@
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({mask: true, over: true});
         var items   = [];
-        var html    = $('<div class="category-full"></div>'); // LỚP VỎ 1
+        var html    = $('<div class="category-full"></div>'); // LỚP VỎ NGOÀI CÙNG
         
         this.create = function () { return this.render(); };
 
         this.start = function () {
             var _this = this;
+            
+            // Xóa sạch để load mới
+            scroll.clear();
             html.append(scroll.render());
 
             network.silent('https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1', function (data) {
                 if (data && data.items) {
-                    scroll.clear();
-                    
-                    // LỚP VỎ 2: "items" giúp dàn hàng ngang chuẩn Lampa
+                    // LỚP VỎ THỨ 2: "items" - Đây là class quyết định chia 2-3 cột trên mobile
                     var body = $('<div class="items"></div>');
 
                     data.items.forEach(function (item) {
+                        // FIX API ẢNH: Đảm bảo lấy đúng link poster
                         var img = item.poster_url;
                         if(img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
 
-                        // Tạo card chuẩn
+                        // Tạo card từ template chuẩn
                         var card = Lampa.Template.get('card', {
                             title: item.name,
-                            release_year: item.year
+                            release_year: item.year || '2026'
                         });
 
-                        // LỚP VỎ 3: "card--fixed" ép kích thước poster đều tăm tắp
+                        // ÉP CLASS BỐ TRÍ: card--fixed giúp poster đều nhau
                         card.addClass('card--fixed selector');
+                        
+                        // Nhét link ảnh vào đúng chỗ Lampa cần
                         card.find('.card__img').attr('src', img);
 
-                        // Chèn nhãn số tập (Chiêu của lnum.js)
+                        // Chèn nhãn tập phim (lnum style)
                         if (item.episode_current) {
                             card.find('.card__view').append('<div class="card__kk-label">' + item.episode_current + '</div>');
                         }
 
-                        // Xử lý Touch cho cảm ứng
+                        // Xử lý Touch cho điện thoại
                         card.on('click', function () {
                             Lampa.Activity.push({
                                 url: 'https://phimapi.com/phim/' + item.slug,
@@ -72,8 +76,6 @@
                     });
 
                     scroll.append(body);
-                    
-                    // Ép Lampa cập nhật lại vùng chọn để vuốt chạm mượt hơn
                     _this.activity.loader(false);
                 }
             });
@@ -89,7 +91,7 @@
         };
     }
 
-    // --- GIỮ NGUYÊN PHẦN SIDEBAR ĐÃ GHIM ---
+    // --- SIDEBAR (GIỮ NGUYÊN) ---
     function startPlugin() {
         Lampa.Component.add('kkphim_component', KKPhimComponent);
 
@@ -98,11 +100,7 @@
 
             var menu_item = $(`
                 <div class="menu__item selector" data-action="kkphim">
-                    <div class="menu__ico">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/>
-                        </svg>
-                    </div>
+                    <div class="menu__ico"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg></div>
                     <div class="menu__text">KKPhim</div>
                 </div>
             `);
