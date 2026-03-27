@@ -1,157 +1,153 @@
-(function() {
-    'use strict';
+/* KKPhim Plugin for Lampa - LNUM STYLE CARD
 
-    Lampa.Platform.tv(); // Khởi tạo platform TV
+Menu → Category rows (Netflix style)
 
-    /********** Component hiển thị danh sách phim KKPhim **********/
-    Lampa.Component.add('kkphim_category', {
-        render: function() {
-            this.page = 1;
-            this.loading = false;
-            this.cards = [];
+Card layout giống lnum
 
-            this.activity.append('<div class="cards"></div>');
-            this.container = this.activity.find('.cards');
+Dùng ảnh từ phimapi (img.phimapi.com)
 
-            this.loadPage(this.page);
-        },
+Không dùng torrent */
 
-        loadPage: function(page) {
-            if(this.loading) return;
-            this.loading = true;
 
-            let self = this;
-            $.getJSON(`https://api.kkphim.io/list?page=${page}`, function(res) {
-                if(res && res.data) {
-                    res.data.forEach(function(item) {
-                        let $card = $(
-                            '<div class="card" data-id="'+item.id+'">' +
-                            '<img src="'+item.image+'" />' +
-                            '<div class="card__title">'+item.title+'</div>' +
-                            '</div>'
-                        );
-                        $card.on('hover:enter', function() {
-                            Lampa.Activity.push({
-                                url: 'https://api.kkphim.io/detail/'+item.id,
-                                title: item.title,
-                                component: 'kkphim_detail',
-                                source: 'kkphim',
-                                card_type: true
-                            });
-                        });
-                        self.container.append($card);
-                        self.cards.push($card);
-                    });
-                }
+(function () { 'use strict';
 
-                self.loading = false;
+if (window.plugin_kkphim_lnum) return; window.plugin_kkphim_lnum = true;
+
+const API = 'https://phimapi.com';
+
+function startPlugin() {
+
+Lampa.Component.add('kkphim_home', {
+  name: 'KKPhim',
+
+  component: function () {
+
+    this.create = function () {};
+
+    this.build = function () {
+      this.activity.loader(true);
+
+      let rows = [
+        { title: 'Mới cập nhật', type: 'phim-moi-cap-nhat' },
+        { title: 'Phim lẻ', type: 'phim-le' },
+        { title: 'Phim bộ', type: 'phim-bo' },
+        { title: 'Hoạt hình', type: 'hoat-hinh' }
+      ];
+
+      let result = [];
+      let loaded = 0;
+
+      rows.forEach(row => {
+        loadCategory(row.type, (items) => {
+
+          result.push({
+            title: row.title,
+            items: items
+          });
+
+          loaded++;
+
+          if (loaded === rows.length) {
+            this.activity.loader(false);
+
+            this.activity.render({
+              title: 'KKPhim',
+              results: result
             });
-        }
-    });
+          }
 
-    /********** Component hiển thị chi tiết phim + chọn tập **********/
-    Lampa.Component.add('kkphim_detail', {
-        render: function() {
-            let self = this;
-            this.activity.append('<div class="detail">Đang tải phim...</div>');
-            $.getJSON(this.source.url, function(res) {
-                self.activity.find('.detail').html(
-                    '<h2>'+res.title+'</h2><img src="'+res.image+'" /><p>'+res.description+'</p>'
-                );
-
-                let $eps = $('<div class="episodes"></div>');
-                res.episodes.forEach(function(ep){
-                    let $btn = $('<div class="episode">Tập '+ep.number+'</div>');
-                    $btn.on('hover:enter', function(){
-                        alert('Bạn chọn Tập '+ep.number); // Thay bằng play video
-                    });
-                    $eps.append($btn);
-                });
-                self.activity.append($eps);
-            });
-        }
-    });
-
-    /********** Tạo menu trái **********/
-    function createMenu() {
-        const $menuItem = $(
-            '<li class="menu__item selector" data-action="kkphim_menu">' +
-            '<div class="menu__ico">' +
-            '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 512 512">' +
-            '<path fill="currentColor" fill-rule="evenodd" d="M368 214l-102 187c40 71 73 97 138 94 63-2 136-89 95-163L397 150c-3 12-25 55-28 63z"/>' +
-            '</svg>' +
-            '</div>' +
-            '<div class="menu__text">KKPhim</div>' +
-            '</li>'
-        );
-
-        $menuItem.on('hover:enter', function() {
-            Lampa.Activity.push({
-                url: 'https://api.kkphim.io/list',
-                title: 'KKPhim',
-                component: 'kkphim_category',
-                source: 'kkphim',
-                card_type: true,
-                page: 1
-            });
         });
+      });
+    };
 
-        $('.menu .menu__list').eq(0).append($menuItem);
-    }
+    this.open = function (item) {
+      this.activity.loader(true);
 
-    /********** Row ngang category trên homepage **********/
-    function createCategoryRow() {
-        const categories = ['Hành Động','Anime','Tình Cảm','Hài'];
-        categories.forEach(function(cat){
-            let $row = $('<div class="category-row"><h3>'+cat+'</h3><div class="cards"></div><div class="load-more">Xem thêm</div></div>');
-            $('body').append($row);
+      fetch(`${API}/phim/${item.url}`)
+        .then(r => r.json())
+        .then(json => {
+          this.activity.loader(false);
 
-            let page = 1;
-            let loading = false;
-            function loadCategory(){
-                if(loading) return;
-                loading = true;
-                $.getJSON('https://api.kkphim.io/list?category='+cat+'&page='+page, function(res){
-                    res.data.forEach(function(item){
-                        let $card = $('<div class="card" data-id="'+item.id+'">' +
-                            '<img src="'+item.image+'" />' +
-                            '<div class="card__title">'+item.title+'</div>' +
-                            '</div>');
-                        $card.on('hover:enter', function() {
-                            Lampa.Activity.push({
-                                url: 'https://api.kkphim.io/detail/'+item.id,
-                                title: item.title,
-                                component: 'kkphim_detail',
-                                source: 'kkphim',
-                                card_type: true
-                            });
-                        });
-                        $row.find('.cards').append($card);
-                    });
-                    loading = false;
-                });
+          let movie = json.movie;
+          let episodes = json.episodes;
+
+          let firstEp = null;
+
+          episodes.forEach(sv => {
+            sv.server_data.forEach(ep => {
+              if (!firstEp) firstEp = ep;
+            });
+          });
+
+          this.activity.render({
+            title: movie.name,
+            info: {
+              title: movie.name,
+              poster: movie.poster_url,
+              background_image: movie.poster_url,
+              description: movie.content
+            },
+            onEnter: function () {
+              if (!firstEp) return;
+
+              Lampa.Player.play({
+                url: firstEp.link_m3u8 || firstEp.link_embed,
+                title: movie.name
+              });
             }
+          });
 
-            $row.find('.load-more').on('hover:enter', function(){
-                page++;
-                loadCategory();
-            });
-
-            loadCategory();
         });
-    }
+    };
 
-    // Khởi tạo menu + category row khi app ready
-    if(window.appready) {
-        createMenu();
-        createCategoryRow();
-    } else {
-        Lampa.Listener.follow('app', function(e) {
-            if(e.type === 'ready') {
-                createMenu();
-                createCategoryRow();
-            }
+  }
+});
+
+// MENU
+Lampa.Listener.follow('menu', function (e) {
+  if (e.type === 'add') {
+    e.menu.push({
+      title: 'KKPhim',
+      action: function () {
+        Lampa.Activity.push({
+          url: 'kkphim_home',
+          title: 'KKPhim',
+          component: 'kkphim_home'
         });
-    }
+      }
+    });
+  }
+});
+
+function loadCategory(type, callback) {
+  let url = '';
+
+  if (type === 'phim-moi-cap-nhat') {
+    url = `${API}/danh-sach/phim-moi-cap-nhat?page=1`;
+  } else {
+    url = `${API}/v1/api/danh-sach/${type}?page=1`;
+  }
+
+  fetch(url)
+    .then(r => r.json())
+    .then(json => {
+      let items = (json.data?.items || json.items || []).map(mapItem);
+      callback(items);
+    });
+}
+
+function mapItem(item) {
+  return {
+    title: item.name,
+    poster: item.poster_url || item.thumb_url,
+    background_image: item.poster_url,
+    url: item.slug,
+    type: 'movie'
+  };
+}
+
+}
+
+if (window.appready) startPlugin(); else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 
 })();
