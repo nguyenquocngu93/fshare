@@ -1,185 +1,51 @@
-/* KKPhim Plugin for Lampa - LNUM STYLE CARD
+(function () {
+    'use strict';
 
-Menu → Category rows (Netflix style)
+    if (window.plugin_kkphim_ready) return;
+    window.plugin_kkphim_ready = true;
 
-Card layout giống lnum
+    function startPlugin() {
+        console.log('KKPhim plugin loaded');
 
-Dùng ảnh từ phimapi (img.phimapi.com)
+        // thêm menu bên trái giống anime.js
+        Lampa.Menu.add({
+            title: 'kkphim',
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none">' +
+                  '<path d="M4 4H20V20H4V4Z" stroke="white" stroke-width="2"/>' +
+                  '<path d="M9 8L16 12L9 16V8Z" fill="white"/>' +
+                  '</svg>',
+            onSelect: function () {
 
-Không dùng torrent */
+                // mở trang riêng giống anime.js
+                Lampa.Activity.push({
+                    url: '',
+                    title: 'KKPhim',
+                    component: 'kkphim_component'
+                });
 
-
-(function () { 'use strict';
-
-if (window.plugin_kkphim_lnum) return; window.plugin_kkphim_lnum = true;
-
-const API = 'https://phimapi.com';
-
-function startPlugin() {
-
-Lampa.Component.add('kkphim_home', {
-  name: 'KKPhim',
-
-  component: function () {
-
-    this.create = function () {};
-
-    this.build = function () {
-      this.activity.loader(true);
-
-      let rows = [
-        { title: 'Mới cập nhật', type: 'phim-moi-cap-nhat' },
-        { title: 'Phim lẻ', type: 'phim-le' },
-        { title: 'Phim bộ', type: 'phim-bo' },
-        { title: 'Hoạt hình', type: 'hoat-hinh' }
-      ];
-
-      let result = [];
-      let loaded = 0;
-
-      rows.forEach(row => {
-        loadCategory(row.type, (items) => {
-
-          result.push({
-            title: row.title,
-            items: items
-          });
-
-          loaded++;
-
-          if (loaded === rows.length) {
-            this.activity.loader(false);
-
-            this.activity.render({
-              title: 'KKPhim',
-              results: result
-            });
-          }
-
+            }
         });
-      });
-    };
 
-    this.open = function (item) {
-      this.activity.loader(true);
+        // tạo component hiển thị nội dung
+        Lampa.Component.add('kkphim_component', {
+            create: function () {
+                let html = $('<div class="kkphim-page" style="padding:20px;"></div>');
 
-      fetch(`${API}/phim/${item.url}`)
-        .then(r => r.json())
-        .then(json => {
-          this.activity.loader(false);
+                html.append('<div style="font-size:22px;font-weight:bold;margin-bottom:15px;">KKPhim</div>');
+                html.append('<div>Đang load dữ liệu...</div>');
 
-          let movie = json.movie;
-          let episodes = json.episodes;
-
-          let playList = [];
-
-          episodes.forEach(sv => {
-            sv.server_data.forEach(ep => {
-              playList.push({
-                title: ep.name,
-                url: ep.link_m3u8 || ep.link_embed
-              });
-            });
-          });
-
-          // CARD INFO + BUTTONS
-          this.activity.render({
-            title: movie.name,
-            info: {
-              title: movie.name,
-              poster: movie.poster_url,
-              background_image: movie.poster_url,
-              description: movie.content
+                return html;
             },
 
-            buttons: [
-              {
-                title: 'Phát',
-                action: function () {
-                  let first = playList[0];
-                  if (!first) return;
-
-                  Lampa.Player.play({
-                    url: first.url,
-                    title: movie.name
-                  });
-                }
-              },
-              {
-                title: 'Chọn tập',
-                action: () => {
-                  this.activity.render({
-                    title: movie.name + ' - Tập',
-                    items: playList,
-                    onEnter: function (ep) {
-                      Lampa.Player.play({
-                        url: ep.url,
-                        title: movie.name + ' - ' + ep.title
-                      });
-                    }
-                  });
-                }
-              }
-            ]
-          });
-
+            destroy: function () {
+                // cleanup nếu cần
+            }
         });
-    };
+    }
 
-  }
-});
-
-// MENU (anime.js style register)
-Lampa.Listener.follow('menu', function (e) {
-  if (e.type === 'add') {
-    e.menu.push({
-      title: 'KKPhim',
-      icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v16H4z"/></svg>',
-      component: 'kkphim_home',
-      action: function () {
-        Lampa.Activity.push({
-          url: 'kkphim_home',
-          title: 'KKPhim',
-          component: 'kkphim_home'
-        });
-      }
+    if (window.appready) startPlugin();
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') startPlugin();
     });
-  }
-});
-      }
-    });
-  }
-});
-
-function loadCategory(type, callback) {
-  let url = '';
-
-  if (type === 'phim-moi-cap-nhat') {
-    url = `${API}/danh-sach/phim-moi-cap-nhat?page=1`;
-  } else {
-    url = `${API}/v1/api/danh-sach/${type}?page=1`;
-  }
-
-  fetch(url)
-    .then(r => r.json())
-    .then(json => {
-      let items = (json.data?.items || json.items || []).map(mapItem);
-      callback(items);
-    });
-}
-
-function mapItem(item) {
-  return {
-    title: item.name,
-    poster: item.poster_url || item.thumb_url,
-    background_image: item.poster_url,
-    url: item.slug,
-    type: 'movie'
-  };
-}
-
-}
-
-if (window.appready) startPlugin(); else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 
 })();
