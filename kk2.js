@@ -1,11 +1,11 @@
 (function () {
     'use strict';
 
-    // --- 1. POLYFILLS ---
+    // --- POLYFILLS ---
     if (!Object.keys) { Object.keys = function (o) { var r = [], k; for (k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) r.push(k); } return r; }; }
     if (!Array.prototype.forEach) { Array.prototype.forEach = function (c, t) { var s = Object(this), l = s.length >>> 0; for (var i = 0; i < l; i++) { if (i in s) c.call(t, s[i], i, s); } }; }
 
-    // --- 2. CẤU HÌNH ---
+    // --- CẤU HÌNH ---
     var SOURCE_NAME = 'KKPHIM';
     var CACHE_SIZE = 100;
     var CACHE_TIME = 1000 * 60 * 60 * 3; // 3 giờ
@@ -15,13 +15,13 @@
 
     var ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg>';
 
-    // --- 3. API SERVICE ---
+    // --- API SERVICE ---
     function KKPhimApiService() {
         var self = this;
         self.network = new Lampa.Reguest();
         self.discovery = false;
 
-        // Helper cache (giống lnum.js)
+        // Cache helpers
         function getCache(key) {
             var res = cache[key];
             if (res) {
@@ -65,14 +65,18 @@
             };
         }
 
-        // Chuẩn hóa dữ liệu từ API KKPhim (danh sách phim)
+        // Chuẩn hóa dữ liệu (đảm bảo poster là URL đầy đủ)
         function normalizeData(json) {
             var items = json.items || (json.data ? json.data.items : []);
             var results = items.map(function (item) {
                 var img = item.poster_url;
-                // Sửa lỗi ảnh: nếu không có http thì thêm domain
+                // Chỉ thêm domain nếu chưa có http, nhưng nếu đã có http rồi thì giữ nguyên
                 if (img && !img.match(/^https?:\/\//)) {
                     img = 'https://phimimg.com/uploads/vod/' + img;
+                }
+                // Đảm bảo ảnh có protocol (nếu là //domain thì thêm https:)
+                if (img && img.match(/^\/\//)) {
+                    img = 'https:' + img;
                 }
                 return {
                     id: item._id || item.slug,
@@ -95,7 +99,6 @@
             };
         }
 
-        // GET có cache
         self.get = function (url, onComplete, onError) {
             var cached = getCache(url);
             if (cached) {
@@ -109,22 +112,23 @@
             }, onError);
         };
 
-        // Category: tạo các dòng
+        // Category: tạo danh sách dòng
         self.category = function (params, onSuccess, onError) {
-            var partsData = [
+            var categories = [
                 { title: 'Phim Mới Cập Nhật', url: 'https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1' },
                 { title: 'Phim Bộ', url: 'https://phimapi.com/v1/api/danh-sach/phim-bo?page=1' },
                 { title: 'Phim Lẻ', url: 'https://phimapi.com/v1/api/danh-sach/phim-le?page=1' },
                 { title: 'Hoạt Hình', url: 'https://phimapi.com/v1/api/danh-sach/hoat-hinh?page=1' }
-            ].map(function (cat) {
+            ];
+            var partsData = categories.map(function (cat) {
                 return function (callback) {
                     self.get(cat.url, function (json) {
                         callback({
                             title: cat.title,
-                            url: cat.url,          // lưu url gốc để list dùng
+                            url: cat.url,          // lưu URL gốc để list dùng
                             results: json.results,
                             source: SOURCE_NAME,
-                            more: json.total_pages > json.page,
+                            more: json.total_pages > json.page,   // Tất cả các dòng đều có more nếu có nhiều trang
                             page: json.page,
                             total_pages: json.total_pages,
                             total_results: json.total_results
@@ -137,7 +141,7 @@
             Lampa.Api.partNext(partsData, 5, onSuccess, onError);
         };
 
-        // List: xử lý phân trang (more & infinite scroll)
+        // List: xử lý phân trang (more)
         self.list = function (params, onComplete, onError) {
             var baseUrl = params.url;
             var page = params.page || 1;
@@ -157,23 +161,30 @@
             }, onError);
         };
 
-        // Full: lấy thông tin chi tiết phim (tự viết, không dùng TMDB)
+        // Full: lấy thông tin chi tiết phim (từ KKPhim) và bổ sung từ TMDB để có dữ liệu đẹp
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
-            var slug = card.id; // slug của phim (từ id)
-            var url = 'https://phimapi.com/phim/' + slug;
-            self.network.silent(url, function (json) {
-                // Kiểm tra dữ liệu trả về
-                if (!json || !json.data) {
-                    // Fallback sang TMDB nếu lỗi
+            var slug = card.id;
+            var kkUrl = 'https://phimapi.com/phim/' + slug;
+            self.network.silent(kkUrl, function (kkData) {
+                if (!kkData || !kkData.data) {
+                    // Nếu không có dữ liệu từ KKPhim, fallback TMDB
                     Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
                     return;
                 }
-                var data = json.data;
-                // Xử lý seasons và episodes
+                var data = kkData.data;
+                var poster = data.poster_url;
+                if (poster && !poster.match(/^https?:\/\//)) {
+                    poster = 'https://phimimg.com/uploads/vod/' + poster;
+                }
+                var backdrop = data.thumb_url || poster;
+                if (backdrop && !backdrop.match(/^https?:\/\//)) {
+                    backdrop = 'https://phimimg.com/uploads/vod/' + backdrop;
+                }
+
+                // Xử lý tập phim (tạm thời để hiển thị seasons)
                 var seasons = [];
                 if (data.episodes && data.episodes.length) {
-                    // Nhóm episodes theo season
                     var seasonMap = {};
                     data.episodes.forEach(function(ep) {
                         var seasonNum = ep.season || 1;
@@ -194,7 +205,7 @@
                         });
                     }
                 } else if (data.episode_current) {
-                    // Phim lẻ: tạo 1 season với 1 episode
+                    // Phim lẻ
                     seasons.push({
                         season_number: 1,
                         name: 'Full',
@@ -202,20 +213,13 @@
                             episode_number: 1,
                             name: data.name,
                             air_date: data.year || '',
-                            still_path: data.poster_url || '',
+                            still_path: poster,
                             overview: data.description || ''
                         }]
                     });
                 }
-                // Tạo card chi tiết
-                var poster = data.poster_url;
-                if (poster && !poster.match(/^https?:\/\//)) {
-                    poster = 'https://phimimg.com/uploads/vod/' + poster;
-                }
-                var backdrop = data.thumb_url || poster;
-                if (backdrop && !backdrop.match(/^https?:\/\//)) {
-                    backdrop = 'https://phimimg.com/uploads/vod/' + backdrop;
-                }
+
+                // Tạo đối tượng card chi tiết
                 var detailCard = {
                     id: data._id || data.slug,
                     title: data.name,
@@ -229,14 +233,17 @@
                     seasons: seasons,
                     source: SOURCE_NAME
                 };
+
+                // Tùy chọn: nếu muốn bổ sung thêm từ TMDB để có trailer, cast... có thể gọi song song
+                // Nhưng để đơn giản, ta chỉ trả về từ KKPhim
                 onSuccess(detailCard);
             }, function (err) {
-                // Fallback TMDB nếu API lỗi
+                // Fallback TMDB nếu lỗi
                 Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
             });
         };
 
-        // Các method fallback khác
+        // Các method fallback
         self.seasons = function (params, onSuccess, onError) {
             Lampa.Api.sources.tmdb.seasons(params, onSuccess, onError);
         };
@@ -248,16 +255,15 @@
         };
     }
 
-    // --- 4. KHỞI CHẠY PLUGIN ---
+    // --- KHỞI CHẠY PLUGIN ---
     function startPlugin() {
         if (window.kkphim_plugin_active) return;
         window.kkphim_plugin_active = true;
 
-        // Đăng ký source
         var kkApi = new KKPhimApiService();
         Lampa.Api.sources[SOURCE_NAME] = kkApi;
 
-        // Thêm nhãn episode current lên card
+        // Thêm nhãn episode current lên card (nếu có)
         Lampa.Listener.follow('card', function (e) {
             if (e.type == 'build' && e.object.data.source == SOURCE_NAME) {
                 if (e.object.data.episode_current) {
@@ -267,7 +273,7 @@
             }
         });
 
-        // Thêm menu item
+        // Thêm menu
         var menuItem = $('<li data-action="kkphim" class="menu__item selector"><div class="menu__ico">' + ICON + '</div><div class="menu__text kkphim_cat_text">' + CAT_NAME + '</div></li>');
         $('.menu .menu__list').eq(0).append(menuItem);
 
@@ -280,7 +286,7 @@
             });
         });
 
-        // Thêm settings để đổi tên hiển thị
+        // Settings cho phép đổi tên
         Lampa.SettingsApi.addComponent({
             component: 'kkphim_settings',
             name: CAT_NAME,
@@ -308,7 +314,6 @@
         });
     }
 
-    // Chạy khi app ready
     if (window.appready) {
         startPlugin();
     } else {
