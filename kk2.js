@@ -4,141 +4,152 @@
     var api_url = 'https://kkphimapi.com/';
     var img_url = 'https://phimimg.com/';
 
-    // Danh sách các thể loại muốn hiển thị ở trang chủ
-    var categories = [
-        { title: 'Phim Mới Cập Nhật', url: 'danh-sach/phim-moi-cap-nhat', type: 'new' },
-        { title: 'Phim Lẻ', url: 'v1/api/danh-sach/phim-le', type: 'list' },
-        { title: 'Phim Bộ', url: 'v1/api/danh-sach/phim-bo', type: 'list' },
-        { title: 'Hoạt Hình', url: 'v1/api/danh-sach/hoat-hinh', type: 'list' }
-    ];
-
     function KKPhim(object) {
         var network = new Lampa.RegExpHTTP();
         var scroll = new Lampa.Scroll({mask: true, over: true});
         var items = [];
         var html = $('<div></div>');
         var body = $('<div class="category-full"></div>');
-        var page = object.page || 1;
+        var info;
+        var last;
         var wait_load = false;
+        var page = object.page || 1;
 
         this.create = function () {
             var _this = this;
+            this.activity.loader(true);
 
-            // Nếu là trang danh mục cụ thể (khi bấm "Xem thêm")
+            // Nếu có URL tức là đang ở trang "Xem thêm" hoặc Search
             if (object.url) {
-                this.loadCategoryFull();
+                this.loadMore();
             } else {
-                // Nếu là trang chủ plugin (hiển thị các hàng ngang)
                 this.loadHome();
             }
 
             return this.render();
         };
 
-        // 1. GIAO DIỆN TRANG CHỦ (NHIỀU HÀNG)
         this.loadHome = function () {
             var _this = this;
-            this.activity.loader(true);
+            var categories = [
+                { title: 'Phim Mới', url: 'danh-sach/phim-moi-cap-nhat' },
+                { title: 'Phim Lẻ', url: 'v1/api/danh-sach/phim-le' },
+                { title: 'Phim Bộ', url: 'v1/api/danh-sach/phim-bo' }
+            ];
 
-            var requests = categories.map(function (cat) {
+            var promises = categories.map(function (cat) {
                 return new Promise(function (resolve) {
-                    network.silent(api_url + cat.url + '?page=1', function (data) {
-                        _this.buildRow(cat, data);
+                    var u = api_url + cat.url + (cat.url.indexOf('?') > -1 ? '&' : '?') + 'page=1';
+                    network.silent(u, function (res) {
+                        _this.buildRow(cat, res);
                         resolve();
                     }, resolve);
                 });
             });
 
-            Promise.all(requests).then(function () {
+            Promise.all(promises).then(function () {
                 _this.activity.loader(false);
                 _this.activity.toggle();
             });
         };
 
-        this.buildRow = function (cat, data) {
-            if (!data || !data.data || !data.data.items) return;
+        this.buildRow = function (cat, res) {
+            var data = res.data ? res.data.items : res.items;
+            if (!data || data.length === 0) return;
 
-            var row = $('<div class="category-images"></div>');
-            var title = $('<div class="category-images__title">' + cat.title + '</div>');
-            var body_row = $('<div class="category-images__body"></div>');
-            var more = $('<div class="category-images__item"><div class="category-images__more"><span>Xem thêm</span></div></div>');
-
-            data.data.items.slice(0, 10).forEach(function (item) {
-                var card = Lampa.Template.get('card', { title: item.name });
-                card.find('img').attr('src', img_url + item.thumb_url);
+            var row = $('<div class="category-images"><div class="category-images__title">' + cat.title + '</div><div class="category-images__body"></div></div>');
+            
+            data.slice(0, 12).forEach(function (item) {
+                var card = Lampa.Template.get('card', { title: item.name, original_title: item.origin_name });
+                card.find('img').attr('src', (item.thumb_url.indexOf('http') > -1 ? '' : img_url) + item.thumb_url);
+                
                 card.on('hover:enter', function () {
                     Lampa.Activity.push({ url: api_url + 'phim/' + item.slug, component: 'full_id', method: 'kkphim' });
                 });
-                body_row.append(card);
+                row.find('.category-images__body').append(card);
             });
 
-            // Sự kiện nút Xem thêm
+            // Nút Xem Thêm
+            var more = $('<div class="category-images__item"><div class="category-images__more"><span>Xem thêm</span></div></div>');
             more.on('hover:enter', function () {
-                Lampa.Activity.push({
-                    title: cat.title,
-                    url: cat.url,
-                    page: 1,
-                    component: 'kkphim'
-                });
+                Lampa.Activity.push({ title: cat.title, url: cat.url, component: 'kkphim', page: 1 });
             });
-
-            body_row.append(more);
-            row.append(title).append(body_row);
+            row.find('.category-images__body').append(more);
             body.append(row);
         };
 
-        // 2. GIAO DIỆN XEM TOÀN BỘ (INFINITE SCROLL)
-        this.loadCategoryFull = function () {
+        this.loadMore = function () {
             var _this = this;
-            this.activity.loader(true);
-
-            network.silent(api_url + object.url + '?page=' + page, function (data) {
-                if (data && data.data && data.data.items.length > 0) {
-                    data.data.items.forEach(function (item) {
+            var u = api_url + object.url + (object.url.indexOf('?') > -1 ? '&' : '?') + 'page=' + page;
+            
+            network.silent(u, function (res) {
+                var data = res.data ? res.data.items : res.items;
+                if (data && data.length > 0) {
+                    data.forEach(function (item) {
                         var card = Lampa.Template.get('card', { title: item.name });
-                        card.find('img').attr('src', img_url + item.thumb_url);
+                        card.find('img').attr('src', (item.thumb_url.indexOf('http') > -1 ? '' : img_url) + item.thumb_url);
                         card.on('hover:enter', function () {
                             Lampa.Activity.push({ url: api_url + 'phim/' + item.slug, component: 'full_id', method: 'kkphim' });
                         });
                         body.append(card);
                         items.push(card);
                     });
-
                     _this.activity.loader(false);
                     _this.activity.toggle();
                     wait_load = false;
                 }
             });
 
-            // Lắng nghe cuộn để load thêm
+            // Infinite Scroll logic
             scroll.onScroll = function () {
-                if (!wait_load && scroll.isIntersected(body.find('.card').last()[0])) {
-                    wait_load = true;
-                    page++;
-                    _this.loadCategoryFull();
+                if (!wait_load && items.length > 0) {
+                    var last_card = items[items.length - 1][0];
+                    if (scroll.isIntersected(last_card)) {
+                        wait_load = true;
+                        page++;
+                        _this.loadMore();
+                    }
                 }
             };
         };
 
-        this.render = function () {
-            return html.append(scroll.render().append(body));
-        };
+        this.render = function () { return html.append(scroll.render().append(body)); };
     }
 
-    function startPlugin() {
-        if (window.app_ready) {
-            Lampa.Component.add('kkphim', KKPhim);
-            Lampa.Menu.add({
-                id: 'kkphim',
-                title: 'KKPhim',
-                icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M10 18l6-6-6-6v12z" fill="#fff"/></svg>',
-                component: 'kkphim',
-                page: true
-            });
-        } else {
-            setTimeout(startPlugin, 100);
-        }
+    // --- CÁCH HIỆN MENU CHUẨN CỘNG ĐỒNG ---
+    function init() {
+        // Đăng ký component
+        Lampa.Component.add('kkphim', KKPhim);
+
+        // Thêm vào menu qua Listener để chắc chắn nó hiện
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type == 'ready' || e.type == 'menu') {
+                var menu_item = {
+                    id: 'kkphim',
+                    title: 'KKPhim',
+                    icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12L7 20V4L21 12Z" fill="currentColor"/></svg>',
+                    component: 'kkphim',
+                    page: true
+                };
+
+                // Kiểm tra xem đã có menu này chưa để tránh bị lặp
+                if ($('.menu [data-id="kkphim"]').length == 0) {
+                    Lampa.Menu.add(menu_item);
+                }
+            }
+        });
     }
 
-    startPlugin();
+    // Chạy init ngay lập tức
+    if (window.Lampa) init();
+    else {
+        // Dự phòng nếu script load trước cả core Lampa
+        var timer = setInterval(function(){
+            if(window.Lampa){
+                clearInterval(timer);
+                init();
+            }
+        }, 10);
+    }
+
 })();
