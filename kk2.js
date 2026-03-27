@@ -1,136 +1,64 @@
 (function () {
     'use strict';
 
-    if (window.plugin_kkphim_ready) return;
-    window.plugin_kkphim_ready = true;
+    function kkphimPlugin() {
+        // 1. Thêm mục vào menu bên trái
+        Lampa.Component.add('kkphim_component', function (object) {
+            var network = new Lampa.Reguest();
+            var scroll  = new Lampa.Scroll({mask: true, over: true});
+            var items   = [];
+            var html    = $('<div></div>');
+            
+            this.create = function () {
+                var _this = this;
+                
+                // Giao diện khi nhấn vào menu KKPhim
+                html.append(scroll.render());
+                
+                // Demo: Hiển thị dòng chữ thông báo
+                var info = $('<div class="category-full"><h2>Chào mừng đến với KKPhim</h2><p>Dữ liệu đang được tải...</p></div>');
+                scroll.append(info);
+                
+                return this.render();
+            };
 
-    Lampa.Platform.tv();
-
-    function start() {
-
-        // ===== MENU GIỐNG ANIME.JS =====
-        let icon = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M4 4h16v16H4z"/>
-            <path fill="#000" d="M10 8l6 4l-6 4z"/>
-        </svg>`;
-
-        let button = $(`
-            <li class="menu__item selector" data-action="kkphim">
-                <div class="menu__ico">${icon}</div>
-                <div class="menu__text">kkphim</div>
-            </li>
-        `);
-
-        button.on('hover:enter', function () {
-            Lampa.Activity.push({
-                title: 'KKPhim',
-                component: 'kkphim_home'
-            });
+            this.render = function () {
+                return html;
+            };
         });
 
-        $('.menu .menu__list').eq(0).append(button);
+        // 2. Đăng ký Menu item
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type == 'ready') {
+                var menu_item = $(`
+                    <div class="menu__item selector" data-action="kkphim">
+                        <svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="white"/>
+                        </svg>
+                        <div class="menu__text">KKPhim</div>
+                    </div>
+                `);
 
-        // ===== COMPONENT =====
-        Lampa.Component.add('kkphim_home', {
-            create: function () {
-
-                let html = $('<div class="kk-home"></div>');
-
-                let scroll = new Lampa.Scroll({
-                    mask: true,
-                    over: true
+                menu_item.on('hover:enter', function () {
+                    Lampa.Activity.push({
+                        url: '',
+                        title: 'KKPhim',
+                        component: 'kkphim_component',
+                        page: 1
+                    });
                 });
 
-                html.append(scroll.render());
-
-                let categories = [
-                    { title: 'Phim mới', url: 'https://phimapi.com/danh-sach/phim-moi-cap-nhat' },
-                    { title: 'Phim lẻ', url: 'https://phimapi.com/v1/api/danh-sach/phim-le' },
-                    { title: 'Phim bộ', url: 'https://phimapi.com/v1/api/danh-sach/phim-bo' }
-                ];
-
-                categories.forEach(cat => loadRow(scroll, cat));
-
-                return html;
+                // Chèn vào menu bên trái (thường là sau mục "Phim")
+                $('.menu .menu__list').append(menu_item);
             }
         });
-
-        // ===== LOAD ROW =====
-        function loadRow(scroll, cat) {
-
-            let row = $(`
-                <div style="margin-bottom:30px">
-                    <div style="font-size:20px;margin:10px 0">${cat.title}</div>
-                    <div class="kk-row"></div>
-                </div>
-            `);
-
-            let line = new Lampa.Scroll({
-                horizontal: true,
-                mask: true
-            });
-
-            row.find('.kk-row').append(line.render());
-            scroll.append(row);
-
-            fetch(cat.url)
-                .then(r => r.json())
-                .then(data => {
-
-                    let items = data.items || data.data?.items || [];
-
-                    items.forEach(item => {
-
-                        let card = Lampa.Template.get('card', {
-                            title: item.name,
-                            poster: item.poster_url || item.thumb_url
-                        });
-
-                        let el = $(card);
-
-                        el.on('hover:enter', function () {
-                            openDetail(item);
-                        });
-
-                        line.append(el);
-                    });
-
-                    line.update();
-                });
-        }
-
-        // ===== DETAIL + PLAY =====
-        function openDetail(item) {
-
-            fetch('https://phimapi.com/phim/' + item.slug)
-                .then(r => r.json())
-                .then(data => {
-
-                    let movie = data.movie;
-                    let episodes = data.episodes?.[0]?.server_data || [];
-
-                    let list = episodes.map(ep => ({
-                        title: ep.name,
-                        url: ep.link_m3u8 || ep.link_embed
-                    }));
-
-                    Lampa.Select.show({
-                        title: movie.name,
-                        items: list,
-                        onSelect: function (a) {
-                            Lampa.Player.play(a.url);
-                        }
-                    });
-
-                });
-        }
-
     }
 
-    if (window.appready) start();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') start();
-    });
-
+    // Khởi chạy plugin
+    if (window.appready) kkphimPlugin();
+    else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type == 'ready') kkphimPlugin();
+        });
+    }
 })();
