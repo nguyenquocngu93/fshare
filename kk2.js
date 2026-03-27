@@ -4,48 +4,46 @@
     if (window.plugin_kkphim_ready) return;
     window.plugin_kkphim_ready = true;
 
-    function startPlugin() {
-        console.log('KKPhim plugin loaded');
+    Lampa.Platform.tv();
 
-        // thêm menu bên trái giống anime.js
-        Lampa.Menu.add({
-            title: 'kkphim',
-            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none">' +
-                  '<path d="M4 4H20V20H4V4Z" stroke="white" stroke-width="2"/>' +
-                  '<path d="M9 8L16 12L9 16V8Z" fill="white"/>' +
-                  '</svg>',
-            onSelect: function () {
+    function start() {
 
-                // mở trang riêng giống anime.js
-                Lampa.Activity.push({
-                    url: '',
-                    title: 'KKPhim',
-                    component: 'kkphim_component'
-                });
+        // icon đẹp (play + box)
+        let icon = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M4 4h16v16H4z"/>
+            <path fill="#000" d="M10 8l6 4l-6 4z"/>
+        </svg>`;
 
-            }
+        // tạo menu giống anime.js
+        let button = $(`
+            <li class="menu__item selector" data-action="kkphim">
+                <div class="menu__ico">${icon}</div>
+                <div class="menu__text">kkphim</div>
+            </li>
+        `);
+
+        // hành động khi bấm
+        button.on('hover:enter', function () {
+
+            Lampa.Activity.push({
+                url: '', // sau này bạn gắn API kkphim vào đây
+                title: 'KKPhim',
+                component: 'category_full',
+                source: 'tmdb', // tạm dùng tmdb UI
+                card_type: true,
+                page: 1
+            });
+
         });
 
-        // tạo component hiển thị nội dung
-        Lampa.Component.add('kkphim_component', {
-            create: function () {
-                let html = $('<div class="kkphim-page" style="padding:20px;"></div>');
-
-                html.append('<div style="font-size:22px;font-weight:bold;margin-bottom:15px;">KKPhim</div>');
-                html.append('<div>Đang load dữ liệu...</div>');
-
-                return html;
-            },
-
-            destroy: function () {
-                // cleanup nếu cần
-            }
-        });
+        // gắn vào menu trái
+        $('.menu .menu__list').eq(0).append(button);
     }
 
-    if (window.appready) startPlugin();
+    if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') startPlugin();
+        if (e.type === 'ready') start();
     });
 
 })();
