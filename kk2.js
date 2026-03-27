@@ -4,28 +4,29 @@
     if (window.plugin_kkphim_ready) return;
     window.plugin_kkphim_ready = true;
 
-    if (!Object.keys) { Object.keys = function (o) { var r = [], k; for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) r.push(k); return r; }; }
-    if (!Array.prototype.forEach) { Array.prototype.forEach = function (c, t) { var s = Object(this), l = s.length >>> 0; for (var i = 0; i < l; i++) if (i in s) c.call(t, s[i], i, s); }; }
+    Lampa.Platform.tv();
 
+    // ===== CONFIG =====
     var SOURCE_NAME = 'KKPHIM';
-    var KKPHIM_API_URL = 'https://kkphim.vip/api';
-    var IMG_BASE_URL = 'https://phimimg.com';
+    var API = 'https://phimapi.com';
     var CACHE_TIME = 1000 * 60 * 60 * 3;
-
     var cache = {};
-    var CATEGORIES = [];
-    var categories_loaded = false;
-
     var TMDB_KEY = Lampa.TMDB.key();
 
     var ICON = '<svg width="36" height="36" viewBox="0 0 24 24"><path fill="white" d="M12 2C6 2 2 6 2 12s4 10 10 10 10-4 10-10S18 2 12 2zm-2 14V8l6 4-6 4z"/></svg>';
 
-    function fixImageUrl(img) {
-        if (!img) return '';
-        if (img.startsWith('http')) return img;
-        return IMG_BASE_URL + (img.startsWith('/') ? img : '/uploads/' + img);
-    }
+    // ===== FIX ẢNH =====
+    var originalImg = Lampa.Api.img;
+    Lampa.Api.img = function (path, size, source) {
+        if (source === SOURCE_NAME) {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            return 'https://phimimg.com/' + path;
+        }
+        return originalImg.call(this, path, size, source);
+    };
 
+    // ===== CACHE =====
     function getCache(key) {
         var c = cache[key];
         if (c && Date.now() - c.time < CACHE_TIME) return c.data;
@@ -36,41 +37,19 @@
         cache[key] = { time: Date.now(), data: data };
     }
 
-    function loadCategories(callback) {
-        new Lampa.Reguest().silent(KKPHIM_API_URL + '/the-loai', function (json) {
-            if (json && json.items) {
-                CATEGORIES = json.items.map(function (c) {
-                    return {
-                        title: c.name,
-                        url: KKPHIM_API_URL + '/the-loai/' + c.slug + '?page=1'
-                    };
-                });
-            }
-            categories_loaded = true;
-            callback && callback();
-        }, function () {
-            CATEGORIES = [
-                { title: 'Phim mới', url: KKPHIM_API_URL + '/phim-moi?page=1' },
-                { title: 'Phim bộ', url: KKPHIM_API_URL + '/phim-bo?page=1' },
-                { title: 'Phim lẻ', url: KKPHIM_API_URL + '/phim-le?page=1' }
-            ];
-            categories_loaded = true;
-            callback && callback();
-        });
-    }
-
+    // ===== NORMALIZE =====
     function normalize(json) {
         var items = json.items || json.data?.items || [];
 
         return {
             results: items.map(function (i) {
-                var poster = fixImageUrl(i.poster_url || i.thumb_url);
                 return {
                     id: i._id || i.slug,
                     title: i.name,
                     name: i.name,
-                    poster_path: poster,
-                    backdrop_path: poster,
+                    poster_path: i.poster_url || i.thumb_url,
+                    backdrop_path: i.poster_url || i.thumb_url,
+                    img: i.poster_url || i.thumb_url,
                     overview: i.content || '',
                     release_date: i.year || '',
                     vote_average: i.vote_average || 0,
@@ -85,6 +64,7 @@
         };
     }
 
+    // ===== TMDB MATCH =====
     function findMatch(list, title, year) {
         return list.find(function (r) {
             var n = (r.title || r.name || '').toLowerCase();
@@ -93,6 +73,7 @@
         }) || list[0];
     }
 
+    // ===== API =====
     function KK() {
         var net = new Lampa.Reguest();
 
@@ -108,12 +89,15 @@
         };
 
         this.category = function (p, ok, err) {
-            if (!categories_loaded) {
-                loadCategories(() => this.category(p, ok, err));
-                return;
-            }
 
-            var parts = CATEGORIES.map(cat => next => {
+            var categories = [
+                { title: 'Phim mới', url: API + '/danh-sach/phim-moi-cap-nhat?page=1' },
+                { title: 'Phim lẻ', url: API + '/v1/api/danh-sach/phim-le?page=1' },
+                { title: 'Phim bộ', url: API + '/v1/api/danh-sach/phim-bo?page=1' },
+                { title: 'Hoạt hình', url: API + '/v1/api/danh-sach/hoat-hinh?page=1' }
+            ];
+
+            var parts = categories.map(cat => next => {
                 this.get(cat.url, function (json) {
                     next({
                         title: cat.title,
@@ -132,7 +116,6 @@
         this.list = function (p, ok, err) {
             var url = p.url.replace(/page=\d+/, 'page=' + p.page);
             if (!/page=/.test(url)) url += (url.includes('?') ? '&' : '?') + 'page=' + p.page;
-
             this.get(url, ok, err);
         };
 
@@ -157,11 +140,18 @@
 
         this.seasons = Lampa.Api.sources.tmdb.seasons;
         this.person = Lampa.Api.sources.tmdb.person;
+
+        this.clear = function () {
+            net.clear();
+            cache = {};
+        };
     }
 
     function start() {
+
         Lampa.Api.sources[SOURCE_NAME] = new KK();
 
+        // label tập
         Lampa.Listener.follow('card', function (e) {
             if (e.type === 'build' && e.object.data.source === SOURCE_NAME) {
                 if (e.object.data.episode_current) {
@@ -171,30 +161,24 @@
             }
         });
 
-        function addMenuItem() {
-            if ($('[data-action="kkphim"]').length) return;
+        // ===== MENU (GIỮ NGUYÊN STYLE ANIME.JS) =====
+        var button = $(
+            '<li class="menu__item selector" data-action="kkphim">' +
+            '<div class="menu__ico">' + ICON + '</div>' +
+            '<div class="menu__text">kkphim</div>' +
+            '</li>'
+        );
 
-            var menu_item = $(`
-                <li class="menu__item selector" data-action="kkphim">
-                    <div class="menu__ico">${ICON}</div>
-                    <div class="menu__text kkphim_cat_text">KKPHIM</div>
-                </li>
-            `);
-
-            menu_item.on('hover:enter', function () {
-                Lampa.Activity.push({
-                    title: 'KKPhim',
-                    component: 'category',
-                    source: SOURCE_NAME,
-                    page: 1
-                });
+        button.on('hover:enter', function () {
+            Lampa.Activity.push({
+                title: 'KKPhim',
+                component: 'category',
+                source: SOURCE_NAME,
+                page: 1
             });
+        });
 
-            $('.menu .menu__list').eq(0).append(menu_item);
-        }
-
-        if (window.appready) addMenuItem();
-        else Lampa.Listener.follow('app', e => e.type === 'ready' && addMenuItem());
+        $('.menu .menu__list').eq(0).append(button);
     }
 
     if (window.appready) start();
