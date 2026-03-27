@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. COMPONENT HIỂN THỊ (KKPhim Content)
+    // 1. COMPONENT HIỂN THỊ (KKPhim Content) - Tối ưu cho Touch
     function KKPhimComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({mask: true, over: true});
@@ -11,31 +11,31 @@
         this.create = function () {
             var _this = this;
 
-            // Gọi API lấy danh sách phim mới
+            // Gọi API lấy phim mới
             network.silent('https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1', function (data) {
                 if (data && data.items) {
                     scroll.clear();
                     
-                    // Dùng div với class "items" để Lampa tự chia cột
+                    // Container "items" để chia cột poster tự động
                     var body = $('<div class="items"></div>');
 
                     data.items.forEach(function (item) {
-                        // Xử lý link ảnh
+                        // Fix link ảnh poster
                         var img = item.poster_url;
                         if(img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
 
-                        // Tạo card bằng Template mặc định để tránh lỗi Constructor
+                        // Tạo card từ template mặc định
                         var card = Lampa.Template.get('card', {
                             title: item.name,
                             release_year: item.year
                         });
 
-                        // Ép class để hiển thị chuẩn
+                        // Thêm class chuẩn để hiện poster đẹp trên cảm ứng
                         card.addClass('card--fixed selector');
                         card.find('.card__img').attr('src', img);
 
-                        // Sự kiện khi nhấn vào phim
-                        card.on('hover:enter', function () {
+                        // Sự kiện CHẠM (Click/Touch) để mở phim
+                        card.on('click', function () {
                             Lampa.Activity.push({
                                 url: 'https://phimapi.com/phim/' + item.slug,
                                 title: item.name,
@@ -51,21 +51,12 @@
 
                     scroll.append(body);
                     html.append(scroll.render());
-
-                    // Điều khiển Remote
-                    Lampa.Controller.add('kk_content', {
-                        toggle: function () {
-                            Lampa.Controller.collectionSet(html);
-                            Lampa.Controller.render();
-                        },
-                        back: function () {
-                            Lampa.Activity.backward();
-                        }
-                    });
-                    Lampa.Controller.toggle('kk_content');
+                    
+                    // Với Touchscreen, chỉ cần thông báo Activity đã sẵn sàng
+                    _this.activity.loader(false);
                 }
             }, function () {
-                Lampa.Noty.show('Lỗi kết nối API KKPhim!');
+                Lampa.Noty.show('Lỗi kết nối KKPhim!');
             });
 
             return this.render();
@@ -81,7 +72,7 @@
         };
     }
 
-    // 2. PHẦN MENU ĐÃ GHIM (Sidebar)
+    // 2. PHẦN MENU SIDEBAR (GIỮ ĐÚNG CẤU TRÚC ĐÃ GHIM)
     function startPlugin() {
         Lampa.Component.add('kkphim_component', KKPhimComponent);
 
@@ -99,23 +90,32 @@
                 </div>
             `);
 
-            menu_item.on('hover:enter', function () {
+            // Chạm vào menu sidebar để mở
+            menu_item.on('click', function () {
                 Lampa.Activity.push({
                     url: '',
                     title: 'KKPhim',
                     component: 'kkphim_component',
                     page: 1
                 });
-                Lampa.Menu.hide();
+                Lampa.Menu.hide(); // Ẩn menu sau khi chạm
             });
 
             $('.menu .menu__list').append(menu_item);
         }
 
         if (window.appready) addMenuItem();
-        else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') addMenuItem(); });
+        else {
+            Lampa.Listener.follow('app', function (e) {
+                if (e.type == 'ready') addMenuItem();
+            });
+        }
     }
 
     if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') startPlugin(); });
+    else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type == 'ready') startPlugin();
+        });
+    }
 })();
