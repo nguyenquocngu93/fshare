@@ -5,18 +5,20 @@
     if (!Object.keys) { Object.keys = function (o) { var r = [], k; for (k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) r.push(k); } return r; }; }
     if (!Array.prototype.forEach) { Array.prototype.forEach = function (c, t) { var s = Object(this), l = s.length >>> 0; for (var i = 0; i < l; i++) { if (i in s) c.call(t, s[i], i, s); } }; }
 
-    // --- CẤU HÌNH GIỐNG LNUM ---
+    // --- CẤU HÌNH ---
     var SOURCE_NAME = 'KKPHIM';
-    var KKPHIM_API_URL = 'https://phimapi.com';
-    var IMG_BASE_URL = 'https://phimimg.com/uploads/vod/';
+    var KKPHIM_API_URL = 'https://kkphim.vip/api';
+    var IMG_BASE_URL = 'https://phimimg.com';
     var CACHE_SIZE = 100;
     var CACHE_TIME = 1000 * 60 * 60 * 3; // 3h
     var cache = {};
     
     var CAT_NAME = Lampa.Storage.get('kkphim_settings_cat_name', SOURCE_NAME);
+    var TMDB_KEY = Lampa.TMDB.key(); // Sử dụng key có sẵn của Lampa
+    
     var ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg>';
 
-    // --- FIX ẢNH: Ghi đè hàm Lampa.Api.img giống lnum ---
+    // --- FIX ẢNH: Ghi đè hàm Lampa.Api.img ---
     var originalImgFunc = Lampa.Api.img;
     Lampa.Api.img = function(path, size, source) {
         if (source === SOURCE_NAME || (path && (path.indexOf('phimimg.com') > -1 || path.indexOf(IMG_BASE_URL) > -1))) {
@@ -25,7 +27,34 @@
         return originalImgFunc.call(this, path, size, source);
     };
 
-    // --- API SERVICE (Cấu trúc giống lnum.js) ---
+    // --- LẤY DANH SÁCH CATEGORY TỪ KKPHIM.VIP ---
+    var CATEGORIES = [];
+
+    function loadCategories() {
+        var network = new Lampa.Reguest();
+        network.silent(KKPHIM_API_URL + '/the-loai', function(json) {
+            if (json && json.items) {
+                CATEGORIES = json.items.map(function(cat) {
+                    return {
+                        title: cat.name,
+                        slug: cat.slug,
+                        url: KKPHIM_API_URL + '/the-loai/' + cat.slug + '?page=1'
+                    };
+                });
+            }
+        }, function(err) {
+            console.error('Không thể tải categories:', err);
+            // Fallback categories nếu không tải được
+            CATEGORIES = [
+                { title: 'Phim Mới', slug: 'phim-moi', url: KKPHIM_API_URL + '/phim-moi?page=1' },
+                { title: 'Phim Bộ', slug: 'phim-bo', url: KKPHIM_API_URL + '/phim-bo?page=1' },
+                { title: 'Phim Lẻ', slug: 'phim-le', url: KKPHIM_API_URL + '/phim-le?page=1' },
+                { title: 'Hoạt Hình', slug: 'hoat-hinh', url: KKPHIM_API_URL + '/hoat-hinh?page=1' }
+            ];
+        });
+    }
+
+    // --- API SERVICE ---
     function KKPhimApiService() {
         var self = this;
         self.network = new Lampa.Reguest();
@@ -78,31 +107,38 @@
             };
         }
 
-        // Chuẩn hóa dữ liệu
+        // Chuẩn hóa URL ảnh
+        function fixImageUrl(img) {
+            if (!img) return '';
+            if (img.match(/^https?:\/\//)) return img;
+            if (img.match(/^\/\//)) return 'https:' + img;
+            if (img.indexOf('/uploads/') === 0) return IMG_BASE_URL + img;
+            return IMG_BASE_URL + '/uploads/vod/' + img;
+        }
+
+        // Chuẩn hóa dữ liệu từ API
         function normalizeData(json) {
             var items = json.items || (json.data ? json.data.items : []);
+            var results = items.map(function (item) {
+                return {
+                    id: item._id || item.slug || item.id,
+                    title: item.name,
+                    name: item.name,
+                    poster_path: fixImageUrl(item.poster_url || item.thumb_url),
+                    img: fixImageUrl(item.poster_url || item.thumb_url),
+                    overview: item.description || item.content || '',
+                    release_date: item.year ? String(item.year) : '',
+                    vote_average: item.vote_average || 0,
+                    episode_current: item.episode_current || '',
+                    type: item.type === 'single' ? 'movie' : 'tv',
+                    source: SOURCE_NAME
+                };
+            });
             return {
-                results: items.map(function (item) {
-                    var img = item.poster_url;
-                    if (img && !img.match(/^https?:\/\//)) {
-                        img = IMG_BASE_URL + img;
-                    }
-                    return {
-                        id: item._id || item.slug,
-                        title: item.name,
-                        name: item.name,
-                        poster_path: img,
-                        img: img,
-                        overview: item.description || '',
-                        release_date: item.year ? String(item.year) : '',
-                        vote_average: item.vote_average || 0,
-                        episode_current: item.episode_current || '',
-                        source: SOURCE_NAME
-                    };
-                }),
-                page: json.pagination ? json.pagination.currentPage : 1,
-                total_pages: json.pagination ? Math.ceil(json.pagination.totalItems / (json.pagination.totalItemsPerPage || 10)) : 1,
-                total_results: json.pagination ? json.pagination.totalItems : items.length
+                results: results,
+                page: json.pagination ? json.pagination.currentPage : (json.current_page || 1),
+                total_pages: json.pagination ? Math.ceil(json.pagination.totalItems / (json.pagination.totalItemsPerPage || 10)) : (json.total_pages || 1),
+                total_results: json.pagination ? json.pagination.totalItems : (json.total || results.length)
             };
         }
 
@@ -119,16 +155,17 @@
             }, onError);
         };
 
-        // Category: Tạo danh sách các dòng (giống lnum)
+        // Category: Tạo danh sách tất cả các dòng từ categories
         self.category = function (params, onSuccess, onError) {
-            var categories = [
-                { title: 'Phim Mới Cập Nhật', url: KKPHIM_API_URL + '/danh-sach/phim-moi-cap-nhat?page=1' },
-                { title: 'Phim Bộ', url: KKPHIM_API_URL + '/v1/api/danh-sach/phim-bo?page=1' },
-                { title: 'Phim Lẻ', url: KKPHIM_API_URL + '/v1/api/danh-sach/phim-le?page=1' },
-                { title: 'Hoạt Hình', url: KKPHIM_API_URL + '/v1/api/danh-sach/hoat-hinh?page=1' }
-            ];
+            // Nếu categories chưa load xong, chờ và retry
+            if (CATEGORIES.length === 0) {
+                setTimeout(function() {
+                    self.category(params, onSuccess, onError);
+                }, 500);
+                return;
+            }
             
-            var partsData = categories.map(function (cat) {
+            var partsData = CATEGORIES.map(function (cat) {
                 return function (callback) {
                     self.get(cat.url, function (json) {
                         callback({
@@ -169,13 +206,14 @@
             }, onError);
         };
 
-        // Full: Thông tin chi tiết (dùng TMDB để có đủ dữ liệu)
+        // Full: Thông tin chi tiết (dùng TMDB nếu có key)
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
             var searchTitle = card.title || card.name;
             var searchYear = card.release_date ? String(card.release_date).substring(0, 4) : '';
             
-            var searchUrl = 'https://api.themoviedb.org/3/search/multi?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&query=' + encodeURIComponent(searchTitle);
+            // Tìm kiếm trên TMDB
+            var searchUrl = 'https://api.themoviedb.org/3/search/multi?api_key=' + TMDB_KEY + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&query=' + encodeURIComponent(searchTitle);
             
             if (searchYear) {
                 searchUrl += '&year=' + searchYear;
@@ -187,7 +225,7 @@
                     var mediaType = bestMatch.media_type || (bestMatch.first_air_date ? 'tv' : 'movie');
                     var tmdbId = bestMatch.id;
                     
-                    var detailUrl = 'https://api.themoviedb.org/3/' + mediaType + '/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&append_to_response=credits,videos';
+                    var detailUrl = 'https://api.themoviedb.org/3/' + mediaType + '/' + tmdbId + '?api_key=' + TMDB_KEY + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&append_to_response=credits,videos';
                     
                     self.network.silent(detailUrl, function (detailData) {
                         var tmdbCard = {
@@ -233,10 +271,13 @@
         };
     }
 
-    // --- KHỞI CHẠY PLUGIN (Cấu trúc giống lnum) ---
+    // --- KHỞI CHẠY PLUGIN ---
     function startPlugin() {
         if (window.kkphim_plugin_active) return;
         window.kkphim_plugin_active = true;
+
+        // Load categories từ API
+        loadCategories();
 
         // Đăng ký source
         var kkApi = new KKPhimApiService();
@@ -252,7 +293,7 @@
             }
         });
 
-        // Thêm menu item (giống lnum)
+        // Thêm menu item
         function addMenuItem() {
             if ($('.menu .menu__list [data-action="kkphim"]').length > 0) return;
             
@@ -275,7 +316,7 @@
             $('.menu .menu__list').eq(0).append(menu_item);
         }
 
-        // Thêm settings (giống lnum)
+        // Thêm settings
         Lampa.SettingsApi.addComponent({
             component: 'kkphim_settings',
             name: CAT_NAME,
