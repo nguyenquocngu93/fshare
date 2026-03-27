@@ -1,11 +1,11 @@
 (function () {
     'use strict';
 
-    // ========== POLYFILLS (giữ lại) ==========
+    // --- 1. POLYFILLS (giữ từ lnum.js) ---
     if (!Object.keys) { Object.keys = function (o) { var r = [], k; for (k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) r.push(k); } return r; }; }
     if (!Array.prototype.forEach) { Array.prototype.forEach = function (c, t) { var s = Object(this), l = s.length >>> 0; for (var i = 0; i < l; i++) { if (i in s) c.call(t, s[i], i, s); } }; }
 
-    // ========== CẤU HÌNH ==========
+    // --- 2. CẤU HÌNH ---
     var SOURCE_NAME = 'KKPHIM';
     var CACHE_SIZE = 100;
     var CACHE_TIME = 1000 * 60 * 60 * 3; // 3 giờ
@@ -13,22 +13,20 @@
 
     var CAT_NAME = Lampa.Storage.get('kkphim_settings_cat_name', SOURCE_NAME);
 
-    // Icon SVG (giữ nguyên)
     var ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 16.5V7.5L16 12L10 16.5Z" fill="white"/></svg>';
 
-    // ========== API SERVICE ==========
+    // --- 3. API SERVICE (sửa lỗi ảnh và phân trang) ---
     function KKPhimApiService() {
         var self = this;
         self.network = new Lampa.Reguest();
-        self.discovery = false; // để Lampa biết đây không phải discovery source
+        self.discovery = false;
 
-        // --- Cache helper (dùng đúng cơ chế của lnum.js) ---
+        // Helper cache
         function getCache(key) {
             var res = cache[key];
             if (res) {
                 var cache_timestamp = Date.now() - CACHE_TIME;
                 if (res.timestamp > cache_timestamp) return res.value;
-                // Xóa cache cũ
                 for (var id in cache) {
                     var node = cache[id];
                     if (!(node && node.timestamp > cache_timestamp)) delete cache[id];
@@ -41,7 +39,6 @@
             var timestamp = Date.now();
             var size = Object.keys(cache).length;
 
-            // Xóa nếu vượt quá kích thước
             if (size >= CACHE_SIZE) {
                 var cache_timestamp = timestamp - CACHE_TIME;
                 for (var id in cache) {
@@ -68,12 +65,15 @@
             };
         }
 
-        // --- Chuẩn hóa dữ liệu từ API KKPhim ---
+        // Chuẩn hóa dữ liệu từ API KKPhim
         function normalizeData(json) {
             var items = json.items || (json.data ? json.data.items : []);
             var results = items.map(function (item) {
                 var img = item.poster_url;
-                if (img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
+                // Sửa lỗi ảnh: thêm domain nếu thiếu
+                if (img && !img.match(/^https?:\/\//)) {
+                    img = 'https://phimimg.com/uploads/vod/' + img;
+                }
                 return {
                     id: item._id || item.slug,
                     title: item.name,
@@ -95,7 +95,7 @@
             };
         }
 
-        // --- GET với cache ---
+        // GET có cache
         self.get = function (url, onComplete, onError) {
             var cached = getCache(url);
             if (cached) {
@@ -109,9 +109,8 @@
             }, onError);
         };
 
-        // --- Method bắt buộc: category (hiển thị danh sách dòng) ---
+        // Category: tạo các dòng
         self.category = function (params, onSuccess, onError) {
-            // Các dòng hiển thị ở trang chủ
             var partsData = [
                 { title: 'Phim Mới Cập Nhật', url: 'https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1' },
                 { title: 'Phim Bộ', url: 'https://phimapi.com/v1/api/danh-sach/phim-bo?page=1' },
@@ -122,9 +121,10 @@
                     self.get(cat.url, function (json) {
                         callback({
                             title: cat.title,
+                            url: cat.url,          // lưu url gốc để list dùng
                             results: json.results,
                             source: SOURCE_NAME,
-                            more: json.total_pages > json.page, // có thêm trang không
+                            more: json.total_pages > json.page,
                             page: json.page,
                             total_pages: json.total_pages,
                             total_results: json.total_results
@@ -134,23 +134,16 @@
                     });
                 };
             });
-
-            // Chạy lần lượt các dòng, tối đa 5 dòng cùng lúc (như lnum)
             Lampa.Api.partNext(partsData, 5, onSuccess, onError);
         };
 
-        // --- Method bắt buộc: list (gọi khi nhấn "xem thêm" hoặc phân trang) ---
+        // List: xử lý phân trang (more & infinite scroll)
         self.list = function (params, onComplete, onError) {
-            // params.url có dạng: "base__phim-moi-cap-nhat?page=1"
-            // Ta cần parse để lấy url và page
-            var url = params.url;
+            var baseUrl = params.url;
             var page = params.page || 1;
-            // Nếu url chưa có page thì thêm vào
-            if (url.indexOf('?') === -1) {
-                url += '?page=' + page;
-            } else {
-                url = url.replace(/page=\d+/, 'page=' + page);
-                if (url.indexOf('page=') === -1) url += '&page=' + page;
+            var url = baseUrl.replace(/page=\d+/, 'page=' + page);
+            if (url.indexOf('page=') === -1) {
+                url += (url.indexOf('?') === -1 ? '?' : '&') + 'page=' + page;
             }
 
             self.get(url, function (json) {
@@ -164,27 +157,22 @@
             }, onError);
         };
 
-        // --- Method bắt buộc: full (thông tin chi tiết phim) ---
+        // Các method fallback cho chi tiết phim, seasons, person
         self.full = function (params, onSuccess, onError) {
-            // Gọi TMDB làm fallback (vì KKPhim không có chi tiết đầy đủ)
             Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
         };
-
-        // --- Các method khác (cần có để tránh lỗi) ---
         self.seasons = function (params, onSuccess, onError) {
             Lampa.Api.sources.tmdb.seasons(params, onSuccess, onError);
         };
-
         self.person = function (params, onSuccess, onError) {
             Lampa.Api.sources.tmdb.person(params, onSuccess, onError);
         };
-
         self.clear = function () {
             self.network.clear();
         };
     }
 
-    // ========== KHỞI TẠO PLUGIN ==========
+    // --- 4. KHỞI CHẠY PLUGIN ---
     function startPlugin() {
         if (window.kkphim_plugin_active) return;
         window.kkphim_plugin_active = true;
@@ -193,7 +181,7 @@
         var kkApi = new KKPhimApiService();
         Lampa.Api.sources[SOURCE_NAME] = kkApi;
 
-        // Thêm nhãn episode current lên card (tương tự lnum có thể có cardClass riêng)
+        // Thêm nhãn episode current lên card
         Lampa.Listener.follow('card', function (e) {
             if (e.type == 'build' && e.object.data.source == SOURCE_NAME) {
                 if (e.object.data.episode_current) {
@@ -203,7 +191,7 @@
             }
         });
 
-        // --- Thêm menu ---
+        // Thêm menu item
         var menuItem = $('<li data-action="kkphim" class="menu__item selector"><div class="menu__ico">' + ICON + '</div><div class="menu__text kkphim_cat_text">' + CAT_NAME + '</div></li>');
         $('.menu .menu__list').eq(0).append(menuItem);
 
@@ -216,14 +204,13 @@
             });
         });
 
-        // --- Thêm settings (giống lnum) ---
+        // Thêm settings để đổi tên hiển thị
         Lampa.SettingsApi.addComponent({
             component: 'kkphim_settings',
             name: CAT_NAME,
             icon: ICON
         });
 
-        // Cho phép đổi tên hiển thị trên menu
         Lampa.SettingsApi.addParam({
             component: 'kkphim_settings',
             param: {
@@ -245,7 +232,7 @@
         });
     }
 
-    // Chạy khi app sẵn sàng
+    // Chạy khi app ready
     if (window.appready) {
         startPlugin();
     } else {
