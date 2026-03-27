@@ -1,40 +1,62 @@
 (function () {
     'use strict';
 
-    // 1. COMPONENT HIỂN THỊ (KKPhim Content) - Tối ưu cho Touch
+    // 1. CHÈN CSS NHÃN SỐ TẬP (Học từ lnum.js)
+    Lampa.Template.add('kkphim_style', `
+        <style>
+            .card__kk-label {
+                position: absolute;
+                top: 0.5em;
+                left: 0.5em;
+                background: #e74c3c;
+                color: #fff;
+                padding: 0.1em 0.5em;
+                border-radius: 0.2em;
+                font-size: 0.75em;
+                z-index: 5;
+            }
+        </style>
+    `);
+
     function KKPhimComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({mask: true, over: true});
         var items   = [];
-        var html    = $('<div class="category-full"></div>');
+        var html    = $('<div class="category-full"></div>'); // LỚP VỎ 1
         
-        this.create = function () {
-            var _this = this;
+        this.create = function () { return this.render(); };
 
-            // Gọi API lấy phim mới
+        this.start = function () {
+            var _this = this;
+            html.append(scroll.render());
+
             network.silent('https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1', function (data) {
                 if (data && data.items) {
                     scroll.clear();
                     
-                    // Container "items" để chia cột poster tự động
+                    // LỚP VỎ 2: "items" giúp dàn hàng ngang chuẩn Lampa
                     var body = $('<div class="items"></div>');
 
                     data.items.forEach(function (item) {
-                        // Fix link ảnh poster
                         var img = item.poster_url;
                         if(img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
 
-                        // Tạo card từ template mặc định
+                        // Tạo card chuẩn
                         var card = Lampa.Template.get('card', {
                             title: item.name,
                             release_year: item.year
                         });
 
-                        // Thêm class chuẩn để hiện poster đẹp trên cảm ứng
+                        // LỚP VỎ 3: "card--fixed" ép kích thước poster đều tăm tắp
                         card.addClass('card--fixed selector');
                         card.find('.card__img').attr('src', img);
 
-                        // Sự kiện CHẠM (Click/Touch) để mở phim
+                        // Chèn nhãn số tập (Chiêu của lnum.js)
+                        if (item.episode_current) {
+                            card.find('.card__view').append('<div class="card__kk-label">' + item.episode_current + '</div>');
+                        }
+
+                        // Xử lý Touch cho cảm ứng
                         card.on('click', function () {
                             Lampa.Activity.push({
                                 url: 'https://phimapi.com/phim/' + item.slug,
@@ -50,16 +72,11 @@
                     });
 
                     scroll.append(body);
-                    html.append(scroll.render());
                     
-                    // Với Touchscreen, chỉ cần thông báo Activity đã sẵn sàng
+                    // Ép Lampa cập nhật lại vùng chọn để vuốt chạm mượt hơn
                     _this.activity.loader(false);
                 }
-            }, function () {
-                Lampa.Noty.show('Lỗi kết nối KKPhim!');
             });
-
-            return this.render();
         };
 
         this.render = function () { return html; };
@@ -72,7 +89,7 @@
         };
     }
 
-    // 2. PHẦN MENU SIDEBAR (GIỮ ĐÚNG CẤU TRÚC ĐÃ GHIM)
+    // --- GIỮ NGUYÊN PHẦN SIDEBAR ĐÃ GHIM ---
     function startPlugin() {
         Lampa.Component.add('kkphim_component', KKPhimComponent);
 
@@ -90,7 +107,6 @@
                 </div>
             `);
 
-            // Chạm vào menu sidebar để mở
             menu_item.on('click', function () {
                 Lampa.Activity.push({
                     url: '',
@@ -98,24 +114,16 @@
                     component: 'kkphim_component',
                     page: 1
                 });
-                Lampa.Menu.hide(); // Ẩn menu sau khi chạm
+                Lampa.Menu.hide();
             });
 
             $('.menu .menu__list').append(menu_item);
         }
 
         if (window.appready) addMenuItem();
-        else {
-            Lampa.Listener.follow('app', function (e) {
-                if (e.type == 'ready') addMenuItem();
-            });
-        }
+        else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') addMenuItem(); });
     }
 
     if (window.appready) startPlugin();
-    else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') startPlugin();
-        });
-    }
+    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') startPlugin(); });
 })();
