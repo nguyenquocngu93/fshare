@@ -5,10 +5,13 @@
     if (!Object.keys) { Object.keys = function (o) { var r = [], k; for (k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) r.push(k); } return r; }; }
     if (!Array.prototype.forEach) { Array.prototype.forEach = function (c, t) { var s = Object(this), l = s.length >>> 0; for (var i = 0; i < l; i++) { if (i in s) c.call(t, s[i], i, s); } }; }
 
-    // --- CẤU HÌNH ---
+    // --- CẤU HÌNH API (giống lnum.js) ---
     var SOURCE_NAME = 'KKPHIM';
+    var KKPHIM_API_URL = 'https://phimapi.com';
+    var IMG_BASE_URL = 'https://phimimg.com/uploads/vod/';
+    
     var CACHE_SIZE = 100;
-    var CACHE_TIME = 1000 * 60 * 60 * 3; // 3 giờ
+    var CACHE_TIME = 1000 * 60 * 60 * 3;
     var cache = {};
 
     var CAT_NAME = Lampa.Storage.get('kkphim_settings_cat_name', SOURCE_NAME);
@@ -65,25 +68,31 @@
             };
         }
 
-        // Chuẩn hóa dữ liệu (đảm bảo poster là URL đầy đủ)
+        // Lấy URL ảnh đúng cách
+        function getImageUrl(imgPath) {
+            if (!imgPath) return '';
+            // Nếu đã có http hoặc https thì giữ nguyên
+            if (imgPath.match(/^https?:\/\//)) {
+                return imgPath;
+            }
+            // Nếu bắt đầu bằng // thì thêm https:
+            if (imgPath.match(/^\/\//)) {
+                return 'https:' + imgPath;
+            }
+            // Nếu là đường dẫn tương đối, thêm base URL
+            return IMG_BASE_URL + imgPath;
+        }
+
+        // Chuẩn hóa dữ liệu từ API KKPhim
         function normalizeData(json) {
             var items = json.items || (json.data ? json.data.items : []);
             var results = items.map(function (item) {
-                var img = item.poster_url;
-                // Chỉ thêm domain nếu chưa có http, nhưng nếu đã có http rồi thì giữ nguyên
-                if (img && !img.match(/^https?:\/\//)) {
-                    img = 'https://phimimg.com/uploads/vod/' + img;
-                }
-                // Đảm bảo ảnh có protocol (nếu là //domain thì thêm https:)
-                if (img && img.match(/^\/\//)) {
-                    img = 'https:' + img;
-                }
                 return {
                     id: item._id || item.slug,
                     title: item.name,
                     name: item.name,
-                    poster_path: img,
-                    img: img,
+                    poster_path: getImageUrl(item.poster_url),
+                    img: getImageUrl(item.poster_url),
                     overview: item.description || '',
                     release_date: item.year || '',
                     vote_average: item.vote_average || 0,
@@ -115,20 +124,21 @@
         // Category: tạo danh sách dòng
         self.category = function (params, onSuccess, onError) {
             var categories = [
-                { title: 'Phim Mới Cập Nhật', url: 'https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1' },
-                { title: 'Phim Bộ', url: 'https://phimapi.com/v1/api/danh-sach/phim-bo?page=1' },
-                { title: 'Phim Lẻ', url: 'https://phimapi.com/v1/api/danh-sach/phim-le?page=1' },
-                { title: 'Hoạt Hình', url: 'https://phimapi.com/v1/api/danh-sach/hoat-hinh?page=1' }
+                { title: 'Phim Mới Cập Nhật', url: KKPHIM_API_URL + '/danh-sach/phim-moi-cap-nhat?page=1' },
+                { title: 'Phim Bộ', url: KKPHIM_API_URL + '/v1/api/danh-sach/phim-bo?page=1' },
+                { title: 'Phim Lẻ', url: KKPHIM_API_URL + '/v1/api/danh-sach/phim-le?page=1' },
+                { title: 'Hoạt Hình', url: KKPHIM_API_URL + '/v1/api/danh-sach/hoat-hinh?page=1' }
             ];
+            
             var partsData = categories.map(function (cat) {
                 return function (callback) {
                     self.get(cat.url, function (json) {
                         callback({
                             title: cat.title,
-                            url: cat.url,          // lưu URL gốc để list dùng
+                            url: cat.url,
                             results: json.results,
                             source: SOURCE_NAME,
-                            more: json.total_pages > json.page,   // Tất cả các dòng đều có more nếu có nhiều trang
+                            more: json.total_pages > json.page,
                             page: json.page,
                             total_pages: json.total_pages,
                             total_results: json.total_results
@@ -161,85 +171,61 @@
             }, onError);
         };
 
-        // Full: lấy thông tin chi tiết phim (từ KKPhim) và bổ sung từ TMDB để có dữ liệu đẹp
+        // Full: tìm kiếm trên TMDB để lấy thông tin chi tiết
         self.full = function (params, onSuccess, onError) {
             var card = params.card;
-            var slug = card.id;
-            var kkUrl = 'https://phimapi.com/phim/' + slug;
-            self.network.silent(kkUrl, function (kkData) {
-                if (!kkData || !kkData.data) {
-                    // Nếu không có dữ liệu từ KKPhim, fallback TMDB
-                    Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
-                    return;
-                }
-                var data = kkData.data;
-                var poster = data.poster_url;
-                if (poster && !poster.match(/^https?:\/\//)) {
-                    poster = 'https://phimimg.com/uploads/vod/' + poster;
-                }
-                var backdrop = data.thumb_url || poster;
-                if (backdrop && !backdrop.match(/^https?:\/\//)) {
-                    backdrop = 'https://phimimg.com/uploads/vod/' + backdrop;
-                }
-
-                // Xử lý tập phim (tạm thời để hiển thị seasons)
-                var seasons = [];
-                if (data.episodes && data.episodes.length) {
-                    var seasonMap = {};
-                    data.episodes.forEach(function(ep) {
-                        var seasonNum = ep.season || 1;
-                        if (!seasonMap[seasonNum]) seasonMap[seasonNum] = [];
-                        seasonMap[seasonNum].push({
-                            episode_number: ep.episode,
-                            name: ep.name || 'Tập ' + ep.episode,
-                            air_date: ep.release_date || '',
-                            still_path: ep.thumbnail || '',
-                            overview: ep.description || ''
-                        });
+            var searchTitle = card.title || card.name;
+            var searchYear = card.release_date ? card.release_date.substring(0, 4) : '';
+            
+            // Tìm kiếm trên TMDB để lấy ID
+            var searchUrl = 'https://api.themoviedb.org/3/search/multi?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&query=' + encodeURIComponent(searchTitle);
+            
+            if (searchYear) {
+                searchUrl += '&year=' + searchYear;
+            }
+            
+            self.network.silent(searchUrl, function (searchData) {
+                if (searchData.results && searchData.results.length > 0) {
+                    // Tìm kết quả phù hợp nhất
+                    var bestMatch = searchData.results[0];
+                    var mediaType = bestMatch.media_type || (bestMatch.first_air_date ? 'tv' : 'movie');
+                    var tmdbId = bestMatch.id;
+                    
+                    // Gọi API chi tiết của TMDB
+                    var detailUrl = 'https://api.themoviedb.org/3/' + mediaType + '/' + tmdbId + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('tmdb_lang', 'vi-VN') + '&append_to_response=credits,videos';
+                    
+                    self.network.silent(detailUrl, function (detailData) {
+                        // Tạo card với dữ liệu từ TMDB
+                        var tmdbCard = {
+                            id: detailData.id,
+                            title: detailData.title || detailData.name,
+                            name: detailData.title || detailData.name,
+                            original_title: detailData.original_title || detailData.original_name,
+                            overview: detailData.overview,
+                            poster_path: detailData.poster_path,
+                            backdrop_path: detailData.backdrop_path,
+                            release_date: detailData.release_date || detailData.first_air_date,
+                            vote_average: detailData.vote_average,
+                            vote_count: detailData.vote_count,
+                            seasons: detailData.seasons,
+                            number_of_seasons: detailData.number_of_seasons,
+                            number_of_episodes: detailData.number_of_episodes,
+                            credits: detailData.credits,
+                            videos: detailData.videos,
+                            source: 'tmdb'
+                        };
+                        onSuccess(tmdbCard);
+                    }, function (err) {
+                        // Fallback dữ liệu từ KKPhim
+                        onSuccess(card);
                     });
-                    for (var s in seasonMap) {
-                        seasons.push({
-                            season_number: parseInt(s),
-                            name: 'Mùa ' + s,
-                            episodes: seasonMap[s].sort(function(a,b){ return a.episode_number - b.episode_number; })
-                        });
-                    }
-                } else if (data.episode_current) {
-                    // Phim lẻ
-                    seasons.push({
-                        season_number: 1,
-                        name: 'Full',
-                        episodes: [{
-                            episode_number: 1,
-                            name: data.name,
-                            air_date: data.year || '',
-                            still_path: poster,
-                            overview: data.description || ''
-                        }]
-                    });
+                } else {
+                    // Không tìm thấy trên TMDB, dùng dữ liệu từ KKPhim
+                    onSuccess(card);
                 }
-
-                // Tạo đối tượng card chi tiết
-                var detailCard = {
-                    id: data._id || data.slug,
-                    title: data.name,
-                    name: data.name,
-                    original_title: data.original_name || data.name,
-                    overview: data.description || '',
-                    poster_path: poster,
-                    backdrop_path: backdrop,
-                    release_date: data.year ? data.year + '-01-01' : '',
-                    vote_average: data.vote_average || 0,
-                    seasons: seasons,
-                    source: SOURCE_NAME
-                };
-
-                // Tùy chọn: nếu muốn bổ sung thêm từ TMDB để có trailer, cast... có thể gọi song song
-                // Nhưng để đơn giản, ta chỉ trả về từ KKPhim
-                onSuccess(detailCard);
             }, function (err) {
-                // Fallback TMDB nếu lỗi
-                Lampa.Api.sources.tmdb.full(params, onSuccess, onError);
+                // Lỗi tìm kiếm, dùng dữ liệu từ KKPhim
+                onSuccess(card);
             });
         };
 
@@ -263,7 +249,7 @@
         var kkApi = new KKPhimApiService();
         Lampa.Api.sources[SOURCE_NAME] = kkApi;
 
-        // Thêm nhãn episode current lên card (nếu có)
+        // Thêm nhãn episode current lên card
         Lampa.Listener.follow('card', function (e) {
             if (e.type == 'build' && e.object.data.source == SOURCE_NAME) {
                 if (e.object.data.episode_current) {
@@ -286,7 +272,7 @@
             });
         });
 
-        // Settings cho phép đổi tên
+        // Settings
         Lampa.SettingsApi.addComponent({
             component: 'kkphim_settings',
             name: CAT_NAME,
