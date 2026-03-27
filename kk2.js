@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. ĐỊNH NGHĨA COMPONENT HIỂN THỊ (KKPhim Content)
+    // 1. COMPONENT HIỂN THỊ (KKPhim Content)
     function KKPhimComponent(object) {
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({mask: true, over: true});
@@ -11,41 +11,31 @@
         this.create = function () {
             var _this = this;
 
-            // Hiển thị Loading chuẩn Lampa
-            Lampa.Select.show({ title: 'Đang tải KKPhim...', items: [] });
-
-            // Gọi API lấy danh sách phim mới nhất
+            // Gọi API lấy danh sách phim mới
             network.silent('https://phimapi.com/danh-sach/phim-moi-cap-nhat?page=1', function (data) {
-                Lampa.Select.hide();
-                
                 if (data && data.items) {
-                    // Dùng Items class để Lampa tự dàn hàng (Grid)
-                    var list = new Lampa.Items({
-                        category: 'kkphim_list',
-                        type: 'card'
-                    });
+                    scroll.clear();
+                    
+                    // Dùng div với class "items" để Lampa tự chia cột
+                    var body = $('<div class="items"></div>');
 
                     data.items.forEach(function (item) {
-                        // Fix link ảnh poster
+                        // Xử lý link ảnh
                         var img = item.poster_url;
                         if(img && !img.includes('http')) img = 'https://phimimg.com/uploads/vod/' + img;
 
-                        // Tạo Card chuẩn Lampa (để tự động đẹp theo Skin)
-                        var card = new Lampa.Card({
+                        // Tạo card bằng Template mặc định để tránh lỗi Constructor
+                        var card = Lampa.Template.get('card', {
                             title: item.name,
-                            release_year: item.year,
-                            img: img,
-                            card_id: item._id
+                            release_year: item.year
                         });
 
-                        card.create();
-                        
-                        // Fix điều khiển cho Remote/Chuột
-                        card.onFocus = function() {
-                            scroll.update(card.render());
-                        };
-                        
-                        card.onEnter = function() {
+                        // Ép class để hiển thị chuẩn
+                        card.addClass('card--fixed selector');
+                        card.find('.card__img').attr('src', img);
+
+                        // Sự kiện khi nhấn vào phim
+                        card.on('hover:enter', function () {
                             Lampa.Activity.push({
                                 url: 'https://phimapi.com/phim/' + item.slug,
                                 title: item.name,
@@ -53,16 +43,16 @@
                                 id: item._id,
                                 method: 'GET'
                             });
-                        };
+                        });
 
-                        list.append(card.render());
+                        body.append(card);
                         items.push(card);
                     });
 
-                    scroll.append(list.render());
+                    scroll.append(body);
                     html.append(scroll.render());
 
-                    // Kích hoạt Controller để bấm được các phim
+                    // Điều khiển Remote
                     Lampa.Controller.add('kk_content', {
                         toggle: function () {
                             Lampa.Controller.collectionSet(html);
@@ -73,13 +63,9 @@
                         }
                     });
                     Lampa.Controller.toggle('kk_content');
-
-                } else {
-                    Lampa.Noty.show('Không có dữ liệu!');
                 }
             }, function () {
-                Lampa.Select.hide();
-                Lampa.Noty.show('Lỗi kết nối API!');
+                Lampa.Noty.show('Lỗi kết nối API KKPhim!');
             });
 
             return this.render();
@@ -90,19 +76,16 @@
         this.destroy = function () {
             network.clear();
             scroll.destroy();
-            items.forEach(function(item){ if(item.destroy) item.destroy(); });
             html.remove();
             items = [];
         };
     }
 
-    // 2. HÀM KHỞI CHẠY PLUGIN (PHẦN GHIM MENU SIDEBAR)
+    // 2. PHẦN MENU ĐÃ GHIM (Sidebar)
     function startPlugin() {
-        // Đăng ký component vào hệ thống Lampa
         Lampa.Component.add('kkphim_component', KKPhimComponent);
 
         function addMenuItem() {
-            // Kiểm tra tránh trùng lặp menu
             if ($('.menu .menu__list [data-action="kkphim"]').length > 0) return;
 
             var menu_item = $(`
@@ -116,7 +99,6 @@
                 </div>
             `);
 
-            // Sự kiện click menu bên trái
             menu_item.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: '',
@@ -127,24 +109,13 @@
                 Lampa.Menu.hide();
             });
 
-            // Chèn vào sidebar
             $('.menu .menu__list').append(menu_item);
         }
 
         if (window.appready) addMenuItem();
-        else {
-            Lampa.Listener.follow('app', function (e) {
-                if (e.type == 'ready') addMenuItem();
-            });
-        }
+        else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') addMenuItem(); });
     }
 
-    // KÍCH HOẠT PLUGIN
     if (window.appready) startPlugin();
-    else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') startPlugin();
-        });
-    }
-
+    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') startPlugin(); });
 })();
