@@ -71,14 +71,18 @@ Lampa.Component.add('kkphim_home', {
           let movie = json.movie;
           let episodes = json.episodes;
 
-          let firstEp = null;
+          let playList = [];
 
           episodes.forEach(sv => {
             sv.server_data.forEach(ep => {
-              if (!firstEp) firstEp = ep;
+              playList.push({
+                title: ep.name,
+                url: ep.link_m3u8 || ep.link_embed
+              });
             });
           });
 
+          // CARD INFO + BUTTONS
           this.activity.render({
             title: movie.name,
             info: {
@@ -87,14 +91,36 @@ Lampa.Component.add('kkphim_home', {
               background_image: movie.poster_url,
               description: movie.content
             },
-            onEnter: function () {
-              if (!firstEp) return;
 
-              Lampa.Player.play({
-                url: firstEp.link_m3u8 || firstEp.link_embed,
-                title: movie.name
-              });
-            }
+            buttons: [
+              {
+                title: 'Phát',
+                action: function () {
+                  let first = playList[0];
+                  if (!first) return;
+
+                  Lampa.Player.play({
+                    url: first.url,
+                    title: movie.name
+                  });
+                }
+              },
+              {
+                title: 'Chọn tập',
+                action: () => {
+                  this.activity.render({
+                    title: movie.name + ' - Tập',
+                    items: playList,
+                    onEnter: function (ep) {
+                      Lampa.Player.play({
+                        url: ep.url,
+                        title: movie.name + ' - ' + ep.title
+                      });
+                    }
+                  });
+                }
+              }
+            ]
           });
 
         });
@@ -103,17 +129,23 @@ Lampa.Component.add('kkphim_home', {
   }
 });
 
-// MENU
+// MENU (anime.js style register)
 Lampa.Listener.follow('menu', function (e) {
   if (e.type === 'add') {
     e.menu.push({
       title: 'KKPhim',
+      icon: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h16v16H4z"/></svg>',
+      component: 'kkphim_home',
       action: function () {
         Lampa.Activity.push({
           url: 'kkphim_home',
           title: 'KKPhim',
           component: 'kkphim_home'
         });
+      }
+    });
+  }
+});
       }
     });
   }
