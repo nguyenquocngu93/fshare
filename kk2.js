@@ -1,5 +1,5 @@
 (function () {
-    // Polyfills (giữ nguyên)
+    // Polyfills
     if (!Object.keys) { Object.keys = function getObjectKeys(o) { var r = [], k; for (k in o) { if (Object.prototype.hasOwnProperty.call(o, k)) { r.push(k); } } return r; }; }
     if (!Array.prototype.map) { Array.prototype.map = function mapArray(c, t) { if (this == null) { throw new TypeError('Array is null or undefined'); } var s = Object(this), l = s.length >>> 0; if (typeof c !== 'function') { throw new TypeError(c + ' is not a function'); } var r = new Array(l); for (var i = 0; i < l; i++) { if (i in s) { r[i] = c.call(t, s[i], i, s); } } return r; }; }
     if (!Array.prototype.forEach) { Array.prototype.forEach = function forEachArray(c, t) { if (this == null) { throw new TypeError('Array is null or undefined'); } var s = Object(this), l = s.length >>> 0; if (typeof c !== 'function') { throw new TypeError(c + ' is not a function'); } for (var i = 0; i < l; i++) { if (i in s) { c.call(t, s[i], i, s); } } }; }
@@ -10,33 +10,25 @@
     var ICON = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve"><g><g><path fill="currentColor" d="M482.909,67.2H29.091C13.05,67.2,0,80.25,0,96.291v319.418C0,431.75,13.05,444.8,29.091,444.8h453.818c16.041,0,29.091-13.05,29.091-29.091V96.291C512,80.25,498.95,67.2,482.909,67.2z M477.091,409.891H34.909V102.109h442.182V409.891z"/></g></g><g><g><rect fill="currentColor" x="126.836" y="84.655" width="34.909" height="342.109"/></g></g><g><g><rect fill="currentColor" x="350.255" y="84.655" width="34.909" height="342.109"/></g></g><g><g><rect fill="currentColor" x="367.709" y="184.145" width="126.836" height="34.909"/></g></g><g><g><rect fill="currentColor" x="17.455" y="184.145" width="126.836" height="34.909"/></g></g><g><g><rect fill="currentColor" x="367.709" y="292.364" width="126.836" height="34.909"/></g></g><g><g><rect fill="currentColor" x="17.455" y="292.364" width="126.836" height="34.909"/></g></g></svg>';
 
     var SOURCE_NAME = 'KPHim';
-    var CACHE_SIZE = 100;
+    var CACHE_SIZE = 200;
     var CACHE_TIME = 1000 * 60 * 60 * 3;
     var cache = {};
 
     var API_BASE_URL = 'https://phimapi.com';
     var IMAGE_BASE_URL = 'https://phimimg.com';
 
-    var CATEGORIES = {
-        'phim-bo': 'Phim bộ',
-        'phim-le': 'Phim lẻ',
-        'tv-show': 'TV Shows',
-        'hoathinh': 'Hoạt hình',
-        'phim-chieu-rap': 'Phim chiếu rạp'
-    };
-
-    var DISPLAY_OPTIONS = {};
-    for (var cat in CATEGORIES) {
-        DISPLAY_OPTIONS[cat] = {
-            title: CATEGORIES[cat],
-            visible: true
-        };
-    }
+    // Danh sách thể loại cho trang chủ (4 thể loại test)
+    var HOME_CATEGORIES = [
+        { id: 'phim-bo', name: 'Phim bộ', slug: 'phim-bo' },
+        { id: 'phim-le', name: 'Phim lẻ', slug: 'phim-le' },
+        { id: 'hoathinh', name: 'Hoạt hình', slug: 'hoathinh' },
+        { id: 'tv-show', name: 'TV Shows', slug: 'tv-show' }
+    ];
 
     function KPHimApiService() {
         var self = this;
         self.network = new Lampa.Reguest();
-
+        
         function getCache(key) {
             var res = cache[key];
             if (res) {
@@ -80,7 +72,7 @@
             };
         }
 
-        function normalizeData(json) {
+        function normalizeData(json, category) {
             var items = [];
             if (json && json.data && json.data.items) {
                 items = json.data.items;
@@ -103,7 +95,8 @@
                         vote_average: item.tmdb?.vote_average || 0,
                         year: item.year,
                         slug: item.slug,
-                        source: SOURCE_NAME
+                        source: SOURCE_NAME,
+                        category: category
                     };
                 }),
                 page: json.page || 1,
@@ -112,7 +105,7 @@
             };
         }
 
-        self.get = function (url, onComplete, onError) {
+        self.get = function (url, category, onComplete, onError) {
             var cached = getCache(url);
             if (cached) {
                 onComplete(cached);
@@ -124,7 +117,7 @@
                     onError(new Error('Empty response'));
                     return;
                 }
-                var normalized = normalizeData(json);
+                var normalized = normalizeData(json, category);
                 setCache(url, normalized);
                 onComplete(normalized);
             }, function (err) {
@@ -134,11 +127,12 @@
 
         self.list = function (params, onComplete, onError) {
             params = params || {};
-            var category = params.url || 'phim-bo';
+            var category = params.category || params.url;
             var page = params.page || 1;
             var limit = 20;
             var url = API_BASE_URL + '/v1/api/danh-sach/' + category + '?page=' + page + '&limit=' + limit;
-            self.get(url, onComplete, onError);
+            
+            self.get(url, category, onComplete, onError);
         };
 
         self.full = function (params, onSuccess, onError) {
@@ -174,23 +168,27 @@
 
         self.category = function (params, onSuccess, onError) {
             var partsData = [];
-            for (var key in DISPLAY_OPTIONS) {
-                if (DISPLAY_OPTIONS[key].visible) {
-                    partsData.push((function(catKey, catTitle) {
-                        return function(callback) {
-                            callback({
-                                source: SOURCE_NAME,
-                                url: catKey,
-                                title: catTitle,
-                                page: 1,
-                                more: true,
-                                results: []
-                            });
-                        };
-                    })(key, DISPLAY_OPTIONS[key].title));
-                }
-            }
-            Lampa.Api.partNext(partsData, 5, onSuccess, onError);
+            
+            // Tạo các row cho từng thể loại trên trang chủ
+            HOME_CATEGORIES.forEach(function(cat) {
+                partsData.push(function(callback) {
+                    self.list({ category: cat.slug, page: 1 }, function(data) {
+                        callback({
+                            source: SOURCE_NAME,
+                            title: cat.name,
+                            url: cat.slug,
+                            page: 1,
+                            more: data.total_pages > 1,
+                            total_pages: data.total_pages,
+                            results: data.results || []
+                        });
+                    }, function(error) {
+                        callback({ error: error });
+                    });
+                });
+            });
+            
+            Lampa.Api.partNext(partsData, HOME_CATEGORIES.length, onSuccess, onError);
         };
 
         self.search = function (params, onSuccess, onError) {
@@ -201,7 +199,7 @@
                 return;
             }
             var url = API_BASE_URL + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(query) + '&page=' + page;
-            self.get(url, onSuccess, onError);
+            self.get(url, 'search', onSuccess, onError);
         };
 
         self.clear = function () {
@@ -230,10 +228,6 @@
             hoathinh: {
                 en: 'Animation',
                 vi: 'Hoạt hình'
-            },
-            phim_chieu_rap: {
-                en: 'Now Showing',
-                vi: 'Phim chiếu rạp'
             }
         });
     }
@@ -283,30 +277,6 @@
             }
         });
 
-        for (var key in DISPLAY_OPTIONS) {
-            (function(catKey, catTitle) {
-                var settingName = 'kphim_settings_' + catKey + '_visible';
-                var visible = Lampa.Storage.get(settingName, "true").toString() === "true";
-                DISPLAY_OPTIONS[catKey].visible = visible;
-
-                Lampa.SettingsApi.addParam({
-                    component: "kphim_settings",
-                    param: {
-                        name: settingName,
-                        type: "trigger",
-                        default: visible
-                    },
-                    field: {
-                        name: catTitle,
-                        description: 'Hiển thị danh mục này'
-                    },
-                    onChange: function(value) {
-                        DISPLAY_OPTIONS[catKey].visible = value === "true";
-                    }
-                });
-            })(key, DISPLAY_OPTIONS[key].title);
-        }
-
         var kphimApi = new KPHimApiService();
         Lampa.Api.sources.kphim = kphimApi;
         Object.defineProperty(Lampa.Api.sources, SOURCE_NAME, {
@@ -323,6 +293,8 @@
                 page: 1
             });
         });
+        
+        console.log('KPHim plugin loaded successfully');
     }
 
     if (window.appready) {
