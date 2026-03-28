@@ -17,7 +17,7 @@
     var API_BASE_URL = 'https://phimapi.com';
     var IMAGE_BASE_URL = 'https://phimimg.com';
 
-    // Danh sách thể loại cho trang chủ (4 thể loại test)
+    // 4 thể loại test
     var HOME_CATEGORIES = [
         { id: 'phim-bo', name: 'Phim bộ', slug: 'phim-bo' },
         { id: 'phim-le', name: 'Phim lẻ', slug: 'phim-le' },
@@ -74,34 +74,46 @@
 
         function normalizeData(json, category) {
             var items = [];
+            var total = 0;
+            
             if (json && json.data && json.data.items) {
                 items = json.data.items;
+                total = json.data.total || 0;
             } else if (json && json.items) {
                 items = json.items;
-            } else if (Array.isArray(json)) {
-                items = json;
+                total = json.total || 0;
             }
-
+            
+            var total_pages = Math.ceil(total / 20) || 1;
+            
             return {
                 results: items.map(function (item) {
+                    // Xử lý ảnh
+                    var poster = item.poster_url || item.thumb_url || '';
+                    if (poster && !poster.startsWith('http')) {
+                        poster = IMAGE_BASE_URL + poster;
+                    }
+                    
                     return {
                         id: item._id,
                         name: item.name,
                         title: item.name,
                         original_name: item.origin_name,
-                        poster_path: item.poster_url || item.thumb_url,
-                        img: item.poster_url || item.thumb_url,
-                        overview: item.content || item.description,
+                        poster_path: poster,
+                        img: poster,
+                        overview: item.content || '',
                         vote_average: item.tmdb?.vote_average || 0,
                         year: item.year,
                         slug: item.slug,
+                        tmdb_id: item.tmdb?.id,
+                        tmdb_type: item.tmdb?.type,
                         source: SOURCE_NAME,
                         category: category
                     };
                 }),
                 page: json.page || 1,
-                total_pages: Math.ceil((json.data?.total || json.total || 0) / 20) || 1,
-                total_results: json.data?.total || json.total || 0
+                total_pages: total_pages,
+                total_results: total
             };
         }
 
@@ -136,30 +148,49 @@
         };
 
         self.full = function (params, onSuccess, onError) {
-            var slug = params.card.slug;
+            var card = params.card;
+            var slug = card.slug;
+            
             if (!slug) {
                 onError(new Error('No slug'));
                 return;
             }
-            var url = API_BASE_URL + '/v1/api/phim/' + slug;
+            
+            var url = API_BASE_URL + '/phim/' + slug;
             self.network.silent(url, function (json) {
-                if (json && json.data && json.data.movie) {
-                    var movie = json.data.movie;
-                    var card = {
-                        id: movie._id,
-                        name: movie.name,
-                        title: movie.name,
-                        original_name: movie.origin_name,
-                        overview: movie.content,
-                        poster_path: movie.poster_url,
-                        backdrop_path: movie.thumb_url,
-                        year: movie.year,
-                        type: movie.type,
-                        status: movie.status,
-                        episode_total: movie.episode_total,
-                        episodes: json.data.episodes || []
-                    };
-                    onSuccess(card);
+                if (json && json.movie) {
+                    var movie = json.movie;
+                    
+                    // Nếu có TMDB ID, dùng TMDB để hiển thị thông tin chi tiết
+                    if (movie.tmdb && movie.tmdb.id) {
+                        var tmdbParams = {
+                            card: {
+                                id: movie.tmdb.id,
+                                media_type: movie.tmdb.type || 'movie',
+                                source: 'tmdb'
+                            }
+                        };
+                        Lampa.Api.sources.tmdb.full(tmdbParams, onSuccess, onError);
+                    } else {
+                        // Fallback: dùng dữ liệu từ API
+                        var cardData = {
+                            id: movie._id,
+                            name: movie.name,
+                            title: movie.name,
+                            original_name: movie.origin_name,
+                            overview: movie.content,
+                            poster_path: movie.poster_url,
+                            backdrop_path: movie.thumb_url,
+                            year: movie.year,
+                            type: movie.type,
+                            status: movie.status,
+                            vote_average: movie.tmdb?.vote_average || 0,
+                            runtime: movie.time,
+                            genres: movie.category || [],
+                            countries: movie.country || []
+                        };
+                        onSuccess(cardData);
+                    }
                 } else {
                     onError(new Error('Movie not found'));
                 }
@@ -168,27 +199,33 @@
 
         self.category = function (params, onSuccess, onError) {
             var partsData = [];
+            var loadedCount = 0;
+            var results = [];
             
-            // Tạo các row cho từng thể loại trên trang chủ
-            HOME_CATEGORIES.forEach(function(cat) {
-                partsData.push(function(callback) {
-                    self.list({ category: cat.slug, page: 1 }, function(data) {
-                        callback({
-                            source: SOURCE_NAME,
-                            title: cat.name,
-                            url: cat.slug,
-                            page: 1,
-                            more: data.total_pages > 1,
-                            total_pages: data.total_pages,
-                            results: data.results || []
-                        });
-                    }, function(error) {
-                        callback({ error: error });
-                    });
+            HOME_CATEGORIES.forEach(function(cat, index) {
+                self.list({ category: cat.slug, page: 1 }, function(data) {
+                    loadedCount++;
+                    results[index] = {
+                        source: SOURCE_NAME,
+                        title: cat.name,
+                        url: cat.slug,
+                        page: 1,
+                        more: data.total_pages > 1,
+                        total_pages: data.total_pages,
+                        results: data.results || []
+                    };
+                    
+                    if (loadedCount === HOME_CATEGORIES.length) {
+                        onSuccess(results);
+                    }
+                }, function(error) {
+                    loadedCount++;
+                    results[index] = { error: error };
+                    if (loadedCount === HOME_CATEGORIES.length) {
+                        onSuccess(results);
+                    }
                 });
             });
-            
-            Lampa.Api.partNext(partsData, HOME_CATEGORIES.length, onSuccess, onError);
         };
 
         self.search = function (params, onSuccess, onError) {
@@ -294,7 +331,7 @@
             });
         });
         
-        console.log('KPHim plugin loaded successfully');
+        console.log('✅ KPHim plugin loaded');
     }
 
     if (window.appready) {
