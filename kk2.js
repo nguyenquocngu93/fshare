@@ -15,6 +15,7 @@
     var _similarInjected = {};
     var _epsCache = {};
     var _tmdbEpisodesCache = {};
+    var _currentCardSlug = null;
 
     // =====================================================================
     // CSS
@@ -130,8 +131,8 @@
             production_companies: [],
             production_countries: [],
             spoken_languages:     [],
-            type:                 'movie',
-            media_type:           'movie',
+            type:                 item.type === 'single' ? 'movie' : 'tv',
+            media_type:           item.type === 'single' ? 'movie' : 'tv',
             source:               SOURCE_NAME,
             kphim_slug:           item.slug     || '',
             kphim_type:           item.type     || '',
@@ -205,7 +206,6 @@
             if (t.runtime)        result.runtime         = t.runtime;
             if (t.episode_run_time && t.episode_run_time.length) result.runtime = t.episode_run_time[0] || 0;
 
-            // Lưu thông tin seasons từ TMDB
             if (t.seasons && t.seasons.length) {
                 result.tmdb_seasons = t.seasons;
             }
@@ -245,8 +245,8 @@
     // DANH MUC
     // =====================================================================
     var CATEGORIES = [
-        { url: '/v1/api/danh-sach/phim-le',      title: 'Phim lẻ'    },
         { url: '/v1/api/danh-sach/phim-bo',      title: 'Phim bộ'    },
+        { url: '/v1/api/danh-sach/phim-le',      title: 'Phim lẻ'    },
         { url: '/v1/api/danh-sach/hoat-hinh',    title: 'Hoạt hình'  },
         { url: '/v1/api/danh-sach/tv-shows',     title: 'TV Shows'   },
     ];
@@ -338,13 +338,13 @@
             $wrap.append($crow);
         }
 
-        var $target = $ctx.find('.kkp-episodes-wrap');
-        if ($target.length) { $target.before($wrap); return; }
-        $target = $ctx.find('.kkp-similar-wrap');
-        if ($target.length) { $target.before($wrap); return; }
-        $target = $ctx.find('.full-descr');
-        if ($target.length) { $target.after($wrap); return; }
-        $ctx.find('.full-start').first().append($wrap);
+        // Chèn vào đúng vị trí
+        var $target = $ctx.find('.full-descr');
+        if ($target.length) {
+            $target.after($wrap);
+        } else {
+            $ctx.find('.full-start').append($wrap);
+        }
     }
 
     // =====================================================================
@@ -352,15 +352,26 @@
     // =====================================================================
     function injectSimilarMovies(card, $ctx) {
         if (!card || card.source !== SOURCE_NAME) return;
+        
         var gi = getGenreSlug(card);
         if (!gi) return;
+        
         var cardSlug = card.kphim_slug || card.id;
+        
+        // Reset cache khi chuyển phim mới
+        if (_currentCardSlug !== cardSlug) {
+            _similarInjected[cardSlug] = false;
+            _currentCardSlug = cardSlug;
+        }
         
         if (_similarInjected[cardSlug]) return;
         _similarInjected[cardSlug] = true;
 
         setTimeout(function () {
-            if (!$ctx.closest('body').length || $ctx.find('.kkp-similar-wrap').length) return;
+            if (!$ctx.closest('body').length) return;
+            
+            // Xóa wrap cũ nếu có
+            $ctx.find('.kkp-similar-wrap').remove();
             
             var net = new Lampa.Reguest();
             net.silent(BASE_URL + '/v1/api/the-loai/' + gi.slug + '?page=1&limit=30', function (data) {
@@ -402,18 +413,20 @@
                     $row.append($c);
                 });
 
-                setTimeout(function () {
-                    if (!$ctx.closest('body').length) return;
-                    var $target = $ctx.find('.kkp-cast-wrap');
-                    if ($target.length) $target.after($wrap);
-                    else {
-                        var $descr = $ctx.find('.full-descr');
-                        if ($descr.length) $descr.after($wrap);
-                        else $ctx.find('.full-start').append($wrap);
+                // Chèn sau cast hoặc sau description
+                var $target = $ctx.find('.kkp-cast-wrap');
+                if ($target.length) {
+                    $target.after($wrap);
+                } else {
+                    var $descr = $ctx.find('.full-descr');
+                    if ($descr.length) {
+                        $descr.after($wrap);
+                    } else {
+                        $ctx.find('.full-start').append($wrap);
                     }
-                }, 100);
+                }
             });
-        }, 500);
+        }, 800);
     }
 
     // =====================================================================
@@ -423,55 +436,55 @@
         if (!card || card.source !== SOURCE_NAME) return;
         
         // Kiểm tra nếu là phim lẻ (movie) thì không hiển thị tập
-        var isMovie = card.kphim_type === 'single' || card.type === 'movie';
-        if (isMovie) return;
+        var isMovie = card.kphim_type === 'single' || card.type === 'single' || card.media_type === 'movie';
         
-        var $existing = $ctx.find('.kkp-episodes-wrap');
-        if ($existing.length) {
-            $existing.remove();
+        if (isMovie) {
+            console.log('[KPHim] Phim lẻ, không hiển thị episodes');
+            return;
         }
         
-        if (!kphimEpisodes || !kphimEpisodes.length) return;
+        if (!kphimEpisodes || !kphimEpisodes.length) {
+            console.log('[KPHim] Không có dữ liệu episodes từ KPHim');
+            return;
+        }
+        
+        console.log('[KPHim] Inject episodes cho phim bộ:', card.title);
+        
+        // Xóa wrap cũ nếu có
+        $ctx.find('.kkp-episodes-wrap').remove();
         
         // Lấy thông tin seasons từ TMDB
         var tmdbSeasons = (tmdbData && tmdbData.seasons) || [];
-        var currentSeason = 1;
         
-        // Tạo tabs seasons
-        var $seasonsTabs = $('<div class="kkp-season-tabs"></div>');
-        var seasonsList = [];
-        
-        // Lấy danh sách season từ TMDB (chỉ lấy season có episode_count > 0)
-        tmdbSeasons.forEach(function(season) {
-            if (season.season_number > 0 && season.episode_count > 0) {
-                seasonsList.push(season);
-            }
+        // Lọc chỉ lấy season có episode_count > 0 và season_number > 0
+        var validSeasons = tmdbSeasons.filter(function(s) {
+            return s.season_number > 0 && s.episode_count > 0;
         });
         
-        // Nếu không có season từ TMDB, tạo season 1 từ dữ liệu KPHim
-        if (seasonsList.length === 0 && kphimEpisodes.length) {
-            seasonsList.push({ season_number: 1, name: 'Season 1', episode_count: 0 });
-        }
+        // Nếu không có season từ TMDB, tạo season 1 mặc định
+        var seasonsList = validSeasons.length ? validSeasons : [{ season_number: 1, name: 'Mùa 1', episode_count: 0 }];
         
-        // Tạo container cho episodes
-        var $episodesContainer = $('<div class="kkp-episodes-container"></div>');
+        // Tạo container
         var $wrap = $(
             '<div class="kkp-episodes-wrap" style="padding: 1em 0 1.5em;">' +
             '<div style="padding: 0 1.5em 1em;"><span style="font-size:1.15em;font-weight:700;">Danh sách tập</span></div>' +
             '</div>'
         );
+        
+        var $seasonsTabs = $('<div class="kkp-season-tabs"></div>');
+        var $episodesContainer = $('<div class="kkp-episodes-container"></div>');
         $wrap.append($seasonsTabs);
         $wrap.append($episodesContainer);
         
         // Hàm render episodes cho season
         function renderSeasonEpisodes(seasonNumber) {
             $episodesContainer.empty();
+            $episodesContainer.html('<div style="padding: 1em 1.5em; text-align: center;">Đang tải tập phim...</div>');
             
             // Tìm server phù hợp từ KPHim
             var targetServer = null;
             for (var i = 0; i < kphimEpisodes.length; i++) {
                 var server = kphimEpisodes[i];
-                // Ưu tiên server có tên chứa "Vietsub" hoặc mặc định
                 if (server.server_name && server.server_name.toLowerCase().indexOf('vietsub') !== -1) {
                     targetServer = server;
                     break;
@@ -486,86 +499,138 @@
                 return;
             }
             
-            // Lấy danh sách tập từ TMDB (nếu có)
-            fetchTMDBSeason(card.tmdb_id, seasonNumber, function(tmdbSeasonData) {
-                var tmdbEpisodes = (tmdbSeasonData && tmdbSeasonData.episodes) || [];
-                
-                // Tạo grid episodes
-                var $grid = $('<div class="kkp-episodes-grid"></div>');
-                
-                // Map episodes từ KPHim theo số tập
-                var kphimEpMap = {};
-                targetServer.server_data.forEach(function(ep, idx) {
-                    // Lấy số tập từ tên (dạng "Tập 1", "1", "01", "EP1", etc)
-                    var epNum = null;
-                    var epName = ep.name || '';
-                    var match = epName.match(/(\d+)/);
-                    if (match) {
-                        epNum = parseInt(match[1]);
-                    } else {
-                        epNum = idx + 1;
-                    }
-                    kphimEpMap[epNum] = ep;
-                });
-                
-                // Tạo danh sách tập (từ TMDB hoặc tạo mới)
-                var episodesToShow = [];
-                if (tmdbEpisodes.length) {
-                    episodesToShow = tmdbEpisodes;
+            // Map episodes từ KPHim theo số tập
+            var kphimEpMap = {};
+            targetServer.server_data.forEach(function(ep, idx) {
+                var epNum = null;
+                var epName = ep.name || '';
+                var match = epName.match(/(\d+)/);
+                if (match) {
+                    epNum = parseInt(match[1]);
                 } else {
-                    // Tạo tập từ dữ liệu KPHim
-                    for (var i = 0; i < targetServer.server_data.length; i++) {
-                        episodesToShow.push({
-                            episode_number: i + 1,
-                            name: targetServer.server_data[i].name || ('Tập ' + (i + 1)),
-                            air_date: ''
-                        });
-                    }
+                    epNum = idx + 1;
                 }
-                
-                episodesToShow.forEach(function(ep) {
-                    var epNum = ep.episode_number;
-                    var kphimEp = kphimEpMap[epNum];
-                    var hasLink = kphimEp && (kphimEp.link_m3u8 || kphimEp.link_embed);
+                kphimEpMap[epNum] = ep;
+            });
+            
+            // Lấy episodes từ TMDB nếu có
+            if (card.tmdb_id && seasonNumber > 0) {
+                fetchTMDBSeason(card.tmdb_id, seasonNumber, function(tmdbSeasonData) {
+                    var tmdbEpisodes = (tmdbSeasonData && tmdbSeasonData.episodes) || [];
+                    
+                    var $grid = $('<div class="kkp-episodes-grid"></div>');
+                    
+                    if (tmdbEpisodes.length) {
+                        tmdbEpisodes.forEach(function(ep) {
+                            var epNum = ep.episode_number;
+                            var kphimEp = kphimEpMap[epNum];
+                            var hasLink = kphimEp && (kphimEp.link_m3u8 || kphimEp.link_embed);
+                            
+                            var $epCard = $(
+                                '<div class="kkp-episode-card selector" data-ep-num="' + epNum + '" style="' + (hasLink ? '' : 'opacity: 0.5;') + '">' +
+                                '<div class="kkp-episode-number">Tập ' + epNum + '</div>' +
+                                '<div class="kkp-episode-name">' + (ep.name || 'Tập ' + epNum) + '</div>' +
+                                '<div class="kkp-episode-date">' + (ep.air_date || '') + '</div>' +
+                                '</div>'
+                            );
+                            
+                            if (hasLink) {
+                                $epCard.on('click hover:enter', (function(epData, epNumData, linkData) {
+                                    return function() {
+                                        var link = linkData;
+                                        if (link) {
+                                            Lampa.Player.play({
+                                                url: link,
+                                                title: card.title + ' - Tập ' + epNumData + ': ' + (epData.name || ''),
+                                                poster: card.img || card.poster
+                                            });
+                                        }
+                                    };
+                                })(ep, epNum, kphimEp.link_m3u8 || kphimEp.link_embed));
+                            } else {
+                                $epCard.css('cursor', 'not-allowed');
+                            }
+                            
+                            $grid.append($epCard);
+                        });
+                    } else {
+                        // Fallback: dùng dữ liệu từ KPHim
+                        for (var i = 0; i < targetServer.server_data.length; i++) {
+                            var ep = targetServer.server_data[i];
+                            var epNum = i + 1;
+                            var hasLink = ep.link_m3u8 || ep.link_embed;
+                            
+                            var $epCard = $(
+                                '<div class="kkp-episode-card selector" data-ep-num="' + epNum + '" style="' + (hasLink ? '' : 'opacity: 0.5;') + '">' +
+                                '<div class="kkp-episode-number">Tập ' + epNum + '</div>' +
+                                '<div class="kkp-episode-name">' + (ep.name || 'Tập ' + epNum) + '</div>' +
+                                '<div class="kkp-episode-date"></div>' +
+                                '</div>'
+                            );
+                            
+                            if (hasLink) {
+                                $epCard.on('click hover:enter', (function(epNumData, linkData) {
+                                    return function() {
+                                        if (linkData) {
+                                            Lampa.Player.play({
+                                                url: linkData,
+                                                title: card.title + ' - Tập ' + epNumData,
+                                                poster: card.img || card.poster
+                                            });
+                                        }
+                                    };
+                                })(epNum, hasLink));
+                            } else {
+                                $epCard.css('cursor', 'not-allowed');
+                            }
+                            
+                            $grid.append($epCard);
+                        }
+                    }
+                    
+                    $episodesContainer.empty().append($grid);
+                });
+            } else {
+                // Không có TMDB, chỉ dùng KPHim
+                var $grid = $('<div class="kkp-episodes-grid"></div>');
+                targetServer.server_data.forEach(function(ep, idx) {
+                    var epNum = idx + 1;
+                    var hasLink = ep.link_m3u8 || ep.link_embed;
                     
                     var $epCard = $(
                         '<div class="kkp-episode-card selector" data-ep-num="' + epNum + '" style="' + (hasLink ? '' : 'opacity: 0.5;') + '">' +
                         '<div class="kkp-episode-number">Tập ' + epNum + '</div>' +
                         '<div class="kkp-episode-name">' + (ep.name || 'Tập ' + epNum) + '</div>' +
-                        '<div class="kkp-episode-date">' + (ep.air_date || '') + '</div>' +
+                        '<div class="kkp-episode-date"></div>' +
                         '</div>'
                     );
                     
                     if (hasLink) {
-                        $epCard.on('click hover:enter', (function(epData) {
+                        $epCard.on('click hover:enter', (function(epNumData, linkData) {
                             return function() {
-                                var link = kphimEp.link_m3u8 || kphimEp.link_embed;
-                                if (link) {
+                                if (linkData) {
                                     Lampa.Player.play({
-                                        url: link,
-                                        title: card.title + ' - Tập ' + epNum + ': ' + (ep.name || ''),
+                                        url: linkData,
+                                        title: card.title + ' - Tập ' + epNumData,
                                         poster: card.img || card.poster
                                     });
-                                } else {
-                                    Lampa.Noty.show('Không có link phát cho tập này');
                                 }
                             };
-                        })(ep));
+                        })(epNum, hasLink));
                     } else {
                         $epCard.css('cursor', 'not-allowed');
                     }
                     
                     $grid.append($epCard);
                 });
-                
-                $episodesContainer.append($grid);
-            });
+                $episodesContainer.empty().append($grid);
+            }
         }
         
         // Tạo tabs
         seasonsList.forEach(function(season, idx) {
             var $tab = $('<div class="kkp-season-tab selector' + (idx === 0 ? ' active' : '') + '">' + 
-                        (season.name || 'Season ' + season.season_number) + 
+                        (season.name || 'Mùa ' + season.season_number) + 
                         (season.episode_count ? ' (' + season.episode_count + ' tập)' : '') + 
                         '</div>');
             $tab.on('click hover:enter', (function(sNum) {
@@ -580,10 +645,12 @@
         
         // Render mặc định season đầu tiên
         if (seasonsList.length) {
-            renderSeasonEpisodes(seasonsList[0].season_number);
+            setTimeout(function() {
+                renderSeasonEpisodes(seasonsList[0].season_number);
+            }, 100);
         }
         
-        // Chèn episodes vào DOM
+        // Chèn vào DOM
         var $target = $ctx.find('.kkp-cast-wrap');
         if ($target.length) {
             $target.after($wrap);
@@ -601,7 +668,10 @@
     // EPISODE HELPERS
     // =====================================================================
     function fetchEpisodes(slug, callback) {
-        if (_epsCache[slug]) { callback(_epsCache[slug]); return; }
+        if (_epsCache[slug]) { 
+            callback(_epsCache[slug]); 
+            return; 
+        }
         var net = new Lampa.Reguest();
         net.silent(BASE_URL + '/phim/' + slug, function (res) {
             _epsCache[slug] = res.episodes || [];
@@ -752,7 +822,6 @@
                 }
 
                 enrichWithTMDB(result, movie, function (enriched, tmdbData) {
-                    // Lưu tmdbData để dùng cho episodes
                     enriched._tmdbData = tmdbData;
                     onComplete({ movie: enriched });
                 });
@@ -929,62 +998,56 @@
             if (e.type === 'destroy') {
                 delete _epsCache[slug];
                 delete _similarInjected[slug];
+                _currentCardSlug = null;
                 return;
             }
             if (e.type !== 'complite') return;
 
-            // Lấy episodes từ KPHim
-            fetchEpisodes(slug, function (kphimEpisodes) {
-                var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : null);
-                var $ctx    = $render || $('body');
-                
-                // Lấy TMDB data từ card._tmdbData (đã có sẵn từ full)
-                var tmdbData = card._tmdbData;
-                var info = getTmdbInfo(card);
-                
-                // Nếu chưa có tmdbData, fetch lại
-                if (!tmdbData && info.id) {
-                    fetchTMDBDetail(info.id, info.type, function(data) {
-                        tmdbData = data;
-                        // Inject episodes
-                        injectEpisodes(card, $ctx, tmdbData, kphimEpisodes);
-                        // Inject cast/crew
-                        if (tmdbData) injectCastToDOM($ctx, tmdbData);
-                    });
-                } else {
-                    // Inject episodes
-                    injectEpisodes(card, $ctx, tmdbData, kphimEpisodes);
-                    // Inject cast/crew
-                    if (tmdbData) injectCastToDOM($ctx, tmdbData);
-                }
-            });
-
             var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : null);
             var $ctx    = $render || $('body');
-
-            // Thêm logo
-            var info = getTmdbInfo(card);
-            if (info.id) {
-                fetchTMDBDetail(info.id, info.type, function (tmdbData) {
-                    if (!$ctx.closest('body').length) return;
-                    
-                    var logos = (tmdbData.images && tmdbData.images.logos) || [];
-                    var logo  = logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] || logos[0];
-                    if (logo && logo.file_path) {
-                        var logoPath = logo.file_path.replace('.svg', '.png');
-                        var logoUrl  = Lampa.TMDB.image('/t/p/w300' + logoPath);
-                        var $t = $ctx.find('.full-start-new__title');
-                        if ($t.length) {
-                            $t.html('<img style="margin-top:5px;max-height:125px;" src="' + logoUrl + '"/>');
-                        }
-                    }
-                });
-            }
             
-            // Inject phim liên quan
-            setTimeout(function() {
-                injectSimilarMovies(card, $ctx);
-            }, 500);
+            // Lấy episodes từ KPHim
+            fetchEpisodes(slug, function (kphimEpisodes) {
+                // Lấy TMDB data
+                var info = getTmdbInfo(card);
+                
+                if (info.id) {
+                    fetchTMDBDetail(info.id, info.type, function(tmdbData) {
+                        if (!$ctx.closest('body').length) return;
+                        
+                        // Inject cast/crew
+                        injectCastToDOM($ctx, tmdbData);
+                        
+                        // Inject episodes (chỉ cho phim bộ)
+                        injectEpisodes(card, $ctx, tmdbData, kphimEpisodes);
+                        
+                        // Inject phim liên quan
+                        setTimeout(function() {
+                            injectSimilarMovies(card, $ctx);
+                        }, 500);
+                        
+                        // Logo
+                        var logos = (tmdbData.images && tmdbData.images.logos) || [];
+                        var logo  = logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] || logos[0];
+                        if (logo && logo.file_path) {
+                            var logoPath = logo.file_path.replace('.svg', '.png');
+                            var logoUrl  = Lampa.TMDB.image('/t/p/w300' + logoPath);
+                            var $t = $ctx.find('.full-start-new__title');
+                            if ($t.length) {
+                                $t.html('<img style="margin-top:5px;max-height:125px;" src="' + logoUrl + '"/>');
+                            }
+                        }
+                    });
+                } else {
+                    // Không có TMDB, vẫn inject episodes từ KPHim
+                    injectEpisodes(card, $ctx, null, kphimEpisodes);
+                    
+                    // Phim liên quan vẫn chạy
+                    setTimeout(function() {
+                        injectSimilarMovies(card, $ctx);
+                    }, 500);
+                }
+            });
 
             // Thêm nút xem phim
             if (!$ctx.find('.view--kphim').length) {
