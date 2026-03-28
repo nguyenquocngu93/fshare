@@ -6,7 +6,8 @@
     var API = 'https://phimapi.com';
     var IMG = 'https://phimimg.com/';
     var TMDB = 'https://api.themoviedb.org/3';
-    var TMDB_KEY = '6979c8ec101ed849f44d197c86582644'; // thay key tmdb của bạn vào đây
+    var TMDB_KEY = 'YOUR_TMDB_API_KEY';
+
     var req = new Lampa.Reguest();
 
     function strip(html) {
@@ -14,14 +15,26 @@
         return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
     }
 
-    function toImg(url) {
+    function img(url) {
         if (!url) return '';
         if (url.indexOf('http') === 0) return url;
         return IMG + url;
     }
 
-    function q(s) {
-        return encodeURIComponent(s || '');
+    function enc(v) {
+        return encodeURIComponent(v || '');
+    }
+
+    function getJSON(url, ok, fail) {
+        req.timeout(20000);
+        req.silent(url, function (json) {
+            ok && ok(json);
+        }, function (a, c) {
+            console.log('KKPhim error:', url, a, c);
+            fail && fail(a, c);
+        }, false, {
+            dataType: 'json'
+        });
     }
 
     function mapItem(item) {
@@ -30,9 +43,9 @@
             slug: item.slug || item._id || item.id || '',
             title: item.name || 'Không tên',
             origin_title: item.origin_name || '',
-            thumb: toImg(item.thumb_url || item.poster_url || ''),
-            poster: toImg(item.poster_url || item.thumb_url || ''),
-            background: toImg(item.poster_url || item.thumb_url || ''),
+            thumb: img(item.thumb_url || item.poster_url || ''),
+            poster: img(item.poster_url || item.thumb_url || ''),
+            background: img(item.poster_url || item.thumb_url || ''),
             year: item.year || '',
             quality: item.quality || '',
             lang: item.lang || '',
@@ -44,18 +57,6 @@
         };
     }
 
-    function requestJSON(url, ok, fail) {
-        req.timeout(20000);
-        req.silent(url, function (json) {
-            ok && ok(json);
-        }, function (a, c) {
-            console.log('KKP request fail:', url, a, c);
-            fail && fail(a, c);
-        }, false, {
-            dataType: 'json'
-        });
-    }
-
     function parseList(json) {
         var arr = [];
         if (json && json.data && json.data.items) arr = json.data.items;
@@ -63,7 +64,7 @@
         return arr.map(mapItem);
     }
 
-    function totalPages(json) {
+    function getPages(json) {
         if (json && json.data && json.data.params && json.data.params.pagination) {
             return json.data.params.pagination.totalPages || 1;
         }
@@ -76,24 +77,23 @@
     function parseDetail(json) {
         var m = json.movie || {};
         return {
-            id: m.slug || '',
             slug: m.slug || '',
             title: m.name || 'Không tên',
             origin_title: m.origin_name || '',
-            poster: toImg(m.poster_url || m.thumb_url || ''),
-            thumb: toImg(m.thumb_url || m.poster_url || ''),
-            background: toImg(m.poster_url || m.thumb_url || ''),
+            poster: img(m.poster_url || m.thumb_url || ''),
+            thumb: img(m.thumb_url || m.poster_url || ''),
+            background: img(m.poster_url || m.thumb_url || ''),
             year: m.year || '',
             quality: m.quality || '',
             lang: m.lang || '',
             time: m.time || '',
-            content: strip(m.content || ''),
-            episode_current: m.episode_current || '',
-            episode_total: m.episode_total || '',
             category: m.category || [],
             country: m.country || [],
             actor: m.actor || [],
             director: m.director || [],
+            content: strip(m.content || ''),
+            episode_current: m.episode_current || '',
+            episode_total: m.episode_total || '',
             episodes: json.episodes || []
         };
     }
@@ -115,16 +115,16 @@
         return out;
     }
 
-    function playEpisode(movie, ep, all) {
+    function play(movie, ep, all) {
         if (!ep || !ep.url) {
             Lampa.Noty.show('Không có link phát');
             return;
         }
 
-        var playlist = (all || []).map(function (item) {
+        var playlist = (all || []).map(function (x) {
             return {
-                title: movie.title + ' - Tập ' + item.name,
-                url: item.url
+                title: movie.title + ' - Tập ' + x.name,
+                url: x.url
             };
         });
 
@@ -139,116 +139,110 @@
             }
         });
 
-        if (Lampa.Player.playlist) {
-            try { Lampa.Player.playlist(playlist); } catch (e) {}
-        }
+        try {
+            if (Lampa.Player.playlist) Lampa.Player.playlist(playlist);
+        } catch (e) {}
     }
 
-    function showEpSelect(movie) {
+    function showEpisodes(movie) {
         var eps = flatEpisodes(movie.episodes);
         if (!eps.length) {
-            Lampa.Noty.show('Chưa có tập');
+            Lampa.Noty.show('Chưa có tập phim');
             return;
         }
-
-        var items = eps.map(function (ep) {
-            return {
-                title: ep.server + ' - Tập ' + ep.name,
-                ep: ep
-            };
-        });
 
         if (Lampa.Select && Lampa.Select.show) {
             Lampa.Select.show({
                 title: 'Danh sách tập',
-                items: items,
+                items: eps.map(function (ep) {
+                    return {
+                        title: ep.server + ' - Tập ' + ep.name,
+                        ep: ep
+                    };
+                }),
                 onSelect: function (a) {
-                    playEpisode(movie, a.ep, eps);
+                    play(movie, a.ep, eps);
                 },
                 onBack: function () {}
             });
         } else {
-            playEpisode(movie, eps[0], eps);
+            play(movie, eps[0], eps);
         }
     }
 
-    function getTmdbBackdrop(title, year, callback) {
+    function getTMDBBackdrop(title, year, done) {
         if (!TMDB_KEY || TMDB_KEY === 'YOUR_TMDB_API_KEY') {
-            callback('');
+            done('');
             return;
         }
 
-        var url = TMDB + '/search/multi?api_key=' + TMDB_KEY + '&query=' + q(title);
-        requestJSON(url, function (json) {
-            var results = (json && json.results) ? json.results : [];
-            if (!results.length) {
-                callback('');
-                return;
-            }
-
+        var url = TMDB + '/search/multi?api_key=' + TMDB_KEY + '&query=' + enc(title);
+        getJSON(url, function (json) {
+            var rs = (json && json.results) || [];
             var pick = null;
 
             if (year) {
-                pick = results.find(function (r) {
+                pick = rs.find(function (r) {
                     var d = r.release_date || r.first_air_date || '';
                     return d.indexOf(String(year)) === 0;
                 });
             }
 
-            if (!pick) pick = results[0];
+            if (!pick && rs.length) pick = rs[0];
 
-            if (pick && pick.backdrop_path) {
-                callback('https://image.tmdb.org/t/p/w1280' + pick.backdrop_path);
-            } else {
-                callback('');
-            }
+            if (pick && pick.backdrop_path) done('https://image.tmdb.org/t/p/w1280' + pick.backdrop_path);
+            else done('');
         }, function () {
-            callback('');
+            done('');
         });
     }
 
-    function card(item, onEnter) {
+    function createScroller() {
+        return $('<div class="kkpf-scroll"></div>');
+    }
+
+    function createCard(item, onClick) {
         var el = $(`
-            <div class="kkpm-card selector">
-                <div class="kkpm-card__img">
+            <div class="kkpf-card selector">
+                <div class="kkpf-card__img">
                     <img src="${item.thumb}" alt="${item.title}">
-                    ${item.quality ? '<div class="kkpm-card__badge">' + item.quality + '</div>' : ''}
+                    ${item.quality ? `<div class="kkpf-card__badge">${item.quality}</div>` : ''}
                 </div>
-                <div class="kkpm-card__title">${item.title}</div>
-                <div class="kkpm-card__meta">${item.year || ''}${item.lang ? ' • ' + item.lang : ''}</div>
+                <div class="kkpf-card__title">${item.title}</div>
+                <div class="kkpf-card__meta">${item.year || ''}${item.lang ? ' • ' + item.lang : ''}</div>
             </div>
         `);
 
-        el.on('hover:enter click', function () {
-            onEnter && onEnter(item);
+        el.on('click hover:enter', function () {
+            onClick && onClick(item);
         });
 
         el.on('hover:focus', function () {
-            if (item.background) {
-                try { Lampa.Background.change(item.background); } catch (e) {}
-            }
+            try {
+                if (item.background) Lampa.Background.change(item.background);
+            } catch (e) {}
         });
 
         return el;
     }
 
-    function rowBlock(title, items, onMore, onEnter) {
+    function createRow(title, items, onMore, onClick) {
         var row = $(`
-            <div class="kkpm-row">
-                <div class="kkpm-row__head">
-                    <div class="kkpm-row__title">${title}</div>
-                    <div class="kkpm-row__more selector">Xem thêm</div>
+            <div class="kkpf-row">
+                <div class="kkpf-row__head">
+                    <div class="kkpf-row__title">${title}</div>
+                    <div class="kkpf-row__more selector">Xem thêm</div>
                 </div>
-                <div class="kkpm-row__list"></div>
+                <div class="kkpf-row__list"></div>
             </div>
         `);
 
-        var list = row.find('.kkpm-row__list');
+        var list = row.find('.kkpf-row__list');
         items.forEach(function (item) {
-            list.append(card(item, onEnter));
+            list.append(createCard(item, onClick));
         });
 
-        row.find('.kkpm-row__more').on('hover:enter click', function () {
+        row.find('.kkpf-row__more').on('click hover:enter', function () {
             onMore && onMore();
         });
 
@@ -256,7 +250,9 @@
     }
 
     function MainPage() {
-        var root = $('<div class="kkpm-page kkpm-main"></div>');
+        var root = $('<div class="kkpf-page"></div>');
+        var scroller = createScroller();
+        var body = $('<div class="kkpf-main"></div>');
         var self = this;
 
         var catalogs = [
@@ -269,28 +265,29 @@
 
         this.create = function () {
             self.activity.loader(true);
+            scroller.append(body);
+            root.append(scroller);
             self.activity.render().append(root);
 
-            var count = 0;
+            var done = 0;
 
             catalogs.forEach(function (cat) {
-                requestJSON(API + cat.url + '?page=1', function (json) {
+                getJSON(API + cat.url + '?page=1', function (json) {
                     var items = parseList(json);
-
                     if (items.length) {
-                        root.append(rowBlock(
+                        body.append(createRow(
                             cat.title,
                             items,
                             function () {
                                 Lampa.Activity.push({
-                                    component: 'kkpm_category',
+                                    component: 'kkpf_category',
                                     title: cat.title,
                                     url: cat.url
                                 });
                             },
                             function (item) {
                                 Lampa.Activity.push({
-                                    component: 'kkpm_detail',
+                                    component: 'kkpf_detail',
                                     title: item.title,
                                     slug: item.slug
                                 });
@@ -298,30 +295,25 @@
                         ));
                     }
 
-                    count++;
-                    if (count === catalogs.length) done();
+                    done++;
+                    if (done === catalogs.length) finish();
                 }, function () {
-                    count++;
-                    if (count === catalogs.length) done();
+                    done++;
+                    if (done === catalogs.length) finish();
                 });
             });
 
-            function done() {
+            function finish() {
                 self.activity.loader(false);
                 self.start();
             }
         };
 
         this.start = function () {
-            setTimeout(function () {
-                var first = root.find('.selector').first();
-                if (first.length) {
-                    try {
-                        Lampa.Controller.collectionSet(root);
-                        Lampa.Controller.collectionFocus(first, root);
-                    } catch (e) {}
-                }
-            }, 100);
+            try {
+                Lampa.Controller.collectionSet(root);
+                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
+            } catch (e) {}
         };
 
         this.render = function () {
@@ -334,47 +326,43 @@
     }
 
     function CategoryPage(object) {
-        var root = $('<div class="kkpm-page kkpm-category"></div>');
-        var grid = $('<div class="kkpm-grid"></div>');
-        var load = $('<div class="kkpm-load">Đang tải...</div>');
-        var empty = $('<div class="kkpm-empty" style="display:none">Không có dữ liệu</div>');
+        var root = $('<div class="kkpf-page"></div>');
+        var scroller = createScroller();
+        var body = $('<div class="kkpf-category"></div>');
+        var grid = $('<div class="kkpf-grid"></div>');
+        var load = $('<div class="kkpf-load">Đang tải...</div>');
+        var empty = $('<div class="kkpf-empty" style="display:none">Không có dữ liệu</div>');
 
+        var self = this;
+        var path = object.url || '/danh-sach/phim-moi-cap-nhat';
         var page = 1;
         var pages = 1;
         var loading = false;
-        var finished = false;
-        var path = object.url || '/danh-sach/phim-moi-cap-nhat';
-        var self = this;
+        var ended = false;
 
-        function appendItems(items) {
-            items.forEach(function (item) {
-                grid.append(card(item, function (it) {
-                    Lampa.Activity.push({
-                        component: 'kkpm_detail',
-                        title: it.title,
-                        slug: it.slug
-                    });
-                }));
-            });
-        }
-
-        function nextLoad() {
-            if (loading || finished) return;
+        function loadPage() {
+            if (loading || ended) return;
             loading = true;
             load.show();
 
-            requestJSON(API + path + '?page=' + page, function (json) {
+            getJSON(API + path + '?page=' + page, function (json) {
                 var items = parseList(json);
-                pages = totalPages(json);
+                pages = getPages(json);
 
-                if (page === 1 && !items.length) {
-                    empty.show();
-                } else {
-                    appendItems(items);
-                }
+                if (page === 1 && !items.length) empty.show();
+
+                items.forEach(function (item) {
+                    grid.append(createCard(item, function (it) {
+                        Lampa.Activity.push({
+                            component: 'kkpf_detail',
+                            title: it.title,
+                            slug: it.slug
+                        });
+                    }));
+                });
 
                 if (page >= pages) {
-                    finished = true;
+                    ended = true;
                     load.text('Đã tải hết');
                 } else {
                     page++;
@@ -383,14 +371,7 @@
 
                 loading = false;
                 self.activity.loader(false);
-
-                try {
-                    var first = root.find('.selector').first();
-                    if (first.length) {
-                        Lampa.Controller.collectionSet(root);
-                        Lampa.Controller.collectionFocus(first, root);
-                    }
-                } catch (e) {}
+                self.start();
             }, function () {
                 loading = false;
                 load.text('Tải lỗi');
@@ -398,41 +379,33 @@
             });
         }
 
-        function bindInfinite() {
-            $(window).off('scroll.kkpm_category').on('scroll.kkpm_category', function () {
-                if (loading || finished) return;
-
-                var scrollTop = $(window).scrollTop();
-                var winH = $(window).height();
-                var docH = $(document).height();
-
-                if (scrollTop + winH >= docH - 300) {
-                    nextLoad();
-                }
-            });
-        }
-
         this.create = function () {
             self.activity.loader(true);
-            root.append(grid);
-            root.append(empty);
-            root.append(load.hide());
+
+            body.append(grid);
+            body.append(empty);
+            body.append(load.hide());
+            scroller.append(body);
+            root.append(scroller);
             self.activity.render().append(root);
 
-            bindInfinite();
-            nextLoad();
+            scroller.on('scroll', function () {
+                var el = scroller[0];
+                if (!el || loading || ended) return;
+
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 250) {
+                    loadPage();
+                }
+            });
+
+            loadPage();
         };
 
         this.start = function () {
-            setTimeout(function () {
-                var first = root.find('.selector').first();
-                if (first.length) {
-                    try {
-                        Lampa.Controller.collectionSet(root);
-                        Lampa.Controller.collectionFocus(first, root);
-                    } catch (e) {}
-                }
-            }, 100);
+            try {
+                Lampa.Controller.collectionSet(root);
+                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
+            } catch (e) {}
         };
 
         this.render = function () {
@@ -440,72 +413,75 @@
         };
 
         this.destroy = function () {
-            $(window).off('scroll.kkpm_category');
             root.remove();
         };
     }
 
     function DetailPage(object) {
-        var root = $('<div class="kkpm-page kkpm-detail"></div>');
+        var root = $('<div class="kkpf-page"></div>');
+        var scroller = createScroller();
+        var body = $('<div class="kkpf-detail"></div>');
         var self = this;
 
         this.create = function () {
             self.activity.loader(true);
+            scroller.append(body);
+            root.append(scroller);
             self.activity.render().append(root);
 
-            requestJSON(API + '/phim/' + object.slug, function (json) {
+            getJSON(API + '/phim/' + object.slug, function (json) {
                 var movie = parseDetail(json);
                 var eps = flatEpisodes(movie.episodes);
 
-                getTmdbBackdrop(movie.origin_title || movie.title, movie.year, function (tmdbBackdrop) {
-                    movie.backdrop = tmdbBackdrop || movie.background || movie.poster;
+                getTMDBBackdrop(movie.origin_title || movie.title, movie.year, function (backdrop) {
+                    movie.backdrop = backdrop || movie.background || movie.poster;
 
-                    if (movie.backdrop) {
-                        try { Lampa.Background.change(movie.backdrop); } catch (e) {}
-                    }
+                    try {
+                        if (movie.backdrop) Lampa.Background.change(movie.backdrop);
+                    } catch (e) {}
 
-                    renderDetail(movie, eps);
+                    render(movie, eps);
                     self.activity.loader(false);
                     self.start();
                 });
             }, function () {
-                root.html('<div class="kkpm-empty">Không tải được thông tin phim</div>');
+                body.html('<div class="kkpf-empty">Không tải được chi tiết phim</div>');
                 self.activity.loader(false);
                 self.start();
             });
         };
 
-        function renderDetail(movie, eps) {
-            var genres = (movie.category || []).map(function (x) { return x.name; }).join(', ');
-            var countries = (movie.country || []).map(function (x) { return x.name; }).join(', ');
+        function render(movie, eps) {
+            var genres = (movie.category || []).map(function (i) { return i.name; }).join(', ');
+            var countries = (movie.country || []).map(function (i) { return i.name; }).join(', ');
             var actors = (movie.actor || []).join(', ');
             var directors = (movie.director || []).join(', ');
 
-            var top = $(`
-                <div class="kkpm-hero">
-                    <div class="kkpm-hero__bg" style="background-image:url('${movie.backdrop || movie.background || movie.poster}')"></div>
-                    <div class="kkpm-hero__overlay"></div>
-                    <div class="kkpm-hero__inner">
-                        <div class="kkpm-hero__poster">
+            var hero = $(`
+                <div class="kkpf-hero">
+                    <div class="kkpf-hero__bg" style="background-image:url('${movie.backdrop || movie.poster}')"></div>
+                    <div class="kkpf-hero__overlay"></div>
+                    <div class="kkpf-hero__inner">
+                        <div class="kkpf-hero__poster">
                             <img src="${movie.poster}" alt="${movie.title}">
                         </div>
-                        <div class="kkpm-hero__info">
-                            <div class="kkpm-hero__title">${movie.title}</div>
-                            <div class="kkpm-hero__sub">${movie.origin_title || ''}</div>
+                        <div class="kkpf-hero__info">
+                            <div class="kkpf-hero__title">${movie.title}</div>
+                            <div class="kkpf-hero__sub">${movie.origin_title || ''}</div>
 
-                            <div class="kkpm-tags">
+                            <div class="kkpf-tags">
                                 ${movie.year ? '<span>' + movie.year + '</span>' : ''}
                                 ${movie.quality ? '<span>' + movie.quality + '</span>' : ''}
                                 ${movie.lang ? '<span>' + movie.lang + '</span>' : ''}
                                 ${movie.episode_current ? '<span>' + movie.episode_current + '</span>' : ''}
                             </div>
 
-                            <div class="kkpm-actions">
-                                <div class="kkpm-btn kkpm-btn--play selector">Phát ngay</div>
-                                <div class="kkpm-btn selector">Chọn tập</div>
+                            <div class="kkpf-actions">
+                                <div class="kkpf-btn kkpf-btn--play selector">Phát ngay</div>
+                                <div class="kkpf-btn selector">Chọn tập</div>
                             </div>
 
-                            <div class="kkpm-info">
+                            <div class="kkpf-info">
                                 <div><b>Thể loại:</b> ${genres || 'Đang cập nhật'}</div>
                                 <div><b>Quốc gia:</b> ${countries || 'Đang cập nhật'}</div>
                                 <div><b>Thời lượng:</b> ${movie.time || 'Đang cập nhật'}</div>
@@ -513,49 +489,44 @@
                                 <div><b>Diễn viên:</b> ${actors || 'Đang cập nhật'}</div>
                             </div>
 
-                            <div class="kkpm-desc">${movie.content || 'Chưa có mô tả'}</div>
+                            <div class="kkpf-desc">${movie.content || 'Chưa có mô tả'}</div>
                         </div>
                     </div>
                 </div>
             `);
 
-            root.append(top);
+            body.append(hero);
 
-            top.find('.kkpm-btn--play').on('hover:enter click', function () {
+            hero.find('.kkpf-btn--play').on('click hover:enter', function () {
                 if (!eps.length) return Lampa.Noty.show('Chưa có tập phim');
-                playEpisode(movie, eps[0], eps);
+                play(movie, eps[0], eps);
             });
 
-            top.find('.kkpm-btn').eq(1).on('hover:enter click', function () {
-                showEpSelect(movie);
+            hero.find('.kkpf-btn').eq(1).on('click hover:enter', function () {
+                showEpisodes(movie);
             });
 
             if (eps.length) {
-                var epWrap = $('<div class="kkpm-episodes"><div class="kkpm-episodes__title">Danh sách tập</div><div class="kkpm-episodes__list"></div></div>');
-                var list = epWrap.find('.kkpm-episodes__list');
+                var box = $('<div class="kkpf-episodes"><div class="kkpf-episodes__title">Danh sách tập</div><div class="kkpf-episodes__list"></div></div>');
+                var list = box.find('.kkpf-episodes__list');
 
                 eps.forEach(function (ep) {
-                    var btn = $('<div class="kkpm-ep selector">Tập ' + ep.name + '</div>');
-                    btn.on('hover:enter click', function () {
-                        playEpisode(movie, ep, eps);
+                    var btn = $('<div class="kkpf-ep selector">Tập ' + ep.name + '</div>');
+                    btn.on('click hover:enter', function () {
+                        play(movie, ep, eps);
                     });
                     list.append(btn);
                 });
 
-                root.append(epWrap);
+                body.append(box);
             }
         }
 
         this.start = function () {
-            setTimeout(function () {
-                var first = root.find('.selector').first();
-                if (first.length) {
-                    try {
-                        Lampa.Controller.collectionSet(root);
-                        Lampa.Controller.collectionFocus(first, root);
-                    } catch (e) {}
-                }
-            }, 100);
+            try {
+                Lampa.Controller.collectionSet(root);
+                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
+            } catch (e) {}
         };
 
         this.render = function () {
@@ -567,33 +538,57 @@
         };
     }
 
-    function injectCSS() {
-        if ($('#kkpm-style').length) return;
+    function addStyle() {
+        if ($('#kkpf-style').length) return;
 
         $('head').append(`
-            <style id="kkpm-style">
-                .kkpm-page{
+            <style id="kkpf-style">
+                .kkpf-page{
+                    position:absolute;
+                    top:0;
+                    left:0;
+                    right:0;
+                    bottom:0;
+                    overflow:hidden;
+                }
+
+                .kkpf-scroll{
+                    position:absolute;
+                    top:0;
+                    left:0;
+                    right:0;
+                    bottom:0;
+                    overflow-y:auto;
+                    overflow-x:hidden;
+                    -webkit-overflow-scrolling:touch;
+                    padding-bottom:40px;
+                }
+
+                .kkpf-main,
+                .kkpf-category,
+                .kkpf-detail{
+                    min-height:100%;
                     padding:12px 0 24px 0;
                 }
 
-                .kkpm-row{
+                .kkpf-row{
                     margin-bottom:22px;
                 }
 
-                .kkpm-row__head{
+                .kkpf-row__head{
                     display:flex;
                     align-items:center;
                     justify-content:space-between;
-                    padding:0 14px 10px 14px;
+                    padding:0 14px 10px;
                     gap:10px;
                 }
 
-                .kkpm-row__title{
+                .kkpf-row__title{
                     font-size:20px;
                     font-weight:700;
                 }
 
-                .kkpm-row__more{
+                .kkpf-row__more{
                     padding:8px 12px;
                     border-radius:12px;
                     background:rgba(255,255,255,.12);
@@ -601,54 +596,54 @@
                     white-space:nowrap;
                 }
 
-                .kkpm-row__list{
+                .kkpf-row__list{
                     display:flex;
                     gap:12px;
                     overflow-x:auto;
                     overflow-y:hidden;
-                    padding:0 14px 6px 14px;
+                    padding:0 14px 4px;
                     -webkit-overflow-scrolling:touch;
                 }
 
-                .kkpm-row__list::-webkit-scrollbar{
+                .kkpf-row__list::-webkit-scrollbar{
                     display:none;
                 }
 
-                .kkpm-card{
+                .kkpf-card{
                     width:132px;
                     min-width:132px;
                     flex:0 0 132px;
                 }
 
-                .kkpm-card__img{
+                .kkpf-card__img{
+                    position:relative;
                     width:100%;
                     aspect-ratio:2/3;
-                    border-radius:14px;
                     overflow:hidden;
-                    background:#202020;
-                    position:relative;
+                    border-radius:14px;
+                    background:#222;
                 }
 
-                .kkpm-card__img img{
+                .kkpf-card__img img{
                     width:100%;
                     height:100%;
                     object-fit:cover;
                     display:block;
                 }
 
-                .kkpm-card__badge{
+                .kkpf-card__badge{
                     position:absolute;
                     top:8px;
                     right:8px;
+                    background:#ff5a2f;
+                    color:#fff;
                     padding:4px 7px;
                     border-radius:8px;
-                    background:#ff5b2e;
-                    color:#fff;
                     font-size:11px;
                     font-weight:700;
                 }
 
-                .kkpm-card__title{
+                .kkpf-card__title{
                     margin-top:8px;
                     font-size:14px;
                     font-weight:600;
@@ -659,186 +654,180 @@
                     overflow:hidden;
                 }
 
-                .kkpm-card__meta{
+                .kkpf-card__meta{
                     margin-top:3px;
                     font-size:12px;
                     opacity:.7;
                 }
 
-                .kkpm-grid{
+                .kkpf-grid{
                     display:grid;
                     grid-template-columns:repeat(3,minmax(0,1fr));
                     gap:12px;
                     padding:0 14px;
                 }
 
-                .kkpm-load,
-                .kkpm-empty{
+                .kkpf-load,.kkpf-empty{
                     text-align:center;
-                    padding:20px 14px;
-                    opacity:.8;
+                    padding:18px 14px;
                     font-size:14px;
+                    opacity:.8;
                 }
 
-                .kkpm-hero{
+                .kkpf-hero{
                     position:relative;
                     overflow:hidden;
-                    border-radius:0 0 22px 22px;
-                    min-height:420px;
-                    background:#101010;
+                    background:#111;
+                    border-radius:0 0 20px 20px;
                 }
 
-                .kkpm-hero__bg{
+                .kkpf-hero__bg{
                     position:absolute;
                     inset:0;
                     background-size:cover;
                     background-position:center;
-                    transform:scale(1.06);
                     filter:blur(10px);
+                    transform:scale(1.06);
                     opacity:.35;
                 }
 
-                .kkpm-hero__overlay{
+                .kkpf-hero__overlay{
                     position:absolute;
                     inset:0;
-                    background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,.8) 55%,rgba(0,0,0,.96) 100%);
+                    background:linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.82) 60%, rgba(0,0,0,.96) 100%);
                 }
 
-                .kkpm-hero__inner{
+                .kkpf-hero__inner{
                     position:relative;
                     z-index:2;
-                    padding:18px 14px 22px 14px;
                     display:flex;
                     flex-direction:column;
                     gap:16px;
+                    padding:16px 14px 20px;
                 }
 
-                .kkpm-hero__poster{
+                .kkpf-hero__poster{
                     width:150px;
                     max-width:42vw;
                     border-radius:16px;
                     overflow:hidden;
-                    box-shadow:0 10px 30px rgba(0,0,0,.35);
+                    box-shadow:0 12px 30px rgba(0,0,0,.35);
                 }
 
-                .kkpm-hero__poster img{
+                .kkpf-hero__poster img{
                     width:100%;
                     display:block;
                 }
 
-                .kkpm-hero__title{
+                .kkpf-hero__title{
                     font-size:24px;
                     line-height:1.25;
                     font-weight:800;
                 }
 
-                .kkpm-hero__sub{
+                .kkpf-hero__sub{
                     margin-top:4px;
                     font-size:14px;
                     opacity:.72;
                 }
 
-                .kkpm-tags{
-                    margin-top:12px;
+                .kkpf-tags{
                     display:flex;
                     flex-wrap:wrap;
                     gap:8px;
+                    margin-top:12px;
                 }
 
-                .kkpm-tags span{
+                .kkpf-tags span{
                     padding:7px 10px;
                     border-radius:999px;
                     background:rgba(255,255,255,.12);
                     font-size:12px;
                 }
 
-                .kkpm-actions{
+                .kkpf-actions{
                     display:flex;
+                    flex-wrap:wrap;
                     gap:10px;
                     margin-top:14px;
-                    flex-wrap:wrap;
                 }
 
-                .kkpm-btn{
+                .kkpf-btn{
+                    min-width:120px;
+                    text-align:center;
                     padding:11px 14px;
                     border-radius:14px;
                     background:rgba(255,255,255,.12);
                     font-size:14px;
                     font-weight:700;
-                    text-align:center;
-                    min-width:120px;
                 }
 
-                .kkpm-btn--play{
-                    background:#ff5b2e;
+                .kkpf-btn--play{
+                    background:#ff5a2f;
                     color:#fff;
                 }
 
-                .kkpm-info{
+                .kkpf-info{
                     margin-top:14px;
                     font-size:14px;
                     line-height:1.7;
                 }
 
-                .kkpm-desc{
+                .kkpf-desc{
                     margin-top:14px;
                     font-size:14px;
                     line-height:1.7;
                     opacity:.94;
                 }
 
-                .kkpm-episodes{
-                    padding:18px 14px 24px 14px;
+                .kkpf-episodes{
+                    padding:18px 14px 24px;
                 }
 
-                .kkpm-episodes__title{
+                .kkpf-episodes__title{
                     font-size:18px;
                     font-weight:800;
                     margin-bottom:12px;
                 }
 
-                .kkpm-episodes__list{
+                .kkpf-episodes__list{
                     display:flex;
                     flex-wrap:wrap;
                     gap:10px;
                 }
 
-                .kkpm-ep{
+                .kkpf-ep{
+                    min-width:76px;
+                    text-align:center;
                     padding:10px 14px;
                     border-radius:12px;
                     background:rgba(255,255,255,.1);
                     font-size:14px;
-                    min-width:76px;
-                    text-align:center;
                 }
 
-                @media (min-width: 768px){
-                    .kkpm-grid{
+                @media (min-width:768px){
+                    .kkpf-grid{
                         grid-template-columns:repeat(5,minmax(0,1fr));
                     }
 
-                    .kkpm-hero{
-                        border-radius:0 0 28px 28px;
-                    }
-
-                    .kkpm-hero__inner{
-                        padding:24px;
+                    .kkpf-hero__inner{
                         display:grid;
                         grid-template-columns:220px 1fr;
-                        gap:22px;
+                        gap:24px;
                         align-items:start;
+                        padding:24px;
                     }
 
-                    .kkpm-hero__poster{
+                    .kkpf-hero__poster{
                         width:220px;
                         max-width:none;
                     }
 
-                    .kkpm-hero__title{
+                    .kkpf-hero__title{
                         font-size:34px;
                     }
 
-                    .kkpm-desc,.kkpm-info{
+                    .kkpf-desc,.kkpf-info{
                         max-width:900px;
                     }
                 }
@@ -850,18 +839,18 @@
         function run() {
             var menu = $('.menu .menu__list').eq(0);
             if (!menu.length) return setTimeout(run, 1000);
-            if (menu.find('[data-action="kkpm"]').length) return;
+            if (menu.find('[data-action="kkpf"]').length) return;
 
             var item = $(`
-                <li class="menu__item selector" data-action="kkpm">
+                <li class="menu__item selector" data-action="kkpf">
                     <div class="menu__ico">🎬</div>
                     <div class="menu__text">KKPhim</div>
                 </li>
             `);
 
-            item.on('hover:enter click', function () {
+            item.on('click hover:enter', function () {
                 Lampa.Activity.push({
-                    component: 'kkpm_main',
+                    component: 'kkpf_main',
                     title: 'KKPhim'
                 });
             });
@@ -872,14 +861,14 @@
         run();
     }
 
-    Lampa.Component.add('kkpm_main', MainPage);
-    Lampa.Component.add('kkpm_category', CategoryPage);
-    Lampa.Component.add('kkpm_detail', DetailPage);
+    Lampa.Component.add('kkpf_main', MainPage);
+    Lampa.Component.add('kkpf_category', CategoryPage);
+    Lampa.Component.add('kkpf_detail', DetailPage);
 
     function start() {
-        injectCSS();
+        addStyle();
         addMenu();
-        console.log('KKPhim mobile plugin ready');
+        console.log('KKPhim fixed scroll plugin ready');
     }
 
     if (Lampa.Listener) {
