@@ -164,17 +164,7 @@
         document.head.appendChild(s);
     }
 
-    // =================== Mở chi tiết phim ===================
-    function openDetail(item) {
-        Lampa.Activity.push({
-            url: item.slug,
-            title: item.name || item.origin_name || '',
-            component: 'kkkphim_detail',
-            page: 1
-        });
-    }
-
-    // =================== Tạo card chuẩn Lampa ===================
+    // =================== Card Info theo chuẩn LNUM ===================
     function createLampaCard(item, onEnter) {
         var imgUrl  = Img.fix(item.poster_url || item.thumb_url || '');
         var title   = item.name || item.origin_name || '';
@@ -182,13 +172,14 @@
         var quality = item.quality || '';
         var epText  = item.episode_current || '';
         var vote    = item.tmdb && item.tmdb.vote_average ? item.tmdb.vote_average : '';
-
+        
+        // Sử dụng template card chuẩn của Lampa
         var card = Lampa.Template.get('card', {
             title: title,
             release_year: year
         });
 
-        // Poster image
+        // Thiết lập poster
         var img = card.find('.card__img')[0] || card.find('img')[0];
         if (img) {
             if (img.tagName === 'IMG') {
@@ -198,19 +189,23 @@
             }
         }
 
-        // Thêm chất lượng
-        if (quality || epText) {
-            var viewEl = card.find('.card__view');
-            if (viewEl.length) {
-                if (quality) {
-                    viewEl.append('<div style="position:absolute;top:0.5em;left:0.5em;background:rgba(0,0,0,0.7);color:#ffcc00;font-size:0.7em;padding:0.15em 0.5em;border-radius:0.3em;font-weight:600;z-index:2;">' + quality + '</div>');
-                }
-                if (epText) {
-                    viewEl.append('<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.85));color:#fff;font-size:0.65em;padding:0.6em 0.3em 0.25em;text-align:center;z-index:2;">' + epText + '</div>');
-                }
+        // Thêm các thông tin phụ
+        var infoDiv = card.find('.card__info');
+        if (infoDiv.length) {
+            var metaInfo = [];
+            if (quality) metaInfo.push('<span class="card__quality">' + quality + '</span>');
+            if (epText) metaInfo.push('<span class="card__episodes">' + epText + '</span>');
+            if (vote) metaInfo.push('<span class="card__rating">★ ' + vote + '</span>');
+            
+            if (metaInfo.length) {
+                infoDiv.append('<div class="card__meta">' + metaInfo.join(' · ') + '</div>');
             }
         }
 
+        // Thêm CSS cho card
+        card.addClass('kkk-card');
+        
+        // Xử lý sự kiện enter
         card.on('hover:enter', function () {
             if (onEnter) onEnter(item);
         });
@@ -219,7 +214,7 @@
     }
 
     // =============================================================
-    //  MAIN COMPONENT (Home – scroll ngang từng hàng, chuẩn Lampa)
+    //  MAIN COMPONENT (Home – scroll ngang từng hàng)
     // =============================================================
     function KKKMainComponent(object) {
         var network    = new Lampa.Reguest();
@@ -288,7 +283,14 @@
             });
 
             list.slice(0, 20).forEach(function (item) {
-                var card = createLampaCard(item, openDetail);
+                var card = createLampaCard(item, function(item) {
+                    Lampa.Activity.push({
+                        url: item.slug,
+                        title: item.name || item.origin_name || '',
+                        component: 'kkkphim_detail',
+                        page: 1
+                    });
+                });
                 line.body().append(card);
                 items.push(card[0]);
             });
@@ -352,7 +354,7 @@
     }
 
     // =============================================================
-    //  CATALOG COMPONENT (Grid phân trang, chuẩn Lampa)
+    //  CATALOG COMPONENT (Grid phân trang)
     // =============================================================
     function KKKCatalogComponent(object) {
         var network      = new Lampa.Reguest();
@@ -365,13 +367,12 @@
         var category_url = object.url || 'phim-moi-cap-nhat';
         var active       = false;
         var body;
-        var bottomObserver;
         var moreBtn;
 
         this.create = function () {
             scroll.minus();
 
-            body = $('<div class="category-full"></div>');
+            body = $('<div class="category-full grid-view"></div>');
             scroll.append(body);
 
             this.loadPage();
@@ -414,26 +415,29 @@
         this.appendCards = function (list) {
             var _this = this;
 
-            // Xóa nút load more cũ
             if (moreBtn) {
                 moreBtn.remove();
                 moreBtn = null;
             }
 
             list.forEach(function (item) {
-                var card = createLampaCard(item, openDetail);
+                var card = createLampaCard(item, function(item) {
+                    Lampa.Activity.push({
+                        url: item.slug,
+                        title: item.name || item.origin_name || '',
+                        component: 'kkkphim_detail',
+                        page: 1
+                    });
+                });
                 body.append(card);
                 items.push(card[0]);
             });
 
-            // Thêm nút load more
             if (page < totalPages) {
                 moreBtn = $('<div class="selector card-more"><div class="card-more__box"><div class="card-more__title">Tải thêm</div><div class="card-more__subtitle">Trang ' + (page + 1) + ' / ' + totalPages + '</div></div></div>');
-
                 moreBtn.on('hover:enter', function () {
                     _this.loadPage();
                 });
-
                 body.append(moreBtn);
                 items.push(moreBtn[0]);
             }
@@ -497,7 +501,7 @@
     }
 
     // =============================================================
-    //  DETAIL COMPONENT (Info phim + danh sách tập)
+    //  DETAIL COMPONENT (Info phim + danh sách tập) - Giữ nguyên phần card info đẹp
     // =============================================================
     function KKKDetailComponent(object) {
         var network = new Lampa.Reguest();
@@ -760,20 +764,13 @@
                 });
 
                 if (playlist.length) {
-                    // === Tạo object để player nhận diện ===
                     var playerData = playlist[currentIdx];
                     playerData.playlist = playlist;
 
                     Lampa.Player.play(playerData);
                     Lampa.Player.playlist(playlist);
-
-                    // Lưu timeline
-                    if (Lampa.Platform.tv()) {
-                        // trên TV
-                    }
                 }
             } else {
-                // Embed link - thử mở
                 Lampa.Noty.show('Đang mở link embed...');
                 window.open(url, '_blank');
             }
@@ -853,7 +850,7 @@
         this.create = function () {
             scroll.minus();
 
-            body = $('<div class="category-full"></div>');
+            body = $('<div class="category-full grid-view"></div>');
             scroll.append(body);
 
             this.loadPage();
@@ -902,7 +899,14 @@
             }
 
             list.forEach(function (item) {
-                var card = createLampaCard(item, openDetail);
+                var card = createLampaCard(item, function(item) {
+                    Lampa.Activity.push({
+                        url: item.slug,
+                        title: item.name || item.origin_name || '',
+                        component: 'kkkphim_detail',
+                        page: 1
+                    });
+                });
                 body.append(card);
                 items.push(card[0]);
             });
@@ -1002,54 +1006,33 @@
             });
         });
 
-        // Chèn vào cuối menu list đầu tiên
-        var addedToMenu = false;
-
-        // Cách 1: Tìm menu__list
+        // Chèn vào menu
         var menuList = $('.menu .menu__list');
         if (menuList.length) {
             menuList.eq(0).append(menuItem);
-            addedToMenu = true;
         }
 
-        // Cách 2: Nếu không tìm thấy, thử selector khác
-        if (!addedToMenu) {
-            var altMenu = $('.navigation-menu .menu__list, .menu__body .menu__list');
-            if (altMenu.length) {
-                altMenu.eq(0).append(menuItem);
-                addedToMenu = true;
-            }
-        }
-
-        // === Tích hợp tìm kiếm ===
-        // Lắng nghe sự kiện search của Lampa
+        // Tích hợp tìm kiếm
         Lampa.Listener.follow('search', function (e) {
             if (e.type === 'start') {
-                // Thêm source tìm kiếm KKKPhim
                 var searchQuery = e.query || '';
-                if (searchQuery.length > 1) {
-                    // Thêm 1 kết quả vào panel search
-                    var existItem = e.body ? e.body.find('[data-kkk-search]') : null;
-                    if (existItem && existItem.length) return;
+                if (searchQuery.length > 1 && e.body) {
+                    var searchCard = $('<div class="selector search-source" data-kkk-search="true">' +
+                        '<div class="search-source__title">KKKPhim</div>' +
+                        '<div class="search-source__descr">Tìm "' + searchQuery + '" trên KKKPhim</div>' +
+                    '</div>');
 
-                    if (e.body) {
-                        var searchCard = $('<div class="selector search-source" data-kkk-search="true">' +
-                            '<div class="search-source__title">KKKPhim</div>' +
-                            '<div class="search-source__descr">Tìm "' + searchQuery + '" trên KKKPhim</div>' +
-                        '</div>');
-
-                        searchCard.on('hover:enter', function () {
-                            Lampa.Activity.push({
-                                url:       searchQuery,
-                                title:     'KKKPhim: ' + searchQuery,
-                                component: 'kkkphim_search',
-                                search:    searchQuery,
-                                page:      1
-                            });
+                    searchCard.on('hover:enter', function () {
+                        Lampa.Activity.push({
+                            url:       searchQuery,
+                            title:     'KKKPhim: ' + searchQuery,
+                            component: 'kkkphim_search',
+                            search:    searchQuery,
+                            page:      1
                         });
+                    });
 
-                        e.body.append(searchCard);
-                    }
+                    e.body.append(searchCard);
                 }
             }
         });
