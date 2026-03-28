@@ -28,10 +28,6 @@
         return API_BASE + '/phim/' + slug;
     }
 
-    function searchUrl(q) {
-        return API_BASE + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(q) + '&limit=24';
-    }
-
     function parseItems(data) {
         if (data && data.items) return data.items;
         if (data && data.data && data.data.items) return data.data.items;
@@ -45,117 +41,154 @@
         var s = document.createElement('style');
         s.id = 'kkk-css';
         s.textContent = '\
-.kkk-row { margin-bottom: 1.5em; }\
+.kkk-row { margin-bottom:1.5em; }\
 .kkk-row__title { display:flex; align-items:center; justify-content:space-between; padding:0 1.5em 0.5em; }\
 .kkk-row__name { font-size:1.3em; font-weight:bold; color:#fff; }\
 .kkk-row__more { font-size:0.85em; color:#ffaa00; cursor:pointer; padding:0.3em 0.8em; border-radius:0.3em; }\
 .kkk-row__more.focus { background:rgba(255,170,0,0.3); }\
-.kkk-row__scroll { display:flex; overflow-x:auto; overflow-y:hidden; gap:0.8em; padding:0 1.5em; scrollbar-width:none; -ms-overflow-style:none; }\
-.kkk-row__scroll::-webkit-scrollbar { display:none; }\
+.kkk-row__items { display:flex; gap:0.8em; padding:0 1.5em; overflow:visible; }\
 .kkk-poster { flex-shrink:0; width:130px; cursor:pointer; }\
 .kkk-poster.focus .kkk-poster__img-wrap { border-color:#fff; transform:scale(1.05); }\
-.kkk-poster__img-wrap { position:relative; border-radius:0.6em; overflow:hidden; border:2px solid transparent; transition:all 0.2s; aspect-ratio:2/3; }\
-.kkk-poster__img { width:100%; height:100%; object-fit:cover; display:block; }\
+.kkk-poster__img-wrap { position:relative; border-radius:0.6em; overflow:hidden; border:2px solid transparent; transition:all 0.15s; }\
+.kkk-poster__img { width:100%; height:195px; object-fit:cover; display:block; }\
 .kkk-poster__quality { position:absolute; top:4px; left:4px; background:rgba(255,140,0,0.9); color:#fff; font-size:0.6em; padding:1px 5px; border-radius:3px; font-weight:bold; }\
-.kkk-poster__ep { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.85)); color:#fff; font-size:0.6em; padding:8px 4px 3px; text-align:center; }\
+.kkk-poster__ep { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,rgba(0,0,0,0.85)); color:#fff; font-size:0.6em; padding:8px 4px 3px; text-align:center; }\
 .kkk-poster__title { color:#fff; font-size:0.78em; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\
 .kkk-poster__year { color:#666; font-size:0.68em; }\
 \
 .kkk-detail { position:relative; }\
-.kkk-backdrop { width:100%; height:300px; object-fit:cover; display:block; }\
-.kkk-backdrop-gradient { position:absolute; top:0; left:0; right:0; height:300px; background:linear-gradient(to top, #1a1a1a 0%, rgba(26,26,26,0.7) 50%, rgba(26,26,26,0.3) 100%); }\
-.kkk-detail__body { position:relative; margin-top:-100px; padding:0 1.5em; z-index:2; }\
+.kkk-backdrop { width:100%; height:280px; object-fit:cover; display:block; }\
+.kkk-backdrop-gradient { position:absolute; top:0; left:0; right:0; height:280px; background:linear-gradient(to top,#1a1a1a 0%,rgba(26,26,26,0.6) 50%,rgba(26,26,26,0.2) 100%); pointer-events:none; }\
+.kkk-detail__body { position:relative; margin-top:-90px; padding:0 1.5em; z-index:2; }\
 .kkk-detail__top { display:flex; gap:1.2em; }\
-.kkk-detail__poster { width:140px; flex-shrink:0; }\
-.kkk-detail__poster img { width:100%; border-radius:0.5em; box-shadow:0 4px 20px rgba(0,0,0,0.5); }\
-.kkk-detail__info { flex:1; padding-top:10px; }\
-.kkk-detail__name { font-size:1.5em; font-weight:bold; color:#fff; line-height:1.2; }\
-.kkk-detail__orig { font-size:0.9em; color:#888; margin:2px 0 8px; }\
+.kkk-detail__poster-wrap { width:130px; flex-shrink:0; }\
+.kkk-detail__poster-wrap img { width:100%; border-radius:0.5em; box-shadow:0 4px 20px rgba(0,0,0,0.5); }\
+.kkk-detail__info { flex:1; min-width:0; padding-top:8px; }\
+.kkk-detail__name { font-size:1.4em; font-weight:bold; color:#fff; line-height:1.2; }\
+.kkk-detail__orig { font-size:0.85em; color:#888; margin:2px 0 8px; }\
 .kkk-detail__tags { display:flex; gap:0.4em; flex-wrap:wrap; margin-bottom:8px; }\
 .kkk-detail__tag { background:rgba(255,255,255,0.1); color:#ccc; font-size:0.7em; padding:2px 8px; border-radius:20px; }\
 .kkk-detail__tag--accent { background:rgba(255,140,0,0.25); color:#ffaa00; }\
-.kkk-detail__genres { color:#777; font-size:0.78em; margin-bottom:4px; }\
-.kkk-detail__countries { color:#777; font-size:0.78em; }\
+.kkk-detail__genres { color:#777; font-size:0.75em; margin-bottom:3px; }\
+.kkk-detail__countries { color:#777; font-size:0.75em; }\
 \
-.kkk-detail__desc { color:#aaa; font-size:0.85em; line-height:1.5; padding:1em 1.5em 0; max-height:4.5em; overflow:hidden; position:relative; }\
-.kkk-detail__desc--full { max-height:none; }\
-.kkk-detail__desc-toggle { color:#ffaa00; font-size:0.8em; padding:0.3em 1.5em; cursor:pointer; display:inline-block; }\
-.kkk-detail__desc-toggle.focus { text-decoration:underline; }\
+.kkk-desc-section { padding:0.8em 1.5em 0; }\
+.kkk-desc-text { color:#aaa; font-size:0.82em; line-height:1.5; max-height:4em; overflow:hidden; transition:max-height 0.3s; }\
+.kkk-desc-text--full { max-height:999px; }\
+.kkk-desc-toggle { color:#ffaa00; font-size:0.78em; cursor:pointer; padding:0.3em 0; display:inline-block; }\
+.kkk-desc-toggle.focus { text-decoration:underline; }\
 \
-.kkk-detail__play-section { padding:1em 1.5em 0; }\
-.kkk-server-title { font-size:1.1em; font-weight:bold; color:#ffaa00; margin-bottom:0.5em; }\
-.kkk-ep-grid { display:flex; flex-wrap:wrap; gap:0.4em; margin-bottom:1em; }\
-.kkk-ep-btn { background:rgba(255,255,255,0.08); color:#fff; padding:0.5em 1em; border-radius:0.4em; font-size:0.85em; min-width:45px; text-align:center; cursor:pointer; transition:background 0.2s; }\
+.kkk-play-section { padding:0.8em 1.5em; }\
+.kkk-play-title { font-size:1.1em; font-weight:bold; color:#fff; margin-bottom:0.6em; }\
+.kkk-server-name { font-size:0.95em; font-weight:bold; color:#ffaa00; margin:0.6em 0 0.3em; }\
+.kkk-ep-grid { display:flex; flex-wrap:wrap; gap:0.4em; margin-bottom:0.6em; }\
+.kkk-ep-btn { background:rgba(255,255,255,0.08); color:#fff; padding:0.45em 0.9em; border-radius:0.4em; font-size:0.8em; min-width:42px; text-align:center; cursor:pointer; }\
 .kkk-ep-btn.focus { background:#ff8c00; color:#000; font-weight:bold; }\
 \
-.kkk-catalog-grid { display:flex; flex-wrap:wrap; gap:0.8em; padding:0 1.5em 1em; }\
-.kkk-load-more { text-align:center; padding:1.5em; }\
-.kkk-load-more__btn { display:inline-block; background:rgba(255,255,255,0.08); color:#ffaa00; padding:0.6em 2em; border-radius:2em; font-size:1em; cursor:pointer; }\
-.kkk-load-more__btn.focus { background:rgba(255,140,0,0.3); }\
+.kkk-catalog-wrap { display:flex; flex-wrap:wrap; gap:0.8em; padding:0.5em 1.5em; }\
+.kkk-load-wrap { width:100%; text-align:center; padding:1.2em 0; }\
+.kkk-load-btn { display:inline-block; background:rgba(255,255,255,0.08); color:#ffaa00; padding:0.6em 2em; border-radius:2em; font-size:0.95em; cursor:pointer; }\
+.kkk-load-btn.focus { background:rgba(255,140,0,0.3); }\
 ';
         document.head.appendChild(s);
     }
 
-    // =================== MAIN COMPONENT (Home with rows) ===================
+    // =================== Helpers ===================
+    function createPosterElement(item, onClick) {
+        var card = document.createElement('div');
+        card.className = 'selector kkk-poster';
+
+        var imgUrl = Img.fix(item.poster_url || item.thumb_url || '');
+
+        card.innerHTML =
+            '<div class="kkk-poster__img-wrap">' +
+                '<img class="kkk-poster__img" src="' + imgUrl + '" onerror="this.src=\'https://via.placeholder.com/130x195?text=No\'" loading="lazy" />' +
+                (item.quality ? '<div class="kkk-poster__quality">' + item.quality + '</div>' : '') +
+                (item.episode_current ? '<div class="kkk-poster__ep">' + item.episode_current + '</div>' : '') +
+            '</div>' +
+            '<div class="kkk-poster__title">' + (item.name || item.origin_name || '') + '</div>' +
+            '<div class="kkk-poster__year">' + (item.year || '') + '</div>';
+
+        card.addEventListener('hover:enter', function () {
+            if (onClick) onClick(item);
+        });
+
+        return card;
+    }
+
+    function openDetail(item) {
+        Lampa.Activity.push({
+            url: item.slug,
+            title: item.name || item.origin_name || '',
+            component: 'kkkphim_detail',
+            page: 1
+        });
+    }
+
+    // =================== MAIN (Home rows) ===================
     function KKKMainComponent(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var comp = this;
+        var body = $('<div></div>');
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var network = new Lampa.Reguest();
         var created = false;
         var loadedCount = 0;
+        var rowsData = [];
 
         this.create = function () {
             var _this = this;
-
             this.activity.loader(true);
 
-            categories.forEach(function (cat, index) {
-                _this.loadRow(cat, index);
+            scroll.minus();
+            scroll.body().addClass('torrent-list');
+
+            categories.forEach(function (cat, idx) {
+                _this.loadRow(cat, idx);
             });
         };
 
-        this.loadRow = function (cat, index) {
+        this.loadRow = function (cat, idx) {
             var _this = this;
             var url = catUrl(cat.url, 1);
 
             network.timeout(15000);
             network.silent(url, function (data) {
                 var items = parseItems(data);
-                if (items.length) {
-                    _this.buildRow(cat, items);
-                }
+                rowsData[idx] = { cat: cat, items: items };
                 loadedCount++;
                 if (loadedCount >= categories.length) {
-                    _this.activity.loader(false);
-                    _this.activity.toggle();
+                    _this.renderAllRows();
                 }
             }, function () {
+                rowsData[idx] = { cat: cat, items: [] };
                 loadedCount++;
                 if (loadedCount >= categories.length) {
-                    _this.activity.loader(false);
-                    _this.activity.toggle();
+                    _this.renderAllRows();
                 }
             });
         };
 
-        this.buildRow = function (cat, items) {
+        this.renderAllRows = function () {
             var _this = this;
+            this.activity.loader(false);
 
-            var row = document.createElement('div');
-            row.className = 'kkk-row';
+            rowsData.forEach(function (rd) {
+                if (!rd || !rd.items.length) return;
+                _this.buildRow(rd.cat, rd.items);
+            });
 
-            // Title bar
-            var titleBar = document.createElement('div');
-            titleBar.className = 'kkk-row__title';
+            this.activity.toggle();
+        };
 
-            var name = document.createElement('div');
-            name.className = 'kkk-row__name';
-            name.textContent = cat.title;
-            titleBar.appendChild(name);
+        this.buildRow = function (cat, items) {
+            var row = $('<div class="kkk-row"></div>');
 
-            var more = document.createElement('div');
-            more.className = 'selector kkk-row__more';
-            more.textContent = 'Xem thêm ›';
-            more.addEventListener('hover:enter', function () {
+            // Title
+            var titleBar = $('<div class="kkk-row__title"></div>');
+            titleBar.append('<div class="kkk-row__name">' + cat.title + '</div>');
+
+            var moreBtn = $('<div class="selector kkk-row__more">Xem thêm ›</div>');
+            moreBtn.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: cat.url,
                     title: cat.title,
@@ -163,50 +196,19 @@
                     page: 1
                 });
             });
-            titleBar.appendChild(more);
+            titleBar.append(moreBtn);
+            row.append(titleBar);
 
-            row.appendChild(titleBar);
-
-            // Scroll row
-            var rowScroll = document.createElement('div');
-            rowScroll.className = 'kkk-row__scroll';
+            // Items row (horizontal)
+            var rowItems = $('<div class="kkk-row__items"></div>');
 
             items.slice(0, 15).forEach(function (item) {
-                var card = _this.createPoster(item);
-                rowScroll.appendChild(card);
+                var card = createPosterElement(item, openDetail);
+                rowItems.append(card);
             });
 
-            row.appendChild(rowScroll);
-            scroll.append($(row));
-        };
-
-        this.createPoster = function (item) {
-            var card = document.createElement('div');
-            card.className = 'selector kkk-poster';
-
-            var imgUrl = Img.fix(item.poster_url || item.thumb_url || '');
-            var quality = item.quality || '';
-            var epCurrent = item.episode_current || '';
-
-            card.innerHTML =
-                '<div class="kkk-poster__img-wrap">' +
-                    '<img class="kkk-poster__img" src="' + imgUrl + '" onerror="this.src=\'https://via.placeholder.com/130x195?text=No+Img\'" loading="lazy" />' +
-                    (quality ? '<div class="kkk-poster__quality">' + quality + '</div>' : '') +
-                    (epCurrent ? '<div class="kkk-poster__ep">' + epCurrent + '</div>' : '') +
-                '</div>' +
-                '<div class="kkk-poster__title">' + (item.name || item.origin_name || '') + '</div>' +
-                '<div class="kkk-poster__year">' + (item.year || '') + '</div>';
-
-            card.addEventListener('hover:enter', function () {
-                Lampa.Activity.push({
-                    url: item.slug,
-                    title: item.name || item.origin_name || '',
-                    component: 'kkkphim_detail',
-                    page: 1
-                });
-            });
-
-            return card;
+            row.append(rowItems);
+            scroll.append(row);
         };
 
         this.start = function () {
@@ -217,27 +219,34 @@
 
         this.pause = function () {};
         this.stop = function () {};
-        this.render = function () { return scroll.render(); };
+
+        this.render = function () {
+            return scroll.render();
+        };
+
         this.destroy = function () {
             network.clear();
             scroll.destroy();
         };
     }
 
-    // =================== CATALOG COMPONENT (Grid + Load More) ===================
+    // =================== CATALOG (Grid + Load More) ===================
     function KKKCatalogComponent(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var network = new Lampa.Reguest();
         var created = false;
         var page = 0;
         var loading = false;
         var category_url = object.url || 'phim-moi-cap-nhat';
-        var gridWrap;
+        var gridEl;
+        var loadMoreWrap;
 
         this.create = function () {
-            gridWrap = document.createElement('div');
-            gridWrap.className = 'kkk-catalog-grid';
-            scroll.append($(gridWrap));
+            scroll.minus();
+            scroll.body().addClass('torrent-list');
+
+            gridEl = $('<div class="kkk-catalog-wrap"></div>');
+            scroll.append(gridEl);
 
             this.loadMore();
         };
@@ -250,18 +259,15 @@
             var _this = this;
             if (page === 1) this.activity.loader(true);
 
-            var url = catUrl(category_url, page);
-
             network.clear();
             network.timeout(15000);
-            network.silent(url, function (data) {
+            network.silent(catUrl(category_url, page), function (data) {
                 _this.activity.loader(false);
                 loading = false;
 
                 var items = parseItems(data);
                 if (items.length) {
                     _this.appendCards(items);
-                    _this.addLoadMoreBtn();
                     _this.activity.toggle();
                 } else if (page === 1) {
                     _this.showEmpty();
@@ -280,64 +286,30 @@
         this.appendCards = function (items) {
             var _this = this;
 
-            // Remove old load more button
-            var oldBtn = scroll.render().find('.kkk-load-more');
-            if (oldBtn.length) oldBtn.remove();
+            // Remove old load more
+            if (loadMoreWrap) {
+                loadMoreWrap.remove();
+                loadMoreWrap = null;
+            }
 
             items.forEach(function (item) {
-                var card = document.createElement('div');
-                card.className = 'selector kkk-poster';
+                var card = createPosterElement(item, openDetail);
                 card.style.width = '130px';
-
-                var imgUrl = Img.fix(item.poster_url || item.thumb_url || '');
-
-                card.innerHTML =
-                    '<div class="kkk-poster__img-wrap">' +
-                        '<img class="kkk-poster__img" src="' + imgUrl + '" onerror="this.src=\'https://via.placeholder.com/130x195?text=No+Img\'" loading="lazy" />' +
-                        (item.quality ? '<div class="kkk-poster__quality">' + item.quality + '</div>' : '') +
-                        (item.episode_current ? '<div class="kkk-poster__ep">' + item.episode_current + '</div>' : '') +
-                    '</div>' +
-                    '<div class="kkk-poster__title">' + (item.name || item.origin_name || '') + '</div>' +
-                    '<div class="kkk-poster__year">' + (item.year || '') + '</div>';
-
-                card.addEventListener('hover:enter', function () {
-                    Lampa.Activity.push({
-                        url: item.slug,
-                        title: item.name || item.origin_name || '',
-                        component: 'kkkphim_detail',
-                        page: 1
-                    });
-                });
-
-                gridWrap.appendChild(card);
+                gridEl.append(card);
             });
-        };
 
-        this.addLoadMoreBtn = function () {
-            var _this = this;
-
-            var wrap = document.createElement('div');
-            wrap.className = 'kkk-load-more';
-            wrap.style.width = '100%';
-
-            var btn = document.createElement('div');
-            btn.className = 'selector kkk-load-more__btn';
-            btn.textContent = '📄 Tải thêm - Trang ' + (page + 1);
-
-            btn.addEventListener('hover:enter', function () {
-                wrap.remove();
+            // Add load more button
+            loadMoreWrap = $('<div class="kkk-load-wrap"></div>');
+            var btn = $('<div class="selector kkk-load-btn">📄 Tải thêm (Trang ' + (page + 1) + ')</div>');
+            btn.on('hover:enter', function () {
                 _this.loadMore();
             });
-
-            wrap.appendChild(btn);
-            scroll.append($(wrap));
+            loadMoreWrap.append(btn);
+            scroll.append(loadMoreWrap);
         };
 
         this.showEmpty = function () {
-            var e = document.createElement('div');
-            e.style.cssText = 'padding:3em;color:#fff;text-align:center;font-size:1.2em;';
-            e.textContent = 'Không tìm thấy phim nào';
-            scroll.append($(e));
+            scroll.append($('<div style="padding:3em;color:#fff;text-align:center;font-size:1.2em;">Không tìm thấy phim nào</div>'));
         };
 
         this.start = function () {
@@ -355,17 +327,19 @@
         };
     }
 
-    // =================== DETAIL COMPONENT (Backdrop style) ===================
+    // =================== DETAIL (Backdrop) ===================
     function KKKDetailComponent(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var network = new Lampa.Reguest();
         var created = false;
         var slug = object.url || '';
-        var descExpanded = false;
 
         this.create = function () {
             var _this = this;
             this.activity.loader(true);
+
+            scroll.minus();
+            scroll.body().addClass('torrent-list');
 
             network.clear();
             network.timeout(15000);
@@ -388,127 +362,112 @@
         this.buildDetail = function (movie, episodes) {
             var _this = this;
 
-            var wrap = document.createElement('div');
-            wrap.className = 'kkk-detail';
-
             var backdropUrl = Img.fix(movie.thumb_url || movie.poster_url || '');
             var posterUrl = Img.fix(movie.poster_url || movie.thumb_url || '');
 
-            // Backdrop
-            wrap.innerHTML =
-                '<img class="kkk-backdrop" src="' + backdropUrl + '" onerror="this.style.height=\'150px\';this.style.background=\'#333\';" />' +
-                '<div class="kkk-backdrop-gradient"></div>';
+            // ---- Backdrop ----
+            var backdropWrap = $('<div class="kkk-detail"></div>');
+            backdropWrap.html(
+                '<img class="kkk-backdrop" src="' + backdropUrl + '" onerror="this.style.height=\'120px\';this.style.background=\'#333\';" />' +
+                '<div class="kkk-backdrop-gradient"></div>'
+            );
 
-            // Body
-            var body = document.createElement('div');
-            body.className = 'kkk-detail__body';
-
-            // Top section: poster + info
-            var top = document.createElement('div');
-            top.className = 'kkk-detail__top';
+            // ---- Body (poster + info) ----
+            var bodyEl = $('<div class="kkk-detail__body"></div>');
+            var topEl = $('<div class="kkk-detail__top"></div>');
 
             // Tags
             var tagsHtml = '';
-            var tagItems = [];
-            if (movie.quality) tagItems.push({ text: movie.quality, accent: true });
-            if (movie.lang) tagItems.push({ text: movie.lang, accent: false });
-            if (movie.year) tagItems.push({ text: movie.year, accent: false });
-            if (movie.episode_current) tagItems.push({ text: movie.episode_current, accent: true });
-            if (movie.time) tagItems.push({ text: movie.time, accent: false });
+            var tagData = [];
+            if (movie.quality) tagData.push({ t: movie.quality, a: true });
+            if (movie.lang) tagData.push({ t: movie.lang, a: false });
+            if (movie.year) tagData.push({ t: String(movie.year), a: false });
+            if (movie.episode_current) tagData.push({ t: movie.episode_current, a: true });
+            if (movie.time) tagData.push({ t: movie.time, a: false });
 
-            tagItems.forEach(function (t) {
-                tagsHtml += '<span class="kkk-detail__tag' + (t.accent ? ' kkk-detail__tag--accent' : '') + '">' + t.text + '</span>';
+            tagData.forEach(function (d) {
+                tagsHtml += '<span class="kkk-detail__tag' + (d.a ? ' kkk-detail__tag--accent' : '') + '">' + d.t + '</span>';
             });
 
-            var genresText = (movie.category || []).map(function (c) { return c.name; }).join(', ');
-            var countriesText = (movie.country || []).map(function (c) { return c.name; }).join(', ');
+            var genres = (movie.category || []).map(function (c) { return c.name; }).join(', ');
+            var countries = (movie.country || []).map(function (c) { return c.name; }).join(', ');
 
-            top.innerHTML =
-                '<div class="kkk-detail__poster">' +
-                    '<img src="' + posterUrl + '" onerror="this.src=\'https://via.placeholder.com/140x210?text=No+Img\'" />' +
+            topEl.html(
+                '<div class="kkk-detail__poster-wrap">' +
+                    '<img src="' + posterUrl + '" onerror="this.src=\'https://via.placeholder.com/130x195?text=No\'" />' +
                 '</div>' +
                 '<div class="kkk-detail__info">' +
                     '<div class="kkk-detail__name">' + (movie.name || '') + '</div>' +
                     '<div class="kkk-detail__orig">' + (movie.origin_name || '') + '</div>' +
                     '<div class="kkk-detail__tags">' + tagsHtml + '</div>' +
-                    (genresText ? '<div class="kkk-detail__genres">🎭 ' + genresText + '</div>' : '') +
-                    (countriesText ? '<div class="kkk-detail__countries">🌍 ' + countriesText + '</div>' : '') +
-                '</div>';
+                    (genres ? '<div class="kkk-detail__genres">🎭 ' + genres + '</div>' : '') +
+                    (countries ? '<div class="kkk-detail__countries">🌍 ' + countries + '</div>' : '') +
+                '</div>'
+            );
 
-            body.appendChild(top);
-            wrap.appendChild(body);
+            bodyEl.append(topEl);
+            backdropWrap.append(bodyEl);
+            scroll.append(backdropWrap);
 
-            scroll.append($(wrap));
-
-            // Description (collapsible)
+            // ---- Description ----
             var desc = (movie.content || '').replace(/<[^>]*>/g, '').trim();
             if (desc) {
-                var descEl = document.createElement('div');
-                descEl.className = 'kkk-detail__desc';
-                descEl.textContent = desc;
-                scroll.append($(descEl));
+                var descSection = $('<div class="kkk-desc-section"></div>');
+                var descText = $('<div class="kkk-desc-text"></div>');
+                descText.text(desc);
+                descSection.append(descText);
 
-                if (desc.length > 150) {
-                    var toggle = document.createElement('div');
-                    toggle.className = 'selector kkk-detail__desc-toggle';
-                    toggle.textContent = '▼ Xem thêm mô tả';
+                if (desc.length > 120) {
+                    var toggleBtn = $('<div class="selector kkk-desc-toggle">▼ Xem thêm</div>');
+                    var expanded = false;
 
-                    toggle.addEventListener('hover:enter', function () {
-                        descExpanded = !descExpanded;
-                        if (descExpanded) {
-                            descEl.classList.add('kkk-detail__desc--full');
-                            toggle.textContent = '▲ Thu gọn';
+                    toggleBtn.on('hover:enter', function () {
+                        expanded = !expanded;
+                        if (expanded) {
+                            descText.addClass('kkk-desc-text--full');
+                            toggleBtn.text('▲ Thu gọn');
                         } else {
-                            descEl.classList.remove('kkk-detail__desc--full');
-                            toggle.textContent = '▼ Xem thêm mô tả';
+                            descText.removeClass('kkk-desc-text--full');
+                            toggleBtn.text('▼ Xem thêm');
                         }
                     });
 
-                    scroll.append($(toggle));
+                    descSection.append(toggleBtn);
                 }
+
+                scroll.append(descSection);
             }
 
-            // Episodes section
+            // ---- Episodes ----
             if (episodes && episodes.length) {
-                var playSection = document.createElement('div');
-                playSection.className = 'kkk-detail__play-section';
-
-                var playTitle = document.createElement('div');
-                playTitle.style.cssText = 'font-size:1.2em;font-weight:bold;color:#fff;margin-bottom:0.8em;';
-                playTitle.textContent = '🎬 Danh sách phát';
-                playSection.appendChild(playTitle);
+                var playSection = $('<div class="kkk-play-section"></div>');
+                playSection.append('<div class="kkk-play-title">🎬 Danh sách phát</div>');
 
                 episodes.forEach(function (server) {
                     if (!server.server_data || !server.server_data.length) return;
 
-                    var serverTitle = document.createElement('div');
-                    serverTitle.className = 'kkk-server-title';
-                    serverTitle.textContent = '▶ ' + (server.server_name || 'Server');
-                    playSection.appendChild(serverTitle);
+                    playSection.append('<div class="kkk-server-name">▶ ' + (server.server_name || 'Server') + '</div>');
 
-                    var epGrid = document.createElement('div');
-                    epGrid.className = 'kkk-ep-grid';
+                    var epGrid = $('<div class="kkk-ep-grid"></div>');
 
-                    server.server_data.forEach(function (ep, epIndex) {
-                        var btn = document.createElement('div');
-                        btn.className = 'selector kkk-ep-btn';
-                        btn.textContent = ep.name || ep.slug || ('Tập ' + (epIndex + 1));
+                    server.server_data.forEach(function (ep, idx) {
+                        var btn = $('<div class="selector kkk-ep-btn">' + (ep.name || ep.slug || ('Tập ' + (idx + 1))) + '</div>');
 
-                        btn.addEventListener('hover:enter', function () {
-                            _this.playEp(ep, movie, server.server_data, epIndex);
+                        btn.on('hover:enter', function () {
+                            _this.playEp(ep, movie, server.server_data);
                         });
 
-                        epGrid.appendChild(btn);
+                        epGrid.append(btn);
                     });
 
-                    playSection.appendChild(epGrid);
+                    playSection.append(epGrid);
                 });
 
-                scroll.append($(playSection));
+                scroll.append(playSection);
             }
         };
 
-        this.playEp = function (ep, movie, allEps, currentIndex) {
+        this.playEp = function (ep, movie, allEps) {
             var url = ep.link_m3u8 || ep.link_embed || '';
 
             if (!url) {
@@ -517,43 +476,25 @@
             }
 
             if (url.indexOf('.m3u8') !== -1) {
-                // Build playlist
                 var playlist = [];
+                var currentIdx = 0;
 
                 allEps.forEach(function (e, i) {
-                    var epUrl = e.link_m3u8 || '';
-                    if (epUrl) {
+                    var eUrl = e.link_m3u8 || '';
+                    if (eUrl) {
+                        if (eUrl === url) currentIdx = playlist.length;
                         playlist.push({
                             title: (movie.name || 'KKKPhim') + ' - ' + (e.name || ('Tập ' + (i + 1))),
-                            url: epUrl,
-                            quality: { 'auto': epUrl },
+                            url: eUrl,
+                            quality: { auto: eUrl },
                             timeline: Lampa.Timeline.view({})
                         });
                     }
                 });
 
-                // Find current index in playlist
-                var playIndex = 0;
-                for (var i = 0; i < playlist.length; i++) {
-                    if (playlist[i].url === url) {
-                        playIndex = i;
-                        break;
-                    }
-                }
-
-                if (playlist.length > 0) {
-                    Lampa.Player.play(playlist[playIndex]);
+                if (playlist.length) {
+                    Lampa.Player.play(playlist[currentIdx]);
                     Lampa.Player.playlist(playlist);
-                } else {
-                    // Fallback single play
-                    var single = {
-                        title: (movie.name || 'KKKPhim') + ' - ' + (ep.name || ''),
-                        url: url,
-                        quality: { 'auto': url },
-                        timeline: Lampa.Timeline.view({})
-                    };
-                    Lampa.Player.play(single);
-                    Lampa.Player.playlist([single]);
                 }
             } else {
                 Lampa.Noty.show('Link embed không hỗ trợ phát trực tiếp');
@@ -561,10 +502,7 @@
         };
 
         this.showEmpty = function () {
-            var e = document.createElement('div');
-            e.style.cssText = 'padding:3em;color:#fff;text-align:center;font-size:1.2em;';
-            e.textContent = 'Không tải được thông tin phim';
-            scroll.append($(e));
+            scroll.append($('<div style="padding:3em;color:#fff;text-align:center;font-size:1.2em;">Không tải được thông tin phim</div>'));
         };
 
         this.start = function () {
@@ -590,20 +528,9 @@
         Lampa.Component.add('kkkphim_catalog', KKKCatalogComponent);
         Lampa.Component.add('kkkphim_detail', KKKDetailComponent);
 
-        // Menu icon
-        var ico = [
-            '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">',
-            '<rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/>',
-            '<polygon points="10,8 16,12 10,16" fill="currentColor"/>',
-            '</svg>'
-        ].join('');
+        var ico = '<svg viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><polygon points="10,8 16,12 10,16" fill="currentColor"/></svg>';
 
-        var menuItem = $([
-            '<li class="menu__item selector" data-action="kkkphim">',
-                '<div class="menu__ico">' + ico + '</div>',
-                '<div class="menu__text">KKKPhim</div>',
-            '</li>'
-        ].join(''));
+        var menuItem = $('<li class="menu__item selector" data-action="kkkphim"><div class="menu__ico">' + ico + '</div><div class="menu__text">KKKPhim</div></li>');
 
         menuItem.on('hover:enter', function () {
             Lampa.Activity.push({
@@ -614,14 +541,11 @@
             });
         });
 
-        // Add to menu
-        var $menu = $('.menu .menu__list');
-        if ($menu.length) $menu.eq(0).append(menuItem);
+        $('.menu .menu__list').eq(0).append(menuItem);
 
-        Lampa.Noty.show('✅ KKKPhim đã sẵn sàng!');
+        Lampa.Noty.show('✅ KKKPhim v3 đã sẵn sàng!');
     }
 
-    // =================== BOOT ===================
     if (window.appready) {
         initPlugin();
     } else {
