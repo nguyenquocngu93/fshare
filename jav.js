@@ -74,38 +74,39 @@
             '.card__meta { font-size: 0.7em; color: rgba(255,255,255,0.6); margin-top: 0.2em; }',
             '.card__quality, .card__episodes, .card__rating { display: inline-block; }',
 
-            // Detail page (giữ nguyên)
-            '.kkk-detail { padding: 1.5em; }',
-            '.kkk-detail__backdrop { position: relative; height: 0; }',
-            '.kkk-detail__backdrop img { position: absolute; top: 0; left: 0; width: 100%; height: 22em; object-fit: cover; display: block; mask-image: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%); }',
-            '.kkk-detail__body { position: relative; z-index: 2; display: flex; gap: 1.5em; }',
+            // Detail page - FIX BACKDROP
+            '.kkk-detail { position: relative; min-height: 100vh; }',
+            '.kkk-detail__backdrop { position: absolute; top: 0; left: 0; right: 0; height: 60vh; overflow: hidden; z-index: 0; }',
+            '.kkk-detail__backdrop img { width: 100%; height: 100%; object-fit: cover; display: block; }',
+            '.kkk-detail__backdrop::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,1) 100%); }',
+            '.kkk-detail__body { position: relative; z-index: 2; display: flex; gap: 1.5em; padding: 12em 1.5em 1.5em; }',
             '.kkk-detail__poster { width: 13em; flex-shrink: 0; }',
             '.kkk-detail__poster img { width: 100%; border-radius: 1em; aspect-ratio: 2/3; object-fit: cover; box-shadow: 0 4px 30px rgba(0,0,0,0.6); }',
             '.kkk-detail__info { flex: 1; min-width: 0; padding-top: 1em; }',
-            '.kkk-detail__name { font-size: 1.7em; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 0.15em; }',
-            '.kkk-detail__orig { font-size: 0.9em; color: rgba(255,255,255,0.4); margin-bottom: 0.8em; }',
+            '.kkk-detail__name { font-size: 1.7em; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 0.15em; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }',
+            '.kkk-detail__orig { font-size: 0.9em; color: rgba(255,255,255,0.5); margin-bottom: 0.8em; }',
             '.kkk-detail__tags { display: flex; gap: 0.4em; flex-wrap: wrap; margin-bottom: 0.7em; }',
-            '.kkk-detail__tag { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); font-size: 0.75em; padding: 0.25em 0.7em; border-radius: 1em; }',
-            '.kkk-detail__tag--accent { background: rgba(255,200,0,0.15); color: #ffcc00; }',
-            '.kkk-detail__meta { color: rgba(255,255,255,0.35); font-size: 0.8em; margin-bottom: 0.2em; }',
-            '.kkk-detail__desc { color: rgba(255,255,255,0.5); font-size: 0.85em; line-height: 1.55; margin-top: 0.7em; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }',
+            '.kkk-detail__tag { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); font-size: 0.75em; padding: 0.25em 0.7em; border-radius: 1em; backdrop-filter: blur(10px); }',
+            '.kkk-detail__tag--accent { background: rgba(255,200,0,0.2); color: #ffcc00; }',
+            '.kkk-detail__meta { color: rgba(255,255,255,0.5); font-size: 0.8em; margin-bottom: 0.2em; }',
+            '.kkk-detail__desc { color: rgba(255,255,255,0.6); font-size: 0.85em; line-height: 1.55; margin-top: 0.7em; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }',
             '.kkk-detail__desc--full { -webkit-line-clamp: unset; }',
             '.kkk-detail__buttons { display: flex; gap: 0.7em; flex-wrap: wrap; margin-top: 1em; }',
-            '.kkk-detail__btn { display: inline-flex; align-items: center; gap: 0.4em; background: rgba(255,255,255,0.07); color: #fff; padding: 0.55em 1.3em; border-radius: 0.7em; font-size: 0.9em; cursor: pointer; }',
+            '.kkk-detail__btn { display: inline-flex; align-items: center; gap: 0.4em; background: rgba(255,255,255,0.1); color: #fff; padding: 0.55em 1.3em; border-radius: 0.7em; font-size: 0.9em; cursor: pointer; backdrop-filter: blur(10px); }',
             '.kkk-detail__btn--primary { background: #fff; color: #000; font-weight: 600; }',
             '.kkk-detail__btn.focus { background: #fff; color: #000; font-weight: 600; }',
-            '.kkk-episodes { padding: 1em 1.5em; }',
+            '.kkk-episodes { position: relative; z-index: 2; padding: 1em 1.5em; background: rgba(0,0,0,0.3); }',
             '.kkk-episodes__title { font-size: 1.1em; font-weight: 600; color: #fff; margin-bottom: 0.6em; }',
             '.kkk-episodes__server { font-size: 0.85em; color: rgba(255,200,0,0.8); margin: 0.6em 0 0.3em; font-weight: 600; }',
             '.kkk-episodes__grid { display: flex; flex-wrap: wrap; gap: 0.35em; margin-bottom: 0.5em; }',
-            '.kkk-episodes__ep { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); padding: 0.5em 1em; border-radius: 0.5em; font-size: 0.8em; min-width: 3em; text-align: center; cursor: pointer; }',
+            '.kkk-episodes__ep { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); padding: 0.5em 1em; border-radius: 0.5em; font-size: 0.8em; min-width: 3em; text-align: center; cursor: pointer; }',
             '.kkk-episodes__ep.focus { background: #fff; color: #000; font-weight: 600; }',
             '.kkk-episodes__ep--active { background: rgba(255,200,0,0.2); color: #ffcc00; }'
         ].join('\n');
         document.head.appendChild(s);
     }
 
-    // =================== Card theo chuẩn LNUM ===================
+    // =================== Card ===================
     function createLampaCard(item, onEnter) {
         var imgUrl  = Img.fix(item.poster_url || item.thumb_url || '');
         var title   = item.name || item.origin_name || '';
@@ -147,7 +148,7 @@
         return card;
     }
 
-    // =================== Tạo Line giả lập (thay thế Lampa.Line) ===================
+    // =================== Line ===================
     function createLine(options) {
         var lineDiv = $('<div class="line"></div>');
         var headDiv = $('<div class="line__head"></div>');
@@ -176,7 +177,7 @@
     }
 
     // =============================================================
-    //  MAIN COMPONENT
+    //  MAIN COMPONENT - FIX TRÙNG LẶP
     // =============================================================
     function KKKMainComponent(object) {
         var network    = new Lampa.Reguest();
@@ -185,7 +186,7 @@
         var lines      = [];
         var created    = false;
         var loadedCount = 0;
-        var rowsData   = [];
+        var rowsData   = new Array(categories.length); // FIX: pre-allocate để tránh trùng
         var active     = false;
 
         this.create = function () {
@@ -216,9 +217,11 @@
             var _this = this;
             this.activity.loader(false);
 
+            // FIX: duyệt theo thứ tự categories, bỏ qua dòng rỗng
             rowsData.forEach(function (rd) {
-                if (!rd || !rd.items.length) return;
-                _this.buildLine(rd.cat, rd.items);
+                if (rd && rd.items && rd.items.length > 0) {
+                    _this.buildLine(rd.cat, rd.items);
+                }
             });
 
             this.activity.toggle();
@@ -227,7 +230,7 @@
         this.buildLine = function (cat, list) {
             var line = createLine({
                 title: cat.title,
-                nomore: true
+                nomore: false  // FIX: hiện nút "Xem thêm"
             });
 
             line.head({
@@ -294,7 +297,7 @@
     }
 
     // =============================================================
-    //  CATALOG COMPONENT (giữ nguyên)
+    //  CATALOG COMPONENT
     // =============================================================
     function KKKCatalogComponent(object) {
         var network      = new Lampa.Reguest();
@@ -397,7 +400,7 @@
     }
 
     // =============================================================
-    //  DETAIL COMPONENT (giữ nguyên phần card info đẹp)
+    //  DETAIL COMPONENT - FIX PLAYER
     // =============================================================
     function KKKDetailComponent(object) {
         var network = new Lampa.Reguest();
@@ -572,33 +575,38 @@
             }
         };
 
+        // FIX: Player m3u8/embed
         this.playEp = function (ep, movie, allEps) {
             var url = ep.link_m3u8 || ep.link_embed || '';
             if (!url) { Lampa.Noty.show('Không tìm thấy link phát'); return; }
+            
             if (url.indexOf('.m3u8') !== -1) {
                 var playlist = [], currentIdx = 0;
                 allEps.forEach(function (e, i) {
-                    var eUrl = e.link_m3u8 || '';
+                    var eUrl = e.link_m3u8 || e.link_embed || '';
                     if (eUrl) {
                         if (eUrl === url) currentIdx = playlist.length;
-                        var timeHash = Lampa.Utils.hash(movie.slug + '_' + (e.slug || e.name || i));
+                        var hashKey = Lampa.Utils.hash([movie.slug, e.slug || e.name || i].join(''));
                         playlist.push({
                             title: (movie.name || 'KKKPhim') + ' - ' + (e.name || ('Tập ' + (i + 1))),
                             url: eUrl,
                             quality: {},
-                            timeline: Lampa.Timeline.get(timeHash)
+                            timeline: Lampa.Timeline.view(hashKey)
                         });
                     }
                 });
                 if (playlist.length) {
-                    var playerData = playlist[currentIdx];
-                    playerData.playlist = playlist;
-                    Lampa.Player.play(playerData);
+                    Lampa.Player.play(playlist[currentIdx]);
                     Lampa.Player.playlist(playlist);
                 }
-            } else {
-                Lampa.Noty.show('Đang mở link embed...');
-                window.open(url, '_blank');
+            } else if (url.indexOf('http') === 0) {
+                // FIX: mở embed bằng player iframe
+                Lampa.Player.play({
+                    title: movie.name + ' - ' + (ep.name || ''),
+                    url: url,
+                    quality: {},
+                    timeline: Lampa.Timeline.view(Lampa.Utils.hash([movie.slug, ep.slug].join('')))
+                });
             }
         };
 
@@ -628,7 +636,7 @@
     }
 
     // =============================================================
-    //  SEARCH COMPONENT (giữ nguyên)
+    //  SEARCH COMPONENT
     // =============================================================
     function KKKSearchComponent(object) {
         var network    = new Lampa.Reguest();
