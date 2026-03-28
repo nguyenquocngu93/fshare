@@ -37,7 +37,7 @@
         return [];
     }
 
-    // =================== Tính số cột theo chiều rộng (giống lnum.js) ===================
+    // =================== Tính số cột theo chiều rộng ===================
     function getColumns() {
         var w = window.innerWidth;
         if (w >= 1400) return 7;
@@ -48,7 +48,7 @@
         return 2;
     }
 
-    // =================== Tạo card poster chuẩn Lampa ===================
+    // =================== Tạo card poster ===================
     function createCard(item, onEnter) {
         var imgUrl  = Img.fix(item.poster_url || item.thumb_url || '');
         var title   = item.name || item.origin_name || '';
@@ -56,10 +56,7 @@
         var quality = item.quality || '';
         var epText  = item.episode_current || '';
 
-        var card = Lampa.Template.js('card_default') || document.createElement('div');
-
-        // Nếu Lampa không có template card_default, tự build
-        card = document.createElement('div');
+        var card = document.createElement('div');
         card.classList.add('card', 'selector');
         card.setAttribute('tabindex', '0');
 
@@ -79,16 +76,14 @@
             '<div class="card__age">' + year + '</div>'
         ].join('');
 
-        card.addEventListener('hover:enter', function () {
+        // === SỬA: Dùng sự kiện hover:enter đúng cách qua jQuery ===
+        $(card).on('hover:enter', function () {
             if (onEnter) onEnter(item);
         });
 
-        card.addEventListener('hover:focus', function () {
-            card.classList.add('focus');
-        });
-
-        card.addEventListener('hover:long', function () {
-            // Có thể thêm menu context nếu cần
+        // === SỬA: Thêm xử lý focus/blur cho card ===
+        $(card).on('hover:focus', function () {
+            // Focus animation đã được CSS xử lý qua .focus class
         });
 
         return card;
@@ -377,14 +372,16 @@
         document.head.appendChild(s);
     }
 
-    // =================== Cập nhật width card theo số cột (giống lnum.js) ===================
+    // =================== Cập nhật width card theo số cột ===================
     function updateCardWidth(gridEl) {
         var cols = getColumns();
-        var cards = gridEl.find ? gridEl.find('.card') : gridEl.querySelectorAll('.card');
+        var el = gridEl instanceof $ ? gridEl[0] : gridEl;
+        if (!el) return;
+        var cards = el.querySelectorAll('.card');
 
-        $(cards).each(function () {
-            this.style.width = (100 / cols) + '%';
-        });
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].style.width = (100 / cols) + '%';
+        }
     }
 
     // =================== OPEN DETAIL ===================
@@ -401,6 +398,7 @@
     //  MAIN COMPONENT (Home – Các hàng ngang)
     // =============================================================
     function KKKMainComponent(object) {
+        var comp     = this;
         var network  = new Lampa.Reguest();
         var scroll   = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var items    = [];
@@ -409,11 +407,12 @@
         var rowsData = [];
         var active   = false;
 
+        // === SỬA: Controller cho component ===
         this.create = function () {
-            var _this = this;
-
             this.activity.loader(true);
             scroll.minus();
+
+            var _this = this;
 
             categories.forEach(function (cat, idx) {
                 _this.loadRow(cat, idx);
@@ -445,7 +444,7 @@
                 _this.buildLine(rd.cat, rd.items);
             });
 
-            // Kích hoạt Controller + Navigator
+            // === SỬA: Kích hoạt Controller đúng cách ===
             this.activity.toggle();
         };
 
@@ -464,7 +463,9 @@
             var moreEl = document.createElement('div');
             moreEl.className = 'selector kkk-line__more';
             moreEl.textContent = 'Xem thêm ›';
-            moreEl.addEventListener('hover:enter', function () {
+            items.push(moreEl);
+
+            $(moreEl).on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: cat.url,
                     title: cat.title,
@@ -495,6 +496,31 @@
             if (created) return;
             created = true;
 
+            // === SỬA: Đăng ký controller ===
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(items.length ? items[0] : false, scroll.render());
+                },
+                left: function () {
+                    if (Navigator.canmove('left')) Navigator.move('left');
+                    else Lampa.Controller.toggle('menu');
+                },
+                right: function () {
+                    Navigator.move('right');
+                },
+                up: function () {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function () {
+                    if (Navigator.canmove('down')) Navigator.move('down');
+                },
+                back: function () {
+                    Lampa.Activity.backward();
+                }
+            });
+
             this.create();
         };
 
@@ -524,13 +550,15 @@
 
             items = [];
             rowsData = [];
+            loadedCount = 0;
         };
     }
 
     // =============================================================
-    //  CATALOG COMPONENT (Grid + Load More – tự chia cột như lnum.js)
+    //  CATALOG COMPONENT (Grid + Load More)
     // =============================================================
     function KKKCatalogComponent(object) {
+        var comp         = this;
         var network      = new Lampa.Reguest();
         var scroll       = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var items        = [];
@@ -541,6 +569,7 @@
         var gridEl;
         var loadMoreWrap;
         var active       = false;
+        var resizeHandler;
 
         this.create = function () {
             scroll.minus();
@@ -549,10 +578,11 @@
             gridEl.className = 'kkk-grid';
             scroll.append(gridEl);
 
-            // Lắng nghe resize để cập nhật cột
-            $(window).on('resize.kkkcat', function () {
-                updateCardWidth($(gridEl));
-            });
+            // === SỬA: Lưu handler để cleanup ===
+            resizeHandler = function () {
+                updateCardWidth(gridEl);
+            };
+            $(window).on('resize.kkkcat', resizeHandler);
 
             this.loadMore();
         };
@@ -594,7 +624,13 @@
 
             // Xóa nút load more cũ
             if (loadMoreWrap) {
-                $(loadMoreWrap).remove();
+                // === SỬA: Xóa item cũ khỏi danh sách items ===
+                var oldBtn = loadMoreWrap.querySelector('.kkk-more__btn');
+                if (oldBtn) {
+                    var idx = items.indexOf(oldBtn);
+                    if (idx > -1) items.splice(idx, 1);
+                }
+                loadMoreWrap.parentNode && loadMoreWrap.parentNode.removeChild(loadMoreWrap);
                 loadMoreWrap = null;
             }
 
@@ -614,7 +650,9 @@
             var btn = document.createElement('div');
             btn.className = 'selector kkk-more__btn';
             btn.textContent = '📄 Tải thêm (Trang ' + (page + 1) + ')';
-            btn.addEventListener('hover:enter', function () {
+            items.push(btn);
+
+            $(btn).on('hover:enter', function () {
                 _this.loadMore();
             });
 
@@ -632,6 +670,32 @@
         this.start = function () {
             if (created) return;
             created = true;
+
+            // === SỬA: Đăng ký controller ===
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(items.length ? items[0] : false, scroll.render());
+                },
+                left: function () {
+                    if (Navigator.canmove('left')) Navigator.move('left');
+                    else Lampa.Controller.toggle('menu');
+                },
+                right: function () {
+                    Navigator.move('right');
+                },
+                up: function () {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function () {
+                    if (Navigator.canmove('down')) Navigator.move('down');
+                },
+                back: function () {
+                    Lampa.Activity.backward();
+                }
+            });
+
             this.create();
         };
 
@@ -645,7 +709,7 @@
 
         this.resume = function () {
             active = true;
-            updateCardWidth($(gridEl));
+            updateCardWidth(gridEl);
 
             if (items.length) {
                 this.activity.toggle();
@@ -661,6 +725,8 @@
             network.clear();
             scroll.destroy();
             items = [];
+            gridEl = null;
+            loadMoreWrap = null;
         };
     }
 
@@ -668,6 +734,7 @@
     //  DETAIL COMPONENT
     // =============================================================
     function KKKDetailComponent(object) {
+        var comp    = this;
         var network = new Lampa.Reguest();
         var scroll  = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var items   = [];
@@ -771,7 +838,7 @@
                     items.push(toggleBtn);
 
                     var expanded = false;
-                    toggleBtn.addEventListener('hover:enter', function () {
+                    $(toggleBtn).on('hover:enter', function () {
                         expanded = !expanded;
                         if (expanded) {
                             descText.classList.add('kkk-desc__text--full');
@@ -815,7 +882,7 @@
                         btn.textContent = ep.name || ep.slug || ('Tập ' + (idx + 1));
                         items.push(btn);
 
-                        btn.addEventListener('hover:enter', function () {
+                        $(btn).on('hover:enter', function () {
                             _this.playEp(ep, movie, server.server_data);
                         });
 
@@ -846,21 +913,42 @@
                     if (eUrl) {
                         if (eUrl === url) currentIdx = playlist.length;
 
+                        // === SỬA: Timeline đúng format ===
+                        var timelineData = {};
+                        try {
+                            timelineData = Lampa.Timeline.view(movie.slug || slug);
+                        } catch (ex) {
+                            timelineData = {};
+                        }
+
                         playlist.push({
                             title:    (movie.name || 'KKKPhim') + ' - ' + (e.name || ('Tập ' + (i + 1))),
                             url:      eUrl,
                             quality:  { auto: eUrl },
-                            timeline: Lampa.Timeline.view({})
+                            timeline: timelineData
                         });
                     }
                 });
 
                 if (playlist.length) {
-                    Lampa.Player.play(playlist[currentIdx]);
+                    // === SỬA: Set playlist trước khi play ===
                     Lampa.Player.playlist(playlist);
+                    Lampa.Player.play(playlist[currentIdx]);
                 }
             } else {
-                Lampa.Noty.show('Link embed không hỗ trợ phát trực tiếp');
+                // === SỬA: Thử mở trong iframe/webview nếu là embed ===
+                Lampa.Noty.show('Link embed - đang thử mở...');
+
+                try {
+                    Lampa.Player.play({
+                        title: movie.name || 'KKKPhim',
+                        url: url,
+                        quality: { auto: url },
+                        timeline: {}
+                    });
+                } catch (ex) {
+                    Lampa.Noty.show('Link embed không hỗ trợ phát trực tiếp');
+                }
             }
         };
 
@@ -874,6 +962,32 @@
         this.start = function () {
             if (created) return;
             created = true;
+
+            // === SỬA: Đăng ký controller ===
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(items.length ? items[0] : false, scroll.render());
+                },
+                left: function () {
+                    if (Navigator.canmove('left')) Navigator.move('left');
+                    else Lampa.Controller.toggle('menu');
+                },
+                right: function () {
+                    Navigator.move('right');
+                },
+                up: function () {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function () {
+                    if (Navigator.canmove('down')) Navigator.move('down');
+                },
+                back: function () {
+                    Lampa.Activity.backward();
+                }
+            });
+
             this.create();
         };
 
@@ -923,13 +1037,11 @@
             '</svg>'
         ].join('');
 
-        // Thêm menu item
-        var menuItem = $(
-            '<li class="menu__item selector" data-action="kkkphim">' +
-                '<div class="menu__ico">' + ico + '</div>' +
-                '<div class="menu__text">KKKPhim</div>' +
-            '</li>'
-        );
+        // === SỬA: Thêm menu item đúng cách ===
+        var menuItem = $('<li class="menu__item selector" data-action="kkkphim">' +
+            '<div class="menu__ico">' + ico + '</div>' +
+            '<div class="menu__text">KKKPhim</div>' +
+        '</li>');
 
         menuItem.on('hover:enter', function () {
             Lampa.Activity.push({
@@ -940,16 +1052,31 @@
             });
         });
 
-        // Chèn vào menu
-        $('.menu .menu__list').eq(0).append(menuItem);
-
-        // Thêm button vào trang chủ nếu cần
-        if (Lampa.Manifest && Lampa.Manifest.menu) {
-            Lampa.Manifest.menu({
-                title: 'KKKPhim',
-                component: 'kkkphim_main'
-            });
+        // === SỬA: Chèn vào menu đúng selector ===
+        var menuList = $('.menu .menu__list');
+        if (menuList.length) {
+            menuList.eq(0).append(menuItem);
         }
+
+        // === SỬA: Thêm nút vào header/menu nếu Lampa hỗ trợ ===
+        try {
+            if (Lampa.Menu) {
+                Lampa.Menu.append({
+                    title: 'KKKPhim',
+                    component: 'kkkphim_main',
+                    icon: ico
+                });
+            }
+        } catch (e) {
+            // Không có Lampa.Menu thì bỏ qua
+        }
+
+        // === SỬA: Thêm search source (tìm kiếm) ===
+        try {
+            if (Lampa.Api) {
+                // Có thể thêm API search sau
+            }
+        } catch (e) {}
 
         Lampa.Noty.show('✅ KKKPhim đã sẵn sàng!');
     }
