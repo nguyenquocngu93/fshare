@@ -11,6 +11,9 @@
 
     var ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
+    // Cache cho phim liên quan
+    var _similarInjected = {};
+
     // =====================================================================
     // CSS
     // =====================================================================
@@ -18,7 +21,7 @@
         if (document.getElementById('kphim-style')) return;
         var s = document.createElement('style');
         s.id = 'kphim-style';
-        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}';
+        s.textContent = '.card__type{display:none!important}.card-label--type{display:none!important}.card__label--tv{display:none!important}.item__type{display:none!important}.kkp-similar-row::-webkit-scrollbar{display:none}.kkp-cast-row::-webkit-scrollbar{display:none}';
         document.head.appendChild(s);
     }
 
@@ -185,6 +188,86 @@
             } catch (e) {}
             onOk({ items: items, page: page, totalPages: totalPages, totalItems: totalItems });
         }, onFail || function () {});
+    }
+
+    // =====================================================================
+    // LẤY GENRE SLUG CHO PHIM LIÊN QUAN
+    // =====================================================================
+    function getGenreSlug(card) {
+        var cats = card.kphim_cats || [];
+        for (var i = 0; i < cats.length; i++) {
+            var c = cats[i];
+            if (typeof c === 'object') {
+                if (c.slug) return { slug: c.slug, name: c.name || c.slug };
+                if (typeof c.id === 'string' && isNaN(c.id) && c.id) return { slug: c.id, name: c.name || c.id };
+            }
+        }
+        var genres = card.genres || [];
+        if (genres.length) {
+            var g = genres[0], s = g.slug || g.id || '';
+            if (s && isNaN(s)) return { slug: String(s), name: g.name || String(s) };
+        }
+        return null;
+    }
+
+    // =====================================================================
+    // INJECT PHIM LIÊN QUAN
+    // =====================================================================
+    function injectSimilarMovies(card, $ctx) {
+        if (!card || card.source !== SOURCE_NAME) return;
+        var gi = getGenreSlug(card);
+        if (!gi) return;
+        var cardSlug = card.kphim_slug || card.id;
+        if (_similarInjected[cardSlug]) return;
+        _similarInjected[cardSlug] = true;
+
+        setTimeout(function () {
+            if (!$ctx.closest('body').length || $ctx.find('.kkp-similar-wrap').length) return;
+            var net1 = new Lampa.Reguest();
+            net1.silent(BASE_URL + '/v1/api/the-loai/' + gi.slug + '?page=1', function (fd) {
+                var tp = 1;
+                try { var p = fd.data && fd.data.params && fd.data.params.pagination; tp = (p && p.totalPages) || 1; } catch (e) {}
+                var rp = Math.floor(Math.random() * tp) + 1;
+                var net2 = new Lampa.Reguest();
+                net2.silent(BASE_URL + '/v1/api/the-loai/' + gi.slug + '?page=' + rp, function (data) {
+                    if (!$ctx.closest('body').length) return;
+                    var items = [];
+                    try { items = (data.data && data.data.items) ? data.data.items.map(normalizeItem) : []; } catch (e) { return; }
+                    items = items.filter(function (i) { return i.id !== cardSlug; })
+                                 .sort(function () { return Math.random() - 0.5; }).slice(0, 20);
+                    if (!items.length) return;
+
+                    var $wrap = $(
+                        '<div class="kkp-similar-wrap" data-slug="' + cardSlug + '" style="padding:.5em 0 1.4em;">' +
+                        '<div style="padding:0 1.5em 1.2em;"><span style="font-size:1.15em;font-weight:700;">Phim liên quan</span></div>' +
+                        '<div class="kkp-similar-row" style="display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:0 1.5em .5em;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>' +
+                        '</div>'
+                    );
+                    var $row = $wrap.find('.kkp-similar-row');
+                    items.forEach(function (item) {
+                        var poster = item.img || item.poster || '';
+                        var year   = item.release_date ? item.release_date.slice(0, 4) : '';
+                        var $c = $(
+                            '<div class="kkp-sim-card selector" style="flex:0 0 110px;width:110px;flex-shrink:0;cursor:pointer;border-radius:6px;overflow:hidden;background:#1a1a1a;">' +
+                            '<div style="position:relative;padding-top:150%;background:#111;"><img src="' + poster + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0.2"/></div>' +
+                            '<div style="padding:5px 6px;"><div style="font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + (item.title || '') + '</div>' +
+                            '<div style="font-size:10px;opacity:.45;margin-top:2px;">' + year + '</div></div></div>'
+                        );
+                        $c.on('hover:enter click', (function (it) {
+                            return function () { Lampa.Activity.push({ component: 'full', id: it.id, source: SOURCE_NAME, card: it }); };
+                        })(item));
+                        $row.append($c);
+                    });
+
+                    setTimeout(function () {
+                        if (!$ctx.closest('body').length) return;
+                        var $after = $ctx.find('.full-descr');
+                        if ($after.length) $after.last().after($wrap);
+                        else $ctx.find('.full-start').append($wrap);
+                    }, 200);
+                });
+            });
+        }, 700);
     }
 
     // =====================================================================
@@ -518,6 +601,7 @@
 
             if (e.type === 'destroy') {
                 delete _epsCache[slug];
+                delete _similarInjected[slug];
                 return;
             }
             if (e.type !== 'complite') return;
@@ -527,6 +611,30 @@
             var $render = obj.activity ? obj.activity.render() : (obj.render ? obj.render() : null);
             var $ctx    = $render || $('body');
 
+            // Thêm logo từ TMDB
+            var info = getTmdbInfo(card);
+            if (info.id) {
+                fetchTMDBDetail(info.id, info.type, function (tmdbData) {
+                    if (!$ctx.closest('body').length) return;
+                    
+                    // Inject logo
+                    var logos = (tmdbData.images && tmdbData.images.logos) || [];
+                    var logo  = logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] || logos[0];
+                    if (logo && logo.file_path) {
+                        var logoPath = logo.file_path.replace('.svg', '.png');
+                        var logoUrl  = Lampa.TMDB.image('/t/p/w300' + logoPath);
+                        var $t = $ctx.find('.full-start-new__title');
+                        if ($t.length) {
+                            $t.html('<img style="margin-top:5px;max-height:125px;" src="' + logoUrl + '"/>');
+                        }
+                    }
+                });
+            }
+
+            // Thêm phim liên quan
+            injectSimilarMovies(card, $ctx);
+
+            // Thêm nút xem phim
             if (!$ctx.find('.view--kphim').length) {
                 var $btn = $(
                     '<div class="full-start__button selector view--kphim" data-subtitle="KPHim">' +
