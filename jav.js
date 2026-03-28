@@ -4,565 +4,476 @@
     var CONFIG = {
         api_base: 'https://phimapi.com',
         img_base: 'https://phimimg.com/',
+        tmdb_key: '4ef0d7355d9ffb5151e987764708ce96', // TMDB API key public
+        tmdb_img: 'https://image.tmdb.org/t/p/',
         name: 'KKPhim',
-        cache_time: 1000 * 60 * 10
+        cache_time: 1000 * 60 * 15
     };
 
-    // ============== STYLES ==============
+    // ============================================================
+    // STYLES
+    // ============================================================
     function addStyles() {
         if (document.getElementById('kkphim-css')) return;
         var css = `
-            /* Plugin container - KHÔNG chiếm full screen */
-            .kkphim-plugin {
-                width: 100%;
-                min-height: 100%;
-                padding-bottom: 4em;
-                box-sizing: border-box;
+            /* ─── Root scroll container ─── */
+            .kk-scroll {
+                position: absolute;
+                inset: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
                 -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+                /* đẩy nội dung lên khỏi navbar Lampa */
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+            .kk-root {
+                min-height: 100%;
+                /* navbar bottom Lampa ~60-70px + system bar */
+                padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+                box-sizing: border-box;
             }
 
-            /* === NAV MENU === */
+            /* ─── Sticky Nav ─── */
             .kk-nav {
-                display: flex;
-                gap: 0.5em;
-                padding: 0.8em 1em;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
                 position: sticky;
                 top: 0;
-                z-index: 50;
-                background: rgba(13,13,26,0.95);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border-bottom: 1px solid rgba(255,255,255,0.06);
+                z-index: 100;
+                display: flex;
+                gap: .45em;
+                padding: .65em .9em;
+                overflow-x: auto;
+                scrollbar-width: none;
+                background: rgba(10,10,20,.92);
+                backdrop-filter: blur(14px);
+                -webkit-backdrop-filter: blur(14px);
+                border-bottom: 1px solid rgba(255,255,255,.06);
             }
-            .kk-nav::-webkit-scrollbar { display: none; }
-
+            .kk-nav::-webkit-scrollbar{display:none}
             .kk-nav__btn {
                 flex-shrink: 0;
-                padding: 0.55em 1.1em;
+                padding: .5em 1em;
                 border-radius: 2em;
-                background: rgba(255,255,255,0.07);
-                color: rgba(255,255,255,0.75);
-                font-size: 0.82em;
+                background: rgba(255,255,255,.07);
+                color: rgba(255,255,255,.72);
+                font-size: .8em;
                 font-weight: 600;
-                border: 1px solid rgba(255,255,255,0.08);
-                cursor: pointer;
+                border: 1px solid rgba(255,255,255,.08);
                 white-space: nowrap;
-                -webkit-tap-highlight-color: transparent;
-                transition: all 0.18s;
-                user-select: none;
-            }
-            .kk-nav__btn:active,
-            .kk-nav__btn.active {
-                background: linear-gradient(135deg, #e53935, #ff5252);
-                color: #fff;
-                border-color: transparent;
-                transform: scale(0.97);
-            }
-
-            /* === BACK BUTTON - TO HƠN === */
-            .kk-back {
-                display: flex;
-                align-items: center;
-                gap: 0.6em;
-                padding: 1em 1.2em;
-                color: rgba(255,255,255,0.85);
-                font-size: 1em;
-                font-weight: 600;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
                 user-select: none;
-                min-height: 54px;
-                background: rgba(255,255,255,0.04);
-                border-bottom: 1px solid rgba(255,255,255,0.05);
+                transition: background .15s, transform .12s;
             }
-            .kk-back:active { 
-                background: rgba(255,255,255,0.1); 
-                color: #fff;
-            }
-            .kk-back__ico {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: rgba(255,255,255,0.1);
-                font-size: 1.2em;
-                flex-shrink: 0;
-            }
+            .kk-nav__btn:active{transform:scale(.94);background:rgba(229,57,53,.75);color:#fff;border-color:transparent}
 
-            /* === SECTION === */
-            .kk-section {
-                padding: 1em 1em 0.4em;
+            /* ─── Section header ─── */
+            .kk-sec {
+                padding: .9em .9em .3em;
             }
-            .kk-section__head {
+            .kk-sec__head {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 0.5em;
             }
-            .kk-section__title {
-                font-size: 1.1em;
+            .kk-sec__title {
+                font-size: 1.05em;
                 font-weight: 700;
                 color: #fff;
                 display: flex;
                 align-items: center;
-                gap: 0.5em;
+                gap: .45em;
             }
-            .kk-section__title::before {
-                content: '';
-                width: 3px;
-                height: 1em;
-                background: linear-gradient(180deg, #e53935, #ff5252);
-                border-radius: 2px;
+            .kk-sec__title::before {
+                content:'';
+                width: 3px; height: 1em;
+                background: linear-gradient(#e53935,#ff5252);
+                border-radius: 3px;
                 flex-shrink: 0;
             }
+            .kk-sec__more {
+                font-size: .75em;
+                color: rgba(255,255,255,.38);
+                cursor: pointer;
+                padding: .3em .7em;
+                border-radius: 1em;
+                border: 1px solid rgba(255,255,255,.08);
+                -webkit-tap-highlight-color: transparent;
+            }
+            .kk-sec__more:active{background:rgba(255,255,255,.08)}
 
-            /* === SCROLL ROW (horizontal) === */
+            /* ─── Horizontal scroll row ─── */
             .kk-row {
                 display: flex;
-                gap: 0.7em;
+                gap: .65em;
                 overflow-x: auto;
-                padding: 0.3em 1em 0.8em;
+                padding: .4em .9em .9em;
                 -webkit-overflow-scrolling: touch;
-                scroll-snap-type: x proximity;
                 scrollbar-width: none;
+                scroll-snap-type: x proximity;
             }
-            .kk-row::-webkit-scrollbar { display: none; }
-            .kk-row .kk-card {
-                flex-shrink: 0;
-                width: 240px;
-                scroll-snap-align: start;
-            }
+            .kk-row::-webkit-scrollbar{display:none}
+            .kk-row .kk-card{ flex-shrink:0; width:230px; scroll-snap-align:start; }
 
-            /* === GRID (vertical) === */
+            /* ─── Grid ─── */
             .kk-grid {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.7em;
-                padding: 0.3em 1em 0.5em;
+                grid-template-columns: repeat(2,1fr);
+                gap: .65em;
+                padding: .3em .9em .5em;
             }
-            @media (min-width: 480px) {
-                .kk-grid { grid-template-columns: repeat(3, 1fr); }
-            }
-            @media (min-width: 700px) {
-                .kk-grid { grid-template-columns: repeat(4, 1fr); }
-            }
+            @media(min-width:480px){.kk-grid{grid-template-columns:repeat(3,1fr)}}
+            @media(min-width:700px){.kk-grid{grid-template-columns:repeat(4,1fr)}}
 
-            /* === CARD WITH BACKDROP === */
+            /* ════════════════════════════════════════════
+               CARD  –  bắt chước Lampa backdrop style
+               ════════════════════════════════════════════ */
             .kk-card {
                 position: relative;
-                border-radius: 0.7em;
+                border-radius: .75em;
                 overflow: hidden;
-                background: #16162a;
+                background: #12121f;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
-                transition: transform 0.18s;
+                user-select: none;
                 display: block;
+                transition: transform .18s;
             }
-            .kk-card:active { transform: scale(0.96); }
+            .kk-card:active{transform:scale(.96)}
 
-            /* Row card - 16:9 */
-            .kk-row .kk-card .kk-card__img {
-                aspect-ratio: 16/9;
-            }
-
-            /* Grid card - 2:3 poster */
-            .kk-grid .kk-card .kk-card__img {
-                aspect-ratio: 2/3;
-            }
+            /* backdrop 16:9 cho row, poster 2:3 cho grid */
+            .kk-row .kk-card .kk-card__img { aspect-ratio: 16/9; }
+            .kk-grid .kk-card .kk-card__img { aspect-ratio: 2/3; }
 
             .kk-card__img {
                 width: 100%;
                 object-fit: cover;
                 display: block;
-                background: #111;
+                background: #1a1a2e;
             }
-            .kk-card__overlay {
+
+            /* gradient overlay – đậm hơn ở dưới như Lampa */
+            .kk-card__grad {
                 position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 70%;
+                inset: 0;
                 background: linear-gradient(
                     0deg,
-                    rgba(8,8,24,0.96) 0%,
-                    rgba(8,8,24,0.5) 55%,
-                    transparent 100%
+                    rgba(5,5,15,.97)  0%,
+                    rgba(5,5,15,.55) 45%,
+                    rgba(5,5,15,.0)  75%
                 );
                 pointer-events: none;
             }
+
+            /* logo TMDB nằm giữa-trên */
+            .kk-card__logo {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%,-60%);
+                max-width: 70%;
+                max-height: 38%;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 8px rgba(0,0,0,.8));
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity .3s;
+            }
+            .kk-card__logo.loaded{opacity:1}
+
+            /* badges góc trên */
             .kk-card__badges {
                 position: absolute;
-                top: 0.35em;
-                left: 0.35em;
-                right: 0.35em;
+                top: .4em; left: .4em; right: .4em;
                 display: flex;
                 justify-content: space-between;
                 pointer-events: none;
-                z-index: 2;
-                gap: 0.2em;
+                z-index: 3;
             }
-            .kk-badge-group { display: flex; gap: 0.2em; }
+            .kk-bg{display:flex;gap:.2em}
             .kk-badge {
-                padding: 0.12em 0.4em;
-                border-radius: 0.25em;
-                font-size: 0.6em;
+                padding: .12em .38em;
+                border-radius: .28em;
+                font-size: .6em;
                 font-weight: 700;
                 text-transform: uppercase;
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-                white-space: nowrap;
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
             }
-            .kk-badge--q { background: rgba(229,57,53,0.88); color: #fff; }
-            .kk-badge--l { background: rgba(33,150,243,0.88); color: #fff; }
-            .kk-badge--y { background: rgba(255,193,7,0.88); color: #111; }
-            .kk-badge--e { background: rgba(76,175,80,0.88); color: #fff; }
+            .kk-badge--q{background:rgba(229,57,53,.88);color:#fff}
+            .kk-badge--l{background:rgba(33,150,243,.88);color:#fff}
+            .kk-badge--y{background:rgba(255,193,7,.88);color:#111}
+            .kk-badge--e{background:rgba(76,175,80,.88);color:#fff}
 
+            /* tên phim + phụ đề */
             .kk-card__info {
                 position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                padding: 0.5em 0.6em;
-                z-index: 2;
+                bottom: 0; left: 0; right: 0;
+                padding: .55em .65em .6em;
+                z-index: 3;
             }
             .kk-card__name {
-                font-size: 0.82em;
+                font-size: .82em;
                 font-weight: 700;
                 color: #fff;
-                line-height: 1.3;
+                line-height: 1.25;
+                margin: 0;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
                 overflow: hidden;
-                text-shadow: 0 1px 6px rgba(0,0,0,0.9);
-                margin: 0;
+                text-shadow: 0 1px 8px rgba(0,0,0,1);
             }
             .kk-card__sub {
-                font-size: 0.68em;
-                color: rgba(255,255,255,0.5);
-                margin: 0.1em 0 0;
+                font-size: .67em;
+                color: rgba(255,255,255,.48);
+                margin: .12em 0 0;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
 
-            /* === DETAIL PAGE === */
-            .kk-detail__hero {
-                position: relative;
-                width: 100%;
-                aspect-ratio: 16/9;
-                overflow: hidden;
-                max-height: 260px;
-            }
-            .kk-detail__hero img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .kk-detail__hero-grad {
-                position: absolute;
-                bottom: 0; left: 0; right: 0;
-                height: 75%;
-                background: linear-gradient(0deg, 
-                    var(--lampa-background, #0d0d1a) 0%, 
-                    transparent 100%);
-            }
-            .kk-detail__body {
-                padding: 0 1em;
-                margin-top: -2em;
-                position: relative;
-                z-index: 2;
-            }
-            .kk-detail__row {
+            /* ─── Back button – to hơn ─── */
+            .kk-back {
                 display: flex;
-                gap: 1em;
-                align-items: flex-end;
-            }
-            .kk-detail__poster {
-                flex-shrink: 0;
-                width: 100px;
-                border-radius: 0.6em;
-                overflow: hidden;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            }
-            .kk-detail__poster img { width: 100%; display: block; }
-            .kk-detail__meta {
-                flex: 1;
-                min-width: 0;
-                padding-bottom: 0.3em;
-            }
-            .kk-detail__title {
-                font-size: 1.25em;
-                font-weight: 800;
-                color: #fff;
-                margin: 0 0 0.15em;
-                line-height: 1.2;
-            }
-            .kk-detail__orig {
-                font-size: 0.8em;
-                color: rgba(255,255,255,0.4);
-                margin: 0 0 0.5em;
-                font-style: italic;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            .kk-detail__tags {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.3em;
-            }
-            .kk-tag {
-                padding: 0.18em 0.55em;
-                border-radius: 1.5em;
-                font-size: 0.68em;
-                font-weight: 600;
-                background: rgba(255,255,255,0.08);
-                color: rgba(255,255,255,0.7);
-                border: 1px solid rgba(255,255,255,0.1);
-            }
-            .kk-tag--red { background: rgba(229,57,53,0.2); border-color: rgba(229,57,53,0.4); }
-            .kk-tag--blue { background: rgba(33,150,243,0.2); border-color: rgba(33,150,243,0.4); }
-            .kk-tag--green { background: rgba(76,175,80,0.2); border-color: rgba(76,175,80,0.4); }
-
-            /* Action Buttons */
-            .kk-actions {
-                display: flex;
-                gap: 0.6em;
-                margin: 1em 0 0.8em;
-            }
-            .kk-btn {
-                display: inline-flex;
                 align-items: center;
-                justify-content: center;
-                gap: 0.4em;
-                padding: 0.7em 1.2em;
-                border-radius: 2em;
-                font-size: 0.9em;
-                font-weight: 700;
-                border: none;
+                gap: .6em;
+                padding: .9em 1em;
+                min-height: 56px;
+                color: rgba(255,255,255,.85);
+                font-size: .95em;
+                font-weight: 600;
                 cursor: pointer;
                 -webkit-tap-highlight-color: transparent;
-                transition: transform 0.15s, opacity 0.15s;
                 user-select: none;
+                border-bottom: 1px solid rgba(255,255,255,.05);
             }
-            .kk-btn:active { transform: scale(0.94); opacity: 0.85; }
-            .kk-btn--play {
-                background: linear-gradient(135deg, #e53935, #ff5252);
-                color: #fff;
-                box-shadow: 0 4px 16px rgba(229,57,53,0.35);
-                flex: 1;
-                min-height: 46px;
-            }
-            .kk-btn--fav {
-                background: rgba(255,255,255,0.1);
-                color: #fff;
-                border: 1px solid rgba(255,255,255,0.15);
-                width: 46px;
-                height: 46px;
+            .kk-back:active{background:rgba(255,255,255,.07)}
+            .kk-back__circle {
+                width: 38px; height: 38px;
                 border-radius: 50%;
-                padding: 0;
+                background: rgba(255,255,255,.1);
+                display: flex; align-items: center; justify-content: center;
                 font-size: 1.2em;
                 flex-shrink: 0;
             }
 
-            .kk-info-list {
-                margin: 0.3em 0 0.5em;
-                border: 1px solid rgba(255,255,255,0.06);
-                border-radius: 0.7em;
-                overflow: hidden;
-            }
-            .kk-info-item {
-                display: flex;
-                padding: 0.55em 0.8em;
-                font-size: 0.82em;
-                border-bottom: 1px solid rgba(255,255,255,0.05);
-            }
-            .kk-info-item:last-child { border-bottom: none; }
-            .kk-info-item__label {
-                color: rgba(255,255,255,0.35);
-                min-width: 75px;
-                flex-shrink: 0;
-            }
-            .kk-info-item__value { color: rgba(255,255,255,0.8); }
-
-            .kk-desc {
-                font-size: 0.83em;
-                color: rgba(255,255,255,0.6);
-                line-height: 1.7;
-                margin: 0.5em 0;
+            /* ─── Detail ─── */
+            .kk-detail__hero {
                 position: relative;
-            }
-            .kk-desc.collapsed {
-                max-height: 4.2em;
+                width: 100%;
+                height: 52vw;
+                max-height: 270px;
                 overflow: hidden;
             }
-            .kk-desc.collapsed::after {
-                content: '';
+            .kk-detail__hero img {
+                width:100%; height:100%; object-fit:cover;
+            }
+            .kk-detail__hero-grad {
                 position: absolute;
-                bottom: 0; left: 0; right: 0;
-                height: 2em;
-                background: linear-gradient(transparent, var(--lampa-background, #0d0d1a));
-            }
-            .kk-desc-toggle {
-                font-size: 0.78em;
-                color: #e53935;
-                cursor: pointer;
-                padding: 0.3em 0;
-                -webkit-tap-highlight-color: transparent;
-                display: inline-block;
-            }
-            .kk-desc-toggle:active { opacity: 0.7; }
-
-            /* === EPISODES === */
-            .kk-eps__server { margin-bottom: 1em; }
-            .kk-eps__sname {
-                font-size: 0.75em;
-                color: rgba(255,255,255,0.35);
-                margin-bottom: 0.4em;
-                padding-bottom: 0.3em;
-                border-bottom: 1px solid rgba(255,255,255,0.06);
-            }
-            .kk-eps__list {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.4em;
-            }
-            .kk-ep {
-                padding: 0.45em 0.85em;
-                border-radius: 0.5em;
-                background: rgba(255,255,255,0.07);
-                color: rgba(255,255,255,0.8);
-                font-size: 0.78em;
-                font-weight: 600;
-                cursor: pointer;
-                border: 1px solid rgba(255,255,255,0.08);
-                -webkit-tap-highlight-color: transparent;
-                transition: all 0.15s;
-                min-width: 2.8em;
-                text-align: center;
-                user-select: none;
-                min-height: 36px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .kk-ep:active {
-                background: rgba(229,57,53,0.75);
-                color: #fff;
-                transform: scale(0.93);
-            }
-            .kk-ep.playing {
-                background: #e53935;
-                color: #fff;
-                border-color: #e53935;
+                inset: 0;
+                background: linear-gradient(
+                    180deg, rgba(10,10,20,.25) 0%,
+                    rgba(10,10,20,.0) 40%,
+                    rgba(10,10,20,1) 100%
+                );
             }
 
-            /* === INFINITE SCROLL LOADER === */
-            .kk-inf-loader {
-                display: flex;
-                justify-content: center;
-                padding: 1.5em;
-            }
-            .kk-inf-loader.hidden { display: none; }
-            .kk-spin {
-                width: 32px; height: 32px;
-                border: 3px solid rgba(255,255,255,0.08);
-                border-top-color: #e53935;
-                border-radius: 50%;
-                animation: kkspin 0.7s linear infinite;
-            }
-            .kk-inf-end {
-                text-align: center;
-                padding: 1.5em;
-                font-size: 0.8em;
-                color: rgba(255,255,255,0.2);
+            /* Logo TMDB trên hero */
+            .kk-detail__logo {
+                position: absolute;
+                bottom: 5.5em; left: 50%;
+                transform: translateX(-50%);
+                max-width: 55%;
+                max-height: 70px;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 12px rgba(0,0,0,.9));
                 display: none;
             }
-            @keyframes kkspin { to { transform: rotate(360deg); } }
+            .kk-detail__logo.loaded{display:block}
 
-            /* === LOADING / EMPTY === */
-            .kk-loading {
-                display: flex;
-                justify-content: center;
-                padding: 4em 2em;
+            .kk-detail__body { padding: 0 .9em; margin-top: -1.8em; position:relative; z-index:2; }
+            .kk-detail__row  { display:flex; gap:.9em; align-items:flex-end; }
+            .kk-detail__poster {
+                flex-shrink: 0;
+                width: 95px;
+                border-radius: .6em;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,0,0,.65);
             }
-            .kk-empty {
-                text-align: center;
-                padding: 4em 1em;
-                color: rgba(255,255,255,0.3);
-            }
-            .kk-empty__ico { font-size: 2.5em; margin-bottom: 0.3em; }
-
-            /* === CATEGORY CHIPS === */
-            .kk-chips {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5em;
-                padding: 0.5em 1em 1em;
-            }
-            .kk-chip {
-                padding: 0.6em 1.1em;
-                border-radius: 2em;
-                background: rgba(255,255,255,0.06);
-                color: rgba(255,255,255,0.75);
-                font-size: 0.85em;
-                cursor: pointer;
-                border: 1px solid rgba(255,255,255,0.08);
-                -webkit-tap-highlight-color: transparent;
-                user-select: none;
-                min-height: 40px;
-                display: flex;
-                align-items: center;
-            }
-            .kk-chip:active {
-                background: rgba(229,57,53,0.7);
+            .kk-detail__poster img{width:100%;display:block}
+            .kk-detail__meta { flex:1; min-width:0; padding-bottom:.2em; }
+            .kk-detail__title {
+                font-size: 1.2em;
+                font-weight: 800;
                 color: #fff;
-                transform: scale(0.96);
+                margin: 0 0 .1em;
+                line-height: 1.2;
             }
+            .kk-detail__orig {
+                font-size: .78em;
+                color: rgba(255,255,255,.38);
+                margin: 0 0 .45em;
+                font-style: italic;
+                white-space: nowrap; overflow:hidden; text-overflow:ellipsis;
+            }
+            .kk-detail__tags { display:flex; flex-wrap:wrap; gap:.28em; }
+            .kk-tag {
+                padding: .15em .5em;
+                border-radius: 1.5em;
+                font-size: .65em;
+                font-weight: 600;
+                background: rgba(255,255,255,.08);
+                color: rgba(255,255,255,.7);
+                border: 1px solid rgba(255,255,255,.1);
+            }
+            .kk-tag--red  { background:rgba(229,57,53,.2);  border-color:rgba(229,57,53,.45); }
+            .kk-tag--blue { background:rgba(33,150,243,.2); border-color:rgba(33,150,243,.45); }
+            .kk-tag--green{ background:rgba(76,175,80,.2);  border-color:rgba(76,175,80,.45); }
+
+            /* Action buttons */
+            .kk-actions { display:flex; gap:.55em; margin: .9em 0 .7em; }
+            .kk-btn {
+                display:inline-flex; align-items:center; justify-content:center;
+                gap:.4em;
+                padding: .72em 1.2em;
+                border-radius: 2em;
+                font-size: .9em; font-weight:700;
+                border:none; cursor:pointer;
+                -webkit-tap-highlight-color:transparent;
+                transition:transform .14s, opacity .14s;
+                user-select:none;
+            }
+            .kk-btn:active{transform:scale(.93);opacity:.85}
+            .kk-btn--play {
+                background: linear-gradient(135deg,#e53935,#ff5252);
+                color:#fff;
+                box-shadow: 0 4px 18px rgba(229,57,53,.38);
+                flex:1; min-height:48px;
+            }
+            .kk-btn--fav {
+                width:48px; height:48px;
+                border-radius:50%; padding:0;
+                background:rgba(255,255,255,.09);
+                color:#fff; font-size:1.2em;
+                border:1px solid rgba(255,255,255,.14);
+                flex-shrink:0;
+            }
+
+            /* Info table */
+            .kk-info {
+                margin: .2em 0 .6em;
+                border: 1px solid rgba(255,255,255,.06);
+                border-radius: .7em;
+                overflow:hidden;
+            }
+            .kk-info__row {
+                display:flex;
+                padding: .52em .8em;
+                font-size:.81em;
+                border-bottom:1px solid rgba(255,255,255,.05);
+            }
+            .kk-info__row:last-child{border-bottom:none}
+            .kk-info__label{color:rgba(255,255,255,.34);min-width:78px;flex-shrink:0}
+            .kk-info__val  {color:rgba(255,255,255,.82)}
+
+            /* Description */
+            .kk-desc {
+                font-size:.82em; color:rgba(255,255,255,.58);
+                line-height:1.7; margin:.4em 0;
+                position:relative;
+            }
+            .kk-desc.collapsed{max-height:4em;overflow:hidden}
+            .kk-desc.collapsed::after{
+                content:'';
+                position:absolute; bottom:0;left:0;right:0;
+                height:2em;
+                background:linear-gradient(transparent,var(--lampa-background,#0d0d1a));
+            }
+            .kk-desc-toggle {
+                font-size:.76em; color:#e53935;
+                cursor:pointer; padding:.25em 0;
+                display:inline-block;
+                -webkit-tap-highlight-color:transparent;
+            }
+
+            /* Episodes */
+            .kk-eps__sname {
+                font-size:.73em; color:rgba(255,255,255,.32);
+                margin-bottom:.4em; padding-bottom:.28em;
+                border-bottom:1px solid rgba(255,255,255,.06);
+            }
+            .kk-eps__list { display:flex; flex-wrap:wrap; gap:.38em; margin-bottom:1em; }
+            .kk-ep {
+                padding:.42em .82em;
+                border-radius:.5em;
+                background:rgba(255,255,255,.07);
+                color:rgba(255,255,255,.8);
+                font-size:.76em; font-weight:600;
+                cursor:pointer;
+                border:1px solid rgba(255,255,255,.08);
+                -webkit-tap-highlight-color:transparent;
+                min-width:2.6em; min-height:34px;
+                display:flex; align-items:center; justify-content:center;
+                user-select:none; transition:all .14s;
+            }
+            .kk-ep:active,.kk-ep.playing{background:rgba(229,57,53,.8);color:#fff;border-color:#e53935}
+
+            /* Infinite scroll */
+            .kk-inf-load{display:flex;justify-content:center;padding:1.2em;display:none}
+            .kk-inf-load.show{display:flex}
+            .kk-inf-end{text-align:center;padding:1.2em;font-size:.76em;color:rgba(255,255,255,.18);display:none}
+            .kk-spin{
+                width:30px;height:30px;
+                border:3px solid rgba(255,255,255,.08);
+                border-top-color:#e53935;
+                border-radius:50%;
+                animation:kkspin .7s linear infinite;
+            }
+            @keyframes kkspin{to{transform:rotate(360deg)}}
+
+            /* Loading / empty */
+            .kk-loading{display:flex;justify-content:center;padding:4em 2em}
+            .kk-empty{text-align:center;padding:4em 1em;color:rgba(255,255,255,.28)}
+            .kk-empty__ico{font-size:2.4em;margin-bottom:.3em}
+
+            /* Chips */
+            .kk-chips{display:flex;flex-wrap:wrap;gap:.45em;padding:.4em .9em 1em}
+            .kk-chip{
+                padding:.58em 1.05em;
+                border-radius:2em;
+                background:rgba(255,255,255,.06);
+                color:rgba(255,255,255,.74);
+                font-size:.83em; cursor:pointer;
+                border:1px solid rgba(255,255,255,.08);
+                -webkit-tap-highlight-color:transparent;
+                min-height:40px; display:flex; align-items:center;
+                user-select:none;
+            }
+            .kk-chip:active{background:rgba(229,57,53,.7);color:#fff;transform:scale(.96)}
 
             /* Search */
-            .kk-search-bar {
-                padding: 0.8em 1em;
-                display: flex;
-                gap: 0.5em;
+            .kk-sbar{display:flex;gap:.5em;padding:.75em .9em}
+            .kk-sbar input{
+                flex:1; padding:.72em 1em;
+                border-radius:2em;
+                border:1px solid rgba(255,255,255,.14);
+                background:rgba(255,255,255,.08);
+                color:#fff; font-size:.88em;
+                outline:none; -webkit-appearance:none;
+                min-height:46px;
             }
-            .kk-search-bar input {
-                flex: 1;
-                padding: 0.75em 1em;
-                border-radius: 2em;
-                border: 1px solid rgba(255,255,255,0.15);
-                background: rgba(255,255,255,0.08);
-                color: #fff;
-                font-size: 0.9em;
-                outline: none;
-                -webkit-appearance: none;
-                min-height: 46px;
+            .kk-sbar input::placeholder{color:rgba(255,255,255,.28)}
+            .kk-sbar input:focus{border-color:#e53935;background:rgba(255,255,255,.11)}
+            .kk-sbar button{
+                padding:0 1.15em; border-radius:2em;
+                background:#e53935; color:#fff;
+                font-weight:700; border:none;
+                cursor:pointer; font-size:.88em;
+                min-height:46px; min-width:58px;
+                -webkit-tap-highlight-color:transparent;
             }
-            .kk-search-bar input::placeholder { color: rgba(255,255,255,0.3); }
-            .kk-search-bar input:focus {
-                border-color: #e53935;
-                background: rgba(255,255,255,0.11);
-            }
-            .kk-search-bar button {
-                padding: 0 1.2em;
-                border-radius: 2em;
-                background: #e53935;
-                color: #fff;
-                font-weight: 700;
-                border: none;
-                cursor: pointer;
-                font-size: 0.9em;
-                -webkit-tap-highlight-color: transparent;
-                min-height: 46px;
-                min-width: 60px;
-            }
-            .kk-search-bar button:active { opacity: 0.8; }
+            .kk-sbar button:active{opacity:.8}
         `;
         var el = document.createElement('style');
         el.id = 'kkphim-css';
@@ -570,63 +481,123 @@
         document.head.appendChild(el);
     }
 
-    // ============== API ==============
-    var cache = {};
-
-    function api(url, cb) {
-        if (cache[url] && Date.now() - cache[url].t < CONFIG.cache_time) {
-            return cb(cache[url].d);
-        }
+    // ============================================================
+    // CACHE + API helpers
+    // ============================================================
+    var _cache = {};
+    function apiFetch(url, cb) {
+        if (_cache[url] && Date.now() - _cache[url].t < CONFIG.cache_time) return cb(_cache[url].d);
         $.ajax({
             url: url, timeout: 12000, dataType: 'json',
-            success: function (d) { cache[url] = { d: d, t: Date.now() }; cb(d); },
-            error: function () { cb(null); }
+            success: function (d) { _cache[url] = { d: d, t: Date.now() }; cb(d); },
+            error:   function ()  { cb(null); }
         });
     }
 
-    function imgUrl(path) {
+    function imgSrc(path) {
         if (!path) return '';
-        if (path.startsWith('http')) return path;
-        return CONFIG.img_base + path;
+        return path.startsWith('http') ? path : CONFIG.img_base + path;
     }
 
-    // ============== RENDER HELPERS ==============
-
-    function spinnerHtml() {
-        return '<div class="kk-loading"><div class="kk-spin"></div></div>';
+    // ── TMDB: tìm logo + backdrop theo tên phim (tiếng Anh) ──
+    function tmdbSearch(name, year, cb) {
+        var url = 'https://api.themoviedb.org/3/search/movie' +
+            '?api_key=' + CONFIG.tmdb_key +
+            '&query=' + encodeURIComponent(name) +
+            (year ? '&year=' + year : '') +
+            '&language=vi-VN&page=1';
+        apiFetch(url, function (d) {
+            if (!d || !d.results || !d.results.length) {
+                // thử TV
+                var url2 = 'https://api.themoviedb.org/3/search/tv' +
+                    '?api_key=' + CONFIG.tmdb_key +
+                    '&query=' + encodeURIComponent(name) +
+                    '&language=vi-VN&page=1';
+                apiFetch(url2, function (d2) {
+                    if (!d2 || !d2.results || !d2.results.length) return cb(null);
+                    cb({ id: d2.results[0].id, type: 'tv' });
+                });
+                return;
+            }
+            cb({ id: d.results[0].id, type: 'movie' });
+        });
     }
 
-    function emptyHtml(msg) {
-        return '<div class="kk-empty"><div class="kk-empty__ico">📭</div><div>' + (msg || 'Không có dữ liệu') + '</div></div>';
+    function tmdbImages(id, type, cb) {
+        var url = 'https://api.themoviedb.org/3/' + type + '/' + id +
+            '/images?api_key=' + CONFIG.tmdb_key + '&include_image_language=en,vi,null';
+        apiFetch(url, function (d) {
+            if (!d) return cb(null, null);
+            var logo = null;
+            if (d.logos && d.logos.length) {
+                // ưu tiên PNG có nền trong
+                var pngs = d.logos.filter(function(l){ return l.file_path && l.file_path.endsWith('.png'); });
+                logo = (pngs.length ? pngs[0] : d.logos[0]).file_path;
+            }
+            cb(logo ? CONFIG.tmdb_img + 'w300' + logo : null);
+        });
     }
 
+    // Lấy logo TMDB cho 1 item (name + year + originName)
+    function getLogoUrl(item, cb) {
+        var name = item.origin_name || item.name || '';
+        var year = item.year || '';
+        tmdbSearch(name, year, function (res) {
+            if (!res) return cb(null);
+            tmdbImages(res.id, res.type, cb);
+        });
+    }
+
+    // ============================================================
+    // HTML HELPERS
+    // ============================================================
+    function spinnerHtml() { return '<div class="kk-loading"><div class="kk-spin"></div></div>'; }
+    function emptyHtml(m) {
+        return '<div class="kk-empty"><div class="kk-empty__ico">📭</div><div>' + (m || 'Không có dữ liệu') + '</div></div>';
+    }
+    function backHtml(label) {
+        return '<div class="kk-back" data-back="1"><div class="kk-back__circle">‹</div>' + (label || 'Quay lại') + '</div>';
+    }
+    function infoRow(label, val) {
+        return '<div class="kk-info__row"><span class="kk-info__label">' + label + '</span><span class="kk-info__val">' + val + '</span></div>';
+    }
+
+    // ── Card HTML (backdrop Lampa-style) ──
     function cardHtml(item) {
         var name    = item.name || '';
         var orig    = item.origin_name || '';
         var slug    = item.slug || '';
-        var year    = item.year || '';
         var quality = item.quality || '';
         var lang    = item.lang || '';
+        var year    = item.year || '';
         var epCur   = item.episode_current || '';
-        var backdrop = imgUrl(item.poster_url || item.thumb_url);
-        var thumb    = imgUrl(item.thumb_url || item.poster_url);
+        // poster_url thường 16:9 cho row, thumb_url cho grid
+        var backdrop = imgSrc(item.poster_url || item.thumb_url);
+        var thumb    = imgSrc(item.thumb_url  || item.poster_url);
 
         return [
             '<div class="kk-card" data-slug="' + slug + '">',
+              /* badges */
               '<div class="kk-card__badges">',
-                '<div class="kk-badge-group">',
+                '<div class="kk-bg">',
                   quality ? '<span class="kk-badge kk-badge--q">' + quality + '</span>' : '',
-                  lang    ? '<span class="kk-badge kk-badge--l">' + lang + '</span>' : '',
+                  lang    ? '<span class="kk-badge kk-badge--l">' + lang    + '</span>' : '',
                 '</div>',
-                '<div class="kk-badge-group">',
-                  year  ? '<span class="kk-badge kk-badge--y">' + year + '</span>' : '',
+                '<div class="kk-bg">',
+                  year  ? '<span class="kk-badge kk-badge--y">' + year  + '</span>' : '',
                   epCur ? '<span class="kk-badge kk-badge--e">' + epCur + '</span>' : '',
                 '</div>',
               '</div>',
+              /* backdrop img */
               '<img class="kk-card__img" src="' + backdrop + '" loading="lazy"',
-                ' onerror="this.src=\'' + thumb + '\'"',
-              '>',
-              '<div class="kk-card__overlay"></div>',
+                ' onerror="this.src=\'' + thumb + '\';this.onerror=null">',
+              /* logo placeholder – sẽ load async */
+              '<img class="kk-card__logo" data-slug="' + slug + '"',
+                ' data-name="' + encodeURIComponent(orig || name) + '"',
+                ' data-year="' + year + '">',
+              /* gradient */
+              '<div class="kk-card__grad"></div>',
+              /* info */
               '<div class="kk-card__info">',
                 '<p class="kk-card__name">' + name + '</p>',
                 orig ? '<p class="kk-card__sub">' + orig + '</p>' : '',
@@ -635,422 +606,383 @@
         ].join('');
     }
 
-    function infoItemHtml(label, value) {
-        return '<div class="kk-info-item"><span class="kk-info-item__label">' + label + '</span><span class="kk-info-item__value">' + value + '</span></div>';
-    }
-
-    function backBtnHtml(label) {
-        return '<div class="kk-back" data-back="1"><div class="kk-back__ico">‹</div>' + (label || 'Quay lại') + '</div>';
-    }
-
-    // ============== INFINITE SCROLL ENGINE ==============
-    function InfiniteList(opts) {
-        // opts: { container, fetchFn, renderItem, onEmpty, scrollEl }
-        this.page        = 0;
-        this.totalPages  = 1;
-        this.loading     = false;
-        this.done        = false;
-        this.container   = opts.container;   // grid/row element
-        this.fetchFn     = opts.fetchFn;     // fn(page, callback(items, totalPages))
-        this.renderItem  = opts.renderItem;  // fn(item) -> html string
-        this.onEmpty     = opts.onEmpty;
-        this.scrollEl    = opts.scrollEl;    // element to watch scroll on
-
-        this.loaderEl = document.createElement('div');
-        this.loaderEl.className = 'kk-inf-loader hidden';
-        this.loaderEl.innerHTML = '<div class="kk-spin"></div>';
-
-        this.endEl = document.createElement('div');
-        this.endEl.className = 'kk-inf-end';
-        this.endEl.textContent = '— Hết danh sách —';
-
-        var self = this;
-        this._scrollHandler = function () { self._onScroll(); };
-        this.scrollEl.addEventListener('scroll', this._scrollHandler, { passive: true });
-
-        this.loadNext();
-    }
-
-    InfiniteList.prototype.loadNext = function () {
-        if (this.loading || this.done) return;
-        this.loading = true;
-        this.loaderEl.classList.remove('hidden');
-
-        var self = this;
-        var nextPage = this.page + 1;
-
-        this.fetchFn(nextPage, function (items, totalPages) {
-            self.loading = false;
-            self.loaderEl.classList.add('hidden');
-            self.totalPages = totalPages || 1;
-            self.page = nextPage;
-
-            if (!items || !items.length) {
-                if (self.page === 1 && self.onEmpty) self.onEmpty();
-                self._finish();
-                return;
-            }
-
-            var frag = document.createDocumentFragment();
-            items.forEach(function (item) {
-                var div = document.createElement('div');
-                div.innerHTML = self.renderItem(item);
-                var card = div.firstElementChild;
-                card.addEventListener('click', function () {
-                    var slug = this.dataset.slug;
-                    if (slug) openDetail(slug);
-                });
-                frag.appendChild(card);
+    // Lazy-load logos cho một container
+    function loadLogos(container) {
+        var logos = container.querySelectorAll('.kk-card__logo[data-name]');
+        // chỉ load 6 cái đầu trên màn hình
+        var batch = Array.prototype.slice.call(logos, 0, 6);
+        batch.forEach(function (img) {
+            var name = decodeURIComponent(img.dataset.name || '');
+            var year = img.dataset.year || '';
+            if (!name) return;
+            getLogoUrl({ origin_name: name, year: year }, function (logoUrl) {
+                if (logoUrl && img.parentElement) {
+                    img.src = logoUrl;
+                    img.onload = function () { img.classList.add('loaded'); };
+                }
             });
-            self.container.appendChild(frag);
-
-            // Append loader & end after grid
-            if (!self.loaderEl.parentElement) {
-                self.container.parentElement.appendChild(self.loaderEl);
-                self.container.parentElement.appendChild(self.endEl);
-            }
-
-            if (self.page >= self.totalPages) {
-                self._finish();
-            }
+            // xóa data-name để tránh load lại
+            img.removeAttribute('data-name');
         });
-    };
-
-    InfiniteList.prototype._onScroll = function () {
-        if (this.done || this.loading) return;
-        var el = this.scrollEl;
-        var threshold = 300;
-        var remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
-        if (remaining < threshold) {
-            this.loadNext();
-        }
-    };
-
-    InfiniteList.prototype._finish = function () {
-        this.done = true;
-        this.loaderEl.classList.add('hidden');
-        this.endEl.style.display = 'block';
-        this.scrollEl.removeEventListener('scroll', this._scrollHandler);
-    };
-
-    InfiniteList.prototype.destroy = function () {
-        this.done = true;
-        this.scrollEl.removeEventListener('scroll', this._scrollHandler);
-    };
-
-    // ============== CURRENT STATE ==============
-    var currentInfList = null;
-
-    function destroyInfList() {
-        if (currentInfList) {
-            currentInfList.destroy();
-            currentInfList = null;
-        }
     }
 
-    // ============== DETAIL OPEN ==============
-    function openDetail(slug) {
-        if (typeof Lampa !== 'undefined' && Lampa.Activity) {
-            Lampa.Activity.push({
-                component: 'kkphim_detail',
-                slug: slug,
-                title: 'KKPhim'
-            });
-        }
-    }
-
-    // ============== FETCH FUNCTIONS ==============
+    // ============================================================
+    // FETCH functions
+    // ============================================================
     function fetchNew(page, cb) {
-        api(CONFIG.api_base + '/danh-sach/phim-moi-cap-nhat?page=' + page, function (data) {
-            if (!data || !data.items) return cb([], 1);
-            var total = data.pagination ? (data.pagination.totalPages || 1) : 1;
-            cb(data.items, total);
+        apiFetch(CONFIG.api_base + '/danh-sach/phim-moi-cap-nhat?page=' + page, function (d) {
+            if (!d || !d.items) return cb([], 1);
+            cb(d.items, d.pagination ? (d.pagination.totalPages || 1) : 1);
         });
     }
-
     function fetchList(type, page, cb) {
-        api(CONFIG.api_base + '/v1/api/danh-sach/' + type + '?page=' + page, function (data) {
-            if (!data || !data.data || !data.data.items) return cb([], 1);
-            var pag = (data.data.params && data.data.params.pagination) || {};
-            var total = Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1;
-            cb(data.data.items, total);
+        apiFetch(CONFIG.api_base + '/v1/api/danh-sach/' + type + '?page=' + page, function (d) {
+            if (!d || !d.data || !d.data.items) return cb([], 1);
+            var pag = (d.data.params && d.data.params.pagination) || {};
+            cb(d.data.items, Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1);
         });
     }
-
-    function fetchCategory(slug, page, cb) {
-        api(CONFIG.api_base + '/v1/api/the-loai/' + slug + '?page=' + page, function (data) {
-            if (!data || !data.data || !data.data.items) return cb([], 1);
-            var pag = (data.data.params && data.data.params.pagination) || {};
-            var total = Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1;
-            cb(data.data.items, total);
+    function fetchCat(slug, page, cb) {
+        apiFetch(CONFIG.api_base + '/v1/api/the-loai/' + slug + '?page=' + page, function (d) {
+            if (!d || !d.data || !d.data.items) return cb([], 1);
+            var pag = (d.data.params && d.data.params.pagination) || {};
+            cb(d.data.items, Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1);
         });
     }
-
     function fetchCountry(slug, page, cb) {
-        api(CONFIG.api_base + '/v1/api/quoc-gia/' + slug + '?page=' + page, function (data) {
-            if (!data || !data.data || !data.data.items) return cb([], 1);
-            var pag = (data.data.params && data.data.params.pagination) || {};
-            var total = Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1;
-            cb(data.data.items, total);
+        apiFetch(CONFIG.api_base + '/v1/api/quoc-gia/' + slug + '?page=' + page, function (d) {
+            if (!d || !d.data || !d.data.items) return cb([], 1);
+            var pag = (d.data.params && d.data.params.pagination) || {};
+            cb(d.data.items, Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1);
+        });
+    }
+    function fetchSearch(kw, page, cb) {
+        apiFetch(CONFIG.api_base + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page, function (d) {
+            if (!d || !d.data || !d.data.items) return cb([], 1);
+            var pag = (d.data.params && d.data.params.pagination) || {};
+            cb(d.data.items, Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1);
         });
     }
 
-    function fetchSearch(keyword, page, cb) {
-        api(CONFIG.api_base + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(keyword) + '&page=' + page, function (data) {
-            if (!data || !data.data || !data.data.items) return cb([], 1);
-            var pag = (data.data.params && data.data.params.pagination) || {};
-            var total = Math.ceil((pag.totalItems || 0) / (pag.totalItemsPerPage || 24)) || 1;
-            cb(data.data.items, total);
-        });
-    }
+    // ============================================================
+    // INFINITE SCROLL ENGINE
+    // ============================================================
+    var _infDestroy = null;
 
-    // ============== VIEWS ==============
+    function startInfinite(opts) {
+        // opts: { grid, scrollEl, fetchFn, onEmpty }
+        if (_infDestroy) { _infDestroy(); _infDestroy = null; }
 
-    function renderHome(rootEl) {
-        destroyInfList();
+        var grid     = opts.grid;
+        var scrollEl = opts.scrollEl;
+        var fetchFn  = opts.fetchFn;
+        var page     = 0;
+        var total    = 1;
+        var busy     = false;
+        var ended    = false;
 
-        var navItems = [
-            { icon: '🆕', text: 'Phim Mới',   view: 'new' },
-            { icon: '🎬', text: 'Phim Lẻ',    view: 'list', slug: 'phim-le' },
-            { icon: '📺', text: 'Phim Bộ',    view: 'list', slug: 'phim-bo' },
-            { icon: '🎭', text: 'Hoạt Hình',  view: 'list', slug: 'hoat-hinh' },
-            { icon: '📡', text: 'TV Shows',   view: 'list', slug: 'tv-shows' },
-            { icon: '🏷️', text: 'Thể Loại',   view: 'categories' },
-            { icon: '🌍', text: 'Quốc Gia',   view: 'countries' },
-            { icon: '🔍', text: 'Tìm Kiếm',   view: 'search' }
-        ];
+        // loader + end
+        var loaderEl = document.createElement('div');
+        loaderEl.className = 'kk-inf-load';
+        loaderEl.innerHTML = '<div class="kk-spin"></div>';
 
-        var navHtml = '<div class="kk-nav" id="kk-nav">';
-        navItems.forEach(function (n) {
-            navHtml += '<div class="kk-nav__btn" data-view="' + n.view + '"' +
-                (n.slug ? ' data-slug="' + n.slug + '"' : '') + '>' +
-                n.icon + ' ' + n.text + '</div>';
-        });
-        navHtml += '</div>';
+        var endEl = document.createElement('div');
+        endEl.className = 'kk-inf-end';
+        endEl.textContent = '— Đã hết —';
 
-        var sectionsHtml = [
-            { key: 'new',   title: 'Phim Mới',     view: 'new',  slug: '' },
-            { key: 'le',    title: 'Phim Lẻ',      view: 'list', slug: 'phim-le' },
-            { key: 'bo',    title: 'Phim Bộ',      view: 'list', slug: 'phim-bo' },
-            { key: 'anime', title: 'Hoạt Hình',    view: 'list', slug: 'hoat-hinh' }
-        ].map(function (s) {
-            return '<div class="kk-section"><div class="kk-section__head">' +
-                '<div class="kk-section__title">' + s.title + '</div>' +
-                '<div class="kk-section__more" data-view="' + s.view + '"' + (s.slug ? ' data-slug="' + s.slug + '"' : '') + '>Xem thêm ›</div>' +
-                '</div></div>' +
-                '<div class="kk-row" id="kk-row-' + s.key + '"><div class="kk-spin" style="margin:1em auto;display:block"></div></div>';
-        }).join('');
+        grid.parentElement.appendChild(loaderEl);
+        grid.parentElement.appendChild(endEl);
 
-        rootEl.innerHTML = navHtml + sectionsHtml;
+        function loadMore() {
+            if (busy || ended) return;
+            busy = true;
+            loaderEl.classList.add('show');
 
-        // Bind nav
-        rootEl.querySelectorAll('.kk-nav__btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                navigate(this.dataset.view, { slug: this.dataset.slug });
-            });
-        });
+            fetchFn(page + 1, function (items, totalPages) {
+                busy = false;
+                loaderEl.classList.remove('show');
+                total = totalPages || 1;
+                page++;
 
-        // Bind "Xem thêm"
-        rootEl.querySelectorAll('.kk-section__more').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                navigate(this.dataset.view, { slug: this.dataset.slug });
-            });
-        });
+                if (!items || !items.length) {
+                    if (page === 1 && opts.onEmpty) opts.onEmpty();
+                    finish(); return;
+                }
 
-        // Fetch each row
-        var rows = [
-            { key: 'new',   fn: function(cb){ fetchNew(1, cb); } },
-            { key: 'le',    fn: function(cb){ fetchList('phim-le', 1, cb); } },
-            { key: 'bo',    fn: function(cb){ fetchList('phim-bo', 1, cb); } },
-            { key: 'anime', fn: function(cb){ fetchList('hoat-hinh', 1, cb); } }
-        ];
-
-        rows.forEach(function (r) {
-            r.fn(function (items) {
-                var rowEl = document.getElementById('kk-row-' + r.key);
-                if (!rowEl) return;
-                if (!items || !items.length) { rowEl.innerHTML = ''; return; }
-                rowEl.innerHTML = items.slice(0, 12).map(cardHtml).join('');
-                rowEl.querySelectorAll('.kk-card').forEach(function (card) {
+                // append cards
+                var frag = document.createDocumentFragment();
+                items.forEach(function (item) {
+                    var tmp = document.createElement('div');
+                    tmp.innerHTML = cardHtml(item);
+                    var card = tmp.firstElementChild;
                     card.addEventListener('click', function () {
                         openDetail(this.dataset.slug);
                     });
+                    frag.appendChild(card);
                 });
+                grid.appendChild(frag);
+
+                // load logos for newly added cards
+                loadLogos(grid);
+
+                if (page >= total) finish();
+            });
+        }
+
+        function finish() {
+            ended = true;
+            loaderEl.classList.remove('show');
+            endEl.style.display = 'block';
+            scrollEl.removeEventListener('scroll', onScroll);
+        }
+
+        function onScroll() {
+            if (ended || busy) return;
+            var rem = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight;
+            if (rem < 350) loadMore();
+        }
+
+        scrollEl.addEventListener('scroll', onScroll, { passive: true });
+        loadMore(); // first page
+
+        _infDestroy = function () {
+            ended = true;
+            scrollEl.removeEventListener('scroll', onScroll);
+        };
+    }
+
+    // ============================================================
+    // OPEN DETAIL (new Lampa Activity)
+    // ============================================================
+    function openDetail(slug) {
+        if (typeof Lampa !== 'undefined' && Lampa.Activity) {
+            Lampa.Activity.push({ component: 'kkphim_detail', slug: slug, title: 'KKPhim' });
+        }
+    }
+
+    // ============================================================
+    // NAVIGATE (in-page)
+    // ============================================================
+    var _scrollEl = null;
+    var _rootEl   = null;
+
+    function navigate(view, params) {
+        params = params || {};
+        if (!_rootEl || !_scrollEl) return;
+
+        if (_infDestroy) { _infDestroy(); _infDestroy = null; }
+        _rootEl.innerHTML   = spinnerHtml();
+        _scrollEl.scrollTop = 0;
+
+        var titleMap = {
+            'new'      : '🆕 Phim Mới',
+            'phim-le'  : '🎬 Phim Lẻ',
+            'phim-bo'  : '📺 Phim Bộ',
+            'hoat-hinh': '🎭 Hoạt Hình',
+            'tv-shows' : '📡 TV Shows'
+        };
+
+        switch (view) {
+            case 'home':       renderHome(); break;
+            case 'new':        renderInfPage('🆕 Phim Mới', function(p,cb){ fetchNew(p,cb); }); break;
+            case 'list':       renderInfPage(titleMap[params.slug]||params.slug, function(p,cb){ fetchList(params.slug,p,cb); }); break;
+            case 'category':   renderInfPage(params.slug, function(p,cb){ fetchCat(params.slug,p,cb); }); break;
+            case 'country':    renderInfPage(params.slug, function(p,cb){ fetchCountry(params.slug,p,cb); }); break;
+            case 'categories': renderCategories(); break;
+            case 'countries':  renderCountries(); break;
+            case 'search':     renderSearch(params.keyword||null); break;
+        }
+    }
+
+    // ============================================================
+    // VIEWS
+    // ============================================================
+
+    /* ── Home ── */
+    function renderHome() {
+        var navItems = [
+            { icon:'🆕', text:'Phim Mới',  view:'new' },
+            { icon:'🎬', text:'Phim Lẻ',   view:'list', slug:'phim-le' },
+            { icon:'📺', text:'Phim Bộ',   view:'list', slug:'phim-bo' },
+            { icon:'🎭', text:'Hoạt Hình', view:'list', slug:'hoat-hinh' },
+            { icon:'📡', text:'TV Shows',  view:'list', slug:'tv-shows' },
+            { icon:'🏷️', text:'Thể Loại',  view:'categories' },
+            { icon:'🌍', text:'Quốc Gia',  view:'countries' },
+            { icon:'🔍', text:'Tìm Kiếm',  view:'search' }
+        ];
+
+        var rows = [
+            { key:'new',   title:'Phim Mới',   view:'new',  slug:'',         fetchFn: function(cb){ fetchNew(1,cb); } },
+            { key:'le',    title:'Phim Lẻ',    view:'list', slug:'phim-le',  fetchFn: function(cb){ fetchList('phim-le',1,cb); } },
+            { key:'bo',    title:'Phim Bộ',    view:'list', slug:'phim-bo',  fetchFn: function(cb){ fetchList('phim-bo',1,cb); } },
+            { key:'anime', title:'Hoạt Hình',  view:'list', slug:'hoat-hinh',fetchFn: function(cb){ fetchList('hoat-hinh',1,cb); } }
+        ];
+
+        var navHtml = '<div class="kk-nav">' +
+            navItems.map(function(n){
+                return '<div class="kk-nav__btn" data-view="'+n.view+'"'+(n.slug?' data-slug="'+n.slug+'"':'')+'>'+n.icon+' '+n.text+'</div>';
+            }).join('') + '</div>';
+
+        var rowsHtml = rows.map(function(r){
+            return '<div class="kk-sec"><div class="kk-sec__head">' +
+                '<div class="kk-sec__title">'+r.title+'</div>' +
+                '<div class="kk-sec__more" data-view="'+r.view+'"'+(r.slug?' data-slug="'+r.slug+'"':'')+'>Xem thêm ›</div>' +
+                '</div></div>' +
+                '<div class="kk-row" id="kk-row-'+r.key+'"><div class="kk-spin" style="margin:.8em auto;display:block"></div></div>';
+        }).join('');
+
+        _rootEl.innerHTML = navHtml + rowsHtml;
+
+        // bind nav
+        _rootEl.querySelectorAll('.kk-nav__btn').forEach(function(b){
+            b.addEventListener('click', function(){ navigate(this.dataset.view, { slug: this.dataset.slug }); });
+        });
+        _rootEl.querySelectorAll('.kk-sec__more').forEach(function(b){
+            b.addEventListener('click', function(){ navigate(this.dataset.view, { slug: this.dataset.slug }); });
+        });
+
+        // fetch rows
+        rows.forEach(function(r){
+            r.fetchFn(function(items){
+                var rowEl = document.getElementById('kk-row-' + r.key);
+                if (!rowEl) return;
+                if (!items || !items.length){ rowEl.innerHTML=''; return; }
+                rowEl.innerHTML = items.slice(0,12).map(cardHtml).join('');
+                rowEl.querySelectorAll('.kk-card').forEach(function(c){
+                    c.addEventListener('click', function(){ openDetail(this.dataset.slug); });
+                });
+                loadLogos(rowEl);
             });
         });
     }
 
-    // --- Infinite list page ---
-    function renderInfiniteList(rootEl, scrollEl, title, fetchFn) {
-        destroyInfList();
-
-        rootEl.innerHTML =
-            backBtnHtml() +
-            '<div class="kk-section"><div class="kk-section__title">' + title + '</div></div>' +
+    /* ── Infinite list page ── */
+    function renderInfPage(title, fetchFn) {
+        _rootEl.innerHTML =
+            backHtml() +
+            '<div class="kk-sec"><div class="kk-sec__title">' + title + '</div></div>' +
             '<div class="kk-grid" id="kk-inf-grid"></div>';
 
-        bindBack(rootEl);
+        bindBack(_rootEl);
 
-        var gridEl = rootEl.querySelector('#kk-inf-grid');
-
-        currentInfList = new InfiniteList({
-            container:  gridEl,
-            fetchFn:    fetchFn,
-            renderItem: cardHtml,
-            scrollEl:   scrollEl,
-            onEmpty: function () {
-                gridEl.innerHTML = emptyHtml();
-            }
+        var grid = _rootEl.querySelector('#kk-inf-grid');
+        startInfinite({
+            grid: grid,
+            scrollEl: _scrollEl,
+            fetchFn: fetchFn,
+            onEmpty: function(){ grid.innerHTML = emptyHtml(); }
         });
     }
 
-    // --- Search view ---
-    function renderSearch(rootEl, scrollEl, keyword) {
-        destroyInfList();
+    /* ── Search ── */
+    function renderSearch(keyword) {
+        if (_infDestroy) { _infDestroy(); _infDestroy = null; }
 
-        rootEl.innerHTML =
-            backBtnHtml() +
-            '<div class="kk-search-bar">' +
-              '<input id="kk-sinput" type="text" placeholder="Nhập tên phim..." value="' + (keyword ? keyword.replace(/"/g, '&quot;') : '') + '">' +
-              '<button id="kk-sgo">🔍</button>' +
-            '</div>' +
+        _rootEl.innerHTML =
+            backHtml() +
+            '<div class="kk-sbar"><input id="kk-si" type="text" placeholder="Nhập tên phim..." value="'+(keyword?keyword.replace(/"/g,'&quot;'):'')+'">' +
+            '<button id="kk-sg">🔍</button></div>' +
             '<div id="kk-sarea"></div>';
 
-        bindBack(rootEl);
+        bindBack(_rootEl);
 
-        var input  = rootEl.querySelector('#kk-sinput');
-        var goBtn  = rootEl.querySelector('#kk-sgo');
-        var sArea  = rootEl.querySelector('#kk-sarea');
+        var input = _rootEl.querySelector('#kk-si');
+        var goBtn = _rootEl.querySelector('#kk-sg');
+        var sArea = _rootEl.querySelector('#kk-sarea');
 
         function doSearch() {
             var kw = input.value.trim();
             if (!kw) return;
-
-            destroyInfList();
+            if (_infDestroy) { _infDestroy(); _infDestroy = null; }
             sArea.innerHTML = '<div class="kk-grid" id="kk-inf-grid"></div>';
-            var gridEl = sArea.querySelector('#kk-inf-grid');
-
-            currentInfList = new InfiniteList({
-                container:  gridEl,
-                fetchFn:    function (p, cb) { fetchSearch(kw, p, cb); },
-                renderItem: cardHtml,
-                scrollEl:   scrollEl,
-                onEmpty: function () {
-                    gridEl.innerHTML = emptyHtml('Không tìm thấy "' + kw + '"');
-                }
+            var grid = sArea.querySelector('#kk-inf-grid');
+            startInfinite({
+                grid: grid,
+                scrollEl: _scrollEl,
+                fetchFn: function(p,cb){ fetchSearch(kw,p,cb); },
+                onEmpty: function(){ grid.innerHTML = emptyHtml('Không tìm thấy "'+kw+'"'); }
             });
         }
 
         goBtn.addEventListener('click', doSearch);
-        input.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') doSearch();
-        });
-
+        input.addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
         if (keyword) doSearch();
-        else setTimeout(function () { input.focus(); }, 300);
+        else setTimeout(function(){ input.focus(); }, 300);
     }
 
-    // --- Categories view ---
-    function renderCategories(rootEl) {
-        destroyInfList();
+    /* ── Categories ── */
+    function renderCategories() {
         var cats = [
-            {slug:'hanh-dong',name:'💥 Hành Động'},
-            {slug:'tinh-cam',name:'💕 Tình Cảm'},
-            {slug:'hai-huoc',name:'😂 Hài Hước'},
-            {slug:'co-trang',name:'🏯 Cổ Trang'},
-            {slug:'tam-ly',name:'🧠 Tâm Lý'},
-            {slug:'hinh-su',name:'🔍 Hình Sự'},
-            {slug:'chien-tranh',name:'⚔️ Chiến Tranh'},
-            {slug:'the-thao',name:'⚽ Thể Thao'},
-            {slug:'vo-thuat',name:'🥋 Võ Thuật'},
-            {slug:'vien-tuong',name:'🚀 Viễn Tưởng'},
-            {slug:'phieu-luu',name:'🗺️ Phiêu Lưu'},
-            {slug:'khoa-hoc',name:'🔬 Khoa Học'},
-            {slug:'kinh-di',name:'👻 Kinh Dị'},
-            {slug:'am-nhac',name:'🎵 Âm Nhạc'},
-            {slug:'than-thoai',name:'🐉 Thần Thoại'},
-            {slug:'tai-lieu',name:'📄 Tài Liệu'},
-            {slug:'gia-dinh',name:'👨‍👩‍👧 Gia Đình'},
-            {slug:'chinh-kich',name:'🎭 Chính Kịch'},
-            {slug:'bi-an',name:'🔮 Bí Ẩn'},
-            {slug:'hoc-duong',name:'🎒 Học Đường'}
+            {slug:'hanh-dong',name:'💥 Hành Động'},{slug:'tinh-cam',name:'💕 Tình Cảm'},
+            {slug:'hai-huoc',name:'😂 Hài Hước'},{slug:'co-trang',name:'🏯 Cổ Trang'},
+            {slug:'tam-ly',name:'🧠 Tâm Lý'},{slug:'hinh-su',name:'🔍 Hình Sự'},
+            {slug:'chien-tranh',name:'⚔️ Chiến Tranh'},{slug:'the-thao',name:'⚽ Thể Thao'},
+            {slug:'vo-thuat',name:'🥋 Võ Thuật'},{slug:'vien-tuong',name:'🚀 Viễn Tưởng'},
+            {slug:'phieu-luu',name:'🗺️ Phiêu Lưu'},{slug:'khoa-hoc',name:'🔬 Khoa Học'},
+            {slug:'kinh-di',name:'👻 Kinh Dị'},{slug:'am-nhac',name:'🎵 Âm Nhạc'},
+            {slug:'than-thoai',name:'🐉 Thần Thoại'},{slug:'tai-lieu',name:'📄 Tài Liệu'},
+            {slug:'gia-dinh',name:'👨‍👩‍👧 Gia Đình'},{slug:'chinh-kich',name:'🎭 Chính Kịch'},
+            {slug:'bi-an',name:'🔮 Bí Ẩn'},{slug:'hoc-duong',name:'🎒 Học Đường'}
         ];
-
-        rootEl.innerHTML = backBtnHtml() +
-            '<div class="kk-section"><div class="kk-section__title">Thể Loại Phim</div></div>' +
+        _rootEl.innerHTML = backHtml() +
+            '<div class="kk-sec"><div class="kk-sec__title">Thể Loại Phim</div></div>' +
             '<div class="kk-chips">' +
-            cats.map(function(c){
-                return '<div class="kk-chip" data-slug="' + c.slug + '">' + c.name + '</div>';
-            }).join('') + '</div>';
-
-        bindBack(rootEl);
-        rootEl.querySelectorAll('.kk-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                navigate('category', { slug: this.dataset.slug });
-            });
+            cats.map(function(c){ return '<div class="kk-chip" data-slug="'+c.slug+'">'+c.name+'</div>'; }).join('') +
+            '</div>';
+        bindBack(_rootEl);
+        _rootEl.querySelectorAll('.kk-chip').forEach(function(ch){
+            ch.addEventListener('click', function(){ navigate('category',{slug:this.dataset.slug}); });
         });
     }
 
-    // --- Countries view ---
-    function renderCountries(rootEl) {
-        destroyInfList();
+    /* ── Countries ── */
+    function renderCountries() {
         var list = [
-            {slug:'viet-nam',name:'🇻🇳 Việt Nam'},
-            {slug:'han-quoc',name:'🇰🇷 Hàn Quốc'},
-            {slug:'trung-quoc',name:'🇨🇳 Trung Quốc'},
-            {slug:'nhat-ban',name:'🇯🇵 Nhật Bản'},
-            {slug:'thai-lan',name:'🇹🇭 Thái Lan'},
-            {slug:'au-my',name:'🇺🇸 Âu Mỹ'},
-            {slug:'dai-loan',name:'🇹🇼 Đài Loan'},
-            {slug:'hong-kong',name:'🇭🇰 Hồng Kông'},
-            {slug:'an-do',name:'🇮🇳 Ấn Độ'},
-            {slug:'anh',name:'🇬🇧 Anh'},
-            {slug:'phap',name:'🇫🇷 Pháp'},
-            {slug:'duc',name:'🇩🇪 Đức'},
-            {slug:'tay-ban-nha',name:'🇪🇸 Tây Ban Nha'},
-            {slug:'philippines',name:'🇵🇭 Philippines'},
+            {slug:'viet-nam',name:'🇻🇳 Việt Nam'},{slug:'han-quoc',name:'🇰🇷 Hàn Quốc'},
+            {slug:'trung-quoc',name:'🇨🇳 Trung Quốc'},{slug:'nhat-ban',name:'🇯🇵 Nhật Bản'},
+            {slug:'thai-lan',name:'🇹🇭 Thái Lan'},{slug:'au-my',name:'🇺🇸 Âu Mỹ'},
+            {slug:'dai-loan',name:'🇹🇼 Đài Loan'},{slug:'hong-kong',name:'🇭🇰 Hồng Kông'},
+            {slug:'an-do',name:'🇮🇳 Ấn Độ'},{slug:'anh',name:'🇬🇧 Anh'},
+            {slug:'phap',name:'🇫🇷 Pháp'},{slug:'duc',name:'🇩🇪 Đức'},
+            {slug:'tay-ban-nha',name:'🇪🇸 Tây Ban Nha'},{slug:'philippines',name:'🇵🇭 Philippines'},
             {slug:'canada',name:'🇨🇦 Canada'}
         ];
-
-        rootEl.innerHTML = backBtnHtml() +
-            '<div class="kk-section"><div class="kk-section__title">Quốc Gia</div></div>' +
+        _rootEl.innerHTML = backHtml() +
+            '<div class="kk-sec"><div class="kk-sec__title">Quốc Gia</div></div>' +
             '<div class="kk-chips">' +
-            list.map(function(c){
-                return '<div class="kk-chip" data-slug="' + c.slug + '">' + c.name + '</div>';
-            }).join('') + '</div>';
-
-        bindBack(rootEl);
-        rootEl.querySelectorAll('.kk-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                navigate('country', { slug: this.dataset.slug });
-            });
+            list.map(function(c){ return '<div class="kk-chip" data-slug="'+c.slug+'">'+c.name+'</div>'; }).join('') +
+            '</div>';
+        bindBack(_rootEl);
+        _rootEl.querySelectorAll('.kk-chip').forEach(function(ch){
+            ch.addEventListener('click', function(){ navigate('country',{slug:this.dataset.slug}); });
         });
     }
 
-    // --- Detail view (separate Activity) ---
-    function renderDetail(rootEl, slug) {
+    /* ── Detail (separate Activity) ── */
+    function renderDetail(rootEl, scrollEl, slug) {
         rootEl.innerHTML = spinnerHtml();
+        scrollEl.scrollTop = 0;
 
-        api(CONFIG.api_base + '/phim/' + slug, function (data) {
+        apiFetch(CONFIG.api_base + '/phim/' + slug, function (data) {
             if (!data || !data.movie) {
-                rootEl.innerHTML = backBtnHtml() + emptyHtml('Không tìm thấy phim');
-                bindBack(rootEl);
-                return;
+                rootEl.innerHTML = backHtml() + emptyHtml('Không tìm thấy phim');
+                bindBack(rootEl); return;
             }
 
             var m   = data.movie;
             var eps = data.episodes || [];
-            var backdrop = imgUrl(m.poster_url || m.thumb_url);
-            var thumb    = imgUrl(m.thumb_url  || m.poster_url);
+            var backdrop = imgSrc(m.poster_url || m.thumb_url);
+            var thumb    = imgSrc(m.thumb_url  || m.poster_url);
+            var originName = m.origin_name || m.name || '';
 
-            var h = '';
-
-            // Back
-            h += backBtnHtml();
+            var h = backHtml();
 
             // Hero
-            h += '<div class="kk-detail__hero"><img src="' + backdrop + '" onerror="this.style.opacity=0">';
-            h += '<div class="kk-detail__hero-grad"></div></div>';
+            h += '<div class="kk-detail__hero">';
+            h += '<img src="' + backdrop + '" id="kk-hero-img" onerror="this.style.opacity=0">';
+            h += '<img class="kk-detail__logo" id="kk-hero-logo">';
+            h += '<div class="kk-detail__hero-grad"></div>';
+            h += '</div>';
 
             // Body
             h += '<div class="kk-detail__body">';
@@ -1060,106 +992,109 @@
             h += '<h1 class="kk-detail__title">' + (m.name || '') + '</h1>';
             if (m.origin_name) h += '<p class="kk-detail__orig">' + m.origin_name + '</p>';
             h += '<div class="kk-detail__tags">';
-            if (m.quality) h += '<span class="kk-tag kk-tag--red">' + m.quality + '</span>';
-            if (m.lang)    h += '<span class="kk-tag kk-tag--blue">' + m.lang + '</span>';
-            if (m.year)    h += '<span class="kk-tag">' + m.year + '</span>';
+            if (m.quality) h += '<span class="kk-tag kk-tag--red">'   + m.quality + '</span>';
+            if (m.lang)    h += '<span class="kk-tag kk-tag--blue">'  + m.lang    + '</span>';
+            if (m.year)    h += '<span class="kk-tag">'               + m.year    + '</span>';
             if (m.episode_current) h += '<span class="kk-tag kk-tag--green">' + m.episode_current + '</span>';
             if (m.time)    h += '<span class="kk-tag">⏱ ' + m.time + '</span>';
             h += '</div></div></div>';
 
             // Buttons
-            h += '<div class="kk-actions">';
             var firstLink = '';
-            var firstName = m.name || '';
             if (eps.length && eps[0].server_data && eps[0].server_data.length) {
                 firstLink = eps[0].server_data[0].link_m3u8 || eps[0].server_data[0].link_embed || '';
             }
-            h += '<div class="kk-btn kk-btn--play" id="kk-playfirst" data-link="' + firstLink + '" data-name="' + firstName + '">▶ Xem Phim</div>';
+            h += '<div class="kk-actions">';
+            h += '<div class="kk-btn kk-btn--play" id="kk-playfirst" data-link="'+firstLink+'" data-name="'+(m.name||'')+'">▶ Xem Phim</div>';
             h += '<div class="kk-btn kk-btn--fav" id="kk-fav">♡</div>';
             h += '</div>';
 
             // Info
-            h += '<div class="kk-info-list">';
-            if (m.status)   h += infoItemHtml('Trạng thái', m.status);
-            if (m.episode_total) h += infoItemHtml('Tổng tập', m.episode_total);
-            if (m.country && m.country.length) h += infoItemHtml('Quốc gia', m.country.map(function(c){ return c.name; }).join(', '));
-            if (m.category && m.category.length) h += infoItemHtml('Thể loại', m.category.map(function(c){ return c.name; }).join(', '));
-            if (m.director && m.director.length && m.director[0]) h += infoItemHtml('Đạo diễn', m.director.join(', '));
-            if (m.actor && m.actor.length && m.actor[0]) h += infoItemHtml('Diễn viên', m.actor.slice(0, 5).join(', '));
+            h += '<div class="kk-info">';
+            if (m.status)        h += infoRow('Trạng thái', m.status);
+            if (m.episode_total) h += infoRow('Tổng tập',   m.episode_total);
+            if (m.country  && m.country.length)  h += infoRow('Quốc gia',  m.country.map(function(c){return c.name;}).join(', '));
+            if (m.category && m.category.length) h += infoRow('Thể loại',  m.category.map(function(c){return c.name;}).join(', '));
+            if (m.director && m.director.length && m.director[0]) h += infoRow('Đạo diễn', m.director.join(', '));
+            if (m.actor    && m.actor.length    && m.actor[0])    h += infoRow('Diễn viên',m.actor.slice(0,5).join(', '));
             h += '</div>';
 
             // Desc
             if (m.content) {
                 var desc = m.content.replace(/<[^>]*>/g, '');
                 h += '<div class="kk-desc collapsed" id="kk-desc">' + desc + '</div>';
-                h += '<div class="kk-desc-toggle" id="kk-dtoggle">Xem thêm ▾</div>';
+                h += '<div class="kk-desc-toggle" id="kk-dtog">Xem thêm ▾</div>';
             }
 
             h += '</div>'; // detail body
 
             // Episodes
             if (eps.length) {
-                h += '<div class="kk-section" style="margin-top:0.5em"><div class="kk-section__title">Danh Sách Tập</div></div>';
-                h += '<div style="padding:0 1em 1em">';
-                eps.forEach(function (sv) {
-                    if (!sv.server_data || !sv.server_data.length) return;
-                    h += '<div class="kk-eps__server">';
-                    h += '<div class="kk-eps__sname">' + (sv.server_name || 'Server') + '</div>';
+                h += '<div class="kk-sec" style="margin-top:.4em"><div class="kk-sec__title">Danh Sách Tập</div></div>';
+                h += '<div style="padding:0 .9em 1em">';
+                eps.forEach(function(sv){
+                    if (!sv.server_data||!sv.server_data.length) return;
+                    h += '<div class="kk-eps__sname">' + (sv.server_name||'Server') + '</div>';
                     h += '<div class="kk-eps__list">';
-                    sv.server_data.forEach(function (ep) {
-                        var n = ep.name || ep.slug || '';
-                        var l = ep.link_m3u8 || ep.link_embed || '';
-                        h += '<div class="kk-ep" data-link="' + l + '" data-name="' + (m.name || '') + ' - Tập ' + n + '">' + n + '</div>';
+                    sv.server_data.forEach(function(ep){
+                        var n = ep.name||ep.slug||'';
+                        var l = ep.link_m3u8||ep.link_embed||'';
+                        h += '<div class="kk-ep" data-link="'+l+'" data-name="'+(m.name||'')+' – Tập '+n+'">'+n+'</div>';
                     });
-                    h += '</div></div>';
+                    h += '</div>';
                 });
                 h += '</div>';
             }
 
             rootEl.innerHTML = h;
-            rootEl.scrollTop = 0;
 
-            // Bind back
+            // ── bind events ──
             bindBack(rootEl);
 
-            // Bind play buttons
-            rootEl.querySelectorAll('.kk-btn--play, .kk-ep').forEach(function (btn) {
-                btn.addEventListener('click', function () {
+            rootEl.querySelectorAll('.kk-btn--play,.kk-ep').forEach(function(btn){
+                btn.addEventListener('click', function(){
                     playVideo(this.dataset.link, this.dataset.name);
-                    // Mark playing ep
-                    rootEl.querySelectorAll('.kk-ep').forEach(function(e){ e.classList.remove('playing'); });
+                    rootEl.querySelectorAll('.kk-ep').forEach(function(e){e.classList.remove('playing');});
                     if (this.classList.contains('kk-ep')) this.classList.add('playing');
                 });
             });
 
-            // Desc toggle
-            var descEl    = rootEl.querySelector('#kk-desc');
-            var descToggle = rootEl.querySelector('#kk-dtoggle');
-            if (descEl && descToggle) {
-                descToggle.addEventListener('click', function () {
-                    var collapsed = descEl.classList.toggle('collapsed');
-                    descToggle.textContent = collapsed ? 'Xem thêm ▾' : 'Thu gọn ▴';
+            var descEl = rootEl.querySelector('#kk-desc');
+            var dtog   = rootEl.querySelector('#kk-dtog');
+            if (descEl && dtog) {
+                dtog.addEventListener('click', function(){
+                    var c = descEl.classList.toggle('collapsed');
+                    dtog.textContent = c ? 'Xem thêm ▾' : 'Thu gọn ▴';
+                });
+            }
+
+            // ── load TMDB logo async ──
+            var heroLogo = rootEl.querySelector('#kk-hero-logo');
+            if (heroLogo && originName) {
+                getLogoUrl({ origin_name: originName, year: m.year }, function(logoUrl){
+                    if (logoUrl && heroLogo.parentElement) {
+                        heroLogo.src = logoUrl;
+                        heroLogo.onload = function(){ heroLogo.classList.add('loaded'); };
+                    }
                 });
             }
         });
     }
 
-    // ============== HELPERS ==============
+    // ============================================================
+    // HELPERS
+    // ============================================================
     function bindBack(container) {
-        container.querySelectorAll('[data-back]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                if (typeof Lampa !== 'undefined' && Lampa.Activity) {
-                    Lampa.Activity.backward();
-                }
+        container.querySelectorAll('[data-back]').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                if (typeof Lampa !== 'undefined' && Lampa.Activity) Lampa.Activity.backward();
             });
         });
     }
 
     function playVideo(link, title) {
         if (!link) {
-            if (typeof Lampa !== 'undefined' && Lampa.Noty) {
-                Lampa.Noty.show('⚠️ Không có link phát');
-            }
+            if (typeof Lampa !== 'undefined' && Lampa.Noty) Lampa.Noty.show('⚠️ Không có link');
             return;
         }
         try {
@@ -1167,245 +1102,123 @@
                 var item = { title: title || 'KKPhim', url: link };
                 Lampa.Player.play(item);
                 Lampa.Player.playlist([item]);
-            } else {
-                window.open(link, '_blank');
-            }
-        } catch(e) {
-            window.open(link, '_blank');
-        }
+            } else { window.open(link, '_blank'); }
+        } catch(e) { window.open(link, '_blank'); }
     }
 
-    // ============== MAIN NAVIGATE (in-page) ==============
-    function navigate(view, params) {
-        params = params || {};
-        var rootEl  = document.getElementById('kkphim-root');
-        var scrollEl = document.getElementById('kkphim-scroll');
-        if (!rootEl || !scrollEl) return;
-
-        // Scroll về đầu
-        scrollEl.scrollTop = 0;
-        rootEl.innerHTML   = spinnerHtml();
-
-        var titleMap = {
-            'new'       : '🆕 Phim Mới Cập Nhật',
-            'phim-le'   : '🎬 Phim Lẻ',
-            'phim-bo'   : '📺 Phim Bộ',
-            'hoat-hinh' : '🎭 Hoạt Hình',
-            'tv-shows'  : '📡 TV Shows'
-        };
-
-        switch (view) {
-            case 'home':
-                renderHome(rootEl);
-                break;
-
-            case 'new':
-                renderInfiniteList(rootEl, scrollEl,
-                    titleMap['new'],
-                    function (p, cb) { fetchNew(p, cb); });
-                break;
-
-            case 'list':
-                renderInfiniteList(rootEl, scrollEl,
-                    titleMap[params.slug] || params.slug,
-                    function (p, cb) { fetchList(params.slug, p, cb); });
-                break;
-
-            case 'category':
-                renderInfiniteList(rootEl, scrollEl,
-                    params.slug,
-                    function (p, cb) { fetchCategory(params.slug, p, cb); });
-                break;
-
-            case 'country':
-                renderInfiniteList(rootEl, scrollEl,
-                    params.slug,
-                    function (p, cb) { fetchCountry(params.slug, p, cb); });
-                break;
-
-            case 'categories':
-                renderCategories(rootEl);
-                break;
-
-            case 'countries':
-                renderCountries(rootEl);
-                break;
-
-            case 'search':
-                renderSearch(rootEl, scrollEl, params.keyword || null);
-                break;
-
-            case 'detail':
-                // Dùng separate Activity để giữ menu Lampa
-                openDetail(params.slug);
-                break;
-        }
-    }
-
-    // ============== LAMPA INTEGRATION ==============
+    // ============================================================
+    // LAMPA INTEGRATION
+    // ============================================================
     function initPlugin() {
         addStyles();
         if (typeof Lampa === 'undefined') return;
 
-        // ---- Component chính (Home/List/Search/...) ----
-        Lampa.Component.add('kkphim', function (object) {
-            // scrollEl: wrapper có overflow-y: auto
+        /* ── Main component ── */
+        Lampa.Component.add('kkphim', function () {
+            // scrollEl: chứa toàn bộ, overflow-y scroll
             var scrollEl = document.createElement('div');
-            scrollEl.id  = 'kkphim-scroll';
-            scrollEl.style.cssText = [
-                'height:100%',
-                'overflow-y:auto',
-                'overflow-x:hidden',
-                '-webkit-overflow-scrolling:touch',
-                'overscroll-behavior:contain'
-            ].join(';');
+            scrollEl.className = 'kk-scroll';
 
-            // rootEl: nội dung bên trong
             var rootEl = document.createElement('div');
-            rootEl.className = 'kkphim-plugin';
-            rootEl.id = 'kkphim-root';
+            rootEl.className = 'kk-root';
             scrollEl.appendChild(rootEl);
 
-            this.create = function () {};
+            _scrollEl = scrollEl;
+            _rootEl   = rootEl;
 
-            this.start = function () {
-                // Controller tối giản - KHÔNG dùng collectionFocus
-                // để tránh chặn touch scroll
+            this.create = function(){};
+            this.start  = function(){
                 if (Lampa.Controller) {
-                    Lampa.Controller.add('content', {
-                        toggle : function () {},
-                        left   : function () { if (Lampa.Panel) Lampa.Panel.show(); },
-                        right  : function () {},
-                        up     : function () {},
-                        down   : function () {},
-                        back   : function () { Lampa.Activity.backward(); }
+                    Lampa.Controller.add('content',{
+                        toggle:function(){},
+                        left:function(){ if(Lampa.Panel) Lampa.Panel.show(); },
+                        right:function(){}, up:function(){}, down:function(){},
+                        back:function(){ Lampa.Activity.backward(); }
                     });
                     Lampa.Controller.toggle('content');
                 }
                 navigate('home');
             };
-
-            this.pause   = function () {};
-            this.stop    = function () { destroyInfList(); };
-            this.render  = function () { return scrollEl; };
-            this.destroy = function () {
-                destroyInfList();
-                scrollEl.innerHTML = '';
+            this.pause   = function(){};
+            this.stop    = function(){ if(_infDestroy){_infDestroy();_infDestroy=null;} };
+            this.render  = function(){ return scrollEl; };
+            this.destroy = function(){
+                if(_infDestroy){_infDestroy();_infDestroy=null;}
+                scrollEl.innerHTML='';
             };
         });
 
-        // ---- Component Detail (riêng để giữ back stack) ----
-        Lampa.Component.add('kkphim_detail', function (object) {
+        /* ── Detail component ── */
+        Lampa.Component.add('kkphim_detail', function(object){
             var scrollEl = document.createElement('div');
-            scrollEl.style.cssText = [
-                'height:100%',
-                'overflow-y:auto',
-                'overflow-x:hidden',
-                '-webkit-overflow-scrolling:touch',
-                'overscroll-behavior:contain'
-            ].join(';');
+            scrollEl.className = 'kk-scroll';
 
             var rootEl = document.createElement('div');
-            rootEl.className = 'kkphim-plugin';
+            rootEl.className = 'kk-root';
             scrollEl.appendChild(rootEl);
 
-            this.create = function () {};
-
-            this.start = function () {
+            this.create = function(){};
+            this.start  = function(){
                 if (Lampa.Controller) {
-                    Lampa.Controller.add('content', {
-                        toggle : function () {},
-                        left   : function () {},
-                        right  : function () {},
-                        up     : function () {},
-                        down   : function () {},
-                        back   : function () { Lampa.Activity.backward(); }
+                    Lampa.Controller.add('content',{
+                        toggle:function(){}, left:function(){},
+                        right:function(){}, up:function(){}, down:function(){},
+                        back:function(){ Lampa.Activity.backward(); }
                     });
                     Lampa.Controller.toggle('content');
                 }
-                renderDetail(rootEl, object.slug);
+                renderDetail(rootEl, scrollEl, object.slug);
             };
-
-            this.pause   = function () {};
-            this.stop    = function () {};
-            this.render  = function () { return scrollEl; };
-            this.destroy = function () { scrollEl.innerHTML = ''; };
+            this.pause   = function(){};
+            this.stop    = function(){};
+            this.render  = function(){ return scrollEl; };
+            this.destroy = function(){ scrollEl.innerHTML=''; };
         });
 
-        // ---- Thêm vào menu Lampa ----
-        // Dùng Lampa.Menu.add nếu có, fallback DOM inject
-        var menuAdded = false;
+        /* ── Inject menu item ── */
+        function injectMenu() {
+            if (document.querySelector('[data-kkphim-menu]')) return;
+            var menuList = document.querySelector('.menu .menu__list');
+            if (!menuList) return;
 
-        if (Lampa.Menu && typeof Lampa.Menu.add === 'function') {
-            try {
-                Lampa.Menu.add({
-                    title    : 'KKPhim',
-                    component: 'kkphim',
-                    icon     : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>'
-                });
-                menuAdded = true;
-            } catch(e) {}
-        }
+            var li = document.createElement('li');
+            li.className = 'menu__item selector';
+            li.setAttribute('data-kkphim-menu', '1');
+            li.innerHTML =
+                '<div class="menu__ico">' +
+                '<svg viewBox="0 0 24 24" fill="currentColor" style="width:1.4em;height:1.4em">' +
+                '<path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>' +
+                '</svg></div>' +
+                '<div class="menu__text">KKPhim</div>';
 
-        if (!menuAdded) {
-            // Fallback: inject vào DOM menu
-            function injectMenu() {
-                if (document.querySelector('[data-action="kkphim"]')) return;
-                var menuList = document.querySelector('.menu .menu__list');
-                if (!menuList) return;
-
-                var li = document.createElement('li');
-                li.className = 'menu__item selector';
-                li.setAttribute('data-action', 'kkphim');
-                li.innerHTML =
-                    '<div class="menu__ico">' +
-                    '<svg viewBox="0 0 24 24" fill="currentColor" style="width:1.4em;height:1.4em">' +
-                    '<path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>' +
-                    '</svg></div>' +
-                    '<div class="menu__text">KKPhim</div>';
-
-                li.addEventListener('click', function () {
-                    Lampa.Activity.push({ component: 'kkphim', title: 'KKPhim' });
-                });
-
-                // Nếu Lampa dùng hover:enter (TV)
-                $(li).on('hover:enter', function () {
-                    Lampa.Activity.push({ component: 'kkphim', title: 'KKPhim' });
-                });
-
-                menuList.appendChild(li);
+            function goKK() {
+                Lampa.Activity.push({ component:'kkphim', title:'KKPhim' });
             }
+            li.addEventListener('click', goKK);
+            $(li).on('hover:enter', goKK);
 
-            injectMenu();
-            // Thử lại sau nếu DOM chưa sẵn
-            setTimeout(injectMenu, 1000);
-            setTimeout(injectMenu, 3000);
+            menuList.appendChild(li);
         }
+
+        injectMenu();
+        setTimeout(injectMenu, 800);
+        setTimeout(injectMenu, 2500);
 
         if (Lampa.Noty) Lampa.Noty.show('🎬 KKPhim sẵn sàng!', { time: 2000 });
-        console.log('[KKPhim] Plugin loaded OK');
     }
 
-    // ============== BOOT ==============
+    /* ── Boot ── */
     function boot() {
-        if (typeof Lampa !== 'undefined' && Lampa.Component && Lampa.Activity) {
-            initPlugin();
-        } else {
-            var t = 0;
-            var iv = setInterval(function () {
-                t += 500;
-                if ((typeof Lampa !== 'undefined' && Lampa.Component && Lampa.Activity) || t > 15000) {
-                    clearInterval(iv);
-                    if (typeof Lampa !== 'undefined') initPlugin();
-                }
-            }, 500);
-        }
+        var t = 0;
+        var iv = setInterval(function(){
+            t += 400;
+            if (typeof Lampa !== 'undefined' && Lampa.Component && Lampa.Activity) {
+                clearInterval(iv); initPlugin();
+            } else if (t > 15000) clearInterval(iv);
+        }, 400);
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', boot);
-    } else {
-        boot();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
 
 })();
