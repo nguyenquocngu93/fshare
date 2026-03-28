@@ -60,6 +60,9 @@
             overview:             item.content || '',
             genres:               toNameArray(item.category || []),
             countries:            toNameArray(item.country  || []),
+            production_companies: [],
+            production_countries: [],
+            spoken_languages:     [],
             type:                 'movie',
             media_type:           'movie',
             source:               SOURCE_NAME,
@@ -154,7 +157,7 @@
     }
 
     // =====================================================================
-    // DANH MUC (4 thể loại test)
+    // DANH MUC
     // =====================================================================
     var CATEGORIES = [
         { url: '/v1/api/danh-sach/phim-le',      title: 'Phim lẻ'    },
