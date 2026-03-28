@@ -31,6 +31,9 @@
     };
 
     function getCategoryUrl(type, page) {
+        if (type === 'phim-moi-cap-nhat') {
+            return API_BASE + '/danh-sach/' + type + '?page=' + page;
+        }
         return API_BASE + '/v1/api/danh-sach/' + type + '?page=' + page + '&limit=36';
     }
 
