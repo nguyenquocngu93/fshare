@@ -1,881 +1,1384 @@
 (function () {
     'use strict';
 
-    if (!window.Lampa) return;
+    var KKPhim = {
+        API_URL: 'https://phimapi.com',
+        network: new Lampa.Reguest(),
+        cache: {},
 
-    var API = 'https://phimapi.com';
-    var IMG = 'https://phimimg.com/';
-    var TMDB = 'https://api.themoviedb.org/3';
-    var TMDB_KEY = 'YOUR_TMDB_API_KEY';
+        /**
+         * Khởi tạo plugin
+         */
+        init: function () {
+            // Thêm CSS
+            this.addStyles();
 
-    var req = new Lampa.Reguest();
+            // Đăng ký component
+            Lampa.Component.add('kkphim', this.component);
+            Lampa.Component.add('kkphim_info', this.infoComponent);
+            Lampa.Component.add('kkphim_category', this.categoryComponent);
 
-    function strip(html) {
-        if (!html) return '';
-        return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    }
+            // Thêm nút vào menu
+            this.addMenuItem();
 
-    function img(url) {
-        if (!url) return '';
-        if (url.indexOf('http') === 0) return url;
-        return IMG + url;
-    }
+            // Đăng ký source
+            this.registerSource();
+        },
 
-    function enc(v) {
-        return encodeURIComponent(v || '');
-    }
-
-    function getJSON(url, ok, fail) {
-        req.timeout(20000);
-        req.silent(url, function (json) {
-            ok && ok(json);
-        }, function (a, c) {
-            console.log('KKPhim error:', url, a, c);
-            fail && fail(a, c);
-        }, false, {
-            dataType: 'json'
-        });
-    }
-
-    function mapItem(item) {
-        return {
-            id: item.slug || item._id || item.id || '',
-            slug: item.slug || item._id || item.id || '',
-            title: item.name || 'Không tên',
-            origin_title: item.origin_name || '',
-            thumb: img(item.thumb_url || item.poster_url || ''),
-            poster: img(item.poster_url || item.thumb_url || ''),
-            background: img(item.poster_url || item.thumb_url || ''),
-            year: item.year || '',
-            quality: item.quality || '',
-            lang: item.lang || '',
-            time: item.time || '',
-            episode_current: item.episode_current || '',
-            episode_total: item.episode_total || '',
-            type: item.type || '',
-            content: strip(item.content || '')
-        };
-    }
-
-    function parseList(json) {
-        var arr = [];
-        if (json && json.data && json.data.items) arr = json.data.items;
-        else if (json && json.items) arr = json.items;
-        return arr.map(mapItem);
-    }
-
-    function getPages(json) {
-        if (json && json.data && json.data.params && json.data.params.pagination) {
-            return json.data.params.pagination.totalPages || 1;
-        }
-        if (json && json.pagination) {
-            return json.pagination.totalPages || 1;
-        }
-        return 1;
-    }
-
-    function parseDetail(json) {
-        var m = json.movie || {};
-        return {
-            slug: m.slug || '',
-            title: m.name || 'Không tên',
-            origin_title: m.origin_name || '',
-            poster: img(m.poster_url || m.thumb_url || ''),
-            thumb: img(m.thumb_url || m.poster_url || ''),
-            background: img(m.poster_url || m.thumb_url || ''),
-            year: m.year || '',
-            quality: m.quality || '',
-            lang: m.lang || '',
-            time: m.time || '',
-            category: m.category || [],
-            country: m.country || [],
-            actor: m.actor || [],
-            director: m.director || [],
-            content: strip(m.content || ''),
-            episode_current: m.episode_current || '',
-            episode_total: m.episode_total || '',
-            episodes: json.episodes || []
-        };
-    }
-
-    function flatEpisodes(episodes) {
-        var out = [];
-        (episodes || []).forEach(function (server, si) {
-            (server.server_data || []).forEach(function (ep, i) {
-                out.push({
-                    server: server.server_name || ('Server ' + (si + 1)),
-                    name: ep.name || String(i + 1),
-                    slug: ep.slug || ('tap-' + (i + 1)),
-                    url: ep.link_m3u8 || ep.link_embed || '',
-                    link_m3u8: ep.link_m3u8 || '',
-                    link_embed: ep.link_embed || ''
-                });
-            });
-        });
-        return out;
-    }
-
-    function play(movie, ep, all) {
-        if (!ep || !ep.url) {
-            Lampa.Noty.show('Không có link phát');
-            return;
-        }
-
-        var playlist = (all || []).map(function (x) {
-            return {
-                title: movie.title + ' - Tập ' + x.name,
-                url: x.url
-            };
-        });
-
-        Lampa.Player.play({
-            title: movie.title + ' - Tập ' + ep.name,
-            url: ep.url,
-            movie: {
-                id: movie.slug,
-                title: movie.title,
-                img: movie.thumb,
-                background: movie.backdrop || movie.background || movie.poster
-            }
-        });
-
-        try {
-            if (Lampa.Player.playlist) Lampa.Player.playlist(playlist);
-        } catch (e) {}
-    }
-
-    function showEpisodes(movie) {
-        var eps = flatEpisodes(movie.episodes);
-        if (!eps.length) {
-            Lampa.Noty.show('Chưa có tập phim');
-            return;
-        }
-
-        if (Lampa.Select && Lampa.Select.show) {
-            Lampa.Select.show({
-                title: 'Danh sách tập',
-                items: eps.map(function (ep) {
-                    return {
-                        title: ep.server + ' - Tập ' + ep.name,
-                        ep: ep
-                    };
-                }),
-                onSelect: function (a) {
-                    play(movie, a.ep, eps);
-                },
-                onBack: function () {}
-            });
-        } else {
-            play(movie, eps[0], eps);
-        }
-    }
-
-    function getTMDBBackdrop(title, year, done) {
-        if (!TMDB_KEY || TMDB_KEY === 'YOUR_TMDB_API_KEY') {
-            done('');
-            return;
-        }
-
-        var url = TMDB + '/search/multi?api_key=' + TMDB_KEY + '&query=' + enc(title);
-        getJSON(url, function (json) {
-            var rs = (json && json.results) || [];
-            var pick = null;
-
-            if (year) {
-                pick = rs.find(function (r) {
-                    var d = r.release_date || r.first_air_date || '';
-                    return d.indexOf(String(year)) === 0;
-                });
-            }
-
-            if (!pick && rs.length) pick = rs[0];
-
-            if (pick && pick.backdrop_path) done('https://image.tmdb.org/t/p/w1280' + pick.backdrop_path);
-            else done('');
-        }, function () {
-            done('');
-        });
-    }
-
-    function createScroller() {
-        return $('<div class="kkpf-scroll"></div>');
-    }
-
-    function createCard(item, onClick) {
-        var el = $(`
-            <div class="kkpf-card selector">
-                <div class="kkpf-card__img">
-                    <img src="${item.thumb}" alt="${item.title}">
-                    ${item.quality ? `<div class="kkpf-card__badge">${item.quality}</div>` : ''}
-                </div>
-                <div class="kkpf-card__title">${item.title}</div>
-                <div class="kkpf-card__meta">${item.year || ''}${item.lang ? ' • ' + item.lang : ''}</div>
-            </div>
-        `);
-
-        el.on('click hover:enter', function () {
-            onClick && onClick(item);
-        });
-
-        el.on('hover:focus', function () {
-            try {
-                if (item.background) Lampa.Background.change(item.background);
-            } catch (e) {}
-        });
-
-        return el;
-    }
-
-    function createRow(title, items, onMore, onClick) {
-        var row = $(`
-            <div class="kkpf-row">
-                <div class="kkpf-row__head">
-                    <div class="kkpf-row__title">${title}</div>
-                    <div class="kkpf-row__more selector">Xem thêm</div>
-                </div>
-                <div class="kkpf-row__list"></div>
-            </div>
-        `);
-
-        var list = row.find('.kkpf-row__list');
-        items.forEach(function (item) {
-            list.append(createCard(item, onClick));
-        });
-
-        row.find('.kkpf-row__more').on('click hover:enter', function () {
-            onMore && onMore();
-        });
-
-        return row;
-    }
-
-    function MainPage() {
-        var root = $('<div class="kkpf-page"></div>');
-        var scroller = createScroller();
-        var body = $('<div class="kkpf-main"></div>');
-        var self = this;
-
-        var catalogs = [
-            { title: 'Mới cập nhật', url: '/danh-sach/phim-moi-cap-nhat' },
-            { title: 'Phim lẻ', url: '/v1/api/danh-sach/phim-le' },
-            { title: 'Phim bộ', url: '/v1/api/danh-sach/phim-bo' },
-            { title: 'Hoạt hình', url: '/v1/api/danh-sach/hoat-hinh' },
-            { title: 'TV Shows', url: '/v1/api/danh-sach/tv-shows' }
-        ];
-
-        this.create = function () {
-            self.activity.loader(true);
-            scroller.append(body);
-            root.append(scroller);
-            self.activity.render().append(root);
-
-            var done = 0;
-
-            catalogs.forEach(function (cat) {
-                getJSON(API + cat.url + '?page=1', function (json) {
-                    var items = parseList(json);
-                    if (items.length) {
-                        body.append(createRow(
-                            cat.title,
-                            items,
-                            function () {
-                                Lampa.Activity.push({
-                                    component: 'kkpf_category',
-                                    title: cat.title,
-                                    url: cat.url
-                                });
-                            },
-                            function (item) {
-                                Lampa.Activity.push({
-                                    component: 'kkpf_detail',
-                                    title: item.title,
-                                    slug: item.slug
-                                });
-                            }
-                        ));
-                    }
-
-                    done++;
-                    if (done === catalogs.length) finish();
-                }, function () {
-                    done++;
-                    if (done === catalogs.length) finish();
-                });
-            });
-
-            function finish() {
-                self.activity.loader(false);
-                self.start();
-            }
-        };
-
-        this.start = function () {
-            try {
-                Lampa.Controller.collectionSet(root);
-                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
-            } catch (e) {}
-        };
-
-        this.render = function () {
-            return root;
-        };
-
-        this.destroy = function () {
-            root.remove();
-        };
-    }
-
-    function CategoryPage(object) {
-        var root = $('<div class="kkpf-page"></div>');
-        var scroller = createScroller();
-        var body = $('<div class="kkpf-category"></div>');
-        var grid = $('<div class="kkpf-grid"></div>');
-        var load = $('<div class="kkpf-load">Đang tải...</div>');
-        var empty = $('<div class="kkpf-empty" style="display:none">Không có dữ liệu</div>');
-
-        var self = this;
-        var path = object.url || '/danh-sach/phim-moi-cap-nhat';
-        var page = 1;
-        var pages = 1;
-        var loading = false;
-        var ended = false;
-
-        function loadPage() {
-            if (loading || ended) return;
-            loading = true;
-            load.show();
-
-            getJSON(API + path + '?page=' + page, function (json) {
-                var items = parseList(json);
-                pages = getPages(json);
-
-                if (page === 1 && !items.length) empty.show();
-
-                items.forEach(function (item) {
-                    grid.append(createCard(item, function (it) {
-                        Lampa.Activity.push({
-                            component: 'kkpf_detail',
-                            title: it.title,
-                            slug: it.slug
-                        });
-                    }));
-                });
-
-                if (page >= pages) {
-                    ended = true;
-                    load.text('Đã tải hết');
-                } else {
-                    page++;
-                    load.hide();
+        /**
+         * Thêm CSS styles
+         */
+        addStyles: function () {
+            var style = document.createElement('style');
+            style.textContent = `
+                /* ====== TRANG CHỦ ====== */
+                .kkphim-page {
+                    padding: 1.5em;
+                    position: relative;
                 }
 
-                loading = false;
-                self.activity.loader(false);
-                self.start();
-            }, function () {
-                loading = false;
-                load.text('Tải lỗi');
-                self.activity.loader(false);
-            });
-        }
-
-        this.create = function () {
-            self.activity.loader(true);
-
-            body.append(grid);
-            body.append(empty);
-            body.append(load.hide());
-            scroller.append(body);
-            root.append(scroller);
-            self.activity.render().append(root);
-
-            scroller.on('scroll', function () {
-                var el = scroller[0];
-                if (!el || loading || ended) return;
-
-                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 250) {
-                    loadPage();
-                }
-            });
-
-            loadPage();
-        };
-
-        this.start = function () {
-            try {
-                Lampa.Controller.collectionSet(root);
-                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
-            } catch (e) {}
-        };
-
-        this.render = function () {
-            return root;
-        };
-
-        this.destroy = function () {
-            root.remove();
-        };
-    }
-
-    function DetailPage(object) {
-        var root = $('<div class="kkpf-page"></div>');
-        var scroller = createScroller();
-        var body = $('<div class="kkpf-detail"></div>');
-        var self = this;
-
-        this.create = function () {
-            self.activity.loader(true);
-            scroller.append(body);
-            root.append(scroller);
-            self.activity.render().append(root);
-
-            getJSON(API + '/phim/' + object.slug, function (json) {
-                var movie = parseDetail(json);
-                var eps = flatEpisodes(movie.episodes);
-
-                getTMDBBackdrop(movie.origin_title || movie.title, movie.year, function (backdrop) {
-                    movie.backdrop = backdrop || movie.background || movie.poster;
-
-                    try {
-                        if (movie.backdrop) Lampa.Background.change(movie.backdrop);
-                    } catch (e) {}
-
-                    render(movie, eps);
-                    self.activity.loader(false);
-                    self.start();
-                });
-            }, function () {
-                body.html('<div class="kkpf-empty">Không tải được chi tiết phim</div>');
-                self.activity.loader(false);
-                self.start();
-            });
-        };
-
-        function render(movie, eps) {
-            var genres = (movie.category || []).map(function (i) { return i.name; }).join(', ');
-            var countries = (movie.country || []).map(function (i) { return i.name; }).join(', ');
-            var actors = (movie.actor || []).join(', ');
-            var directors = (movie.director || []).join(', ');
-
-            var hero = $(`
-                <div class="kkpf-hero">
-                    <div class="kkpf-hero__bg" style="background-image:url('${movie.backdrop || movie.poster}')"></div>
-                    <div class="kkpf-hero__overlay"></div>
-                    <div class="kkpf-hero__inner">
-                        <div class="kkpf-hero__poster">
-                            <img src="${movie.poster}" alt="${movie.title}">
-                        </div>
-                        <div class="kkpf-hero__info">
-                            <div class="kkpf-hero__title">${movie.title}</div>
-                            <div class="kkpf-hero__sub">${movie.origin_title || ''}</div>
-
-                            <div class="kkpf-tags">
-                                ${movie.year ? '<span>' + movie.year + '</span>' : ''}
-                                ${movie.quality ? '<span>' + movie.quality + '</span>' : ''}
-                                ${movie.lang ? '<span>' + movie.lang + '</span>' : ''}
-                                ${movie.episode_current ? '<span>' + movie.episode_current + '</span>' : ''}
-                            </div>
-
-                            <div class="kkpf-actions">
-                                <div class="kkpf-btn kkpf-btn--play selector">Phát ngay</div>
-                                <div class="kkpf-btn selector">Chọn tập</div>
-                            </div>
-
-                            <div class="kkpf-info">
-                                <div><b>Thể loại:</b> ${genres || 'Đang cập nhật'}</div>
-                                <div><b>Quốc gia:</b> ${countries || 'Đang cập nhật'}</div>
-                                <div><b>Thời lượng:</b> ${movie.time || 'Đang cập nhật'}</div>
-                                <div><b>Đạo diễn:</b> ${directors || 'Đang cập nhật'}</div>
-                                <div><b>Diễn viên:</b> ${actors || 'Đang cập nhật'}</div>
-                            </div>
-
-                            <div class="kkpf-desc">${movie.content || 'Chưa có mô tả'}</div>
-                        </div>
-                    </div>
-                </div>
-            `);
-
-            body.append(hero);
-
-            hero.find('.kkpf-btn--play').on('click hover:enter', function () {
-                if (!eps.length) return Lampa.Noty.show('Chưa có tập phim');
-                play(movie, eps[0], eps);
-            });
-
-            hero.find('.kkpf-btn').eq(1).on('click hover:enter', function () {
-                showEpisodes(movie);
-            });
-
-            if (eps.length) {
-                var box = $('<div class="kkpf-episodes"><div class="kkpf-episodes__title">Danh sách tập</div><div class="kkpf-episodes__list"></div></div>');
-                var list = box.find('.kkpf-episodes__list');
-
-                eps.forEach(function (ep) {
-                    var btn = $('<div class="kkpf-ep selector">Tập ' + ep.name + '</div>');
-                    btn.on('click hover:enter', function () {
-                        play(movie, ep, eps);
-                    });
-                    list.append(btn);
-                });
-
-                body.append(box);
-            }
-        }
-
-        this.start = function () {
-            try {
-                Lampa.Controller.collectionSet(root);
-                Lampa.Controller.collectionFocus(root.find('.selector').first(), root);
-            } catch (e) {}
-        };
-
-        this.render = function () {
-            return root;
-        };
-
-        this.destroy = function () {
-            root.remove();
-        };
-    }
-
-    function addStyle() {
-        if ($('#kkpf-style').length) return;
-
-        $('head').append(`
-            <style id="kkpf-style">
-                .kkpf-page{
-                    position:absolute;
-                    top:0;
-                    left:0;
-                    right:0;
-                    bottom:0;
-                    overflow:hidden;
+                .kkphim-section {
+                    margin-bottom: 2em;
                 }
 
-                .kkpf-scroll{
-                    position:absolute;
-                    top:0;
-                    left:0;
-                    right:0;
-                    bottom:0;
-                    overflow-y:auto;
-                    overflow-x:hidden;
-                    -webkit-overflow-scrolling:touch;
-                    padding-bottom:40px;
+                .kkphim-section__title {
+                    font-size: 1.6em;
+                    font-weight: 700;
+                    color: #fff;
+                    margin-bottom: 0.6em;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
                 }
 
-                .kkpf-main,
-                .kkpf-category,
-                .kkpf-detail{
-                    min-height:100%;
-                    padding:12px 0 24px 0;
+                .kkphim-section__title span {
+                    font-size: 0.55em;
+                    color: rgba(255,255,255,0.5);
+                    cursor: pointer;
+                    padding: 0.3em 0.8em;
+                    border-radius: 0.5em;
+                    transition: all 0.3s;
                 }
 
-                .kkpf-row{
-                    margin-bottom:22px;
+                .kkphim-section__title span:hover,
+                .kkphim-section__title span.focus {
+                    color: #fff;
+                    background: rgba(255,255,255,0.1);
                 }
 
-                .kkpf-row__head{
-                    display:flex;
-                    align-items:center;
-                    justify-content:space-between;
-                    padding:0 14px 10px;
-                    gap:10px;
+                .kkphim-row {
+                    display: flex;
+                    overflow-x: auto;
+                    gap: 0.8em;
+                    padding-bottom: 0.5em;
+                    scrollbar-width: none;
                 }
 
-                .kkpf-row__title{
-                    font-size:20px;
-                    font-weight:700;
+                .kkphim-row::-webkit-scrollbar {
+                    display: none;
                 }
 
-                .kkpf-row__more{
-                    padding:8px 12px;
-                    border-radius:12px;
-                    background:rgba(255,255,255,.12);
-                    font-size:13px;
-                    white-space:nowrap;
+                /* ====== POSTER CARD ====== */
+                .kkphim-card {
+                    flex-shrink: 0;
+                    width: 12em;
+                    cursor: pointer;
+                    position: relative;
+                    border-radius: 1em;
+                    overflow: hidden;
+                    transition: transform 0.3s, box-shadow 0.3s;
                 }
 
-                .kkpf-row__list{
-                    display:flex;
-                    gap:12px;
-                    overflow-x:auto;
-                    overflow-y:hidden;
-                    padding:0 14px 4px;
-                    -webkit-overflow-scrolling:touch;
+                .kkphim-card.focus,
+                .kkphim-card:hover {
+                    transform: scale(1.08);
+                    box-shadow: 0 0 0 3px #fff, 0 8px 25px rgba(0,0,0,0.5);
+                    z-index: 5;
                 }
 
-                .kkpf-row__list::-webkit-scrollbar{
-                    display:none;
+                .kkphim-card__img-wrap {
+                    width: 100%;
+                    aspect-ratio: 2/3;
+                    background: #1a1a2e;
+                    position: relative;
+                    overflow: hidden;
                 }
 
-                .kkpf-card{
-                    width:132px;
-                    min-width:132px;
-                    flex:0 0 132px;
+                .kkphim-card__img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    transition: transform 0.5s;
                 }
 
-                .kkpf-card__img{
-                    position:relative;
-                    width:100%;
-                    aspect-ratio:2/3;
-                    overflow:hidden;
-                    border-radius:14px;
-                    background:#222;
+                .kkphim-card.focus .kkphim-card__img,
+                .kkphim-card:hover .kkphim-card__img {
+                    transform: scale(1.1);
                 }
 
-                .kkpf-card__img img{
-                    width:100%;
-                    height:100%;
-                    object-fit:cover;
-                    display:block;
+                .kkphim-card__quality {
+                    position: absolute;
+                    top: 0.5em;
+                    left: 0.5em;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #fff;
+                    font-size: 0.7em;
+                    font-weight: 700;
+                    padding: 0.2em 0.5em;
+                    border-radius: 0.4em;
+                    text-transform: uppercase;
                 }
 
-                .kkpf-card__badge{
-                    position:absolute;
-                    top:8px;
-                    right:8px;
-                    background:#ff5a2f;
-                    color:#fff;
-                    padding:4px 7px;
-                    border-radius:8px;
-                    font-size:11px;
-                    font-weight:700;
+                .kkphim-card__year {
+                    position: absolute;
+                    top: 0.5em;
+                    right: 0.5em;
+                    background: rgba(0,0,0,0.7);
+                    color: #fff;
+                    font-size: 0.7em;
+                    padding: 0.2em 0.5em;
+                    border-radius: 0.4em;
                 }
 
-                .kkpf-card__title{
-                    margin-top:8px;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1.35;
-                    display:-webkit-box;
-                    -webkit-line-clamp:2;
-                    -webkit-box-orient:vertical;
-                    overflow:hidden;
+                .kkphim-card__ep {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+                    color: #fff;
+                    font-size: 0.7em;
+                    padding: 1.5em 0.5em 0.4em;
+                    text-align: center;
+                    font-weight: 600;
                 }
 
-                .kkpf-card__meta{
-                    margin-top:3px;
-                    font-size:12px;
-                    opacity:.7;
+                .kkphim-card__title {
+                    padding: 0.5em 0.3em;
+                    font-size: 0.85em;
+                    color: #fff;
+                    text-align: center;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    font-weight: 600;
                 }
 
-                .kkpf-grid{
-                    display:grid;
-                    grid-template-columns:repeat(3,minmax(0,1fr));
-                    gap:12px;
-                    padding:0 14px;
+                .kkphim-card__orig-title {
+                    font-size: 0.7em;
+                    color: rgba(255,255,255,0.5);
+                    text-align: center;
+                    padding: 0 0.3em 0.5em;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
 
-                .kkpf-load,.kkpf-empty{
-                    text-align:center;
-                    padding:18px 14px;
-                    font-size:14px;
-                    opacity:.8;
+                /* ====== INFO PAGE ====== */
+                .kkinfo {
+                    position: relative;
+                    min-height: 100%;
                 }
 
-                .kkpf-hero{
-                    position:relative;
-                    overflow:hidden;
-                    background:#111;
-                    border-radius:0 0 20px 20px;
+                .kkinfo__backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 60vh;
+                    background-size: cover;
+                    background-position: center top;
+                    z-index: 0;
                 }
 
-                .kkpf-hero__bg{
-                    position:absolute;
-                    inset:0;
-                    background-size:cover;
-                    background-position:center;
-                    filter:blur(10px);
-                    transform:scale(1.06);
-                    opacity:.35;
+                .kkinfo__backdrop::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(to bottom,
+                        rgba(0,0,0,0.3) 0%,
+                        rgba(0,0,0,0.6) 50%,
+                        #0d0d15 100%
+                    );
                 }
 
-                .kkpf-hero__overlay{
-                    position:absolute;
-                    inset:0;
-                    background:linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.82) 60%, rgba(0,0,0,.96) 100%);
+                .kkinfo__content {
+                    position: relative;
+                    z-index: 2;
+                    padding: 3em 2em 2em;
+                    display: flex;
+                    gap: 2em;
                 }
 
-                .kkpf-hero__inner{
-                    position:relative;
-                    z-index:2;
-                    display:flex;
-                    flex-direction:column;
-                    gap:16px;
-                    padding:16px 14px 20px;
+                .kkinfo__poster-wrap {
+                    flex-shrink: 0;
+                    width: 16em;
                 }
 
-                .kkpf-hero__poster{
-                    width:150px;
-                    max-width:42vw;
-                    border-radius:16px;
-                    overflow:hidden;
-                    box-shadow:0 12px 30px rgba(0,0,0,.35);
+                .kkinfo__poster {
+                    width: 100%;
+                    aspect-ratio: 2/3;
+                    border-radius: 1em;
+                    object-fit: cover;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
                 }
 
-                .kkpf-hero__poster img{
-                    width:100%;
-                    display:block;
+                .kkinfo__details {
+                    flex: 1;
+                    padding-top: 1em;
                 }
 
-                .kkpf-hero__title{
-                    font-size:24px;
-                    line-height:1.25;
-                    font-weight:800;
+                .kkinfo__title {
+                    font-size: 2.2em;
+                    font-weight: 800;
+                    color: #fff;
+                    margin-bottom: 0.1em;
+                    line-height: 1.2;
+                    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
                 }
 
-                .kkpf-hero__sub{
-                    margin-top:4px;
-                    font-size:14px;
-                    opacity:.72;
+                .kkinfo__orig-title {
+                    font-size: 1.1em;
+                    color: rgba(255,255,255,0.6);
+                    margin-bottom: 1em;
+                    font-style: italic;
                 }
 
-                .kkpf-tags{
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap:8px;
-                    margin-top:12px;
+                .kkinfo__meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.8em;
+                    margin-bottom: 1.2em;
                 }
 
-                .kkpf-tags span{
-                    padding:7px 10px;
-                    border-radius:999px;
-                    background:rgba(255,255,255,.12);
-                    font-size:12px;
+                .kkinfo__meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.3em;
+                    background: rgba(255,255,255,0.1);
+                    backdrop-filter: blur(10px);
+                    padding: 0.4em 0.8em;
+                    border-radius: 2em;
+                    font-size: 0.85em;
+                    color: rgba(255,255,255,0.9);
                 }
 
-                .kkpf-actions{
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap:10px;
-                    margin-top:14px;
+                .kkinfo__meta-item svg {
+                    width: 1em;
+                    height: 1em;
+                    fill: currentColor;
                 }
 
-                .kkpf-btn{
-                    min-width:120px;
-                    text-align:center;
-                    padding:11px 14px;
-                    border-radius:14px;
-                    background:rgba(255,255,255,.12);
-                    font-size:14px;
-                    font-weight:700;
+                .kkinfo__meta-item--quality {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #fff;
+                    font-weight: 700;
                 }
 
-                .kkpf-btn--play{
-                    background:#ff5a2f;
-                    color:#fff;
+                .kkinfo__genres {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5em;
+                    margin-bottom: 1.2em;
                 }
 
-                .kkpf-info{
-                    margin-top:14px;
-                    font-size:14px;
-                    line-height:1.7;
+                .kkinfo__genre {
+                    background: rgba(255,255,255,0.08);
+                    border: 1px solid rgba(255,255,255,0.15);
+                    color: rgba(255,255,255,0.8);
+                    padding: 0.3em 0.8em;
+                    border-radius: 2em;
+                    font-size: 0.8em;
+                    transition: all 0.3s;
+                    cursor: pointer;
                 }
 
-                .kkpf-desc{
-                    margin-top:14px;
-                    font-size:14px;
-                    line-height:1.7;
-                    opacity:.94;
+                .kkinfo__genre:hover,
+                .kkinfo__genre.focus {
+                    background: rgba(255,255,255,0.2);
+                    color: #fff;
                 }
 
-                .kkpf-episodes{
-                    padding:18px 14px 24px;
+                .kkinfo__description {
+                    font-size: 0.95em;
+                    color: rgba(255,255,255,0.75);
+                    line-height: 1.7;
+                    max-width: 40em;
+                    margin-bottom: 1.5em;
+                    max-height: 6em;
+                    overflow: hidden;
+                    position: relative;
                 }
 
-                .kkpf-episodes__title{
-                    font-size:18px;
-                    font-weight:800;
-                    margin-bottom:12px;
+                .kkinfo__description::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 2em;
+                    background: linear-gradient(transparent, #0d0d15);
                 }
 
-                .kkpf-episodes__list{
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap:10px;
+                /* ====== BUTTONS ====== */
+                .kkinfo__actions {
+                    display: flex;
+                    gap: 1em;
+                    margin-bottom: 2em;
+                    flex-wrap: wrap;
                 }
 
-                .kkpf-ep{
-                    min-width:76px;
-                    text-align:center;
-                    padding:10px 14px;
-                    border-radius:12px;
-                    background:rgba(255,255,255,.1);
-                    font-size:14px;
+                .kkinfo__btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5em;
+                    padding: 0.8em 1.8em;
+                    border-radius: 0.8em;
+                    font-size: 1em;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    border: none;
+                    outline: none;
                 }
 
-                @media (min-width:768px){
-                    .kkpf-grid{
-                        grid-template-columns:repeat(5,minmax(0,1fr));
-                    }
+                .kkinfo__btn svg {
+                    width: 1.3em;
+                    height: 1.3em;
+                    fill: currentColor;
+                }
 
-                    .kkpf-hero__inner{
-                        display:grid;
-                        grid-template-columns:220px 1fr;
-                        gap:24px;
-                        align-items:start;
-                        padding:24px;
-                    }
+                .kkinfo__btn--play {
+                    background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+                    color: #fff;
+                    box-shadow: 0 4px 15px rgba(229,9,20,0.4);
+                }
 
-                    .kkpf-hero__poster{
-                        width:220px;
-                        max-width:none;
-                    }
+                .kkinfo__btn--play:hover,
+                .kkinfo__btn--play.focus {
+                    background: linear-gradient(135deg, #ff1a25 0%, #e50914 100%);
+                    transform: scale(1.05);
+                    box-shadow: 0 6px 25px rgba(229,9,20,0.6);
+                }
 
-                    .kkpf-hero__title{
-                        font-size:34px;
-                    }
+                .kkinfo__btn--fav {
+                    background: rgba(255,255,255,0.1);
+                    color: #fff;
+                    border: 1px solid rgba(255,255,255,0.2);
+                }
 
-                    .kkpf-desc,.kkpf-info{
-                        max-width:900px;
+                .kkinfo__btn--fav:hover,
+                .kkinfo__btn--fav.focus {
+                    background: rgba(255,255,255,0.2);
+                    transform: scale(1.05);
+                }
+
+                .kkinfo__btn--trailer {
+                    background: rgba(255,255,255,0.1);
+                    color: #fff;
+                    border: 1px solid rgba(255,255,255,0.2);
+                }
+
+                .kkinfo__btn--trailer:hover,
+                .kkinfo__btn--trailer.focus {
+                    background: rgba(255,255,255,0.2);
+                    transform: scale(1.05);
+                }
+
+                /* ====== EPISODES ====== */
+                .kkinfo__episodes {
+                    position: relative;
+                    z-index: 2;
+                    padding: 0 2em 2em;
+                }
+
+                .kkinfo__episodes-title {
+                    font-size: 1.4em;
+                    font-weight: 700;
+                    color: #fff;
+                    margin-bottom: 0.8em;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5em;
+                }
+
+                .kkinfo__episodes-title .ep-count {
+                    font-size: 0.6em;
+                    background: rgba(255,255,255,0.1);
+                    padding: 0.2em 0.6em;
+                    border-radius: 1em;
+                    color: rgba(255,255,255,0.6);
+                }
+
+                .kkinfo__server-tabs {
+                    display: flex;
+                    gap: 0.5em;
+                    margin-bottom: 1em;
+                    flex-wrap: wrap;
+                }
+
+                .kkinfo__server-tab {
+                    background: rgba(255,255,255,0.08);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: rgba(255,255,255,0.7);
+                    padding: 0.4em 1em;
+                    border-radius: 0.5em;
+                    font-size: 0.85em;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+
+                .kkinfo__server-tab.active,
+                .kkinfo__server-tab.focus {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #fff;
+                    border-color: transparent;
+                }
+
+                .kkinfo__ep-grid {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5em;
+                }
+
+                .kkinfo__ep-btn {
+                    min-width: 3.5em;
+                    padding: 0.6em 0.8em;
+                    background: rgba(255,255,255,0.08);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: rgba(255,255,255,0.8);
+                    text-align: center;
+                    border-radius: 0.5em;
+                    font-size: 0.85em;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    font-weight: 600;
+                }
+
+                .kkinfo__ep-btn:hover,
+                .kkinfo__ep-btn.focus {
+                    background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+                    color: #fff;
+                    border-color: transparent;
+                    transform: scale(1.1);
+                    box-shadow: 0 4px 15px rgba(229,9,20,0.4);
+                }
+
+                .kkinfo__ep-btn.watched {
+                    background: rgba(255,255,255,0.15);
+                    color: rgba(255,255,255,0.5);
+                }
+
+                /* ====== CATEGORY PAGE (Infinite Scroll) ====== */
+                .kkcategory {
+                    padding: 1.5em;
+                }
+
+                .kkcategory__title {
+                    font-size: 1.8em;
+                    font-weight: 700;
+                    color: #fff;
+                    margin-bottom: 1em;
+                }
+
+                .kkcategory__grid {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 1em;
+                }
+
+                .kkcategory__grid .kkphim-card {
+                    width: calc(100% / 7 - 1em);
+                }
+
+                @media (max-width: 1200px) {
+                    .kkcategory__grid .kkphim-card {
+                        width: calc(100% / 5 - 1em);
                     }
                 }
-            </style>
-        `);
-    }
 
-    function addMenu() {
-        function run() {
-            var menu = $('.menu .menu__list').eq(0);
-            if (!menu.length) return setTimeout(run, 1000);
-            if (menu.find('[data-action="kkpf"]').length) return;
+                @media (max-width: 800px) {
+                    .kkcategory__grid .kkphim-card {
+                        width: calc(100% / 3 - 1em);
+                    }
+                    .kkinfo__content {
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .kkinfo__poster-wrap {
+                        width: 12em;
+                    }
+                    .kkinfo__title {
+                        font-size: 1.5em;
+                        text-align: center;
+                    }
+                    .kkinfo__orig-title {
+                        text-align: center;
+                    }
+                    .kkinfo__meta {
+                        justify-content: center;
+                    }
+                    .kkinfo__genres {
+                        justify-content: center;
+                    }
+                    .kkinfo__actions {
+                        justify-content: center;
+                    }
+                }
 
-            var item = $(`
-                <li class="menu__item selector" data-action="kkpf">
-                    <div class="menu__ico">🎬</div>
-                    <div class="menu__text">KKPhim</div>
-                </li>
-            `);
+                .kkcategory__loading {
+                    text-align: center;
+                    padding: 2em;
+                    color: rgba(255,255,255,0.5);
+                    font-size: 1em;
+                }
 
-            item.on('click hover:enter', function () {
+                .kkcategory__loading .spinner {
+                    display: inline-block;
+                    width: 2em;
+                    height: 2em;
+                    border: 3px solid rgba(255,255,255,0.1);
+                    border-top-color: #667eea;
+                    border-radius: 50%;
+                    animation: kk-spin 0.8s linear infinite;
+                }
+
+                @keyframes kk-spin {
+                    to { transform: rotate(360deg); }
+                }
+
+                /* ====== SCROLL ====== */
+                .kkphim-page .scroll,
+                .kkinfo .scroll,
+                .kkcategory .scroll {
+                    position: relative;
+                }
+            `;
+            document.head.appendChild(style);
+        },
+
+        /**
+         * Thêm vào menu Lampa
+         */
+        addMenuItem: function () {
+            var ico = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8H2v12c0 1.1.9 2 2 2h12v-2H4V8z" fill="currentColor"/><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 12.5v-9l6 4.5-6 4.5z" fill="currentColor"/></svg>';
+
+            // Thêm button vào menu
+            var menu_item = $('<li class="menu__item selector" data-action="kkphim">' +
+                '<div class="menu__ico">' + ico + '</div>' +
+                '<div class="menu__text">KKPhim</div>' +
+                '</li>');
+
+            menu_item.on('hover:enter', function () {
                 Lampa.Activity.push({
-                    component: 'kkpf_main',
-                    title: 'KKPhim'
+                    url: '',
+                    title: 'KKPhim',
+                    component: 'kkphim',
+                    page: 1
                 });
             });
 
-            menu.append(item);
+            // Chèn vào menu
+            $('.menu .menu__list').eq(0).append(menu_item);
+        },
+
+        /**
+         * Tạo card poster
+         */
+        createCard: function (item) {
+            var card = document.createElement('div');
+            card.className = 'kkphim-card selector';
+            card.setAttribute('data-slug', item.slug);
+
+            var quality = item.quality || item.lang || '';
+            var year = item.year || '';
+            var ep_text = item.episode_current || '';
+            var poster = item.poster_url || item.thumb_url || '';
+
+            // Fix relative URL
+            if (poster && !poster.startsWith('http')) {
+                poster = KKPhim.API_URL + '/uploads/movies/' + poster;
+            }
+
+            card.innerHTML =
+                '<div class="kkphim-card__img-wrap">' +
+                    '<img class="kkphim-card__img" src="' + poster + '" alt="" onerror="this.src=\'https://via.placeholder.com/200x300/1a1a2e/333?text=No+Image\'">' +
+                    (quality ? '<div class="kkphim-card__quality">' + quality + '</div>' : '') +
+                    (year ? '<div class="kkphim-card__year">' + year + '</div>' : '') +
+                    (ep_text ? '<div class="kkphim-card__ep">' + ep_text + '</div>' : '') +
+                '</div>' +
+                '<div class="kkphim-card__title">' + (item.name || 'N/A') + '</div>' +
+                '<div class="kkphim-card__orig-title">' + (item.origin_name || '') + '</div>';
+
+            card.addEventListener('click', function () {
+                KKPhim.openInfo(item.slug);
+            });
+
+            return card;
+        },
+
+        /**
+         * Gọi API
+         */
+        request: function (path, params, callback, errorCallback) {
+            var url = this.API_URL + path;
+            if (params) {
+                var query = Object.keys(params).map(function (k) {
+                    return k + '=' + encodeURIComponent(params[k]);
+                }).join('&');
+                url += '?' + query;
+            }
+
+            this.network.clear();
+            this.network.timeout(15000);
+            this.network.silent(url, function (data) {
+                if (callback) callback(data);
+            }, function (err) {
+                if (errorCallback) errorCallback(err);
+            });
+        },
+
+        /**
+         * Mở trang info phim
+         */
+        openInfo: function (slug) {
+            Lampa.Activity.push({
+                url: slug,
+                title: 'Chi tiết phim',
+                component: 'kkphim_info',
+                slug: slug
+            });
+        },
+
+        /**
+         * Mở category với infinite scroll
+         */
+        openCategory: function (title, apiPath, params) {
+            Lampa.Activity.push({
+                url: apiPath,
+                title: title,
+                component: 'kkphim_category',
+                apiPath: apiPath,
+                apiParams: params || {},
+                page: 1
+            });
+        },
+
+        /**
+         * Phát video
+         */
+        playVideo: function (url, title, subtitle) {
+            if (!url) {
+                Lampa.Noty.show('Không tìm thấy link phát');
+                return;
+            }
+
+            // Detect if it's m3u8
+            var isHLS = url.indexOf('.m3u8') > -1;
+
+            Lampa.Player.play({
+                title: title || 'KKPhim',
+                url: url,
+                quality: {},
+                subtitles: subtitle ? [{ label: 'Vietsub', url: subtitle }] : []
+            });
+
+            Lampa.Player.playlist([{
+                title: title || 'KKPhim',
+                url: url
+            }]);
+        },
+
+        // =============================================
+        // COMPONENT: Trang chủ
+        // =============================================
+        component: function (object) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var content = document.createElement('div');
+            content.className = 'kkphim-page';
+
+            var categories = [
+                { title: 'Phim Mới Cập Nhật', path: '/danh-sach/phim-moi-cap-nhat', params: {} },
+                { title: 'Phim Bộ', path: '/v1/api/danh-sach/phim-bo', params: {} },
+                { title: 'Phim Lẻ', path: '/v1/api/danh-sach/phim-le', params: {} },
+                { title: 'Hoạt Hình', path: '/v1/api/danh-sach/hoat-hinh', params: {} },
+                { title: 'TV Shows', path: '/v1/api/danh-sach/tv-shows', params: {} },
+                { title: 'Phim Vietsub', path: '/v1/api/danh-sach/phim-vietsub', params: {} },
+                { title: 'Phim Thuyết Minh', path: '/v1/api/danh-sach/phim-thuyet-minh', params: {} },
+                { title: 'Phim Lồng Tiếng', path: '/v1/api/danh-sach/phim-long-tieng', params: {} },
+            ];
+
+            var loaded = 0;
+
+            function loadCategory(cat, index) {
+                var section = document.createElement('div');
+                section.className = 'kkphim-section';
+
+                var titleWrap = document.createElement('div');
+                titleWrap.className = 'kkphim-section__title';
+                titleWrap.innerHTML = cat.title + '<span class="selector kkphim-more" data-index="' + index + '">Xem thêm ➤</span>';
+
+                var row = document.createElement('div');
+                row.className = 'kkphim-row';
+
+                section.appendChild(titleWrap);
+                section.appendChild(row);
+                content.appendChild(section);
+
+                // Nút xem thêm
+                var moreBtn = titleWrap.querySelector('.kkphim-more');
+                moreBtn.addEventListener('click', function () {
+                    KKPhim.openCategory(cat.title, cat.path, cat.params);
+                });
+
+                // Load data
+                var apiPath = cat.path;
+                var params = Object.assign({}, cat.params, { page: 1 });
+
+                // API mới và cũ có cấu trúc khác nhau
+                if (apiPath.indexOf('/v1/api/') > -1) {
+                    params.limit = 16;
+                }
+
+                KKPhim.request(apiPath, params, function (data) {
+                    var items = [];
+
+                    if (data && data.items) {
+                        items = data.items;
+                    } else if (data && data.data && data.data.items) {
+                        items = data.data.items;
+                    }
+
+                    items.forEach(function (item) {
+                        // Fix poster URL cho API v1
+                        if (data.data && data.data.APP_DOMAIN_CDN_IMAGE) {
+                            if (item.poster_url && !item.poster_url.startsWith('http')) {
+                                item.poster_url = data.data.APP_DOMAIN_CDN_IMAGE + '/' + item.poster_url;
+                            }
+                            if (item.thumb_url && !item.thumb_url.startsWith('http')) {
+                                item.thumb_url = data.data.APP_DOMAIN_CDN_IMAGE + '/' + item.thumb_url;
+                            }
+                        }
+
+                        var card = KKPhim.createCard(item);
+                        row.appendChild(card);
+                    });
+
+                    loaded++;
+                    if (loaded >= categories.length) {
+                        scroll.append(content);
+                        object.activity.loader(false);
+                        Lampa.Controller.toggle('content');
+                    }
+                }, function () {
+                    loaded++;
+                    if (loaded >= categories.length) {
+                        scroll.append(content);
+                        object.activity.loader(false);
+                        Lampa.Controller.toggle('content');
+                    }
+                });
+            }
+
+            this.create = function () {
+                return scroll.render();
+            };
+
+            this.start = function () {
+                object.activity.loader(true);
+                categories.forEach(function (cat, i) {
+                    loadCategory(cat, i);
+                });
+            };
+
+            this.pause = function () {};
+            this.stop = function () {};
+
+            this.render = function () {
+                return scroll.render();
+            };
+
+            this.destroy = function () {
+                scroll.destroy();
+                KKPhim.network.clear();
+            };
+
+            this.start();
+
+            // Controller
+            this.activity = {
+                component: 'kkphim',
+                enter: function () {
+                    Lampa.Controller.add('content', {
+                        toggle: function () {
+                            Lampa.Controller.collectionSet(scroll.render());
+                            Lampa.Controller.collectionFocus(false, scroll.render());
+                        },
+                        left: function () {
+                            if (Navigator.canmove('left')) Navigator.move('left');
+                            else Lampa.Controller.toggle('menu');
+                        },
+                        right: function () {
+                            Navigator.move('right');
+                        },
+                        up: function () {
+                            if (Navigator.canmove('up')) Navigator.move('up');
+                            else Lampa.Controller.toggle('head');
+                        },
+                        down: function () {
+                            Navigator.move('down');
+                        },
+                        back: function () {
+                            Lampa.Activity.backward();
+                        }
+                    });
+                    Lampa.Controller.toggle('content');
+                }
+            };
+        },
+
+        // =============================================
+        // COMPONENT: Info phim
+        // =============================================
+        infoComponent: function (object) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var wrap = document.createElement('div');
+            wrap.className = 'kkinfo';
+
+            var currentServer = 0;
+            var movieData = null;
+
+            function buildInfoPage(movie, episodes) {
+                movieData = movie;
+                wrap.innerHTML = '';
+
+                var backdrop = movie.thumb_url || movie.poster_url || '';
+                var poster = movie.poster_url || movie.thumb_url || '';
+
+                // Backdrop
+                var backdropEl = document.createElement('div');
+                backdropEl.className = 'kkinfo__backdrop';
+                if (backdrop) {
+                    backdropEl.style.backgroundImage = 'url(' + backdrop + ')';
+                }
+                wrap.appendChild(backdropEl);
+
+                // Content
+                var contentEl = document.createElement('div');
+                contentEl.className = 'kkinfo__content';
+
+                // Poster
+                var posterWrap = document.createElement('div');
+                posterWrap.className = 'kkinfo__poster-wrap';
+                posterWrap.innerHTML = '<img class="kkinfo__poster" src="' + poster + '" alt="" onerror="this.src=\'https://via.placeholder.com/300x450/1a1a2e/333?text=No+Image\'">';
+                contentEl.appendChild(posterWrap);
+
+                // Details
+                var detailsEl = document.createElement('div');
+                detailsEl.className = 'kkinfo__details';
+
+                // Title
+                detailsEl.innerHTML += '<div class="kkinfo__title">' + (movie.name || 'N/A') + '</div>';
+                if (movie.origin_name) {
+                    detailsEl.innerHTML += '<div class="kkinfo__orig-title">' + movie.origin_name + '</div>';
+                }
+
+                // Meta
+                var metaHtml = '<div class="kkinfo__meta">';
+                if (movie.quality) {
+                    metaHtml += '<div class="kkinfo__meta-item kkinfo__meta-item--quality">' + movie.quality + '</div>';
+                }
+                if (movie.year) {
+                    metaHtml += '<div class="kkinfo__meta-item">📅 ' + movie.year + '</div>';
+                }
+                if (movie.time) {
+                    metaHtml += '<div class="kkinfo__meta-item">⏱ ' + movie.time + '</div>';
+                }
+                if (movie.lang) {
+                    metaHtml += '<div class="kkinfo__meta-item">🌐 ' + movie.lang + '</div>';
+                }
+                if (movie.episode_current) {
+                    metaHtml += '<div class="kkinfo__meta-item">📺 ' + movie.episode_current + '</div>';
+                }
+                if (movie.view) {
+                    metaHtml += '<div class="kkinfo__meta-item">👁 ' + movie.view.toLocaleString() + '</div>';
+                }
+                metaHtml += '</div>';
+                detailsEl.innerHTML += metaHtml;
+
+                // Genres
+                if (movie.category && movie.category.length) {
+                    var genresHtml = '<div class="kkinfo__genres">';
+                    movie.category.forEach(function (g) {
+                        genresHtml += '<div class="kkinfo__genre selector" data-slug="' + (g.slug || '') + '">' + g.name + '</div>';
+                    });
+                    genresHtml += '</div>';
+                    detailsEl.innerHTML += genresHtml;
+                }
+
+                // Description
+                var desc = movie.content || '';
+                desc = desc.replace(/<[^>]*>/g, ''); // strip HTML
+                if (desc) {
+                    detailsEl.innerHTML += '<div class="kkinfo__description">' + desc + '</div>';
+                }
+
+                // Action Buttons
+                var actionsHtml = '<div class="kkinfo__actions">';
+
+                // Play button
+                actionsHtml += '<div class="kkinfo__btn kkinfo__btn--play selector" data-action="play">' +
+                    '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' +
+                    '<span>Phát Phim</span>' +
+                    '</div>';
+
+                // Trailer button
+                if (movie.trailer_url) {
+                    actionsHtml += '<div class="kkinfo__btn kkinfo__btn--trailer selector" data-action="trailer">' +
+                        '<svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9.5 7.5v9l7-4.5z"/></svg>' +
+                        '<span>Trailer</span>' +
+                        '</div>';
+                }
+
+                // Fav button
+                actionsHtml += '<div class="kkinfo__btn kkinfo__btn--fav selector" data-action="fav">' +
+                    '<svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3z"/></svg>' +
+                    '<span>Yêu thích</span>' +
+                    '</div>';
+
+                actionsHtml += '</div>';
+                detailsEl.innerHTML += actionsHtml;
+
+                contentEl.appendChild(detailsEl);
+                wrap.appendChild(contentEl);
+
+                // Episodes section
+                if (episodes && episodes.length > 0) {
+                    var epSection = document.createElement('div');
+                    epSection.className = 'kkinfo__episodes';
+
+                    // Count total episodes
+                    var totalEps = 0;
+                    episodes.forEach(function (s) {
+                        totalEps += (s.server_data || []).length;
+                    });
+
+                    epSection.innerHTML += '<div class="kkinfo__episodes-title">Danh sách tập phim <span class="ep-count">' + totalEps + ' tập</span></div>';
+
+                    // Server tabs
+                    if (episodes.length > 1) {
+                        var tabsHtml = '<div class="kkinfo__server-tabs">';
+                        episodes.forEach(function (server, si) {
+                            tabsHtml += '<div class="kkinfo__server-tab selector' + (si === 0 ? ' active' : '') + '" data-server="' + si + '">' + (server.server_name || 'Server ' + (si + 1)) + '</div>';
+                        });
+                        tabsHtml += '</div>';
+                        epSection.innerHTML += tabsHtml;
+                    }
+
+                    // Episode grids (one per server)
+                    episodes.forEach(function (server, si) {
+                        var gridEl = document.createElement('div');
+                        gridEl.className = 'kkinfo__ep-grid';
+                        gridEl.id = 'kk-server-' + si;
+                        if (si > 0) gridEl.style.display = 'none';
+
+                        (server.server_data || []).forEach(function (ep) {
+                            var epBtn = document.createElement('div');
+                            epBtn.className = 'kkinfo__ep-btn selector';
+                            epBtn.textContent = ep.name || 'Tập ?';
+                            epBtn.setAttribute('data-server', si);
+                            epBtn.setAttribute('data-ep-name', ep.name || '');
+                            epBtn.setAttribute('data-link', ep.link_m3u8 || ep.link_embed || '');
+                            epBtn.setAttribute('data-filename', ep.filename || '');
+
+                            epBtn.addEventListener('click', function () {
+                                var link = this.getAttribute('data-link');
+                                var epName = this.getAttribute('data-ep-name');
+                                var filename = this.getAttribute('data-filename');
+
+                                var playTitle = (movie.name || '') + ' - ' + (epName || filename || '');
+                                KKPhim.playVideo(link, playTitle);
+
+                                // Mark as watched
+                                this.classList.add('watched');
+                            });
+
+                            gridEl.appendChild(epBtn);
+                        });
+
+                        epSection.appendChild(gridEl);
+                    });
+
+                    wrap.appendChild(epSection);
+
+                    // Bind server tab clicks
+                    setTimeout(function () {
+                        var tabs = wrap.querySelectorAll('.kkinfo__server-tab');
+                        tabs.forEach(function (tab) {
+                            tab.addEventListener('click', function () {
+                                var si = parseInt(this.getAttribute('data-server'));
+
+                                // Update tabs
+                                tabs.forEach(function (t) { t.classList.remove('active'); });
+                                this.classList.add('active');
+
+                                // Show/hide grids
+                                episodes.forEach(function (_, idx) {
+                                    var grid = document.getElementById('kk-server-' + idx);
+                                    if (grid) grid.style.display = (idx === si) ? 'flex' : 'none';
+                                });
+                            });
+                        });
+                    }, 100);
+                }
+
+                scroll.append(wrap);
+
+                // Bind action buttons
+                setTimeout(function () {
+                    var playBtn = wrap.querySelector('[data-action="play"]');
+                    if (playBtn) {
+                        playBtn.addEventListener('click', function () {
+                            // Play first episode of first server
+                            if (episodes && episodes.length > 0 && episodes[0].server_data && episodes[0].server_data.length > 0) {
+                                var firstEp = episodes[0].server_data[0];
+                                var link = firstEp.link_m3u8 || firstEp.link_embed || '';
+                                var playTitle = (movie.name || '') + ' - ' + (firstEp.name || '');
+                                KKPhim.playVideo(link, playTitle);
+                            } else {
+                                Lampa.Noty.show('Chưa có tập phim nào');
+                            }
+                        });
+                    }
+
+                    var trailerBtn = wrap.querySelector('[data-action="trailer"]');
+                    if (trailerBtn) {
+                        trailerBtn.addEventListener('click', function () {
+                            if (movie.trailer_url) {
+                                // Convert youtube URL to embed if needed
+                                var trailerUrl = movie.trailer_url;
+                                if (trailerUrl.indexOf('youtube.com/watch') > -1) {
+                                    var vid = trailerUrl.split('v=')[1];
+                                    if (vid) {
+                                        vid = vid.split('&')[0];
+                                        trailerUrl = 'https://www.youtube.com/embed/' + vid;
+                                    }
+                                }
+                                window.open(trailerUrl, '_blank');
+                            }
+                        });
+                    }
+
+                    var favBtn = wrap.querySelector('[data-action="fav"]');
+                    if (favBtn) {
+                        favBtn.addEventListener('click', function () {
+                            Lampa.Noty.show('Đã thêm vào yêu thích!');
+                        });
+                    }
+
+                    // Genre clicks
+                    var genres = wrap.querySelectorAll('.kkinfo__genre');
+                    genres.forEach(function (g) {
+                        g.addEventListener('click', function () {
+                            var slug = this.getAttribute('data-slug');
+                            var name = this.textContent;
+                            if (slug) {
+                                KKPhim.openCategory(name, '/v1/api/the-loai/' + slug, {});
+                            }
+                        });
+                    });
+                }, 200);
+            }
+
+            this.create = function () {
+                return scroll.render();
+            };
+
+            this.start = function () {
+                var slug = object.slug;
+                object.activity.loader(true);
+
+                KKPhim.request('/phim/' + slug, null, function (data) {
+                    object.activity.loader(false);
+
+                    if (data && data.movie) {
+                        buildInfoPage(data.movie, data.episodes || []);
+                        Lampa.Controller.toggle('content');
+                    } else {
+                        Lampa.Noty.show('Không tìm thấy phim');
+                    }
+                }, function () {
+                    object.activity.loader(false);
+                    Lampa.Noty.show('Lỗi tải dữ liệu phim');
+                });
+            };
+
+            this.pause = function () {};
+            this.stop = function () {};
+
+            this.render = function () {
+                return scroll.render();
+            };
+
+            this.destroy = function () {
+                scroll.destroy();
+                KKPhim.network.clear();
+            };
+
+            this.start();
+
+            this.activity = {
+                component: 'kkphim_info',
+                enter: function () {
+                    Lampa.Controller.add('content', {
+                        toggle: function () {
+                            Lampa.Controller.collectionSet(scroll.render());
+                            Lampa.Controller.collectionFocus(false, scroll.render());
+                        },
+                        left: function () {
+                            if (Navigator.canmove('left')) Navigator.move('left');
+                            else Lampa.Controller.toggle('menu');
+                        },
+                        right: function () {
+                            Navigator.move('right');
+                        },
+                        up: function () {
+                            if (Navigator.canmove('up')) Navigator.move('up');
+                            else Lampa.Controller.toggle('head');
+                        },
+                        down: function () {
+                            Navigator.move('down');
+                        },
+                        back: function () {
+                            Lampa.Activity.backward();
+                        }
+                    });
+                    Lampa.Controller.toggle('content');
+                }
+            };
+        },
+
+        // =============================================
+        // COMPONENT: Category với Infinite Scroll
+        // =============================================
+        categoryComponent: function (object) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var wrap = document.createElement('div');
+            wrap.className = 'kkcategory';
+
+            var currentPage = 1;
+            var totalPages = 1;
+            var isLoading = false;
+            var allLoaded = false;
+
+            var titleEl = document.createElement('div');
+            titleEl.className = 'kkcategory__title';
+            titleEl.textContent = object.title || 'Danh mục';
+            wrap.appendChild(titleEl);
+
+            var grid = document.createElement('div');
+            grid.className = 'kkcategory__grid';
+            wrap.appendChild(grid);
+
+            var loadingEl = document.createElement('div');
+            loadingEl.className = 'kkcategory__loading';
+            loadingEl.innerHTML = '<div class="spinner"></div><div style="margin-top:0.5em">Đang tải...</div>';
+            loadingEl.style.display = 'none';
+            wrap.appendChild(loadingEl);
+
+            scroll.append(wrap);
+
+            function loadPage(page) {
+                if (isLoading || allLoaded) return;
+                isLoading = true;
+                loadingEl.style.display = 'block';
+
+                var apiPath = object.apiPath;
+                var params = Object.assign({}, object.apiParams || {}, { page: page });
+
+                if (apiPath.indexOf('/v1/api/') > -1) {
+                    params.limit = 24;
+                }
+
+                KKPhim.request(apiPath, params, function (data) {
+                    isLoading = false;
+                    loadingEl.style.display = 'none';
+
+                    var items = [];
+                    var cdnImage = '';
+
+                    if (data && data.items) {
+                        items = data.items;
+                        // Cũ API
+                        totalPages = data.pagination ? data.pagination.totalPages : 1;
+                    } else if (data && data.data && data.data.items) {
+                        items = data.data.items;
+                        cdnImage = data.data.APP_DOMAIN_CDN_IMAGE || '';
+                        totalPages = data.data.params ? data.data.params.pagination.totalPages : 1;
+                    }
+
+                    if (!items || items.length === 0) {
+                        allLoaded = true;
+                        return;
+                    }
+
+                    items.forEach(function (item) {
+                        // Fix poster
+                        if (cdnImage) {
+                            if (item.poster_url && !item.poster_url.startsWith('http')) {
+                                item.poster_url = cdnImage + '/' + item.poster_url;
+                            }
+                            if (item.thumb_url && !item.thumb_url.startsWith('http')) {
+                                item.thumb_url = cdnImage + '/' + item.thumb_url;
+                            }
+                        }
+
+                        var card = KKPhim.createCard(item);
+                        grid.appendChild(card);
+                    });
+
+                    currentPage = page;
+                    if (currentPage >= totalPages) {
+                        allLoaded = true;
+                    }
+
+                    Lampa.Controller.toggle('content');
+                }, function () {
+                    isLoading = false;
+                    loadingEl.style.display = 'none';
+                    Lampa.Noty.show('Lỗi tải dữ liệu');
+                });
+            }
+
+            // Infinite scroll detection
+            scroll.onScroll = function (scrollData) {
+                if (allLoaded || isLoading) return;
+
+                var scrollEl = scroll.render().find('.scroll__content')[0] || scroll.render()[0];
+                if (scrollEl) {
+                    var sh = scrollEl.scrollHeight;
+                    var st = scrollEl.scrollTop || 0;
+                    var ch = scrollEl.clientHeight;
+
+                    if (sh - st - ch < 300) {
+                        loadPage(currentPage + 1);
+                    }
+                }
+            };
+
+            // Monitor scroll
+            var scrollTimer = null;
+            function startScrollMonitor() {
+                scrollTimer = setInterval(function () {
+                    if (allLoaded || isLoading) return;
+
+                    var scrollContent = scroll.render().find('.scroll__body, .scroll__content');
+                    if (scrollContent.length) {
+                        var el = scrollContent[0];
+                        // Check using transform
+                        var transform = el.style.transform || '';
+                        var match = transform.match(/translateY\((-?\d+)/);
+                        var translateY = match ? Math.abs(parseInt(match[1])) : 0;
+                        var totalHeight = el.scrollHeight || el.offsetHeight;
+                        var viewHeight = scroll.render()[0].clientHeight || scroll.render()[0].offsetHeight;
+
+                        if (translateY + viewHeight + 400 >= totalHeight) {
+                            loadPage(currentPage + 1);
+                        }
+                    }
+                }, 500);
+            }
+
+            this.create = function () {
+                return scroll.render();
+            };
+
+            this.start = function () {
+                object.activity.loader(true);
+                loadPage(1);
+                startScrollMonitor();
+
+                setTimeout(function () {
+                    object.activity.loader(false);
+                }, 1500);
+            };
+
+            this.pause = function () {};
+            this.stop = function () {
+                if (scrollTimer) clearInterval(scrollTimer);
+            };
+
+            this.render = function () {
+                return scroll.render();
+            };
+
+            this.destroy = function () {
+                if (scrollTimer) clearInterval(scrollTimer);
+                scroll.destroy();
+                KKPhim.network.clear();
+            };
+
+            this.start();
+
+            this.activity = {
+                component: 'kkphim_category',
+                enter: function () {
+                    Lampa.Controller.add('content', {
+                        toggle: function () {
+                            Lampa.Controller.collectionSet(scroll.render());
+                            Lampa.Controller.collectionFocus(false, scroll.render());
+                        },
+                        left: function () {
+                            if (Navigator.canmove('left')) Navigator.move('left');
+                            else Lampa.Controller.toggle('menu');
+                        },
+                        right: function () {
+                            Navigator.move('right');
+                        },
+                        up: function () {
+                            if (Navigator.canmove('up')) Navigator.move('up');
+                            else Lampa.Controller.toggle('head');
+                        },
+                        down: function () {
+                            if (Navigator.canmove('down')) Navigator.move('down');
+                        },
+                        back: function () {
+                            Lampa.Activity.backward();
+                        }
+                    });
+                    Lampa.Controller.toggle('content');
+                }
+            };
+        },
+
+        /**
+         * Register source cho tìm kiếm
+         */
+        registerSource: function () {
+            // Thêm vào search
+            if (Lampa.Search) {
+                var originalSearch = Lampa.Search;
+            }
         }
+    };
 
-        run();
-    }
-
-    Lampa.Component.add('kkpf_main', MainPage);
-    Lampa.Component.add('kkpf_category', CategoryPage);
-    Lampa.Component.add('kkpf_detail', DetailPage);
-
-    function start() {
-        addStyle();
-        addMenu();
-        console.log('KKPhim fixed scroll plugin ready');
-    }
-
-    if (Lampa.Listener) {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') start();
-        });
+    // =============================================
+    // KHỞI TẠO PLUGIN
+    // =============================================
+    if (window.appready) {
+        KKPhim.init();
     } else {
-        start();
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') {
+                KKPhim.init();
+            }
+        });
     }
+
+    // Export
+    window.kkphim_plugin = KKPhim;
+
 })();
