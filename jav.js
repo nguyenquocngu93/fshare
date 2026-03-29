@@ -90,6 +90,27 @@
             .replace(/'/g, '&#039;');
     }
 
+    function normalizeItem(item) {
+        if (!item) return null;
+        return {
+            name: item.name || item.title || '',
+            origin_name: item.origin_name || '',
+            slug: item.slug || '',
+            poster_url: item.poster_url || item.poster || '',
+            thumb_url: item.thumb_url || item.thumb || '',
+            year: item.year || '',
+            quality: item.quality || '',
+            episode_current: item.episode_current || '',
+            tmdb: item.tmdb || {},
+            category: item.category || [],
+            director: item.director || '',
+            content: item.content || '',
+            time: item.time || '',
+            episode_total: item.episode_total || '',
+            type: item.type || ''
+        };
+    }
+
     function injectStyle() {
         if ($('#kk-css').length) return;
         $('head').append(`<style id="kk-css">
@@ -207,7 +228,9 @@
         function ins() {
             if ($('.menu__item[data-action="kkphim"]').length) return;
             var m = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 2v2h2V6H6zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM6 10v8h12v-8H6z"/></svg></div><div class="menu__text">KKPhim</div></li>');
-            m.on('click hover:enter', function () { Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 }); });
+            m.on('click hover:enter', function () {
+                Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 });
+            });
             $('.menu .menu__list').first().append(m);
         }
         setTimeout(ins, 500);
@@ -216,9 +239,27 @@
     }
 
     function mkCard(item) {
+        item = normalizeItem(item);
+        if (!item) return $('<div></div>');
+
         var p = fullImg(item.poster_url || item.thumb_url);
-        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + item.quality + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + item.episode_current + '</div>' : '') + '</div><div class="kk-card-name">' + (item.name || '') + '</div><div class="kk-card-year">' + (item.year || '') + '</div></div>');
-        c.on('click hover:enter', function () { Lampa.Activity.push({ url: '', title: item.name || 'KKPhim', component: 'kkphim_detail', movie: item, page: 1 }); });
+        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + item.quality + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + item.episode_current + '</div>' : '') + '</div><div class="kk-card-name">' + escapeHtml(item.name || '') + '</div><div class="kk-card-year">' + escapeHtml(item.year || '') + '</div></div>');
+
+        c.on('click hover:enter', function () {
+            if (!item || !item.slug) {
+                Lampa.Noty.show('Phim không có slug');
+                return;
+            }
+
+            Lampa.Activity.push({
+                url: '',
+                title: item.name || 'KKPhim',
+                component: 'kkphim_detail',
+                movie: item,
+                page: 1
+            });
+        });
+
         return c;
     }
 
@@ -233,7 +274,7 @@
         injectStyle();
         addMenu();
 
-        Lampa.Component.add('kkphim_main', function (object) {
+        Lampa.Component.add('kkphim_main', function () {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
             var comp = this;
@@ -253,6 +294,10 @@
                 cats.forEach(function (cat) {
                     network.silent(API + cat.api + '?page=1', function (res) {
                         var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
+
+                        list = list.map(normalizeItem).filter(function (item) {
+                            return item && item.slug;
+                        });
 
                         if (list.length) {
                             var row = $('<div class="kk-row"></div>');
@@ -339,7 +384,7 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
-                wrap.append('<div class="kk-grid-title">' + title + '</div>');
+                wrap.append('<div class="kk-grid-title">' + escapeHtml(title) + '</div>');
                 wrap.append(grid);
                 wrap.append(loadMore);
                 scroll.append(wrap);
@@ -350,6 +395,9 @@
 
             function handleRes(res) {
                 var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
+                list = list.map(normalizeItem).filter(function (item) {
+                    return item && item.slug;
+                });
 
                 if (!list.length) {
                     hasMore = false;
@@ -375,15 +423,27 @@
                 loading = true;
                 loadMore.text('Đang tải...');
 
-                var url = (mode === 'category' && catSlug) ? API + 'v1/api/the-loai/' + catSlug + '?page=' + page : API + apiPath + '?page=' + page;
+                var url = (mode === 'category' && catSlug)
+                    ? API + 'v1/api/the-loai/' + catSlug + '?page=' + page
+                    : API + apiPath + '?page=' + page;
 
-                network.silent(url, function (res) { handleRes(res); }, function () {
+                network.silent(url, function (res) {
+                    handleRes(res);
+                }, function () {
                     if (mode === 'category' && catSlug) {
-                        network.silent(API + 'the-loai/' + catSlug + '?page=' + page, function (r2) { handleRes(r2); }, function () {
-                            loading = false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
+                        network.silent(API + 'the-loai/' + catSlug + '?page=' + page, function (r2) {
+                            handleRes(r2);
+                        }, function () {
+                            loading = false;
+                            loadMore.text('Tải lại');
+                            comp.activity.loader(false);
+                            Lampa.Noty.show('Lỗi tải danh mục');
                         });
                     } else {
-                        loading = false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
+                        loading = false;
+                        loadMore.text('Tải lại');
+                        comp.activity.loader(false);
+                        Lampa.Noty.show('Lỗi tải danh mục');
                     }
                 });
             }
@@ -423,7 +483,7 @@
         Lampa.Component.add('kkphim_detail', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var movie = object.movie;
+            var movie = normalizeItem(object.movie);
             var comp = this;
             var rendered = false;
 
@@ -432,9 +492,16 @@
                 clearScroll(scroll);
                 rendered = false;
 
+                if (!movie || !movie.slug) {
+                    this.activity.loader(false);
+                    scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu phim</div><div class="empty__text">Thiếu slug để tải chi tiết</div></div>');
+                    comp.start();
+                    return;
+                }
+
                 network.silent(API + 'phim/' + movie.slug, function (res) {
                     if (rendered) return;
-                    var data = res.movie || res || {};
+                    var data = normalizeItem(res.movie || res || {});
                     var episodes = res.episodes || [];
                     loadAll(data, episodes);
                 }, function () {
@@ -457,7 +524,10 @@
                                 tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=en-US&append_to_response=credits,images');
                             } catch (e2) {}
                         }
-                        try { logos = await tmdbFetch('/' + ttype + '/' + tid + '/images'); } catch (e3) {}
+
+                        try {
+                            logos = await tmdbFetch('/' + ttype + '/' + tid + '/images');
+                        } catch (e3) {}
                     }
 
                     if (!rendered) {
@@ -466,7 +536,7 @@
                     }
                 } catch (e) {
                     if (!rendered) {
-                        buildDetail(data, episodes, null, null, 'movie');
+                        buildDetail(data, episodes, null, null, detectType(data));
                         rendered = true;
                     }
                 }
@@ -528,7 +598,9 @@
                         }
 
                         directors = directors.filter(function (p, i, arr) {
-                            return arr.findIndex(function (x) { return x.id === p.id || x.name === p.name; }) === i;
+                            return arr.findIndex(function (x) {
+                                return (x.id && x.id === p.id) || x.name === p.name;
+                            }) === i;
                         }).slice(0, 10);
 
                         if (directors.length) {
@@ -550,24 +622,31 @@
                     }).join('');
                 } else if (tmdb && tmdb.genres && tmdb.genres.length) {
                     ghtml = tmdb.genres.map(function (g) {
-                        return '<span class="kk-genre">' + escapeHtml(g.name) + '</span>';
+                        return '<span class="kk-genre">' + escapeHtml(g.name || '') + '</span>';
                     }).join('');
                 }
 
                 if (data.director && !dir) {
                     dir = Array.isArray(data.director) ? data.director.join(', ') : data.director;
-                    var localDirectors = (Array.isArray(data.director) ? data.director : String(data.director).split(',')).map(function (name) {
-                        return {
-                            name: String(name).trim(),
-                            profile_path: '',
-                            job: 'Đạo diễn'
-                        };
-                    }).filter(function (x) { return x.name; });
 
-                    if (localDirectors.length) directorH = makePeopleCards(localDirectors, 'job');
+                    var localDirectors = (Array.isArray(data.director) ? data.director : String(data.director).split(','))
+                        .map(function (name) {
+                            return {
+                                name: String(name).trim(),
+                                profile_path: '',
+                                job: 'Đạo diễn'
+                            };
+                        })
+                        .filter(function (x) { return x.name; });
+
+                    if (localDirectors.length) {
+                        directorH = makePeopleCards(localDirectors, 'job');
+                    }
                 }
 
-                if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + escapeHtml(dir) + '</span></div>';
+                if (dir) {
+                    crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + escapeHtml(dir) + '</span></div>';
+                }
 
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + escapeHtml(t) + '</div><div class="kk-origin">' + escapeHtml(o) + '</div></div></div></div></div>');
 
@@ -575,7 +654,11 @@
 
                 body.find('.kk-play').on('click hover:enter', function () {
                     try {
-                        playEp(episodes[0].server_data[0]);
+                        if (episodes && episodes.length && episodes[0].server_data && episodes[0].server_data.length) {
+                            playEp(episodes[0].server_data[0]);
+                        } else {
+                            Lampa.Noty.show('Không tìm thấy tập phim');
+                        }
                     } catch (e) {
                         Lampa.Noty.show('Không tìm thấy tập phim');
                     }
@@ -585,7 +668,14 @@
                     var slug = $(this).attr('data-slug');
                     var tg = $(this).attr('data-title') || 'Thể loại';
                     if (!slug) return;
-                    Lampa.Activity.push({ url: '', title: tg, component: 'kkphim_category', mode: 'category', category_slug: slug, page_num: 1 });
+                    Lampa.Activity.push({
+                        url: '',
+                        title: tg,
+                        component: 'kkphim_category',
+                        mode: 'category',
+                        category_slug: slug,
+                        page_num: 1
+                    });
                 });
 
                 scroll.append(hero);
@@ -604,13 +694,15 @@
                     ew.append('<div class="kk-block-title">Danh sách tập</div>');
 
                     episodes.forEach(function (sv) {
-                        ew.append('<div class="kk-server">' + escapeHtml(sv.server_name) + '</div>');
+                        ew.append('<div class="kk-server">' + escapeHtml(sv.server_name || '') + '</div>');
                         var g = $('<div class="kk-eps"></div>');
+
                         (sv.server_data || []).forEach(function (ep) {
-                            var b = $('<div class="kk-ep selector">' + escapeHtml(ep.name) + '</div>');
+                            var b = $('<div class="kk-ep selector">' + escapeHtml(ep.name || '') + '</div>');
                             b.on('click hover:enter', function () { playEp(ep); });
                             g.append(b);
                         });
+
                         ew.append(g);
                     });
 
@@ -620,8 +712,15 @@
 
             function playEp(ep) {
                 var link = ep.link_m3u8 || ep.link_embed || '';
-                if (!link) { Lampa.Noty.show('Không có link phát'); return; }
-                Lampa.Player.play({ title: (movie.name || '') + ' - ' + (ep.name || ''), url: link });
+                if (!link) {
+                    Lampa.Noty.show('Không có link phát');
+                    return;
+                }
+
+                Lampa.Player.play({
+                    title: (movie.name || '') + ' - ' + (ep.name || ''),
+                    url: link
+                });
             }
 
             this.start = function () {
@@ -658,5 +757,7 @@
     }
 
     if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') startPlugin();
+    });
 })();
