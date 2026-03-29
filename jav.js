@@ -1,6 +1,9 @@
 (function () {
     'use strict';
 
+    if (window.__kkphim_plugin_started) return;
+    window.__kkphim_plugin_started = true;
+
     var API = 'https://phimapi.com/';
     var IMG = 'https://phimimg.com/';
     var TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
@@ -76,6 +79,15 @@
         try {
             scroll.render().find('.scroll__body').empty();
         } catch (e) {}
+    }
+
+    function escapeHtml(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     function injectStyle() {
@@ -210,11 +222,17 @@
         return c;
     }
 
+    function makePeopleCards(list, roleKey) {
+        return (list || []).map(function (p) {
+            var av = p.profile_path ? '<img src="' + TMDB_IMG_W500 + p.profile_path + '">' : '<div class="kk-cast-empty"></div>';
+            return '<div class="kk-cast-card"><div class="kk-cast-img">' + av + '</div><div class="kk-cast-name">' + escapeHtml(p.name || '') + '</div><div class="kk-cast-role">' + escapeHtml(p[roleKey] || '') + '</div></div>';
+        }).join('');
+    }
+
     function startPlugin() {
         injectStyle();
         addMenu();
 
-        // ======= MAIN =======
         Lampa.Component.add('kkphim_main', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
@@ -303,7 +321,6 @@
             };
         });
 
-        // ======= CATEGORY =======
         Lampa.Component.add('kkphim_category', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
@@ -403,18 +420,20 @@
             };
         });
 
-        // ======= DETAIL =======
         Lampa.Component.add('kkphim_detail', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
             var movie = object.movie;
             var comp = this;
+            var rendered = false;
 
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
+                rendered = false;
 
                 network.silent(API + 'phim/' + movie.slug, function (res) {
+                    if (rendered) return;
                     var data = res.movie || res || {};
                     var episodes = res.episodes || [];
                     loadAll(data, episodes);
@@ -431,15 +450,25 @@
                     var tmdb = null, logos = null;
 
                     if (tid) {
-                        try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=vi-VN&append_to_response=credits,images'); } catch (e) {
-                            try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=en-US&append_to_response=credits,images'); } catch (e2) { }
+                        try {
+                            tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=vi-VN&append_to_response=credits,images');
+                        } catch (e) {
+                            try {
+                                tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=en-US&append_to_response=credits,images');
+                            } catch (e2) {}
                         }
-                        try { logos = await tmdbFetch('/' + ttype + '/' + tid + '/images'); } catch (e3) { }
+                        try { logos = await tmdbFetch('/' + ttype + '/' + tid + '/images'); } catch (e3) {}
                     }
 
-                    buildDetail(data, episodes, tmdb, logos, ttype);
+                    if (!rendered) {
+                        buildDetail(data, episodes, tmdb, logos, ttype);
+                        rendered = true;
+                    }
                 } catch (e) {
-                    buildDetail(data, episodes, null, null, 'movie');
+                    if (!rendered) {
+                        buildDetail(data, episodes, null, null, 'movie');
+                        rendered = true;
+                    }
                 }
 
                 comp.activity.loader(false);
@@ -447,6 +476,8 @@
             }
 
             function buildDetail(data, episodes, tmdb, logos, ttype) {
+                clearScroll(scroll);
+
                 var bk = fullImg(data.thumb_url || data.poster_url);
                 var ps = fullImg(data.poster_url || data.thumb_url);
                 var t = data.name || '';
@@ -458,6 +489,7 @@
                 var epCur = data.episode_current || '';
                 var ghtml = '';
                 var castH = '';
+                var directorH = '';
                 var crewH = '';
                 var logoH = '';
                 var dir = '';
@@ -479,41 +511,74 @@
                     if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
 
                     if (tmdb.credits) {
-                        var cast = (tmdb.credits.cast || []).slice(0, 10);
-                        castH = cast.map(function (c) {
-                            var av = c.profile_path ? '<img src="' + TMDB_IMG_W500 + c.profile_path + '">' : '<div class="kk-cast-empty"></div>';
-                            return '<div class="kk-cast-card"><div class="kk-cast-img">' + av + '</div><div class="kk-cast-name">' + (c.name || '') + '</div><div class="kk-cast-role">' + (c.character || '') + '</div></div>';
-                        }).join('');
+                        var cast = (tmdb.credits.cast || []).slice(0, 12);
+                        castH = makePeopleCards(cast, 'character');
 
                         var crew = tmdb.credits.crew || [];
-                        var dirs = [];
-                        if (ttype === 'movie') dirs = crew.filter(function (c) { return c.job === 'Director'; }).map(function (c) { return c.name; });
-                        else dirs = crew.filter(function (c) { return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director'; }).map(function (c) { return c.name; });
-                        dirs = dirs.filter(function (v, i, a) { return a.indexOf(v) === i; });
-                        if (dirs.length) dir = dirs.slice(0, 5).join(', ');
+                        var directors = [];
+
+                        if (ttype === 'movie') {
+                            directors = crew.filter(function (c) {
+                                return c.job === 'Director';
+                            });
+                        } else {
+                            directors = crew.filter(function (c) {
+                                return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director';
+                            });
+                        }
+
+                        directors = directors.filter(function (p, i, arr) {
+                            return arr.findIndex(function (x) { return x.id === p.id || x.name === p.name; }) === i;
+                        }).slice(0, 10);
+
+                        if (directors.length) {
+                            dir = directors.map(function (c) { return c.name; }).join(', ');
+                            directorH = makePeopleCards(directors.map(function (c) {
+                                return {
+                                    name: c.name,
+                                    profile_path: c.profile_path,
+                                    job: c.job || 'Đạo diễn'
+                                };
+                            }), 'job');
+                        }
                     }
                 }
 
                 if (pCats.length) {
                     ghtml = pCats.map(function (g) {
-                        return '<span class="kk-genre selector" data-slug="' + (g.slug || '') + '" data-title="' + (g.name || '').replace(/"/g, '&quot;') + '">' + g.name + '</span>';
+                        return '<span class="kk-genre selector" data-slug="' + escapeHtml(g.slug || '') + '" data-title="' + escapeHtml(g.name || '') + '">' + escapeHtml(g.name || '') + '</span>';
                     }).join('');
                 } else if (tmdb && tmdb.genres && tmdb.genres.length) {
-                    ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + g.name + '</span>'; }).join('');
+                    ghtml = tmdb.genres.map(function (g) {
+                        return '<span class="kk-genre">' + escapeHtml(g.name) + '</span>';
+                    }).join('');
                 }
 
                 if (data.director && !dir) {
                     dir = Array.isArray(data.director) ? data.director.join(', ') : data.director;
+                    var localDirectors = (Array.isArray(data.director) ? data.director : String(data.director).split(',')).map(function (name) {
+                        return {
+                            name: String(name).trim(),
+                            profile_path: '',
+                            job: 'Đạo diễn'
+                        };
+                    }).filter(function (x) { return x.name; });
+
+                    if (localDirectors.length) directorH = makePeopleCards(localDirectors, 'job');
                 }
 
-                if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + dir + '</span></div>';
+                if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + escapeHtml(dir) + '</span></div>';
 
-                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + t + '</div><div class="kk-origin">' + o + '</div></div></div></div></div>');
+                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + escapeHtml(t) + '</div><div class="kk-origin">' + escapeHtml(o) + '</div></div></div></div></div>');
 
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + v + '</span>' + (y ? '<span class="kk-meta">📅 ' + y + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + rt + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + epCur + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + d + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + escapeHtml(v) + '</span>' + (y ? '<span class="kk-meta">📅 ' + escapeHtml(y) + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + escapeHtml(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + escapeHtml(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + escapeHtml(d) + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
 
                 body.find('.kk-play').on('click hover:enter', function () {
-                    try { playEp(episodes[0].server_data[0]); } catch (e) { Lampa.Noty.show('Không tìm thấy tập phim'); }
+                    try {
+                        playEp(episodes[0].server_data[0]);
+                    } catch (e) {
+                        Lampa.Noty.show('Không tìm thấy tập phim');
+                    }
                 });
 
                 body.find('.kk-genre[data-slug]').on('click hover:enter', function () {
@@ -526,6 +591,10 @@
                 scroll.append(hero);
                 scroll.append(body);
 
+                if (directorH) {
+                    scroll.append('<div class="kk-block"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>');
+                }
+
                 if (castH) {
                     scroll.append('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>');
                 }
@@ -535,10 +604,10 @@
                     ew.append('<div class="kk-block-title">Danh sách tập</div>');
 
                     episodes.forEach(function (sv) {
-                        ew.append('<div class="kk-server">' + sv.server_name + '</div>');
+                        ew.append('<div class="kk-server">' + escapeHtml(sv.server_name) + '</div>');
                         var g = $('<div class="kk-eps"></div>');
                         (sv.server_data || []).forEach(function (ep) {
-                            var b = $('<div class="kk-ep selector">' + ep.name + '</div>');
+                            var b = $('<div class="kk-ep selector">' + escapeHtml(ep.name) + '</div>');
                             b.on('click hover:enter', function () { playEp(ep); });
                             g.append(b);
                         });
