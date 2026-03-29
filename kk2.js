@@ -19,6 +19,47 @@
     var SUBDL_CDN = 'https://dl.subdl.com';
     var SETTINGS_KEY = 'kkphim_settings';
 
+    // TMDB Genre IDs
+    var TMDB_MOVIE_GENRES = [
+        { id: 28, name: 'Hành Động', name_en: 'Action' },
+        { id: 12, name: 'Phiêu Lưu', name_en: 'Adventure' },
+        { id: 16, name: 'Hoạt Hình', name_en: 'Animation' },
+        { id: 35, name: 'Hài', name_en: 'Comedy' },
+        { id: 80, name: 'Hình Sự', name_en: 'Crime' },
+        { id: 99, name: 'Tài Liệu', name_en: 'Documentary' },
+        { id: 18, name: 'Chính Kịch', name_en: 'Drama' },
+        { id: 10751, name: 'Gia Đình', name_en: 'Family' },
+        { id: 14, name: 'Giả Tưởng', name_en: 'Fantasy' },
+        { id: 36, name: 'Lịch Sử', name_en: 'History' },
+        { id: 27, name: 'Kinh Dị', name_en: 'Horror' },
+        { id: 10402, name: 'Âm Nhạc', name_en: 'Music' },
+        { id: 9648, name: 'Bí Ẩn', name_en: 'Mystery' },
+        { id: 10749, name: 'Lãng Mạn', name_en: 'Romance' },
+        { id: 878, name: 'Khoa Học VT', name_en: 'Sci-Fi' },
+        { id: 53, name: 'Giật Gân', name_en: 'Thriller' },
+        { id: 10752, name: 'Chiến Tranh', name_en: 'War' },
+        { id: 37, name: 'Viễn Tây', name_en: 'Western' }
+    ];
+
+    var TMDB_TV_GENRES = [
+        { id: 10759, name: 'Hành Động & Phiêu Lưu', name_en: 'Action & Adventure' },
+        { id: 16, name: 'Hoạt Hình', name_en: 'Animation' },
+        { id: 35, name: 'Hài', name_en: 'Comedy' },
+        { id: 80, name: 'Hình Sự', name_en: 'Crime' },
+        { id: 99, name: 'Tài Liệu', name_en: 'Documentary' },
+        { id: 18, name: 'Chính Kịch', name_en: 'Drama' },
+        { id: 10751, name: 'Gia Đình', name_en: 'Family' },
+        { id: 10762, name: 'Trẻ Em', name_en: 'Kids' },
+        { id: 9648, name: 'Bí Ẩn', name_en: 'Mystery' },
+        { id: 10763, name: 'Tin Tức', name_en: 'News' },
+        { id: 10764, name: 'Thực Tế', name_en: 'Reality' },
+        { id: 10765, name: 'Khoa Học VT & Giả Tưởng', name_en: 'Sci-Fi & Fantasy' },
+        { id: 10766, name: 'Phim Dài Tập', name_en: 'Soap' },
+        { id: 10767, name: 'Talk Show', name_en: 'Talk' },
+        { id: 10768, name: 'Chiến Tranh & Chính Trị', name_en: 'War & Politics' },
+        { id: 37, name: 'Viễn Tây', name_en: 'Western' }
+    ];
+
     function loadSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; } }
     function saveSettings(o) { try { var c = loadSettings(); Object.keys(o).forEach(function (k) { c[k] = o[k]; }); localStorage.setItem(SETTINGS_KEY, JSON.stringify(c)); } catch (e) {} }
     function getSourceKey() { return loadSettings().source || 'ophim'; }
@@ -226,29 +267,79 @@
     async function getImdbId(type, id) { if (!id) return null; try { return (await tmdbFetch('/' + type + '/' + id + '/external_ids')).imdb_id || null; } catch (e) { return null; } }
     async function getTmdbSeasons(id) { try { var r = await tmdbFetch('/tv/' + id + '?language=vi-VN'); if (r && r.seasons) return r.seasons.filter(function (s) { return s.season_number > 0; }).map(function (s) { return { season_number: s.season_number, name: s.name || ('Season ' + s.season_number), episode_count: s.episode_count || 0 }; }); } catch (e) {} return []; }
 
-    // ===================== STREAM PARSING (FIX CHÍNH) =====================
-    // Parse stream từ cả Torrentio và Aiostreams với đầy đủ thông tin
+    // ===================== TMDB DISCOVER / GENRE =====================
+    async function tmdbDiscoverByGenre(mediaType, genreId, page) {
+        page = page || 1;
+        var url = 'https://api.themoviedb.org/3/discover/' + mediaType + '?api_key=' + TMDB_API_KEY + '&with_genres=' + genreId + '&sort_by=popularity.desc&page=' + page + '&language=vi-VN';
+        var r = await fetch(url);
+        if (!r.ok) return { results: [], total_pages: 0 };
+        return await r.json();
+    }
+
+    async function tmdbSearchMulti(query, page) {
+        page = page || 1;
+        var url = 'https://api.themoviedb.org/3/search/multi?api_key=' + TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&page=' + page + '&language=vi-VN';
+        var r = await fetch(url);
+        if (!r.ok) return { results: [], total_pages: 0 };
+        return await r.json();
+    }
+
+    // Convert TMDB result to a format compatible with our card system
+    function tmdbToNorm(item) {
+        var isTV = item.media_type === 'tv' || item.first_air_date || item.name;
+        var ttype = isTV ? 'tv' : 'movie';
+        return {
+            name: item.title || item.name || '',
+            origin_name: item.original_title || item.original_name || '',
+            slug: '', // no slug - TMDB only
+            poster_url: item.poster_path ? TMDB_IMG_W500 + item.poster_path : '',
+            thumb_url: item.backdrop_path ? TMDB_IMG + item.backdrop_path : '',
+            year: (item.release_date || item.first_air_date || '').slice(0, 4),
+            quality: '',
+            episode_current: '',
+            tmdb: { id: item.id, type: ttype, vote_average: item.vote_average },
+            category: (item.genre_ids || []).map(function(gid) {
+                var allGenres = TMDB_MOVIE_GENRES.concat(TMDB_TV_GENRES);
+                var found = allGenres.find(function(g) { return g.id === gid; });
+                return found ? { name: found.name, slug: '' } : null;
+            }).filter(Boolean),
+            director: '',
+            content: item.overview || '',
+            time: '',
+            episode_total: '',
+            type: ttype === 'tv' ? 'series' : 'single',
+            _tmdb_only: true, // flag: this is TMDB-only, no kkphim/ophim source
+            _tmdb_raw: item
+        };
+    }
+
+    function mkTmdbCard(item) {
+        var n = tmdbToNorm(item);
+        if (!n || !n.tmdb || !n.tmdb.id) return $('<div></div>');
+        var p = n.poster_url || '';
+        var vote = n.tmdb.vote_average ? Number(n.tmdb.vote_average).toFixed(1) : '';
+        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' +
+            (vote ? '<div class="kk-card-q">⭐' + vote + '</div>' : '') +
+            '<div class="kk-card-ep kk-card-ep--tmdb">TMDB</div>' +
+            '</div><div class="kk-card-name">' + esc(n.name) + '</div><div class="kk-card-year">' + esc(n.year) + '</div></div>');
+        bindEnter(c, function () {
+            Lampa.Activity.push({
+                url: '', title: n.name || '',
+                component: 'kkphim_detail_tmdb',
+                tmdb_item: n,
+                page: 1
+            });
+        });
+        return c;
+    }
+
+    // ===================== STREAM PARSING =====================
     function parseStreamItem(st) {
-        // Aiostreams format:
-        // name: "Aio 2160p" hoặc "Torrentio 1080p" hoặc tên addon
-        // title: chứa nhiều dòng với thông tin chi tiết
-        //   Line 1: Tên file/release
-        //   Line 2+: Dung lượng, seeders, nguồn...
-        // behaviorHints: { bingeGroup, filename }
-        // url: link trực tiếp (debrid)
-        // infoHash: hash torrent
-
-        // Torrentio format:
-        // name: "Torrentio 1080p" hoặc "[tracker] 1080p"
-        // title: "File name\n💾 1.5 GB\n👤 50"
-        // infoHash: hash
-
         var rawTitle = st.title || '';
         var rawName = st.name || '';
         var allText = rawTitle + '\n' + rawName;
         var lines = rawTitle.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
 
-        // Extract thông tin từ tất cả các dòng
         var fileName = '';
         var quality = '';
         var size = '';
@@ -258,39 +349,28 @@
         var audio = '';
         var langs = '';
         var provider = '';
-        var extras = [];
 
-        // Tên file: thường là dòng dài nhất hoặc dòng chứa release name
-        // Quality: từ name hoặc title
         var qMatch = allText.match(/\b(2160p|4K|UHD|1080p|720p|480p|HDRip|BDRip|WEB-?DL|WEB-?Rip|BluRay|BRRip|HDTV|CAM|TS|DVDSCR)\b/i);
         if (qMatch) quality = qMatch[1].toUpperCase();
 
-        // Dung lượng
-        var sizeMatch = allText.match(/💾\s*([\d.]+\s*[GMKT]i?B)/i)
-            || allText.match(/([\d.]+\s*[GMKT]i?B)/i);
+        var sizeMatch = allText.match(/💾\s*([\d.]+\s*[GMKT]i?B)/i) || allText.match(/([\d.]+\s*[GMKT]i?B)/i);
         if (sizeMatch) size = sizeMatch[1];
 
-        // Seeders
         var seedMatch = allText.match(/👤\s*(\d+)/);
         if (seedMatch) seeds = seedMatch[1];
 
-        // Codec
         var codecMatch = allText.match(/\b(x264|x265|H\.?264|H\.?265|HEVC|AV1|VP9|MPEG)\b/i);
         if (codecMatch) codec = codecMatch[1].toUpperCase();
 
-        // HDR
         var hdrMatch = allText.match(/\b(HDR10\+?|HDR|DV|Dolby Vision|Atmos)\b/i);
         var hdr = hdrMatch ? hdrMatch[1] : '';
 
-        // Audio
         var audioMatch = allText.match(/\b(DTS-HD|DTS|DD5\.1|AAC|AC3|Atmos|TrueHD|FLAC|EAC3|DD\+?\s*\d*\.?\d*)\b/i);
         if (audioMatch) audio = audioMatch[1];
 
-        // Ngôn ngữ
         var langMatch = allText.match(/\b(Multi|Dual|Vietnamese|Hindi|English|Spanish|French|German|Italian|Portuguese|Russian|Japanese|Korean|Chinese|Thai|Arabic|Turkish)\b/gi);
         if (langMatch) langs = langMatch.slice(0, 3).join('/');
 
-        // Source/Provider (tracker, debrid...)
         var provMatch = allText.match(/⚙️\s*([^\n]+)/);
         if (provMatch) provider = provMatch[1].trim();
         if (!provider) {
@@ -298,11 +378,9 @@
             if (trackerMatch) provider = trackerMatch[1];
         }
 
-        // Tên file
         if (st.behaviorHints && st.behaviorHints.filename) {
             fileName = st.behaviorHints.filename;
         } else if (lines.length > 0) {
-            // Tìm dòng dài nhất chứa release name (thường có dấu . hoặc -)
             var candidates = lines.filter(function(l) {
                 return l.length > 15 && (l.indexOf('.') > -1 || l.indexOf('-') > -1) && !l.match(/^[💾👤⚙️🎬🔊]/);
             });
@@ -313,55 +391,34 @@
             }
         }
 
-        // Clean file name
         fileName = fileName.replace(/\.(mkv|mp4|avi|mov)$/i, '').trim();
 
-        // Fallback quality từ name
         if (!quality && rawName) {
             var q2 = rawName.match(/\b(2160p|4K|1080p|720p|480p)\b/i);
             if (q2) quality = q2[1].toUpperCase();
         }
 
-        // Source addon name
         var addonName = '';
         if (rawName) {
-            // "Aio 2160p" → "Aio", "Torrentio 1080p" → "Torrentio"
             var an = rawName.replace(/\s*(2160p|4K|1080p|720p|480p|UHD)\s*/gi, '').trim();
             if (an) addonName = an;
         }
 
-        // Build display label
         var label = '';
-
-        // Quality badge
         if (quality) label += quality;
-
-        // Size
         if (size) label += (label ? ' · ' : '') + '💾 ' + size;
-
-        // Seeds
         if (seeds) label += (label ? ' · ' : '') + '👤 ' + seeds;
-
-        // Codec + HDR
         var techParts = [];
         if (codec) techParts.push(codec);
         if (hdr) techParts.push(hdr);
         if (audio) techParts.push(audio);
         if (techParts.length) label += (label ? ' · ' : '') + techParts.join(' ');
-
-        // Langs
         if (langs) label += (label ? ' · ' : '') + '🌐 ' + langs;
-
-        // Provider/Source
         if (provider) label += (label ? ' · ' : '') + provider;
         else if (addonName && addonName.toLowerCase() !== 'aio') label += (label ? ' · ' : '') + addonName;
-
-        // File name (shortened)
         var shortName = fileName;
         if (shortName.length > 60) shortName = shortName.substring(0, 57) + '...';
         if (shortName) label += '\n📄 ' + shortName;
-
-        // URL indicator
         if (st.url && !st.infoHash) label += ' 🔗';
 
         return {
@@ -392,17 +449,13 @@
         var d = await r.json();
         var streams = (d.streams || []).map(parseStreamItem);
 
-        // Sort: có URL trước, rồi theo seeds, rồi theo quality
         var qOrder = { '2160P': 0, '4K': 0, 'UHD': 0, '1080P': 1, '720P': 2, '480P': 3 };
         streams.sort(function (a, b) {
-            // URL trước
             if (a.hasUrl && !b.hasUrl) return -1;
             if (!a.hasUrl && b.hasUrl) return 1;
-            // Quality
             var qa = qOrder[a.quality] !== undefined ? qOrder[a.quality] : 9;
             var qb = qOrder[b.quality] !== undefined ? qOrder[b.quality] : 9;
             if (qa !== qb) return qa - qb;
-            // Seeds
             return (b.seeds || 0) - (a.seeds || 0);
         });
 
@@ -416,7 +469,6 @@
         var headerTitle = srcIcon + ' ' + title + ' (' + streams.length + ')';
         if (ts) headerTitle += ' → TS';
 
-        // Group by quality
         var groups = {};
         streams.forEach(function(s) {
             var q = s.quality || 'Khác';
@@ -429,14 +481,12 @@
 
         qualityOrder.forEach(function(q) {
             if (!groups[q] || !groups[q].length) return;
-            // Separator
             items.push({ title: '━━━ ' + q + ' (' + groups[q].length + ') ━━━', value: null, separator: true });
             groups[q].forEach(function(s) {
                 items.push({ title: s.label, value: s });
             });
         });
 
-        // Thêm nhóm không match
         Object.keys(groups).forEach(function(q) {
             if (qualityOrder.indexOf(q) !== -1) return;
             items.push({ title: '━━━ ' + q + ' (' + groups[q].length + ') ━━━', value: null, separator: true });
@@ -452,7 +502,7 @@
                 return { title: item.title, value: item.value };
             }),
             onSelect: function (a) {
-                if (!a.value) return; // separator
+                if (!a.value) return;
                 var s = a.value;
                 if (s.url) {
                     playUrlWithSub(s.url, title, movieData, ttype, season, episode, tmdbData);
@@ -504,7 +554,7 @@
     function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     function cleanDesc(s) { return String(s || '').replace(/<[^>]+>/g, '').trim() || 'Không có mô tả'; }
     function fmtTxt(s) { return esc(s || '').replace(/\n/g, '<br>'); }
-    function norm(i) { if (!i) return null; return { name: i.name || i.title || '', origin_name: i.origin_name || '', slug: i.slug || '', poster_url: i.poster_url || i.poster || '', thumb_url: i.thumb_url || i.thumb || '', year: i.year || '', quality: i.quality || '', episode_current: i.episode_current || '', tmdb: i.tmdb || {}, category: Array.isArray(i.category) ? i.category : [], director: i.director || '', content: i.content || '', time: i.time || '', episode_total: i.episode_total || '', type: i.type || '' }; }
+    function norm(i) { if (!i) return null; return { name: i.name || i.title || '', origin_name: i.origin_name || '', slug: i.slug || '', poster_url: i.poster_url || i.poster || '', thumb_url: i.thumb_url || i.thumb || '', year: i.year || '', quality: i.quality || '', episode_current: i.episode_current || '', tmdb: i.tmdb || {}, category: Array.isArray(i.category) ? i.category : [], director: i.director || '', content: i.content || '', time: i.time || '', episode_total: i.episode_total || '', type: i.type || '', _tmdb_only: i._tmdb_only || false, _tmdb_raw: i._tmdb_raw || null }; }
     function getFirstEp(eps) { for (var i = 0; i < (eps || []).length; i++) if (eps[i] && eps[i].server_data && eps[i].server_data.length) return eps[i].server_data[0]; return null; }
 
     function bindEnter(el, fn) {
@@ -521,7 +571,7 @@
     function clearScroll(s) { try { s.render().find('.scroll__body').empty(); } catch (e) {} }
     function applyCtrl(scroll) { Lampa.Controller.add('content', { toggle: function () { Lampa.Controller.collectionSet(scroll.render()); Lampa.Controller.collectionFocus(false, scroll.render()); }, left: function () { if (Navigator.canmove('left')) Navigator.move('left'); else Lampa.Controller.toggle('menu'); }, right: function () { Navigator.move('right'); }, up: function () { if (Navigator.canmove('up')) Navigator.move('up'); else Lampa.Controller.toggle('head'); }, down: function () { Navigator.move('down'); }, back: function () { Lampa.Activity.backward(); } }); setTimeout(function () { Lampa.Controller.toggle('content'); Lampa.Controller.collectionSet(scroll.render()); Lampa.Controller.collectionFocus(false, scroll.render()); }, 0); }
     function mkPeople(list, key) { return (list || []).map(function (p) { var av = p.profile_path ? '<img src="' + TMDB_IMG_W500 + p.profile_path + '">' : '<div class="kk-cast-empty"></div>'; return '<div class="kk-cast-card"><div class="kk-cast-img">' + av + '</div><div class="kk-cast-name">' + esc(p.name || '') + '</div><div class="kk-cast-role">' + esc(p[key] || '') + '</div></div>'; }).join(''); }
-    function mkCard(item) { var n = norm(item); if (!n) return $('<div></div>'); var p = fullImg(n.poster_url || n.thumb_url); var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (n.quality ? '<div class="kk-card-q">' + esc(n.quality) + '</div>' : '') + (n.episode_current ? '<div class="kk-card-ep">' + esc(n.episode_current) + '</div>' : '') + '</div><div class="kk-card-name">' + esc(n.name) + '</div><div class="kk-card-year">' + esc(n.year) + '</div></div>'); bindEnter(c, function () { if (!n.slug) return; Lampa.Activity.push({ url: '', title: n.name || '', component: 'kkphim_detail', movie: n, page: 1 }); }); return c; }
+    function mkCard(item) { var n = norm(item); if (!n) return $('<div></div>'); if (n._tmdb_only && n._tmdb_raw) return mkTmdbCard(n._tmdb_raw); var p = fullImg(n.poster_url || n.thumb_url); var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (n.quality ? '<div class="kk-card-q">' + esc(n.quality) + '</div>' : '') + (n.episode_current ? '<div class="kk-card-ep">' + esc(n.episode_current) + '</div>' : '') + '</div><div class="kk-card-name">' + esc(n.name) + '</div><div class="kk-card-year">' + esc(n.year) + '</div></div>'); bindEnter(c, function () { if (!n.slug) return; Lampa.Activity.push({ url: '', title: n.name || '', component: 'kkphim_detail', movie: n, page: 1 }); }); return c; }
 
     // ===================== CSS =====================
     function injectCSS() {
@@ -552,6 +602,7 @@
 '.kk-card-img img{width:100%;height:100%;object-fit:cover}' +
 '.kk-card-q{position:absolute;top:.5em;left:.5em;padding:.2em .5em;border-radius:.4em;font-size:.7em;font-weight:800;background:#f6c344;color:#000}' +
 '.kk-card-ep{position:absolute;top:.5em;right:.5em;padding:.2em .5em;border-radius:.4em;font-size:.7em;font-weight:800;background:#e53935;color:#fff}' +
+'.kk-card-ep--tmdb{background:#01b4e4;color:#fff}' +
 '.kk-card-name{margin-top:.6em;font-size:1em;line-height:1.3;font-weight:700;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}' +
 '.kk-card-year{margin-top:.18em;font-size:.88em;color:rgba(255,255,255,.5)}' +
 '.kk-grid-wrap{padding:0 1.5em}' +
@@ -623,7 +674,13 @@
 '.kk-stg-status--err{background:rgba(248,113,113,.12);color:#f87171}' +
 '.kk-stg-status--loading{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5)}' +
 'video::cue{background:rgba(0,0,0,.75);color:#fff;font-size:1.2em;line-height:1.5;padding:.2em .6em;border-radius:.3em}' +
-'.selector,.kk-act,.kk-ep,.kk-row-more,.kk-loadmore,.kk-genre,.kk-card,.kk-btn,.kk-stg-item,.kk-srcbtn{touch-action:manipulation;-webkit-tap-highlight-color:transparent}' +
+'.kk-tmdb-badge{display:inline-flex;align-items:center;gap:.3em;padding:.35em .7em;border-radius:.5em;background:#01b4e4;color:#fff;font-size:.85em;font-weight:800;margin-bottom:.5em}' +
+'.kk-tmdb-notice{padding:.8em 1em;border-radius:.8em;background:rgba(1,180,228,.1);border:1px solid rgba(1,180,228,.2);color:#90cef4;font-size:.95em;font-weight:700;margin:0 0 1em;text-align:center}' +
+'.kk-genre-tags{display:flex;flex-wrap:wrap;gap:.5em;padding:0 1.5em .7em}' +
+'.kk-genre-tag{padding:.5em .9em;border-radius:.7em;font-size:.9em;font-weight:700;cursor:pointer;border:1px solid rgba(1,180,228,.2);background:rgba(1,180,228,.08);color:#90cef4}' +
+'.kk-genre-tag.focus{background:rgba(1,180,228,.25);color:#fff}' +
+'.kk-genre-tag--active{background:rgba(1,180,228,.25);border-color:rgba(1,180,228,.5);color:#fff}' +
+'.selector,.kk-act,.kk-ep,.kk-row-more,.kk-loadmore,.kk-genre,.kk-card,.kk-btn,.kk-stg-item,.kk-srcbtn,.kk-genre-tag{touch-action:manipulation;-webkit-tap-highlight-color:transparent}' +
 '@media(orientation:landscape){.kk-hero-bg{height:28em}.kk-hero-bottom{padding:1.5em 1.8em 1.3em}.kk-hero-flex{display:flex;align-items:flex-end;gap:1.3em}.kk-hero-poster{display:block;width:9.5em;min-width:9.5em}.kk-hero-poster img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:.95em}.kk-hero-info{flex:1;padding-bottom:.2em}.kk-logo{max-width:26em;margin-bottom:.95em}.kk-logo img{max-height:8em}.kk-title{font-size:2.7em}.kk-body{padding:1.3em 1.8em 0}.kk-section{padding:1.2em 1.8em 0}.kk-similar-list .kk-card{width:8.8em}}' +
 '@media(max-width:768px){.kk-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.75em}}' +
 '</style>');
@@ -684,7 +741,6 @@
                 bindEnter(tsi, function () { testSub(st3); }); g3.append(tsi).append(st3);
                 w.append(g3);
 
-                // Debug
                 var g5 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">🔍 Debug</div>');
                 var dbg = si('📋 Raw stream JSON', 'Xem response gốc', 'Nhấn');
                 bindEnter(dbg, async function () {
@@ -735,6 +791,18 @@
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this, _src = '';
             var cats = [{ name: 'Phim Mới', api: 'danh-sach/phim-moi-cap-nhat' }, { name: 'Phim Bộ', api: 'v1/api/danh-sach/phim-bo' }, { name: 'Phim Lẻ', api: 'v1/api/danh-sach/phim-le' }, { name: 'Hoạt Hình', api: 'v1/api/danh-sach/hoat-hinh' }, { name: 'TV Shows', api: 'v1/api/danh-sach/tv-shows' }];
 
+            // Random pick some TMDB genres for the main page
+            var TMDB_MAIN_GENRES = [
+                { id: 28, name: '🎬 Hành Động', type: 'movie' },
+                { id: 35, name: '😂 Hài', type: 'movie' },
+                { id: 27, name: '👻 Kinh Dị', type: 'movie' },
+                { id: 878, name: '🚀 Khoa Học VT', type: 'movie' },
+                { id: 16, name: '🎨 Hoạt Hình', type: 'movie' },
+                { id: 10749, name: '💕 Lãng Mạn', type: 'movie' },
+                { id: 18, name: '🎭 Chính Kịch', type: 'tv', mediaType: 'tv' },
+                { id: 10759, name: '⚔️ Hành Động & Phiêu Lưu', type: 'tv', mediaType: 'tv' }
+            ];
+
             this.create = function () {
                 network.clear(); this.activity.loader(true); clearScroll(scroll);
                 var src = getSource(); _src = src.key;
@@ -750,19 +818,109 @@
                 if (getTSHost()) badges.push('🖥️ TS');
                 scroll.append($('<div class="kk-tsbar"><div class="kk-tsbadge">' + badges.join(' · ') + '</div></div>'));
 
-                var loaded = 0;
+                var loaded = 0, total = cats.length + TMDB_MAIN_GENRES.length;
                 cats.forEach(function (cat) {
                     network.silent(SRC_API() + cat.api + '?page=1', function (res) {
                         var list = ((res && res.items) || (res && res.data && res.data.items) || []).map(norm).filter(function (i) { return i && i.slug; });
                         if (list.length) { var row = $('<div class="kk-row"></div>'); var more = $('<div class="kk-row-more selector">Xem thêm</div>'); var rl = $('<div class="kk-row-list"></div>'); bindEnter(more, function () { Lampa.Activity.push({ url: '', title: cat.name, component: 'kkphim_category', cat: cat, page_num: 1 }); }); list.slice(0, 12).forEach(function (i) { rl.append(mkCard(i)); }); row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">' + esc(cat.name) + '</div>').append(more)).append(rl); scroll.append(row); }
-                        loaded++; if (loaded >= cats.length) { comp.activity.loader(false); comp.start(); }
-                    }, function () { loaded++; if (loaded >= cats.length) { comp.activity.loader(false); comp.start(); } });
+                        loaded++; if (loaded >= total) { comp.activity.loader(false); comp.start(); }
+                    }, function () { loaded++; if (loaded >= total) { comp.activity.loader(false); comp.start(); } });
+                });
+
+                // TMDB Genre rows
+                TMDB_MAIN_GENRES.forEach(function (g) {
+                    var mt = g.mediaType || 'movie';
+                    tmdbDiscoverByGenre(mt, g.id, 1).then(function (res) {
+                        var list = (res.results || []).filter(function (i) { return i.poster_path; }).slice(0, 12);
+                        if (list.length) {
+                            var row = $('<div class="kk-row"></div>');
+                            var more = $('<div class="kk-row-more selector">Xem thêm</div>');
+                            var rl = $('<div class="kk-row-list"></div>');
+                            bindEnter(more, function () {
+                                Lampa.Activity.push({
+                                    url: '', title: g.name,
+                                    component: 'kkphim_tmdb_genre',
+                                    tmdb_genre_id: g.id,
+                                    tmdb_media_type: mt,
+                                    page_num: 1
+                                });
+                            });
+                            list.forEach(function (item) {
+                                item.media_type = item.media_type || mt;
+                                rl.append(mkTmdbCard(item));
+                            });
+                            row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">' + esc(g.name) + ' <span style="font-size:.6em;color:#01b4e4">TMDB</span></div>').append(more)).append(rl);
+                            scroll.append(row);
+                        }
+                        loaded++; if (loaded >= total) { comp.activity.loader(false); comp.start(); }
+                    }).catch(function () { loaded++; if (loaded >= total) { comp.activity.loader(false); comp.start(); } });
                 });
             };
             this.start = function () { if (_src && _src !== getSourceKey()) { comp.create(); return; } applyCtrl(scroll); enableScroll(scroll); };
             this.pause = function () {}; this.stop = function () {};
             this.render = function () { return scroll.render(); };
             this.destroy = function () { network.clear(); scroll.destroy(); };
+        });
+
+        // ========== TMDB GENRE CATEGORY ==========
+        Lampa.Component.add('kkphim_tmdb_genre', function (obj) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
+            var genreId = obj.tmdb_genre_id, mediaType = obj.tmdb_media_type || 'movie';
+            var page = obj.page_num || 1, title = obj.title || '';
+            var grid = $('<div class="kk-grid"></div>'), lm = $('<div class="kk-loadmore selector">Tải thêm</div>'), loading = false, hasMore = true;
+
+            this.create = function () {
+                this.activity.loader(true); clearScroll(scroll);
+                // Genre filter tabs
+                var allGenres = mediaType === 'tv' ? TMDB_TV_GENRES : TMDB_MOVIE_GENRES;
+                var genreTags = $('<div class="kk-genre-tags"></div>');
+                // Media type toggle
+                var movieTag = $('<div class="kk-genre-tag selector ' + (mediaType === 'movie' ? 'kk-genre-tag--active' : '') + '">🎬 Phim</div>');
+                var tvTag = $('<div class="kk-genre-tag selector ' + (mediaType === 'tv' ? 'kk-genre-tag--active' : '') + '">📺 TV</div>');
+                bindEnter(movieTag, function () {
+                    if (mediaType === 'movie') return;
+                    Lampa.Activity.push({ url: '', title: title, component: 'kkphim_tmdb_genre', tmdb_genre_id: genreId, tmdb_media_type: 'movie', page_num: 1 });
+                });
+                bindEnter(tvTag, function () {
+                    if (mediaType === 'tv') return;
+                    Lampa.Activity.push({ url: '', title: title, component: 'kkphim_tmdb_genre', tmdb_genre_id: genreId, tmdb_media_type: 'tv', page_num: 1 });
+                });
+                genreTags.append(movieTag).append(tvTag);
+
+                allGenres.forEach(function (g) {
+                    var active = g.id === genreId;
+                    var tag = $('<div class="kk-genre-tag selector ' + (active ? 'kk-genre-tag--active' : '') + '">' + esc(g.name) + '</div>');
+                    bindEnter(tag, function () {
+                        if (active) return;
+                        Lampa.Activity.push({ url: '', title: g.name, component: 'kkphim_tmdb_genre', tmdb_genre_id: g.id, tmdb_media_type: mediaType, page_num: 1 });
+                    });
+                    genreTags.append(tag);
+                });
+
+                scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">' + esc(title) + ' <span style="font-size:.6em;color:#01b4e4">TMDB</span></div>').append(genreTags).append(grid).append(lm));
+                bindEnter(lm, function () { if (!loading && hasMore) doLoad(); });
+                doLoad();
+            };
+
+            function doLoad() {
+                loading = true; lm.text('Đang tải...');
+                tmdbDiscoverByGenre(mediaType, genreId, page).then(function (res) {
+                    var list = (res.results || []).filter(function (i) { return i.poster_path; });
+                    if (!list.length) { hasMore = false; lm.text(page === 1 ? 'Không có' : 'Hết'); comp.activity.loader(false); loading = false; comp.start(); return; }
+                    if (page >= (res.total_pages || 500)) hasMore = false;
+                    list.forEach(function (item) {
+                        item.media_type = item.media_type || mediaType;
+                        grid.append(mkTmdbCard(item).addClass('kk-card--grid'));
+                    });
+                    page++; loading = false; lm.text(hasMore ? 'Tải thêm' : 'Hết');
+                    comp.activity.loader(false); comp.start();
+                }).catch(function () { loading = false; lm.text('Lỗi'); comp.activity.loader(false); });
+            }
+
+            this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
+            this.pause = function () {}; this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () { scroll.destroy(); };
         });
 
         // ========== CATEGORY ==========
@@ -780,21 +938,85 @@
             this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ========== SEARCH ==========
+        // ========== SEARCH (with TMDB fallback) ==========
         Lampa.Component.add('kkphim_search', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
             var kw = obj.keyword || '', page = obj.page_num || 1;
             var grid = $('<div class="kk-grid"></div>'), lm = $('<div class="kk-loadmore selector">Tải thêm</div>'), loading = false, hasMore = true;
-            this.create = function () { this.activity.loader(true); clearScroll(scroll); scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">🔍 ' + esc(kw) + '</div>').append(grid).append(lm)); bindEnter(lm, function () { if (!loading && hasMore) doLoad(); }); doLoad(); };
-            function hr(res) { var list = ((res && res.items) || (res && res.data && res.data.items) || []).map(norm).filter(function (i) { return i && i.slug; }); if (!list.length) { hasMore = false; lm.text(page === 1 ? 'Không có' : 'Hết'); comp.activity.loader(false); loading = false; comp.start(); return; } list.forEach(function (i) { grid.append(mkCard(i).addClass('kk-card--grid')); }); page++; loading = false; lm.text('Tải thêm'); comp.activity.loader(false); comp.start(); }
-            function doLoad() { loading = true; lm.text('Đang tải...'); network.silent(SRC_API() + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page, hr, function () { loading = false; lm.text('Lỗi'); comp.activity.loader(false); }); }
+            var tmdbSection = null, tmdbLoaded = false;
+
+            this.create = function () {
+                this.activity.loader(true); clearScroll(scroll);
+                scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">🔍 ' + esc(kw) + '</div>').append(grid).append(lm));
+                bindEnter(lm, function () { if (!loading && hasMore) doLoad(); });
+                doLoad();
+            };
+
+            function addTmdbFallback() {
+                if (tmdbLoaded) return;
+                tmdbLoaded = true;
+                tmdbSearchMulti(kw, 1).then(function (res) {
+                    var list = (res.results || []).filter(function (i) {
+                        return (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path;
+                    });
+                    if (!list.length) return;
+                    // Create TMDB section
+                    tmdbSection = $('<div style="padding:0 1.5em;margin-top:1.5em"></div>');
+                    tmdbSection.append('<div class="kk-tmdb-notice">📡 Không tìm thấy trên ' + esc(getSource().name) + '. Kết quả từ TMDB (chỉ hỗ trợ Torrent):</div>');
+                    var tmdbGrid = $('<div class="kk-grid"></div>');
+                    list.forEach(function (item) {
+                        tmdbGrid.append(mkTmdbCard(item).addClass('kk-card--grid'));
+                    });
+                    tmdbSection.append(tmdbGrid);
+
+                    // Load more TMDB pages
+                    if (res.total_pages > 1) {
+                        var tmdbPage = 2, tmdbHasMore = true, tmdbLoading = false;
+                        var tmdbLm = $('<div class="kk-loadmore selector">Tải thêm từ TMDB</div>');
+                        bindEnter(tmdbLm, function () {
+                            if (tmdbLoading || !tmdbHasMore) return;
+                            tmdbLoading = true; tmdbLm.text('Đang tải...');
+                            tmdbSearchMulti(kw, tmdbPage).then(function (r2) {
+                                var l2 = (r2.results || []).filter(function (i) { return (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path; });
+                                if (!l2.length) { tmdbHasMore = false; tmdbLm.text('Hết'); tmdbLoading = false; return; }
+                                l2.forEach(function (item) { tmdbGrid.append(mkTmdbCard(item).addClass('kk-card--grid')); });
+                                tmdbPage++;
+                                if (tmdbPage > (r2.total_pages || 500)) tmdbHasMore = false;
+                                tmdbLm.text(tmdbHasMore ? 'Tải thêm từ TMDB' : 'Hết');
+                                tmdbLoading = false;
+                                comp.start();
+                            }).catch(function () { tmdbLoading = false; tmdbLm.text('Lỗi'); });
+                        });
+                        tmdbSection.append(tmdbLm);
+                    }
+
+                    scroll.append(tmdbSection);
+                    comp.start();
+                }).catch(function () {});
+            }
+
+            function hr(res) {
+                var list = ((res && res.items) || (res && res.data && res.data.items) || []).map(norm).filter(function (i) { return i && i.slug; });
+                if (!list.length) {
+                    hasMore = false;
+                    lm.text(page === 1 ? 'Không có trên ' + getSource().name : 'Hết');
+                    // If first page has no results, show TMDB fallback
+                    if (page === 1) addTmdbFallback();
+                    comp.activity.loader(false); loading = false; comp.start(); return;
+                }
+                list.forEach(function (i) { grid.append(mkCard(i).addClass('kk-card--grid')); });
+                page++; loading = false; lm.text('Tải thêm');
+                comp.activity.loader(false); comp.start();
+            }
+
+            function doLoad() { loading = true; lm.text('Đang tải...'); network.silent(SRC_API() + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page, hr, function () { loading = false; lm.text('Lỗi'); comp.activity.loader(false); if (page === 1) addTmdbFallback(); }); }
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
             this.pause = function () {}; this.stop = function () {};
             this.render = function () { return scroll.render(); };
             this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ========== DETAIL ==========
+        // ========== DETAIL (original kkphim/ophim) ==========
         Lampa.Component.add('kkphim_detail', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true });
             var movie = norm(obj.movie), comp = this, rendered = false, _tmdb = null;
@@ -871,6 +1093,164 @@
             this.pause = function () {}; this.stop = function () {};
             this.render = function () { return scroll.render(); };
             this.destroy = function () { network.clear(); scroll.destroy(); };
+        });
+
+        // ========== DETAIL TMDB ONLY (no kkphim/ophim source) ==========
+        Lampa.Component.add('kkphim_detail_tmdb', function (obj) {
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var comp = this, rendered = false, _tmdb = null;
+            var tmdbItem = obj.tmdb_item; // normalized tmdb item
+
+            this.create = function () {
+                this.activity.loader(true); clearScroll(scroll); rendered = false;
+                if (!tmdbItem || !tmdbItem.tmdb || !tmdbItem.tmdb.id) {
+                    this.activity.loader(false);
+                    scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu</div></div>');
+                    comp.start(); return;
+                }
+                loadTmdbDetail();
+            };
+
+            async function loadTmdbDetail() {
+                var ttype = tmdbItem.tmdb.type || 'movie';
+                var tid = tmdbItem.tmdb.id;
+                var tmdb = null, logos = null;
+                try {
+                    try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=vi-VN&append_to_response=credits,images,similar,recommendations'); } catch (e) { try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=en-US&append_to_response=credits,images,similar,recommendations'); } catch (e2) {} }
+                    try { logos = await tmdbFetch('/' + ttype + '/' + tid + '/images'); } catch (e3) {}
+                } catch (e) {}
+                _tmdb = tmdb;
+                if (!rendered) { buildTmdb(tmdbItem, tmdb, logos, ttype); rendered = true; }
+                comp.activity.loader(false); comp.start();
+            }
+
+            function buildTmdb(data, tmdb, logos, ttype) {
+                clearScroll(scroll);
+                var bk = data.thumb_url || '', ps = data.poster_url || '';
+                var t = data.name || '', o = data.origin_name || '', d = cleanDesc(data.content);
+                var v = (data.tmdb && data.tmdb.vote_average) || 'N/A', y = data.year || '', rt = '';
+                var ghtml = '', castH = '', dirH = '', crewH = '', logoH = '', dir = '';
+                var tid = data.tmdb.id;
+
+                if (tmdb) {
+                    if (tmdb.backdrop_path) bk = TMDB_IMG + tmdb.backdrop_path;
+                    if (tmdb.poster_path) ps = TMDB_IMG + tmdb.poster_path;
+                    if (tmdb.title || tmdb.name) t = tmdb.title || tmdb.name;
+                    if (tmdb.original_title || tmdb.original_name) o = tmdb.original_title || tmdb.original_name;
+                    if (tmdb.overview) d = tmdb.overview;
+                    if (tmdb.vote_average) v = Number(tmdb.vote_average).toFixed(1);
+                    if (tmdb.release_date) y = tmdb.release_date.slice(0, 4);
+                    if (!y && tmdb.first_air_date) y = tmdb.first_air_date.slice(0, 4);
+                    if (tmdb.runtime) rt = tmdb.runtime + ' phút';
+                    if (tmdb.number_of_seasons) rt = tmdb.number_of_seasons + ' mùa';
+                    var logo = pickLogo(logos || tmdb.images);
+                    if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
+                    if (tmdb.genres) ghtml = tmdb.genres.map(function (g) {
+                        // Link to TMDB genre page
+                        return '<span class="kk-genre selector" data-tmdb-genre="' + g.id + '" data-tmdb-type="' + ttype + '" data-title="' + esc(g.name || '') + '">' + esc(g.name || '') + '</span>';
+                    }).join('');
+                    if (tmdb.credits) {
+                        castH = mkPeople((tmdb.credits.cast || []).slice(0, 12), 'character');
+                        var dirs = (tmdb.credits.crew || []).filter(function (c) { return c.job === 'Director' || c.job === 'Creator'; }).filter(function (p, i, a) { return a.findIndex(function (x) { return x.name === p.name; }) === i; }).slice(0, 6);
+                        if (dirs.length) { dir = dirs.map(function (c) { return c.name; }).join(', '); dirH = mkPeople(dirs.map(function (c) { return { name: c.name, profile_path: c.profile_path, job: c.job || 'Đạo diễn' }; }), 'job'); }
+                    }
+                }
+                if (dir && !dirH) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + esc(dir) + '</span></div>';
+                var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
+
+                // Update data for stream search
+                var movieData = {
+                    name: t, origin_name: o, slug: '', poster_url: ps, thumb_url: bk,
+                    year: y, tmdb: { id: tid, type: ttype, vote_average: v },
+                    category: [], content: d, type: ttype === 'tv' ? 'series' : 'single',
+                    _tmdb_only: true
+                };
+
+                var cfg = getStreamBase();
+                var streamLbl = cfg.source === 'aio' ? '🌊 Stream (AIO)' : '🧲 Stream';
+                if (getTSHost()) streamLbl += ' → TS';
+
+                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
+
+                // TMDB-only: NO play button, only stream/torrent + subtitle + copy
+                var body = $('<div class="kk-body">' +
+                    '<div class="kk-tmdb-badge">📡 TMDB Only</div>' +
+                    '<div class="kk-tmdb-notice">Phim này không có trên KKPhim/OPhim. Chỉ hỗ trợ xem qua Torrent/Stream.</div>' +
+                    '<div class="kk-metas"><span class="kk-meta">⭐ ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">📅 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + esc(rt) + '</span>' : '') + '</div>' +
+                    '<div class="kk-genres">' + ghtml + '</div>' + crewH +
+                    '<div class="kk-desc">' + fmtTxt(d) + '</div>' +
+                    '<div class="kk-actions">' +
+                        '<div class="kk-act-wrap"><div class="kk-act kk-act--stream selector">' + esc(streamLbl) + '</div></div>' +
+                        '<div class="kk-act-wrap"><div class="kk-act kk-act--sub selector">📝 Phụ đề</div></div>' +
+                        '<div class="kk-act-wrap"><div class="kk-act kk-act--copy selector">🔍 Copy tên</div></div>' +
+                    '</div></div>');
+
+                bindEnter(body.find('.kk-act--stream'), function () {
+                    openStreamSearch(tid, ttype, movieData, null, ps, _tmdb);
+                });
+
+                bindEnter(body.find('.kk-act--sub'), async function () {
+                    var imdb = null;
+                    try { imdb = await getImdbId(ttype, tid); } catch (e) {}
+                    var en = _tmdb ? (_tmdb.original_title || _tmdb.original_name || _tmdb.title || _tmdb.name || '') : o;
+                    Lampa.Noty.show('Tìm sub...');
+                    var subs = await searchSubs(imdb, tid, ttype, null, null, en);
+                    if (!subs.length) { Lampa.Noty.show(getSubdlKey() ? 'Không có' : 'Cần key'); return; }
+                    Lampa.Select.show({
+                        title: '📝 (' + subs.length + ')',
+                        items: subs.slice(0, 40).map(function (s) { return { title: s.label, value: s }; }),
+                        onSelect: function (a) { Lampa.Noty.show('✅ ' + a.value.label); Lampa.Controller.toggle('content'); },
+                        onBack: function () { Lampa.Controller.toggle('content'); }
+                    });
+                });
+
+                bindEnter(body.find('.kk-act--copy'), function () { showCopyName(movieData, _tmdb); });
+
+                // Genre links to TMDB genre page
+                body.find('.kk-genre[data-tmdb-genre]').each(function () {
+                    var g = $(this);
+                    bindEnter(g, function () {
+                        var gid = parseInt(g.attr('data-tmdb-genre'));
+                        var gt = g.attr('data-tmdb-type') || 'movie';
+                        if (gid) Lampa.Activity.push({
+                            url: '', title: g.attr('data-title') || '',
+                            component: 'kkphim_tmdb_genre',
+                            tmdb_genre_id: gid,
+                            tmdb_media_type: gt,
+                            page_num: 1
+                        });
+                    });
+                });
+
+                var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
+                if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + dirH + '</div></div>');
+                if (castH) dw.append('<div class="kk-section"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>');
+
+                // Similar/Recommendations from TMDB
+                var similar = [];
+                if (tmdb && tmdb.recommendations && tmdb.recommendations.results) similar = tmdb.recommendations.results;
+                if (!similar.length && tmdb && tmdb.similar && tmdb.similar.results) similar = tmdb.similar.results;
+                similar = similar.filter(function (i) { return i.poster_path; }).slice(0, 12);
+                if (similar.length) {
+                    var simSection = $('<div class="kk-section kk-section--last kk-similar"></div>').append('<div class="kk-block-title">Phim tương tự</div>');
+                    var simList = $('<div class="kk-similar-list"></div>');
+                    similar.forEach(function (item) {
+                        item.media_type = item.media_type || ttype;
+                        simList.append(mkTmdbCard(item));
+                    });
+                    simSection.append(simList);
+                    dw.append(simSection);
+                } else {
+                    dw.append('<div class="kk-section kk-section--last"></div>');
+                }
+
+                scroll.append(dw);
+            }
+
+            this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
+            this.pause = function () {}; this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () { scroll.destroy(); };
         });
     }
 
