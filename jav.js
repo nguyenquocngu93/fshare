@@ -11,11 +11,17 @@
     };
 
     var TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2OTc5YzhlYzEwMWVkODQ5ZjQ0ZDE5N2M4NjU4MjY0NCIsIm5iZiI6MTcwMzc4NzYwMi4wNjA5OTk5LCJzdWIiOiI2NThkYmM1MmYyY2YyNTc5YjI0Y2MwM2IiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.T8DjYYtgce168bXmm1exuat1K_4DOlq6QtB53IhzVJ0';
+    var TMDB_API_KEY = '6979c8ec101ed849f44d197c86582644'; // Extracted from token
     var TMDB_IMG = 'https://image.tmdb.org/t/p/original';
     var TMDB_IMG_W500 = 'https://image.tmdb.org/t/p/w500';
     var TORRENTIO_BASE = 'https://torrentio.strem.fun';
+    
+    // ===================== SUBDL CONFIG =====================
+    // Đăng ký API key miễn phí tại: https://subdl.com (vào Profile > API)
+    var SUBDL_API_KEY = ''; // ← ĐIỀN API KEY VÀO ĐÂY
     var SUBDL_API = 'https://api.subdl.com/api/v1/subtitles';
     var SUBDL_CDN = 'https://dl.subdl.com';
+    
     var SETTINGS_KEY = 'kkphim_settings';
 
     // ===================== SETTINGS =====================
@@ -29,6 +35,7 @@
     function getTSPass() { return loadSettings().torrserver_password || ''; }
     function getTioConfig() { return loadSettings().torrentio_config || ''; }
     function getSubMode() { return loadSettings().sub_mode || 'ask'; }
+    function getSubdlKey() { return loadSettings().subdl_api_key || SUBDL_API_KEY; }
     function isNguonC() { return getSourceKey() === 'nguonc'; }
 
     function fullImg(u) {
@@ -148,6 +155,104 @@
         return { movie: movie || nguoncNormalize({}), episodes: episodes };
     }
 
+    // ===================== FIX 1: TMDB SEARCH BY NAME =====================
+    var _tmdbSearchCache = {};
+    
+    async function searchTmdbByName(name, originName, year, type) {
+        if (!name && !originName) return null;
+        
+        var cacheKey = (originName || name) + ':' + year + ':' + type;
+        if (_tmdbSearchCache[cacheKey]) return _tmdbSearchCache[cacheKey];
+        
+        var searchName = originName || name;
+        // Clean tên phim
+        searchName = searchName
+            .replace(/\(.*?\)/g, '')
+            .replace(/\[.*?\]/g, '')
+            .replace(/season\s*\d+/gi, '')
+            .replace(/phần\s*\d+/gi, '')
+            .trim();
+        
+        if (!searchName) return null;
+        
+        var mediaType = type === 'tv' ? 'tv' : 'movie';
+        
+        try {
+            // Thử search với tên gốc trước
+            var url = 'https://api.themoviedb.org/3/search/' + mediaType + 
+                '?api_key=' + TMDB_API_KEY + 
+                '&query=' + encodeURIComponent(searchName) +
+                (year ? '&year=' + year : '') +
+                '&language=vi-VN';
+            
+            var r = await fetch(url);
+            if (!r.ok) return null;
+            var d = await r.json();
+            
+            if (d.results && d.results.length > 0) {
+                _tmdbSearchCache[cacheKey] = d.results[0];
+                return d.results[0];
+            }
+            
+            // Thử lại không có year
+            if (year) {
+                url = 'https://api.themoviedb.org/3/search/' + mediaType + 
+                    '?api_key=' + TMDB_API_KEY + 
+                    '&query=' + encodeURIComponent(searchName) +
+                    '&language=vi-VN';
+                r = await fetch(url);
+                if (r.ok) {
+                    d = await r.json();
+                    if (d.results && d.results.length > 0) {
+                        _tmdbSearchCache[cacheKey] = d.results[0];
+                        return d.results[0];
+                    }
+                }
+            }
+            
+            // Thử với tên Việt nếu khác
+            if (name && name !== searchName) {
+                url = 'https://api.themoviedb.org/3/search/' + mediaType + 
+                    '?api_key=' + TMDB_API_KEY + 
+                    '&query=' + encodeURIComponent(name) +
+                    '&language=vi-VN';
+                r = await fetch(url);
+                if (r.ok) {
+                    d = await r.json();
+                    if (d.results && d.results.length > 0) {
+                        _tmdbSearchCache[cacheKey] = d.results[0];
+                        return d.results[0];
+                    }
+                }
+            }
+            
+            // Thử search multi
+            url = 'https://api.themoviedb.org/3/search/multi' + 
+                '?api_key=' + TMDB_API_KEY + 
+                '&query=' + encodeURIComponent(searchName) +
+                '&language=vi-VN';
+            r = await fetch(url);
+            if (r.ok) {
+                d = await r.json();
+                if (d.results && d.results.length > 0) {
+                    var match = d.results.find(function(item) {
+                        return item.media_type === mediaType || item.media_type === 'movie' || item.media_type === 'tv';
+                    });
+                    if (match) {
+                        _tmdbSearchCache[cacheKey] = match;
+                        return match;
+                    }
+                }
+            }
+            
+        } catch (e) {
+            console.log('[KKPhim] TMDB search error:', e);
+        }
+        
+        _tmdbSearchCache[cacheKey] = null;
+        return null;
+    }
+
     // ===================== UNIVERSAL API =====================
     function apiListUrl(catApi, page) {
         if (isNguonC()) {
@@ -251,7 +356,7 @@
         } catch (e) { Lampa.Noty.show('Lỗi TS: ' + (e.message || '')); }
     }
 
-    // ===================== SUBTITLE =====================
+    // ===================== FIX 2: SUBTITLE với API KEY =====================
     var _subCache = {};
 
     function srtToVtt(srt) {
@@ -302,33 +407,94 @@
     async function searchSubs(imdbId, tmdbId, type, season, episode, title) {
         var ck = (imdbId || tmdbId || title || '') + ':' + (season || 0) + ':' + (episode || 0);
         if (_subCache[ck]) return _subCache[ck];
+        
+        var apiKey = getSubdlKey();
+        
         try {
             var p = [];
+            
+            // Thêm API key nếu có
+            if (apiKey) {
+                p.push('api_key=' + apiKey);
+            }
+            
             if (imdbId) p.push('imdb_id=' + imdbId);
             else if (tmdbId) p.push('tmdb_id=' + tmdbId);
             else if (title) p.push('film_name=' + encodeURIComponent(title));
             else { _subCache[ck] = []; return []; }
-            if (type === 'tv' && season && episode) { p.push('season_number=' + season); p.push('episode_number=' + episode); }
+            
+            if (type === 'tv' && season && episode) { 
+                p.push('season_number=' + season); 
+                p.push('episode_number=' + episode); 
+            }
             p.push('languages=vi,en');
             p.push('subs_per_page=30');
             p.push('type=' + (type === 'tv' ? 'tv' : 'movie'));
+            
             var r = await fetch(SUBDL_API + '?' + p.join('&'));
-            if (r.ok) {
-                var d = await r.json();
-                if (d.status && d.subtitles && d.subtitles.length) {
-                    var results = d.subtitles.map(function (s) {
-                        var lang = (s.language || s.lang || '').toLowerCase();
-                        var lm = { vi: '🇻🇳 Tiếng Việt', vietnamese: '🇻🇳 Tiếng Việt', en: '🇬🇧 English', english: '🇬🇧 English', zh: '🇨🇳 中文', ja: '🇯🇵 日本語', ko: '🇰🇷 한국어', th: '🇹🇭 ไทย', id: '🇮🇩 Indonesia' };
-                        var label = lm[lang] || lang.toUpperCase();
-                        if (s.release_name) label += ' · ' + s.release_name;
-                        if (s.author) label += ' (' + s.author + ')';
-                        return { label: label, url: SUBDL_CDN + s.url, language: lang, isZip: (s.url || '').endsWith('.zip') };
-                    });
-                    _subCache[ck] = results; return results;
+            
+            if (!r.ok) {
+                console.log('[KKPhim] SubDL response:', r.status);
+                // Nếu 401/403, thử tìm sub bằng cách khác
+                if (r.status === 401 || r.status === 403) {
+                    console.log('[KKPhim] SubDL cần API key. Đăng ký tại subdl.com');
+                    // Thử OpenSubtitles API free
+                    return await searchOpenSubtitles(imdbId, tmdbId, type, season, episode, title);
                 }
+                _subCache[ck] = []; 
+                return [];
             }
-        } catch (e) { console.log('[KKPhim] Sub search err:', e); }
-        _subCache[ck] = []; return [];
+            
+            var d = await r.json();
+            
+            if (d.status && d.subtitles && d.subtitles.length) {
+                var results = d.subtitles.map(function (s) {
+                    var lang = (s.language || s.lang || '').toLowerCase();
+                    var lm = { vi: '🇻🇳 Tiếng Việt', vietnamese: '🇻🇳 Tiếng Việt', en: '🇬🇧 English', english: '🇬🇧 English', zh: '🇨🇳 中文', ja: '🇯🇵 日本語', ko: '🇰🇷 한국어', th: '🇹🇭 ไทย', id: '🇮🇩 Indonesia' };
+                    var label = lm[lang] || lang.toUpperCase();
+                    if (s.release_name) label += ' · ' + s.release_name;
+                    if (s.author) label += ' (' + s.author + ')';
+                    return { label: label, url: SUBDL_CDN + s.url, language: lang, isZip: (s.url || '').endsWith('.zip') };
+                });
+                _subCache[ck] = results; 
+                return results;
+            }
+        } catch (e) { 
+            console.log('[KKPhim] Sub search err:', e); 
+        }
+        
+        // Fallback sang OpenSubtitles
+        var fallback = await searchOpenSubtitles(imdbId, tmdbId, type, season, episode, title);
+        _subCache[ck] = fallback;
+        return fallback;
+    }
+
+    // ===================== OPENSUBTITLES FALLBACK =====================
+    async function searchOpenSubtitles(imdbId, tmdbId, type, season, episode, title) {
+        // OpenSubtitles.com REST API (free tier)
+        try {
+            var searchTerm = title || '';
+            if (!searchTerm && !imdbId) return [];
+            
+            // Sử dụng OpenSubtitles qua CORS proxy hoặc API public
+            // Đây là fallback, có thể không hoạt động tốt
+            var p = [];
+            if (imdbId) p.push('imdb_id=' + imdbId.replace('tt', ''));
+            else if (searchTerm) p.push('query=' + encodeURIComponent(searchTerm));
+            
+            p.push('languages=vi,en');
+            if (type === 'tv' && season) p.push('season_number=' + season);
+            if (type === 'tv' && episode) p.push('episode_number=' + episode);
+            
+            // Thử tìm từ subscene/opensubtitles qua proxy
+            // Hiện tại trả về array rỗng vì cần setup proxy riêng
+            console.log('[KKPhim] OpenSubtitles fallback - cần API key SubDL để tìm sub');
+            return [];
+            
+        } catch (e) {
+            console.log('[KKPhim] OpenSubtitles error:', e);
+            return [];
+        }
     }
 
     function playWithSubTrack(videoUrl, title, subUrl, subLabel) {
@@ -388,14 +554,41 @@
             return;
         }
 
+        // Lấy TMDB ID - nếu NguonC không có sẵn thì search
         var tmdbId = movieData ? getTmdbId(movieData) : null;
         var imdbId = null;
-        if (tmdbId) { try { imdbId = await getImdbId(ttype || 'movie', tmdbId); } catch (e) {} }
+        
+        // Nếu là NguonC và không có TMDB ID, search bằng tên
+        if (!tmdbId && movieData && isNguonC()) {
+            var tmdbResult = await searchTmdbByName(
+                movieData.name, 
+                movieData.origin_name, 
+                movieData.year,
+                ttype || detectType(movieData)
+            );
+            if (tmdbResult) {
+                tmdbId = tmdbResult.id;
+                // Cache lại vào movieData
+                if (!movieData.tmdb) movieData.tmdb = {};
+                movieData.tmdb.id = tmdbId;
+            }
+        }
+        
+        if (tmdbId) { 
+            try { 
+                imdbId = await getImdbId(ttype || 'movie', tmdbId); 
+            } catch (e) {} 
+        }
 
         var subs = [];
-        try { subs = await searchSubs(imdbId, tmdbId, ttype, season, episode, movieData ? (movieData.name || '') : ''); } catch (e) {}
+        try { 
+            subs = await searchSubs(imdbId, tmdbId, ttype, season, episode, movieData ? (movieData.origin_name || movieData.name || '') : ''); 
+        } catch (e) {}
 
         if (!subs.length) {
+            if (!getSubdlKey()) {
+                console.log('[KKPhim] Không có sub - cần API key SubDL');
+            }
             Lampa.Player.play({ title: title, url: videoUrl });
             return;
         }
@@ -476,6 +669,27 @@
     }
 
     async function openTorrentSearch(tmdbId, ttype, data, episodes, poster) {
+        // Nếu NguonC và không có TMDB ID, search trước
+        if (!tmdbId && isNguonC() && data) {
+            Lampa.Noty.show('Tìm TMDB...');
+            var tmdbResult = await searchTmdbByName(
+                data.name, 
+                data.origin_name, 
+                data.year,
+                ttype
+            );
+            if (tmdbResult) {
+                tmdbId = tmdbResult.id;
+                if (!data.tmdb) data.tmdb = {};
+                data.tmdb.id = tmdbId;
+            }
+        }
+        
+        if (!tmdbId) {
+            Lampa.Noty.show('Không tìm thấy phim trên TMDB');
+            return;
+        }
+        
         if (ttype === 'tv') { tvTorrentPicker(tmdbId, data, episodes, poster); return; }
         Lampa.Noty.show('Tìm torrent...');
         try {
@@ -803,8 +1017,25 @@
                 g2.append(tti).append(st2);
                 w.append(g2);
 
-                // Phụ đề
+                               // Phụ đề - THÊM MỚI: SubDL API Key
                 var g3 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">📝 Phụ đề</div>');
+                
+                // SubDL API Key
+                var subdlKeyItem = si('SubDL API Key', 'Đăng ký tại subdl.com', s.subdl_api_key ? '✅ Đã có' : 'Chưa có');
+                if (s.subdl_api_key) subdlKeyItem.find('.kk-stg-value').css('color', '#4ade80');
+                else subdlKeyItem.find('.kk-stg-value').css('color', '#f87171');
+                bindEnter(subdlKeyItem, function () { 
+                    pi('SubDL API Key (subdl.com → Profile → API)', s.subdl_api_key || '', function (v) { 
+                        v = (v || '').trim(); 
+                        saveSettings({ subdl_api_key: v }); 
+                        s.subdl_api_key = v; 
+                        subdlKeyItem.find('.kk-stg-value').text(v ? '✅ Đã có' : 'Chưa có').css('color', v ? '#4ade80' : '#f87171');
+                        Lampa.Noty.show(v ? 'Đã lưu API key' : 'Đã xóa API key');
+                    }); 
+                });
+                g3.append(subdlKeyItem);
+                
+                // Chế độ sub
                 var subM = s.sub_mode || 'ask';
                 [
                     { k: 'ask', n: 'Hỏi mỗi lần', d: 'Chọn sub trước khi phát' },
@@ -816,6 +1047,7 @@
                     bindEnter(it, function () { saveSettings({ sub_mode: sm.k }); Lampa.Noty.show('Sub: ' + sm.n); comp.create(); });
                     g3.append(it);
                 });
+                
                 var tsi = si('🧪 Test sub', 'Thử Inception', 'Nhấn'), st3 = $('<div class="kk-stg-status" style="display:none"></div>');
                 bindEnter(tsi, function () { testSub(st3); });
                 g3.append(tsi).append(st3);
@@ -837,7 +1069,24 @@
             function pi(t, c, cb) { try { if (Lampa.Input && Lampa.Input.edit) { Lampa.Input.edit({ title: t, value: c || '', free: true, nosave: true }, cb); return; } } catch (e) {} var v = window.prompt(t, c || ''); if (v !== null) cb(v); }
             async function testTS(el) { if (!getTSHost()) { el.show().attr('class', 'kk-stg-status kk-stg-status--err').text('❌ Chưa nhập'); return; } el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); try { var r = await fetch(tsUrl('/echo'), { headers: tsHdr() }); el.attr('class', 'kk-stg-status ' + (r.ok ? 'kk-stg-status--ok' : 'kk-stg-status--err')).text(r.ok ? '✅ OK' : '❌ ' + r.status); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
             async function testTIO(el) { el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); var c = cleanTioConfig(getTioConfig()); var u = TORRENTIO_BASE + (c ? '/' + c : '') + '/stream/movie/tt1375666.json'; try { var r = await fetch(u); if (!r.ok) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + r.status); return; } var d = await r.json(); el.attr('class', 'kk-stg-status kk-stg-status--ok').text('✅ ' + (d.streams || []).length + ' torrent'); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
-            async function testSub(el) { el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); try { var subs = await searchSubs('tt1375666', null, 'movie', null, null, 'Inception'); el.attr('class', 'kk-stg-status ' + (subs.length ? 'kk-stg-status--ok' : 'kk-stg-status--err')).text(subs.length ? '✅ ' + subs.length + ' sub' : '❌ Không có'); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
+            async function testSub(el) { 
+                el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳ Đang tìm...'); 
+                try { 
+                    var subs = await searchSubs('tt1375666', null, 'movie', null, null, 'Inception'); 
+                    if (subs.length) {
+                        el.attr('class', 'kk-stg-status kk-stg-status--ok').text('✅ ' + subs.length + ' sub tìm thấy');
+                    } else {
+                        var key = getSubdlKey();
+                        if (!key) {
+                            el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ Cần API key SubDL');
+                        } else {
+                            el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ Không tìm thấy sub');
+                        }
+                    }
+                } catch (e) { 
+                    el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || 'Lỗi')); 
+                } 
+            }
 
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
             this.pause = function () {}; this.stop = function () {};
@@ -995,10 +1244,22 @@
             };
 
             async function loadAll(data, episodes) {
-                // Đảm bảo data hợp lệ
                 if (!data || !data.slug) data = movie;
                 try {
                     var tid = getTmdbId(data), tt = detectType(data), tmdb = null, logos = null;
+                    
+                    // FIX: Nếu NguonC không có TMDB ID, search bằng tên
+                    if (!tid && isNguonC()) {
+                        Lampa.Noty.show('Tìm thông tin TMDB...');
+                        var tmdbResult = await searchTmdbByName(data.name, data.origin_name, data.year, tt);
+                        if (tmdbResult) {
+                            tid = tmdbResult.id;
+                            if (!data.tmdb) data.tmdb = {};
+                            data.tmdb.id = tid;
+                            data.tmdb.type = tmdbResult.media_type || tt;
+                        }
+                    }
+                    
                     if (tid) {
                         try { tmdb = await tmdbFetch('/' + tt + '/' + tid + '?language=vi-VN&append_to_response=credits,images'); } catch (e) {
                             try { tmdb = await tmdbFetch('/' + tt + '/' + tid + '?language=en-US&append_to_response=credits,images'); } catch (e2) {}
@@ -1007,6 +1268,7 @@
                     }
                     if (!rendered) { build(data, episodes, tmdb, logos, tt); rendered = true; }
                 } catch (e) {
+                    console.log('[KKPhim] loadAll error:', e);
                     if (!rendered) { build(data, episodes, null, null, detectType(data)); rendered = true; }
                 }
                 comp.activity.loader(false); comp.start();
@@ -1015,7 +1277,6 @@
             function build(data, episodes, tmdb, logos, ttype) {
                 clearScroll(scroll);
 
-                // Đảm bảo category là array
                 if (!Array.isArray(data.category)) data.category = [];
 
                 var bk = fullImg(data.thumb_url || data.poster_url);
@@ -1064,7 +1325,7 @@
                 if (dir && !dirH) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + esc(dir) + '</span></div>';
 
                 var hasTmdb = !!getTmdbId(data);
-                var tBtn = hasTmdb ? '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">🧲 Torrent' + (getTSHost() ? ' → TS' : '') + '</div></div>' : '';
+                var tBtn = '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">🧲 Torrent' + (getTSHost() ? ' → TS' : '') + '</div></div>';
                 var subBtn = '<div class="kk-act-wrap"><div class="kk-act kk-act--sub selector">📝 Phụ đề</div></div>';
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
 
@@ -1092,20 +1353,39 @@
                     playUrlWithSub(link, (data.name || '') + ' - ' + (f.name || ''), data, ttype, ttype === 'tv' ? 1 : null, epNum);
                 });
 
-                // 🧲 Torrent
-                if (hasTmdb) {
-                    bindEnter(body.find('.kk-act--torrent'), function () {
-                        openTorrentSearch(getTmdbId(data), ttype, data, episodes, ps);
-                    });
-                }
+                // 🧲 Torrent - Luôn hiện, sẽ search TMDB nếu chưa có
+                bindEnter(body.find('.kk-act--torrent'), function () {
+                    openTorrentSearch(getTmdbId(data), ttype, data, episodes, ps);
+                });
 
                 // 📝 Sub preview
                 bindEnter(body.find('.kk-act--sub'), async function () {
                     var tmdbId = getTmdbId(data), imdb = null;
+                    
+                    // Search TMDB nếu chưa có
+                    if (!tmdbId && isNguonC()) {
+                        Lampa.Noty.show('Tìm TMDB...');
+                        var tmdbResult = await searchTmdbByName(data.name, data.origin_name, data.year, ttype);
+                        if (tmdbResult) {
+                            tmdbId = tmdbResult.id;
+                            if (!data.tmdb) data.tmdb = {};
+                            data.tmdb.id = tmdbId;
+                        }
+                    }
+                    
                     if (tmdbId) try { imdb = await getImdbId(ttype, tmdbId); } catch (e) {}
+                    
                     Lampa.Noty.show('Tìm phụ đề...');
-                    var subs = await searchSubs(imdb, tmdbId, ttype, null, null, data.name || '');
-                    if (!subs.length) { Lampa.Noty.show('Không có phụ đề'); return; }
+                    var subs = await searchSubs(imdb, tmdbId, ttype, null, null, data.origin_name || data.name || '');
+                    
+                    if (!subs.length) { 
+                        if (!getSubdlKey()) {
+                            Lampa.Noty.show('Cần API key SubDL! Vào Cài đặt để nhập.');
+                        } else {
+                            Lampa.Noty.show('Không có phụ đề'); 
+                        }
+                        return; 
+                    }
                     var sorted = subs.slice().sort(function (a, b) { var o = { vi: 0, vietnamese: 0, en: 1, english: 1 }; return (o[a.language] !== undefined ? o[a.language] : 2) - (o[b.language] !== undefined ? o[b.language] : 2); });
                     Lampa.Select.show({
                         title: '📝 Phụ đề (' + subs.length + ')',
@@ -1177,4 +1457,4 @@
 
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
-})();
+})(); 
