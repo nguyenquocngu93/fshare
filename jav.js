@@ -51,6 +51,17 @@
         return vi || en || images.logos[0] || null;
     }
 
+    function slugify(str) {
+        return (str || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
     function enableGlobalMobileTouch() {
         $('body, .activity, .activity__body, .activity__content, .scroll, .scroll__body').css({
             '-webkit-overflow-scrolling': 'touch',
@@ -64,11 +75,14 @@
             'overflow-x': 'hidden',
             '-webkit-overflow-scrolling': 'touch',
             'touch-action': 'pan-y',
-            'height': '100vh'
+            'min-height': '100vh',
+            'padding-bottom': '10.5em',
+            'box-sizing': 'border-box'
         });
 
         el[0].style.setProperty('overflow-y', 'auto', 'important');
         el[0].style.setProperty('touch-action', 'pan-y', 'important');
+        el[0].style.setProperty('padding-bottom', '10.5em', 'important');
 
         el.off('touchstart touchmove').on('touchstart touchmove', function (e) {
             e.stopPropagation();
@@ -89,6 +103,8 @@
                 overflow-x: hidden !important;
                 -webkit-overflow-scrolling: touch !important;
                 touch-action: pan-y !important;
+                padding-bottom: 10.5em;
+                box-sizing: border-box;
             }
 
             .kkphim-page-scroll {
@@ -141,7 +157,8 @@
                 scroll-behavior: smooth;
             }
 
-            .kkphim-row-list::-webkit-scrollbar {
+            .kkphim-row-list::-webkit-scrollbar,
+            .kkphim-cast-row::-webkit-scrollbar {
                 display: none;
             }
 
@@ -226,7 +243,7 @@
                 display: grid;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 1em;
-                padding: 0 1.2em;
+                padding: 0 1.2em 2em;
             }
 
             .kkphim-loadmore {
@@ -247,7 +264,7 @@
 
             .kkphim-detail-top {
                 position: relative;
-                min-height: 36em;
+                min-height: 42em;
             }
 
             .kkphim-detail-backdrop {
@@ -255,7 +272,7 @@
                 top: 0;
                 left: 0;
                 right: 0;
-                height: 32em;
+                height: 38em;
                 overflow: hidden;
             }
 
@@ -263,7 +280,7 @@
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
-                transform: scale(1.04);
+                transform: scale(1.05);
                 filter: blur(2px);
             }
 
@@ -272,7 +289,7 @@
                 inset: 0;
                 background:
                     linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 42%, rgba(0,0,0,0.82) 100%),
-                    linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(20,20,20,0.84) 72%, rgba(20,20,20,1) 100%);
+                    linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(20,20,20,0.82) 72%, rgba(20,20,20,1) 100%);
             }
 
             .kkphim-detail-inner {
@@ -280,7 +297,7 @@
                 z-index: 2;
                 display: flex;
                 gap: 1.6em;
-                padding: 4.3em 1.2em 1.6em;
+                padding: 6em 1.2em 2em;
                 align-items: flex-start;
             }
 
@@ -362,6 +379,12 @@
                 color: #a5d6a7;
                 font-size: 0.96em;
                 font-weight: 700;
+                cursor: pointer;
+            }
+
+            .kkphim-genre.focus {
+                background: rgba(76,175,80,0.45);
+                color: #fff;
             }
 
             .kkphim-crew-block {
@@ -426,10 +449,6 @@
                 overflow-y: hidden;
                 -webkit-overflow-scrolling: touch;
                 padding-bottom: 0.4em;
-            }
-
-            .kkphim-cast-row::-webkit-scrollbar {
-                display: none;
             }
 
             .kkphim-cast-card {
@@ -508,13 +527,17 @@
                     gap: 0.85em;
                 }
 
+                .kkphim-detail-top {
+                    min-height: 34em;
+                }
+
                 .kkphim-detail-backdrop {
-                    height: 24em;
+                    height: 28em;
                 }
 
                 .kkphim-detail-inner {
                     gap: 1em;
-                    padding: 3.4em 1em 1.2em;
+                    padding: 4.8em 1em 1.2em;
                 }
 
                 .kkphim-detail-poster {
@@ -620,14 +643,10 @@
                         if (items.length) createRow(cat, items.slice(0, 12));
 
                         loaded++;
-                        if (loaded >= categories.length) {
-                            comp.activity.loader(false);
-                        }
+                        if (loaded >= categories.length) comp.activity.loader(false);
                     }, function () {
                         loaded++;
-                        if (loaded >= categories.length) {
-                            comp.activity.loader(false);
-                        }
+                        if (loaded >= categories.length) comp.activity.loader(false);
                     });
                 });
 
@@ -710,18 +729,21 @@
             var html = $('<div class="kkphim-page"><div class="kkphim-page-scroll"></div></div>');
             var body = html.find('.kkphim-page-scroll');
             var comp = this;
-            var cat = object.cat;
-            var page = 1;
-            var loading = false;
-            var hasMore = true;
+            var page = object.page_num || 1;
+            var title = object.title || (object.cat && object.cat.name) || 'Danh mục';
+            var mode = object.mode || 'api';
+            var apiPath = object.cat ? object.cat.api : null;
+            var categorySlug = object.category_slug || '';
             var grid = $('<div class="kkphim-grid"></div>');
             var loadMore = $('<div class="kkphim-loadmore selector">Tải thêm</div>');
+            var loading = false;
+            var hasMore = true;
 
             this.create = function () {
                 this.activity.loader(true);
                 addTouchScroll(html);
 
-                body.append('<div class="kkphim-category-title">' + cat.name + '</div>');
+                body.append('<div class="kkphim-category-title">' + title + '</div>');
                 body.append(grid);
                 body.append(loadMore);
 
@@ -738,7 +760,15 @@
                 loading = true;
                 loadMore.text('Đang tải...');
 
-                network.silent(API + cat.api + '?page=' + page, function (res) {
+                var url = '';
+
+                if (mode === 'category' && categorySlug) {
+                    url = API + 'v1/api/the-loai/' + categorySlug + '?page=' + page;
+                } else {
+                    url = API + apiPath + '?page=' + page;
+                }
+
+                network.silent(url, function (res) {
                     var items = [];
                     if (res && res.items) items = res.items;
                     else if (res && res.data && res.data.items) items = res.data.items;
@@ -877,16 +907,12 @@
                 var year = data.year || '';
                 var runtime = data.time || '';
                 var currentEp = data.episode_current || '';
-                var genres = '';
+                var genresHtml = '';
                 var castHtml = '';
                 var crewHtml = '';
                 var logoHtml = '';
-
-                if (data.category && data.category.length) {
-                    genres = data.category.map(function (g) {
-                        return '<span class="kkphim-genre">' + g.name + '</span>';
-                    }).join('');
-                }
+                var directorText = '';
+                var phimApiGenres = data.category || [];
 
                 if (tmdb) {
                     if (tmdb.backdrop_path) backdrop = TMDB_IMG + tmdb.backdrop_path;
@@ -902,12 +928,6 @@
                     if (tmdb.runtime) runtime = tmdb.runtime + ' phút';
                     if ((!runtime || runtime === '') && tmdb.episode_run_time && tmdb.episode_run_time.length) {
                         runtime = tmdb.episode_run_time[0] + ' phút';
-                    }
-
-                    if (tmdb.genres && tmdb.genres.length) {
-                        genres = tmdb.genres.map(function (g) {
-                            return '<span class="kkphim-genre">' + g.name + '</span>';
-                        }).join('');
                     }
 
                     var logo = pickLogo(logos || tmdb.images);
@@ -938,18 +958,51 @@
                             directors = crew.filter(function (c) { return c.job === 'Director'; }).map(function (c) { return c.name; });
                         } else {
                             directors = crew.filter(function (c) {
-                                return c.job === 'Creator' || c.job === 'Executive Producer';
+                                return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director';
                             }).map(function (c) { return c.name; });
                         }
 
+                        directors = directors.filter(function (v, i, a) { return a.indexOf(v) === i; });
+
                         if (directors.length) {
-                            crewHtml =
-                                '<div class="kkphim-crew-block">' +
-                                    '<div class="kkphim-crew-title">Đạo diễn / Sáng tạo</div>' +
-                                    '<div class="kkphim-crew-text">' + directors.slice(0, 5).join(', ') + '</div>' +
-                                '</div>';
+                            directorText = directors.slice(0, 5).join(', ');
                         }
                     }
+
+                    if (tmdb.genres && tmdb.genres.length) {
+                        genresHtml = tmdb.genres.map(function (g) {
+                            var matched = phimApiGenres.find(function (pg) {
+                                return slugify(pg.name) === slugify(g.name);
+                            });
+
+                            var slug = matched ? matched.slug : slugify(g.name);
+
+                            return '<span class="kkphim-genre selector" data-slug="' + slug + '" data-title="' + g.name.replace(/"/g, '&quot;') + '">' + g.name + '</span>';
+                        }).join('');
+                    }
+                }
+
+                if (!genresHtml && phimApiGenres.length) {
+                    genresHtml = phimApiGenres.map(function (g) {
+                        return '<span class="kkphim-genre selector" data-slug="' + (g.slug || slugify(g.name)) + '" data-title="' + (g.name || '').replace(/"/g, '&quot;') + '">' + g.name + '</span>';
+                    }).join('');
+                }
+
+                if (data.director && !directorText) {
+                    if (Array.isArray(data.director)) directorText = data.director.join(', ');
+                    else directorText = data.director;
+                }
+
+                if (!directorText && data.modified && data.modified.by) {
+                    directorText = data.modified.by;
+                }
+
+                if (directorText) {
+                    crewHtml =
+                        '<div class="kkphim-crew-block">' +
+                            '<div class="kkphim-crew-title">Đạo diễn</div>' +
+                            '<div class="kkphim-crew-text">' + directorText + '</div>' +
+                        '</div>';
                 }
 
                 var top = $(
@@ -972,7 +1025,7 @@
                                     (runtime ? '<span class="kkphim-meta">⏱ ' + runtime + '</span>' : '') +
                                     (currentEp ? '<span class="kkphim-meta">🎬 ' + currentEp + '</span>' : '') +
                                 '</div>' +
-                                '<div class="kkphim-detail-genres">' + genres + '</div>' +
+                                '<div class="kkphim-detail-genres">' + genresHtml + '</div>' +
                                 crewHtml +
                                 '<div class="kkphim-detail-desc">' + desc + '</div>' +
                                 '<div class="kkphim-detail-actions">' +
@@ -989,6 +1042,22 @@
                     } catch (e) {
                         Lampa.Noty.show('Không tìm thấy tập phim');
                     }
+                });
+
+                top.find('.kkphim-genre').on('click hover:enter', function () {
+                    var slug = $(this).attr('data-slug');
+                    var titleGenre = $(this).attr('data-title') || 'Thể loại';
+
+                    if (!slug) return;
+
+                    Lampa.Activity.push({
+                        url: '',
+                        title: titleGenre,
+                        component: 'kkphim_category',
+                        mode: 'category',
+                        category_slug: slug,
+                        page_num: 1
+                    });
                 });
 
                 html.append(top);
