@@ -44,10 +44,8 @@
 
     function pickLogo(images) {
         if (!images || !images.logos || !images.logos.length) return null;
-
         var vi = images.logos.find(function (l) { return l.iso_639_1 === 'vi'; });
         var en = images.logos.find(function (l) { return l.iso_639_1 === 'en'; });
-
         return vi || en || images.logos[0] || null;
     }
 
@@ -56,17 +54,16 @@
 
         var css = `
         <style id="kkphim-style">
-            .kkphim-root {
+            .kkphim-native {
                 color: #fff;
-                padding-bottom: 10em;
-                box-sizing: border-box;
+                padding: 1.2em 0 2em;
             }
 
-            .kkphim-row {
-                margin-bottom: 2em;
+            .kkphim-native__section {
+                margin-bottom: 2.1em;
             }
 
-            .kkphim-row-head {
+            .kkphim-native__head {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -75,98 +72,98 @@
                 margin-bottom: 0.9em;
             }
 
-            .kkphim-row-title {
-                font-size: 1.65em;
-                font-weight: 900;
+            .kkphim-native__title {
+                font-size: 1.55em;
                 line-height: 1.2;
+                font-weight: 900;
                 color: #fff;
             }
 
-            .kkphim-row-more {
+            .kkphim-native__more {
                 flex-shrink: 0;
-                font-size: 1em;
-                font-weight: 800;
-                padding: 0.55em 1em;
+                padding: 0.5em 0.95em;
                 border-radius: 999px;
-                background: rgba(255,255,255,0.12);
+                background: rgba(255,255,255,0.08);
                 color: #fff;
+                font-size: 0.96em;
+                font-weight: 800;
                 cursor: pointer;
             }
 
-            .kkphim-row-more.focus {
+            .kkphim-native__more.focus {
                 background: #fff;
                 color: #000;
             }
 
-            .kkphim-row-list {
+            .kkphim-native__row {
                 display: flex;
                 gap: 1em;
                 overflow-x: auto;
                 overflow-y: hidden;
-                padding: 0 1.2em 0.4em;
+                padding: 0 1.2em 0.2em;
                 -webkit-overflow-scrolling: touch;
                 scroll-behavior: smooth;
             }
 
-            .kkphim-row-list::-webkit-scrollbar,
+            .kkphim-native__row::-webkit-scrollbar,
             .kkphim-cast-row::-webkit-scrollbar {
                 display: none;
             }
 
             .kkphim-card {
                 flex: 0 0 auto;
-                width: 9.8em;
+                width: 9.6em;
                 cursor: pointer;
             }
 
-            .kkphim-card-grid {
+            .kkphim-card--grid {
                 width: 100%;
             }
 
-            .kkphim-card-poster {
+            .kkphim-card__poster {
                 position: relative;
                 width: 100%;
-                aspect-ratio: 2 / 3;
-                border-radius: 0.9em;
+                aspect-ratio: 2/3;
+                border-radius: 1em;
                 overflow: hidden;
-                background: #232323;
-                box-shadow: 0 0.4em 1.4em rgba(0,0,0,0.22);
+                background: #242424;
+                box-shadow: 0 0.35em 1.25em rgba(0,0,0,0.18);
             }
 
-            .kkphim-card-poster img {
+            .kkphim-card__poster img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
                 display: block;
             }
 
-            .kkphim-card-quality {
+            .kkphim-card__quality {
                 position: absolute;
-                top: 0.65em;
-                left: 0.65em;
-                padding: 0.28em 0.55em;
+                left: 0.55em;
+                top: 0.55em;
+                padding: 0.25em 0.5em;
                 border-radius: 0.45em;
+                font-size: 0.72em;
+                font-weight: 800;
                 background: #f6c344;
                 color: #000;
-                font-size: 0.72em;
-                font-weight: 800;
             }
 
-            .kkphim-card-episode {
+            .kkphim-card__episode {
                 position: absolute;
-                top: 0.65em;
-                right: 0.65em;
-                padding: 0.28em 0.55em;
+                right: 0.55em;
+                top: 0.55em;
+                padding: 0.25em 0.5em;
                 border-radius: 0.45em;
+                font-size: 0.72em;
+                font-weight: 800;
                 background: #e53935;
                 color: #fff;
-                font-size: 0.72em;
-                font-weight: 800;
             }
 
-            .kkphim-card-name {
+            .kkphim-card__name {
                 margin-top: 0.7em;
-                font-size: 1.02em;
+                font-size: 1em;
                 line-height: 1.35;
                 font-weight: 700;
                 color: #fff;
@@ -177,146 +174,164 @@
                 min-height: 2.7em;
             }
 
-            .kkphim-card-year {
-                margin-top: 0.25em;
-                font-size: 0.92em;
-                color: rgba(255,255,255,0.62);
+            .kkphim-card__year {
+                margin-top: 0.2em;
+                font-size: 0.9em;
+                color: rgba(255,255,255,0.58);
             }
 
-            .kkphim-category-title {
-                padding: 0 0.75em 0.7em;
-                font-size: 2em;
+            .kkphim-grid-wrap {
+                padding: 0 1.2em;
+            }
+
+            .kkphim-grid-title {
+                font-size: 1.9em;
+                line-height: 1.15;
                 font-weight: 900;
                 color: #fff;
+                margin-bottom: 0.8em;
             }
 
             .kkphim-grid {
                 display: grid;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 1em;
-                padding: 0 1.2em 2em;
             }
 
             .kkphim-loadmore {
-                margin: 1.4em 1.2em 0;
+                margin-top: 1.2em;
                 text-align: center;
                 padding: 1em;
                 border-radius: 0.9em;
-                background: rgba(255,255,255,0.1);
-                font-size: 1.05em;
-                font-weight: 800;
+                background: rgba(255,255,255,0.08);
                 color: #fff;
+                font-size: 1em;
+                font-weight: 800;
                 cursor: pointer;
             }
 
             .kkphim-loadmore.focus {
-                background: #ff2432;
+                background: #ff2332;
             }
 
-            .kkphim-detail-top {
+            .kkphim-detail {
+                padding-bottom: 2em;
+            }
+
+            .kkphim-hero {
                 position: relative;
-                min-height: 42em;
-            }
-
-            .kkphim-detail-backdrop {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 38em;
+                margin: 0 0 1.4em;
+                border-radius: 0 0 1.4em 1.4em;
                 overflow: hidden;
-                border-radius: 0 0 1.2em 1.2em;
+                background: #1c1c1c;
             }
 
-            .kkphim-detail-backdrop img {
+            .kkphim-hero__backdrop {
+                position: relative;
+                height: 24em;
+            }
+
+            .kkphim-hero__backdrop img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
-                transform: scale(1.05);
-                filter: blur(2px);
+                display: block;
+                filter: blur(1px);
+                transform: scale(1.04);
             }
 
-            .kkphim-detail-backdrop-mask {
+            .kkphim-hero__overlay {
                 position: absolute;
                 inset: 0;
                 background:
-                    linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 42%, rgba(0,0,0,0.82) 100%),
-                    linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(20,20,20,0.82) 72%, rgba(20,20,20,1) 100%);
+                    linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.14) 24%, rgba(0,0,0,0.42) 58%, rgba(20,20,20,0.92) 86%, rgba(20,20,20,1) 100%);
             }
 
-            .kkphim-detail-inner {
-                position: relative;
+            .kkphim-hero__inner {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 z-index: 2;
+                padding: 1.2em 1.2em 1.2em;
+            }
+
+            .kkphim-hero__landscape {
                 display: flex;
-                gap: 1.6em;
-                padding: 6em 1.2em 2em;
-                align-items: flex-start;
+                align-items: flex-end;
+                gap: 1.25em;
             }
 
-            .kkphim-detail-poster {
-                width: 11em;
-                min-width: 11em;
+            .kkphim-hero__poster {
+                width: 10.5em;
+                min-width: 10.5em;
             }
 
-            .kkphim-detail-poster img {
+            .kkphim-hero__poster img {
                 width: 100%;
                 aspect-ratio: 2/3;
                 object-fit: cover;
                 border-radius: 1em;
-                box-shadow: 0 1em 2.2em rgba(0,0,0,0.4);
-                background: #222;
+                display: block;
+                box-shadow: 0 1em 2em rgba(0,0,0,0.35);
+                background: #242424;
             }
 
-            .kkphim-detail-info {
+            .kkphim-hero__info {
                 flex: 1;
                 min-width: 0;
             }
 
-            .kkphim-detail-logo {
-                max-width: 20em;
-                margin-bottom: 1em;
+            .kkphim-logo {
+                max-width: 18em;
+                margin-bottom: 0.8em;
             }
 
-            .kkphim-detail-logo img {
+            .kkphim-logo img {
                 max-width: 100%;
-                max-height: 6.2em;
+                max-height: 5.8em;
                 object-fit: contain;
                 display: block;
-                filter: drop-shadow(0 0.3em 1em rgba(0,0,0,0.4));
+                filter: drop-shadow(0 0.3em 1em rgba(0,0,0,0.35));
             }
 
-            .kkphim-detail-title {
-                font-size: 2.35em;
+            .kkphim-title {
+                font-size: 2.2em;
                 line-height: 1.08;
                 font-weight: 900;
-                margin-bottom: 0.15em;
                 color: #fff;
+                margin-bottom: 0.15em;
             }
 
-            .kkphim-detail-origin {
-                font-size: 1.18em;
+            .kkphim-origin {
+                font-size: 1.08em;
                 line-height: 1.35;
                 color: rgba(255,255,255,0.72);
-                margin-bottom: 0.9em;
             }
 
-            .kkphim-detail-meta {
+            .kkphim-body {
+                padding: 0 1.2em;
+            }
+
+            .kkphim-meta-row {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 0.55em;
-                margin-bottom: 0.9em;
+                margin-bottom: 1em;
             }
 
             .kkphim-meta {
-                padding: 0.5em 0.85em;
+                display: inline-flex;
+                align-items: center;
+                padding: 0.5em 0.8em;
                 border-radius: 999px;
-                background: rgba(255,255,255,0.14);
+                background: rgba(255,255,255,0.1);
                 color: #fff;
-                font-size: 1em;
+                font-size: 0.98em;
                 font-weight: 800;
             }
 
-            .kkphim-detail-genres {
+            .kkphim-genre-row {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 0.55em;
@@ -324,12 +339,14 @@
             }
 
             .kkphim-genre {
+                display: inline-flex;
+                align-items: center;
                 padding: 0.42em 0.9em;
                 border-radius: 999px;
-                background: rgba(56,142,60,0.25);
+                background: rgba(56,142,60,0.24);
                 border: 1px solid rgba(76,175,80,0.45);
                 color: #a5d6a7;
-                font-size: 0.96em;
+                font-size: 0.95em;
                 font-weight: 700;
                 cursor: pointer;
             }
@@ -339,33 +356,29 @@
                 color: #fff;
             }
 
-            .kkphim-crew-block {
+            .kkphim-credit {
                 margin-bottom: 1em;
             }
 
-            .kkphim-crew-title {
+            .kkphim-credit__label {
                 font-size: 1em;
+                line-height: 1.3;
                 font-weight: 900;
                 color: #fff;
-                margin-bottom: 0.25em;
+                margin-bottom: 0.2em;
             }
 
-            .kkphim-crew-text {
+            .kkphim-credit__value {
                 font-size: 1.02em;
-                line-height: 1.6;
+                line-height: 1.55;
                 color: rgba(255,255,255,0.82);
             }
 
-            .kkphim-detail-desc {
-                font-size: 1.14em;
-                line-height: 1.72;
+            .kkphim-desc {
+                font-size: 1.08em;
+                line-height: 1.68;
                 color: rgba(255,255,255,0.92);
-                max-width: 44em;
-                margin-bottom: 1.3em;
-            }
-
-            .kkphim-detail-actions {
-                margin-top: 0.8em;
+                margin-bottom: 1.2em;
             }
 
             .kkphim-watch {
@@ -373,22 +386,28 @@
                 align-items: center;
                 justify-content: center;
                 min-width: 10em;
-                padding: 0.95em 1.6em;
-                border-radius: 0.85em;
-                background: #ff1324;
+                padding: 0.95em 1.5em;
+                border-radius: 0.9em;
+                background: #ff1424;
                 color: #fff;
-                font-size: 1.18em;
+                font-size: 1.12em;
                 font-weight: 900;
-                box-shadow: 0 0.6em 1.6em rgba(255,19,36,0.24);
+                box-shadow: 0 0.6em 1.5em rgba(255,20,36,0.25);
                 cursor: pointer;
             }
 
-            .kkphim-section {
-                padding: 0 1.2em 1.8em;
+            .kkphim-watch.focus {
+                background: #ff3140;
             }
 
-            .kkphim-section-title {
-                font-size: 1.7em;
+            .kkphim-block {
+                padding: 0 1.2em;
+                margin-top: 1.7em;
+            }
+
+            .kkphim-block__title {
+                font-size: 1.6em;
+                line-height: 1.2;
                 font-weight: 900;
                 color: #fff;
                 margin-bottom: 0.8em;
@@ -400,13 +419,13 @@
                 overflow-x: auto;
                 overflow-y: hidden;
                 -webkit-overflow-scrolling: touch;
-                padding-bottom: 0.4em;
                 touch-action: pan-x;
+                padding-bottom: 0.2em;
             }
 
             .kkphim-cast-card {
                 flex: 0 0 auto;
-                width: 8.5em;
+                width: 8.2em;
             }
 
             .kkphim-cast-avatar {
@@ -414,7 +433,7 @@
                 aspect-ratio: 2/3;
                 border-radius: 0.9em;
                 overflow: hidden;
-                background: #2a2a2a;
+                background: #2b2b2b;
                 margin-bottom: 0.55em;
             }
 
@@ -422,12 +441,13 @@
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                display: block;
             }
 
             .kkphim-cast-avatar-empty {
                 width: 100%;
                 height: 100%;
-                background: #2f2f2f;
+                background: #313131;
             }
 
             .kkphim-cast-name {
@@ -440,12 +460,13 @@
             .kkphim-cast-role {
                 font-size: 0.84em;
                 line-height: 1.35;
-                color: rgba(255,255,255,0.65);
+                color: rgba(255,255,255,0.62);
                 margin-top: 0.2em;
             }
 
             .kkphim-server-name {
-                font-size: 1.1em;
+                font-size: 1.05em;
+                line-height: 1.3;
                 font-weight: 800;
                 color: #63d471;
                 margin: 1em 0 0.7em;
@@ -454,105 +475,63 @@
             .kkphim-episodes-grid {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 0.75em;
+                gap: 0.7em;
             }
 
             .kkphim-episode {
-                min-width: 4.2em;
+                min-width: 4.1em;
                 text-align: center;
-                padding: 0.8em 1.05em;
+                padding: 0.78em 1.02em;
                 border-radius: 0.75em;
-                background: rgba(255,255,255,0.1);
+                background: rgba(255,255,255,0.09);
                 color: #fff;
-                font-size: 1em;
+                font-size: 0.98em;
                 font-weight: 800;
                 cursor: pointer;
             }
 
-            .kkphim-episode.focus,
-            .kkphim-watch.focus {
-                background: #ff2a38;
+            .kkphim-episode.focus {
+                background: #ff2233;
             }
 
             @media (orientation: portrait) {
-                .kkphim-detail-top {
-                    min-height: 36em;
+                .kkphim-hero__backdrop {
+                    height: 22em;
                 }
 
-                .kkphim-detail-backdrop {
-                    height: 31em;
-                    border-radius: 0 0 1.2em 1.2em;
-                }
-
-                .kkphim-detail-backdrop img {
-                    transform: scale(1.1);
-                    filter: blur(1px);
-                }
-
-                .kkphim-detail-backdrop-mask {
-                    background:
-                        linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 26%, rgba(0,0,0,0.46) 58%, rgba(20,20,20,0.92) 84%, rgba(20,20,20,1) 100%);
-                }
-
-                .kkphim-detail-inner {
+                .kkphim-hero__landscape {
                     display: block;
-                    padding: 18.5em 1.1em 1.5em;
                 }
 
-                .kkphim-detail-poster {
+                .kkphim-hero__poster {
                     display: none;
                 }
 
-                .kkphim-detail-info {
-                    position: relative;
+                .kkphim-logo {
+                    max-width: 21em;
+                    margin-bottom: 0.55em;
                 }
 
-                .kkphim-detail-logo {
-                    max-width: 22em;
-                    margin-bottom: 0.75em;
+                .kkphim-logo img {
+                    max-height: 7em;
                 }
 
-                .kkphim-detail-logo img {
-                    max-width: 100%;
-                    max-height: 8em;
-                    object-fit: contain;
-                }
-
-                .kkphim-detail-title {
+                .kkphim-title {
                     font-size: 1.9em;
                     line-height: 1.1;
-                    margin-bottom: 0.2em;
                 }
 
-                .kkphim-detail-origin {
-                    font-size: 1em;
-                    line-height: 1.35;
-                    opacity: 0.9;
-                }
-
-                .kkphim-detail-meta {
-                    gap: 0.5em;
-                    margin-top: 0.9em;
-                }
-
-                .kkphim-meta {
-                    font-size: 0.96em;
-                }
-
-                .kkphim-detail-desc {
-                    font-size: 1.08em;
-                    line-height: 1.65;
-                    max-width: none;
+                .kkphim-origin {
+                    font-size: 0.98em;
                 }
 
                 .kkphim-watch {
                     width: 100%;
-                    font-size: 1.12em;
                 }
             }
 
             @media (orientation: landscape) {
-                .kkphim-detail-poster {
+                .kkphim-hero__poster {
                     display: block;
                 }
             }
@@ -561,10 +540,6 @@
                 .kkphim-grid {
                     grid-template-columns: repeat(3, minmax(0, 1fr));
                     gap: 0.85em;
-                }
-
-                .kkphim-section-title {
-                    font-size: 1.5em;
                 }
             }
         </style>`;
@@ -615,13 +590,13 @@
 
         var card = $(
             '<div class="kkphim-card selector">' +
-                '<div class="kkphim-card-poster">' +
+                '<div class="kkphim-card__poster">' +
                     '<img src="' + poster + '" alt="' + (item.name || '') + '">' +
-                    (item.quality ? '<div class="kkphim-card-quality">' + item.quality + '</div>' : '') +
-                    (item.episode_current ? '<div class="kkphim-card-episode">' + item.episode_current + '</div>' : '') +
+                    (item.quality ? '<div class="kkphim-card__quality">' + item.quality + '</div>' : '') +
+                    (item.episode_current ? '<div class="kkphim-card__episode">' + item.episode_current + '</div>' : '') +
                 '</div>' +
-                '<div class="kkphim-card-name">' + (item.name || '') + '</div>' +
-                '<div class="kkphim-card-year">' + (item.year || '') + '</div>' +
+                '<div class="kkphim-card__name">' + (item.name || '') + '</div>' +
+                '<div class="kkphim-card__year">' + (item.year || '') + '</div>' +
             '</div>'
         );
 
@@ -645,7 +620,7 @@
         Lampa.Component.add('kkphim_main', function () {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var html = $('<div class="kkphim-root"></div>');
+            var html = $('<div class="kkphim-native"></div>');
             var comp = this;
 
             var categories = [
@@ -668,11 +643,11 @@
                         else if (res && res.data && res.data.items) items = res.data.items;
 
                         if (items.length) {
-                            var row = $('<div class="kkphim-row"></div>');
-                            var head = $('<div class="kkphim-row-head"></div>');
-                            var title = $('<div class="kkphim-row-title">' + cat.name + '</div>');
-                            var more = $('<div class="kkphim-row-more selector">Xem thêm</div>');
-                            var list = $('<div class="kkphim-row-list"></div>');
+                            var section = $('<div class="kkphim-native__section"></div>');
+                            var head = $('<div class="kkphim-native__head"></div>');
+                            var title = $('<div class="kkphim-native__title">' + cat.name + '</div>');
+                            var more = $('<div class="kkphim-native__more selector">Xem thêm</div>');
+                            var row = $('<div class="kkphim-native__row"></div>');
 
                             more.on('click hover:enter', function () {
                                 Lampa.Activity.push({
@@ -686,12 +661,12 @@
                             });
 
                             items.slice(0, 12).forEach(function (item) {
-                                list.append(buildCard(item));
+                                row.append(buildCard(item));
                             });
 
                             head.append(title).append(more);
-                            row.append(head).append(list);
-                            scroll.append(row);
+                            section.append(head).append(row);
+                            scroll.append(section);
                         }
 
                         loaded++;
@@ -699,7 +674,7 @@
                             comp.activity.loader(false);
                             setTimeout(function () {
                                 scroll.update();
-                            }, 50);
+                            }, 60);
                         }
                     }, function () {
                         loaded++;
@@ -707,7 +682,7 @@
                             comp.activity.loader(false);
                             setTimeout(function () {
                                 scroll.update();
-                            }, 50);
+                            }, 60);
                         }
                     });
                 });
@@ -729,7 +704,7 @@
         Lampa.Component.add('kkphim_category', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var html = $('<div class="kkphim-root"></div>');
+            var html = $('<div class="kkphim-native"></div>');
             var comp = this;
 
             var page = object.page_num || 1;
@@ -737,6 +712,7 @@
             var mode = object.mode || 'api';
             var apiPath = object.cat ? object.cat.api : null;
             var categorySlug = object.category_slug || '';
+            var wrap = $('<div class="kkphim-grid-wrap"></div>');
             var grid = $('<div class="kkphim-grid"></div>');
             var loadMore = $('<div class="kkphim-loadmore selector">Tải thêm</div>');
             var loading = false;
@@ -746,9 +722,11 @@
                 this.activity.loader(true);
                 html.append(scroll.render());
 
-                scroll.append('<div class="kkphim-category-title">' + title + '</div>');
-                scroll.append(grid);
-                scroll.append(loadMore);
+                wrap.append('<div class="kkphim-grid-title">' + title + '</div>');
+                wrap.append(grid);
+                wrap.append(loadMore);
+
+                scroll.append(wrap);
 
                 loadMore.on('click hover:enter', function () {
                     if (!loading && hasMore) loadPage();
@@ -769,15 +747,12 @@
                     loadMore.text('Hết dữ liệu');
                     comp.activity.loader(false);
                     loading = false;
-                    setTimeout(function () {
-                        scroll.update();
-                    }, 50);
+                    setTimeout(function () { scroll.update(); }, 60);
                     return;
                 }
 
                 items.forEach(function (item) {
-                    var card = buildCard(item).addClass('kkphim-card-grid');
-                    grid.append(card);
+                    grid.append(buildCard(item).addClass('kkphim-card--grid'));
                 });
 
                 page++;
@@ -785,9 +760,7 @@
                 loadMore.text('Tải thêm');
                 comp.activity.loader(false);
 
-                setTimeout(function () {
-                    scroll.update();
-                }, 50);
+                setTimeout(function () { scroll.update(); }, 60);
             }
 
             function loadPage() {
@@ -838,7 +811,7 @@
         Lampa.Component.add('kkphim_detail', function (object) {
             var network = new Lampa.Reguest();
             var scroll = new Lampa.Scroll({ mask: true, over: true });
-            var html = $('<div class="kkphim-root"></div>');
+            var html = $('<div class="kkphim-detail"></div>');
             var movie = object.movie;
             var comp = this;
 
@@ -885,10 +858,7 @@
                 }
 
                 comp.activity.loader(false);
-
-                setTimeout(function () {
-                    scroll.update();
-                }, 80);
+                setTimeout(function () { scroll.update(); }, 80);
             }
 
             function renderDetail(data, episodes, tmdb, logos, tmdbType) {
@@ -903,7 +873,7 @@
                 var currentEp = data.episode_current || '';
                 var genresHtml = '';
                 var castHtml = '';
-                var crewHtml = '';
+                var creditHtml = '';
                 var logoHtml = '';
                 var directorText = '';
                 var hasLogo = false;
@@ -928,7 +898,7 @@
                     var logo = pickLogo(logos || tmdb.images);
                     if (logo && logo.file_path) {
                         hasLogo = true;
-                        logoHtml = '<div class="kkphim-detail-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '" alt="logo"></div>';
+                        logoHtml = '<div class="kkphim-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '" alt="logo"></div>';
                     }
 
                     if (tmdb.credits) {
@@ -982,45 +952,50 @@
                 }
 
                 if (directorText) {
-                    crewHtml =
-                        '<div class="kkphim-crew-block">' +
-                            '<div class="kkphim-crew-title">Đạo diễn</div>' +
-                            '<div class="kkphim-crew-text">' + directorText + '</div>' +
+                    creditHtml =
+                        '<div class="kkphim-credit">' +
+                            '<div class="kkphim-credit__label">Đạo diễn</div>' +
+                            '<div class="kkphim-credit__value">' + directorText + '</div>' +
                         '</div>';
                 }
 
-                var top = $(
-                    '<div class="kkphim-detail-top ' + (hasLogo ? 'kkphim-has-logo' : 'kkphim-no-logo') + '">' +
-                        '<div class="kkphim-detail-backdrop">' +
+                var hero = $(
+                    '<div class="kkphim-hero ' + (hasLogo ? 'kkphim-hero--logo' : 'kkphim-hero--text') + '">' +
+                        '<div class="kkphim-hero__backdrop">' +
                             '<img src="' + backdrop + '" alt="backdrop">' +
-                            '<div class="kkphim-detail-backdrop-mask"></div>' +
+                            '<div class="kkphim-hero__overlay"></div>' +
                         '</div>' +
-                        '<div class="kkphim-detail-inner">' +
-                            '<div class="kkphim-detail-poster">' +
-                                '<img src="' + poster + '" alt="poster">' +
-                            '</div>' +
-                            '<div class="kkphim-detail-info">' +
-                                logoHtml +
-                                '<div class="kkphim-detail-title">' + title + '</div>' +
-                                '<div class="kkphim-detail-origin">' + origin + '</div>' +
-                                '<div class="kkphim-detail-meta">' +
-                                    '<span class="kkphim-meta">⭐ ' + vote + '</span>' +
-                                    (year ? '<span class="kkphim-meta">📅 ' + year + '</span>' : '') +
-                                    (runtime ? '<span class="kkphim-meta">⏱ ' + runtime + '</span>' : '') +
-                                    (currentEp ? '<span class="kkphim-meta">🎬 ' + currentEp + '</span>' : '') +
+                        '<div class="kkphim-hero__inner">' +
+                            '<div class="kkphim-hero__landscape">' +
+                                '<div class="kkphim-hero__poster">' +
+                                    '<img src="' + poster + '" alt="poster">' +
                                 '</div>' +
-                                '<div class="kkphim-detail-genres">' + genresHtml + '</div>' +
-                                crewHtml +
-                                '<div class="kkphim-detail-desc">' + desc + '</div>' +
-                                '<div class="kkphim-detail-actions">' +
-                                    '<div class="kkphim-watch selector">▶ Xem phim</div>' +
+                                '<div class="kkphim-hero__info">' +
+                                    logoHtml +
+                                    '<div class="kkphim-title">' + title + '</div>' +
+                                    '<div class="kkphim-origin">' + origin + '</div>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>'
                 );
 
-                top.find('.kkphim-watch').on('click hover:enter', function () {
+                var body = $(
+                    '<div class="kkphim-body">' +
+                        '<div class="kkphim-meta-row">' +
+                            '<span class="kkphim-meta">⭐ ' + vote + '</span>' +
+                            (year ? '<span class="kkphim-meta">📅 ' + year + '</span>' : '') +
+                            (runtime ? '<span class="kkphim-meta">⏱ ' + runtime + '</span>' : '') +
+                            (currentEp ? '<span class="kkphim-meta">🎬 ' + currentEp + '</span>' : '') +
+                        '</div>' +
+                        '<div class="kkphim-genre-row">' + genresHtml + '</div>' +
+                        creditHtml +
+                        '<div class="kkphim-desc">' + desc + '</div>' +
+                        '<div><div class="kkphim-watch selector">▶ Xem phim</div></div>' +
+                    '</div>'
+                );
+
+                body.find('.kkphim-watch').on('click hover:enter', function () {
                     try {
                         playEpisode(episodes[0].server_data[0]);
                     } catch (e) {
@@ -1028,7 +1003,7 @@
                     }
                 });
 
-                top.find('.kkphim-genre[data-slug]').on('click hover:enter', function () {
+                body.find('.kkphim-genre[data-slug]').on('click hover:enter', function () {
                     var slug = $(this).attr('data-slug');
                     var titleGenre = $(this).attr('data-title') || 'Thể loại';
 
@@ -1047,20 +1022,21 @@
                     });
                 });
 
-                scroll.append(top);
+                scroll.append(hero);
+                scroll.append(body);
 
                 if (castHtml) {
                     scroll.append(
-                        '<div class="kkphim-section">' +
-                            '<div class="kkphim-section-title">Diễn viên</div>' +
+                        '<div class="kkphim-block">' +
+                            '<div class="kkphim-block__title">Diễn viên</div>' +
                             '<div class="kkphim-cast-row">' + castHtml + '</div>' +
                         '</div>'
                     );
                 }
 
                 if (episodes && episodes.length) {
-                    var epWrap = $('<div class="kkphim-section kkphim-episodes"></div>');
-                    epWrap.append('<div class="kkphim-section-title">Danh sách tập</div>');
+                    var epWrap = $('<div class="kkphim-block"></div>');
+                    epWrap.append('<div class="kkphim-block__title">Danh sách tập</div>');
 
                     episodes.forEach(function (server) {
                         epWrap.append('<div class="kkphim-server-name">' + server.server_name + '</div>');
@@ -1084,7 +1060,6 @@
 
             function playEpisode(ep) {
                 var link = ep.link_m3u8 || ep.link_embed || '';
-
                 if (!link) {
                     Lampa.Noty.show('Không có link phát');
                     return;
