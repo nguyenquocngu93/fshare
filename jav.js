@@ -260,26 +260,42 @@
                 align-items:center;
                 padding:0 1.5em;
                 margin-bottom:1.2em;
+                gap: 1em;
             }
             .kk-topbar-title {
                 font-size:1.9em;
                 font-weight:900;
                 color:#fff;
+                min-width: 0;
+                flex: 1;
             }
             .kk-search-btn {
-                min-width:3em;
-                text-align:center;
-                padding:.7em .9em;
-                border-radius:.9em;
-                background:rgba(255,255,255,.08);
-                color:#fff;
-                font-size:1em;
-                font-weight:800;
-                cursor:pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: .55em;
+                min-width: 9.5em;
+                padding: .8em 1.2em;
+                border-radius: 999px;
+                background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.07));
+                border: 1px solid rgba(255,255,255,.10);
+                color: #fff;
+                font-size: .98em;
+                font-weight: 800;
+                cursor: pointer;
+                box-shadow: 0 .35em .9em rgba(0,0,0,.18);
             }
             .kk-search-btn.focus {
                 background:#fff;
                 color:#000;
+            }
+            .kk-search-ico {
+                font-size: 1.05em;
+                line-height: 1;
+            }
+            .kk-search-txt {
+                line-height: 1;
+                white-space: nowrap;
             }
 
             .kk-row { margin-bottom:1.8em }
@@ -288,7 +304,7 @@
             .kk-row-more { font-size:.95em; font-weight:800; padding:.5em .9em; border-radius:999px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer }
             .kk-row-more.focus { background:#fff; color:#000 }
             .kk-row-list { display:flex; gap:.9em; overflow-x:auto; overflow-y:hidden; padding:0 1.5em .2em; -webkit-overflow-scrolling:touch }
-            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar { display:none }
+            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar,.kk-inline-eps::-webkit-scrollbar { display:none }
 
             .kk-card { flex:0 0 auto; width:9.5em; cursor:pointer }
             .kk-card--grid { width:100% }
@@ -343,7 +359,7 @@
                 right: 0;
                 bottom: 0;
                 z-index: 2;
-                padding: 1.2em 1.2em 1.1em;
+                padding: 1.2em 1.2em 1.8em;
             }
 
             .kk-hero-flex { display:block }
@@ -380,7 +396,7 @@
             .kk-body {
                 position: relative;
                 z-index: 3;
-                margin-top: -1.2em;
+                margin-top: .8em;
                 padding: 1.2em 1.2em 0;
                 background: #141414;
                 border-radius: 1.4em 1.4em 0 0;
@@ -452,28 +468,76 @@
                 margin-bottom: 1.2em;
             }
 
-            .kk-play-wrap {
+            .kk-actions {
+                display: flex;
+                align-items: center;
+                gap: .8em;
+                flex-wrap: wrap;
                 padding-top: .1em;
                 padding-bottom: .1em;
+            }
+
+            .kk-play-wrap {
+                padding-top: 0;
+                padding-bottom: 0;
             }
 
             .kk-play {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                min-width: 10em;
-                padding: .95em 1.5em;
-                border-radius: 1em;
+                min-width: 7.2em;
+                padding: .78em 1.1em;
+                border-radius: .9em;
                 background: #ff1730;
                 color: #fff;
-                font-size: 1.08em;
+                font-size: .98em;
                 font-weight: 900;
                 cursor: pointer;
-                box-shadow: 0 .5em 1.4em rgba(255,23,48,.24);
+                box-shadow: 0 .45em 1.1em rgba(255,23,48,.22);
             }
 
             .kk-play.focus {
                 background: #ff3047;
+            }
+
+            .kk-inline-eps {
+                display: flex;
+                align-items: center;
+                gap: .55em;
+                flex-wrap: wrap;
+                flex: 1;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: .1em;
+            }
+
+            .kk-inline-ep {
+                min-width: 3.2em;
+                text-align: center;
+                padding: .68em .9em;
+                border-radius: .7em;
+                background: rgba(255,255,255,.09);
+                color: #fff;
+                font-size: .92em;
+                font-weight: 800;
+                cursor: pointer;
+                flex: 0 0 auto;
+            }
+
+            .kk-inline-ep.focus {
+                background: #ff2233;
+            }
+
+            .kk-inline-more {
+                padding: .68em .95em;
+                border-radius: .7em;
+                background: rgba(255,255,255,.06);
+                color: rgba(255,255,255,.92);
+                font-size: .9em;
+                font-weight: 800;
+                flex: 0 0 auto;
             }
 
             .kk-section {
@@ -591,7 +655,8 @@
             .kk-loadmore,
             .kk-genre,
             .kk-card,
-            .kk-search-btn {
+            .kk-search-btn,
+            .kk-inline-ep {
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: transparent;
             }
@@ -600,7 +665,19 @@
                 .kk-logo img { max-height: 11em; }
                 .kk-title { font-size: 1.75em; }
                 .kk-origin { font-size: .96em; }
-                .kk-play { width: 100%; }
+
+                .kk-actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .kk-play {
+                    width: 100%;
+                }
+
+                .kk-inline-eps {
+                    width: 100%;
+                }
             }
 
             @media(orientation:landscape){
@@ -613,7 +690,7 @@
                 }
 
                 .kk-hero-bottom {
-                    padding: 1.4em 1.4em 1.2em;
+                    padding: 1.4em 1.4em 2em;
                 }
 
                 .kk-hero-flex {
@@ -662,7 +739,7 @@
                 }
 
                 .kk-body {
-                    margin-top: -1em;
+                    margin-top: .9em;
                     padding: 1.15em 1.4em 0;
                     border-radius: 1.2em 1.2em 0 0;
                 }
@@ -762,7 +839,7 @@
                 this.activity.loader(true);
                 clearScroll(scroll);
 
-                var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍</div></div>');
+                var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector"><span class="kk-search-ico">🔍</span><span class="kk-search-txt">Tìm phim</span></div></div>');
 
                 bindEnter(topbar.find('.kk-search-btn'), function () {
                     openSearchPrompt();
@@ -1188,6 +1265,29 @@
 
                 var titleHtml = logoH ? '' : '<div class="kk-title">' + escapeHtml(t) + '</div>';
 
+                var inlineEpisodesHtml = '';
+
+                if (episodes && episodes.length && ttype === 'tv') {
+                    var firstServer = episodes.find(function (sv) {
+                        return sv && sv.server_data && sv.server_data.length;
+                    });
+
+                    if (firstServer) {
+                        var previewEpisodes = firstServer.server_data.slice(0, 6);
+
+                        inlineEpisodesHtml = '<div class="kk-inline-eps">';
+                        previewEpisodes.forEach(function (ep, idx) {
+                            inlineEpisodesHtml += '<div class="kk-inline-ep selector" data-ep-index="' + idx + '">' + escapeHtml(ep.name || ('Tập ' + (idx + 1))) + '</div>';
+                        });
+
+                        if (firstServer.server_data.length > 6) {
+                            inlineEpisodesHtml += '<div class="kk-inline-more">+' + (firstServer.server_data.length - 6) + ' tập</div>';
+                        }
+
+                        inlineEpisodesHtml += '</div>';
+                    }
+                }
+
                 var hero = $('<div class="kk-hero">\
                     <div class="kk-hero-bg">\
                         <img src="' + bk + '">\
@@ -1215,7 +1315,10 @@
                     <div class="kk-genres">' + ghtml + '</div>\
                     ' + crewH + '\
                     <div class="kk-desc">' + formatText(d) + '</div>\
-                    <div class="kk-play-wrap"><div class="kk-play selector">▶ Xem phim</div></div>\
+                    <div class="kk-actions">\
+                        <div class="kk-play-wrap"><div class="kk-play selector">▶ Xem phim</div></div>\
+                        ' + inlineEpisodesHtml + '\
+                    </div>\
                 </div>');
 
                 bindEnter(body.find('.kk-play'), function () {
@@ -1223,6 +1326,23 @@
                     if (first) playEp(first);
                     else Lampa.Noty.show('Không tìm thấy tập phim');
                 });
+
+                if (episodes && episodes.length && ttype === 'tv') {
+                    var firstServerInline = episodes.find(function (sv) {
+                        return sv && sv.server_data && sv.server_data.length;
+                    });
+
+                    if (firstServerInline) {
+                        body.find('.kk-inline-ep').each(function () {
+                            var btn = $(this);
+                            bindEnter(btn, function () {
+                                var idx = parseInt(btn.attr('data-ep-index'), 10);
+                                var ep = firstServerInline.server_data[idx];
+                                if (ep) playEp(ep);
+                            });
+                        });
+                    }
+                }
 
                 body.find('.kk-genre[data-slug]').each(function () {
                     var g = $(this);
@@ -1271,6 +1391,8 @@
                     });
 
                     scroll.append(ew);
+                } else {
+                    scroll.append($('<div class="kk-section kk-section--last"></div>'));
                 }
 
                 loadSimilar(data);
