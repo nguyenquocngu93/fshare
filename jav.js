@@ -274,7 +274,7 @@
                 justify-content:space-between;
                 align-items:center;
                 padding:0 1.5em;
-                margin-bottom:1.4em;
+                margin-bottom:1.5em;
                 gap:1em;
                 position:relative;
                 z-index:5;
@@ -315,10 +315,32 @@
                 white-space:nowrap;
             }
 
-            .kk-row { margin-bottom:2em }
-            .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.95em }
-            .kk-row-title { font-size:1.65em; font-weight:900; color:#fff }
-            .kk-row-more { font-size:1em; font-weight:800; padding:.58em 1em; border-radius:999px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer }
+            .kk-row { margin-bottom:2.15em }
+            .kk-row-head {
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:0 1.5em;
+                margin-bottom:1em;
+                gap:.8em;
+            }
+            .kk-row-title {
+                font-size:1.65em;
+                font-weight:900;
+                color:#fff;
+                line-height:1.25;
+                padding:.1em 0;
+            }
+            .kk-row-more {
+                font-size:1.02em;
+                font-weight:800;
+                padding:.8em 1.3em;
+                border-radius:999px;
+                background:rgba(255,255,255,.08);
+                color:#fff;
+                cursor:pointer;
+                line-height:1;
+            }
             .kk-row-more.focus { background:#fff; color:#000 }
             .kk-row-list { display:flex; gap:1em; overflow-x:auto; overflow-y:hidden; padding:0 1.5em .2em; -webkit-overflow-scrolling:touch }
             .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar { display:none }
@@ -333,9 +355,16 @@
             .kk-card-year { margin-top:.24em; font-size:.94em; color:rgba(255,255,255,.55) }
 
             .kk-grid-wrap { padding:0 1.5em }
-            .kk-grid-title { font-size:2em; font-weight:900; color:#fff; margin-bottom:.8em }
+            .kk-grid-title {
+                font-size:2em;
+                font-weight:900;
+                color:#fff;
+                margin:0 0 .95em;
+                padding:.15em 0 .2em;
+                line-height:1.2;
+            }
             .kk-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1em }
-            .kk-loadmore { margin-top:1.2em; text-align:center; padding:1em; border-radius:1em; background:rgba(255,255,255,.08); color:#fff; font-size:1.05em; font-weight:800; cursor:pointer }
+            .kk-loadmore { margin-top:1.25em; text-align:center; padding:1em 1.2em; border-radius:1em; background:rgba(255,255,255,.08); color:#fff; font-size:1.05em; font-weight:800; cursor:pointer }
             .kk-loadmore.focus { background:#ff2332 }
 
             .kk-detail-wrap {
@@ -383,7 +412,7 @@
                 right:0;
                 bottom:0;
                 z-index:2;
-                padding:1.4em 1.4em 1.2em;
+                padding:1.6em 1.7em 1.35em;
             }
 
             .kk-hero-flex { display:block }
@@ -392,36 +421,37 @@
 
             .kk-logo {
                 max-width:36em;
-                margin:0 0 1.1em;
+                margin:0 0 1.15em;
             }
 
             .kk-logo img {
                 max-width:100%;
-                max-height:11.5em;
+                max-height:11.8em;
                 object-fit:contain;
                 display:block;
                 filter:drop-shadow(0 .45em 1.3em rgba(0,0,0,.45));
             }
 
             .kk-title {
-                font-size:2.35em;
-                line-height:1.05;
+                font-size:2.7em;
+                line-height:1.04;
                 font-weight:900;
                 color:#fff;
-                margin-bottom:.2em;
+                margin-bottom:.22em;
             }
 
             .kk-origin {
-                font-size:1.14em;
-                line-height:1.45;
-                color:rgba(255,255,255,.82);
+                font-size:1.24em;
+                line-height:1.5;
+                color:rgba(255,255,255,.84);
+                padding:.05em 0 .1em;
             }
 
             .kk-body {
                 position:relative;
                 z-index:3;
                 margin-top:0;
-                padding:1.45em 1.45em 0;
+                padding:1.6em 1.7em 0;
                 background:#141414;
                 border-radius:0;
             }
@@ -429,35 +459,39 @@
             .kk-metas {
                 display:flex;
                 flex-wrap:wrap;
-                gap:.65em;
-                margin-bottom:1.15em;
+                gap:.72em;
+                margin:0 0 1.22em;
+                padding:.05em 0;
             }
 
             .kk-meta {
-                padding:.58em .95em;
-                border-radius:.85em;
+                padding:.66em 1.05em;
+                border-radius:.9em;
                 background:rgba(255,255,255,.08);
                 color:#fff;
-                font-size:1.08em;
+                font-size:1.16em;
                 font-weight:800;
+                line-height:1.2;
             }
 
             .kk-genres {
                 display:flex;
                 flex-wrap:wrap;
-                gap:.65em;
-                margin-bottom:1.15em;
+                gap:.72em;
+                margin:0 0 1.22em;
+                padding:.05em 0;
             }
 
             .kk-genre {
-                padding:.56em 1em;
-                border-radius:.85em;
+                padding:.62em 1.08em;
+                border-radius:.9em;
                 background:rgba(255,255,255,.08);
                 border:1px solid rgba(255,255,255,.08);
-                color:rgba(255,255,255,.94);
-                font-size:1em;
+                color:rgba(255,255,255,.95);
+                font-size:1.08em;
                 font-weight:700;
                 cursor:pointer;
+                line-height:1.2;
             }
 
             .kk-genre.focus {
@@ -466,30 +500,34 @@
             }
 
             .kk-crew {
-                margin-bottom:1.1em;
-                padding:.2em 0 .1em;
+                margin:0 0 1.25em;
+                padding:.2em 0 .15em;
             }
 
             .kk-crew b {
                 display:block;
-                font-size:1.2em;
+                font-size:1.28em;
                 font-weight:900;
                 color:#fff;
-                margin-bottom:.28em;
+                margin:0 0 .3em;
+                line-height:1.25;
+                padding:.08em 0;
             }
 
             .kk-crew span {
                 display:block;
-                font-size:1.08em;
-                line-height:1.6;
-                color:rgba(255,255,255,.86);
+                font-size:1.16em;
+                line-height:1.65;
+                color:rgba(255,255,255,.88);
+                padding:.02em 0;
             }
 
             .kk-desc {
-                font-size:1.18em;
-                line-height:1.78;
-                color:rgba(255,255,255,.92);
-                margin-bottom:1.35em;
+                font-size:1.28em;
+                line-height:1.82;
+                color:rgba(255,255,255,.94);
+                margin:0 0 1.5em;
+                padding:.08em 0;
             }
 
             .kk-actions {
@@ -497,14 +535,13 @@
                 align-items:center;
                 gap:.8em;
                 flex-wrap:wrap;
-                padding-top:.1em;
-                padding-bottom:.1em;
+                padding:.15em 0 .25em;
             }
 
             .kk-play-wrap {
                 width:100%;
-                padding-top:0;
-                padding-bottom:0;
+                padding:0;
+                margin:0 0 .1em;
             }
 
             .kk-play {
@@ -513,14 +550,15 @@
                 justify-content:center;
                 width:100%;
                 min-width:0;
-                padding:.9em 1.15em;
-                border-radius:1em;
+                padding:1em 1.2em;
+                border-radius:1.05em;
                 background:#ff1730;
                 color:#fff;
-                font-size:1.15em;
+                font-size:1.22em;
                 font-weight:900;
                 cursor:pointer;
                 box-shadow:0 .5em 1.25em rgba(255,23,48,.22);
+                line-height:1.2;
             }
 
             .kk-play.focus {
@@ -529,13 +567,13 @@
 
             .kk-section {
                 margin:0;
-                padding:1.2em 1.45em 0;
+                padding:1.35em 1.7em 0;
                 background:#141414;
             }
 
             .kk-section + .kk-section {
                 margin-top:0;
-                padding-top:1.15em;
+                padding-top:1.3em;
                 border-top:1px solid rgba(255,255,255,.04);
             }
 
@@ -545,40 +583,42 @@
             }
 
             .kk-section--last {
-                padding-bottom:1.5em;
-                border-radius:0 0 1.5em 1.5em;
+                padding-bottom:1.6em;
+                border-radius:0;
             }
 
             .kk-block-title {
-                font-size:1.7em;
+                font-size:1.9em;
                 font-weight:900;
                 color:#fff;
-                margin-bottom:.8em;
+                margin:0 0 .9em;
+                padding:.16em .06em .18em;
+                line-height:1.22;
             }
 
             .kk-cast-list {
                 display:flex;
-                gap:1em;
+                gap:1.1em;
                 overflow-x:auto;
                 overflow-y:hidden;
                 -webkit-overflow-scrolling:touch;
                 touch-action:pan-x;
-                padding-bottom:.2em;
+                padding:0 .08em .3em;
             }
 
             .kk-cast-card {
                 flex:0 0 auto;
-                width:7.4em;
+                width:8em;
                 text-align:center;
             }
 
             .kk-cast-img {
-                width:6.7em;
-                height:6.7em;
+                width:7.1em;
+                height:7.1em;
                 border-radius:50%;
                 overflow:hidden;
                 background:#2b2b2b;
-                margin:0 auto .7em;
+                margin:0 auto .78em;
                 border:2px solid rgba(255,255,255,.08);
             }
 
@@ -597,29 +637,56 @@
             }
 
             .kk-cast-name {
-                font-size:1em;
-                line-height:1.35;
+                font-size:1.08em;
+                line-height:1.38;
                 font-weight:800;
                 color:#fff;
+                padding:.04em 0;
             }
 
             .kk-cast-role {
-                font-size:.88em;
-                line-height:1.35;
-                color:rgba(255,255,255,.62);
-                margin-top:.18em;
+                font-size:.96em;
+                line-height:1.38;
+                color:rgba(255,255,255,.66);
+                margin-top:.2em;
+                padding:.02em 0;
             }
 
-            .kk-server { font-size:1.14em; font-weight:800; color:#63d471; margin:1em 0 .7em }
-            .kk-section .kk-server:first-of-type { margin-top:.2em }
-            .kk-eps { display:flex; flex-wrap:wrap; gap:.75em }
-            .kk-section .kk-eps:last-child { padding-bottom:.2em }
-            .kk-ep { min-width:4.4em; text-align:center; padding:.82em 1.05em; border-radius:.8em; background:rgba(255,255,255,.09); color:#fff; font-size:1em; font-weight:800; cursor:pointer }
+            .kk-server {
+                font-size:1.22em;
+                font-weight:800;
+                color:#63d471;
+                margin:1.1em 0 .78em;
+                line-height:1.3;
+                padding:.06em 0;
+            }
+            .kk-section .kk-server:first-of-type { margin-top:.25em }
+
+            .kk-eps {
+                display:flex;
+                flex-wrap:wrap;
+                gap:.78em;
+                padding:.02em 0;
+            }
+            .kk-section .kk-eps:last-child { padding-bottom:.25em }
+
+            .kk-ep {
+                min-width:4.7em;
+                text-align:center;
+                padding:.9em 1.15em;
+                border-radius:.85em;
+                background:rgba(255,255,255,.09);
+                color:#fff;
+                font-size:1.08em;
+                font-weight:800;
+                cursor:pointer;
+                line-height:1.2;
+            }
             .kk-ep.focus { background:#ff2233 }
 
             .kk-similar {
-                padding-bottom:1.15em;
-                border-radius:0 0 1.5em 1.5em;
+                padding-bottom:1.2em;
+                border-radius:0;
             }
 
             .kk-similar-list {
@@ -628,7 +695,7 @@
                 overflow-x:auto;
                 overflow-y:hidden;
                 -webkit-overflow-scrolling:touch;
-                padding-bottom:.25em;
+                padding:0 .08em .28em;
             }
 
             .kk-similar-list .kk-card {
@@ -648,9 +715,9 @@
             }
 
             @media(orientation:portrait){
-                .kk-logo img { max-height:12em; }
-                .kk-title { font-size:2.1em; }
-                .kk-origin { font-size:1.08em; }
+                .kk-logo img { max-height:12.2em; }
+                .kk-title { font-size:2.35em; }
+                .kk-origin { font-size:1.14em; }
                 .kk-play { width:100%; }
             }
 
@@ -664,13 +731,13 @@
                 }
 
                 .kk-hero-bottom {
-                    padding:1.5em 1.6em 1.35em;
+                    padding:1.7em 1.95em 1.45em;
                 }
 
                 .kk-hero-flex {
                     display:flex;
                     align-items:flex-end;
-                    gap:1.4em;
+                    gap:1.45em;
                 }
 
                 .kk-hero-poster {
@@ -697,39 +764,39 @@
 
                 .kk-logo {
                     max-width:28em;
-                    margin-bottom:1em;
+                    margin-bottom:1.05em;
                 }
 
                 .kk-logo img {
-                    max-height:8.8em;
+                    max-height:8.9em;
                 }
 
                 .kk-title {
-                    font-size:2.25em;
+                    font-size:2.85em;
                 }
 
                 .kk-origin {
-                    font-size:1.08em;
+                    font-size:1.18em;
                 }
 
                 .kk-body {
                     margin-top:0;
-                    padding:1.35em 1.6em 0;
+                    padding:1.5em 1.95em 0;
                     border-radius:0;
                 }
 
                 .kk-section {
                     margin:0;
-                    padding:1.2em 1.6em 0;
+                    padding:1.35em 1.95em 0;
                 }
 
                 .kk-section--last,
                 .kk-similar {
-                    border-radius:0 0 1.4em 1.4em;
+                    border-radius:0;
                 }
 
                 .kk-cast-list {
-                    gap:1em;
+                    gap:1.1em;
                 }
 
                 .kk-similar-list .kk-card {
@@ -1298,14 +1365,13 @@
                 var detailWrap = $('<div class="kk-detail-wrap"></div>');
                 detailWrap.append(hero);
                 detailWrap.append(body);
-                scroll.append(detailWrap);
 
                 if (directorH) {
-                    scroll.append($('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
+                    detailWrap.append($('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
                 }
 
                 if (castH) {
-                    scroll.append($('<div class="kk-section"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>'));
+                    detailWrap.append($('<div class="kk-section"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>'));
                 }
 
                 if (episodes && episodes.length) {
@@ -1325,18 +1391,17 @@
                         ew.append(g);
                     });
 
-                    scroll.append(ew);
-                } else {
-                    scroll.append($('<div class="kk-section kk-section--last"></div>'));
+                    detailWrap.append(ew);
                 }
 
-                loadSimilar(data);
+                scroll.append(detailWrap);
+                loadSimilar(data, detailWrap);
             }
 
-            function loadSimilar(data) {
+            function loadSimilar(data, detailWrap) {
                 var cats = data.category || [];
                 if (!cats.length || !cats[0].slug) {
-                    scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                    detailWrap.append($('<div class="kk-section kk-section--last"></div>'));
                     return;
                 }
 
@@ -1344,24 +1409,24 @@
                 var title = 'Phim liên quan';
 
                 network.silent(API + 'v1/api/the-loai/' + slug + '?page=1', function (res) {
-                    handleSimilar(res, title);
+                    handleSimilar(res, title, detailWrap);
                 }, function () {
                     network.silent(API + 'the-loai/' + slug + '?page=1', function (res2) {
-                        handleSimilar(res2, title);
+                        handleSimilar(res2, title, detailWrap);
                     }, function () {
-                        scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                        detailWrap.append($('<div class="kk-section kk-section--last"></div>'));
                     });
                 });
             }
 
-            function handleSimilar(res, title) {
+            function handleSimilar(res, title, detailWrap) {
                 var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
                 list = list.map(normalizeItem).filter(function (item) {
                     return item && item.slug && item.slug !== movie.slug;
                 }).slice(0, 12);
 
                 if (!list.length) {
-                    scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                    detailWrap.append($('<div class="kk-section kk-section--last"></div>'));
                     return;
                 }
 
@@ -1374,7 +1439,7 @@
                 });
 
                 row.append(rl);
-                scroll.append(row);
+                detailWrap.append(row);
             }
 
             function playEp(ep) {
