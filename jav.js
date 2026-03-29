@@ -243,7 +243,7 @@
         if (!item) return $('<div></div>');
 
         var p = fullImg(item.poster_url || item.thumb_url);
-        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + item.quality + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + item.episode_current + '</div>' : '') + '</div><div class="kk-card-name">' + escapeHtml(item.name || '') + '</div><div class="kk-card-year">' + escapeHtml(item.year || '') + '</div></div>');
+        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + escapeHtml(item.quality) + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + escapeHtml(item.episode_current) + '</div>' : '') + '</div><div class="kk-card-name">' + escapeHtml(item.name || '') + '</div><div class="kk-card-year">' + escapeHtml(item.year || '') + '</div></div>');
 
         c.on('click hover:enter', function () {
             if (!item || !item.slug) {
@@ -302,7 +302,7 @@
                         if (list.length) {
                             var row = $('<div class="kk-row"></div>');
                             var head = $('<div class="kk-row-head"></div>');
-                            var t = $('<div class="kk-row-title">' + cat.name + '</div>');
+                            var t = $('<div class="kk-row-title">' + escapeHtml(cat.name) + '</div>');
                             var more = $('<div class="kk-row-more selector">Xem thêm</div>');
                             var rl = $('<div class="kk-row-list"></div>');
 
@@ -384,12 +384,15 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
-                wrap.append('<div class="kk-grid-title">' + escapeHtml(title) + '</div>');
+                wrap.append($('<div class="kk-grid-title">' + escapeHtml(title) + '</div>'));
                 wrap.append(grid);
                 wrap.append(loadMore);
                 scroll.append(wrap);
 
-                loadMore.on('click hover:enter', function () { if (!loading && hasMore) doLoad(); });
+                loadMore.on('click hover:enter', function () {
+                    if (!loading && hasMore) doLoad();
+                });
+
                 doLoad();
             };
 
@@ -494,14 +497,14 @@
 
                 if (!movie || !movie.slug) {
                     this.activity.loader(false);
-                    scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu phim</div><div class="empty__text">Thiếu slug để tải chi tiết</div></div>');
+                    scroll.append($('<div class="empty__body"><div class="empty__title">Không có dữ liệu phim</div><div class="empty__text">Thiếu slug để tải chi tiết</div></div>'));
                     comp.start();
                     return;
                 }
 
                 network.silent(API + 'phim/' + movie.slug, function (res) {
                     if (rendered) return;
-                    var data = normalizeItem(res.movie || res || {});
+                    var data = res.movie || res || {};
                     var episodes = res.episodes || [];
                     loadAll(data, episodes);
                 }, function () {
@@ -511,6 +514,8 @@
             };
 
             async function loadAll(data, episodes) {
+                data = normalizeItem(data);
+
                 try {
                     var tid = getTmdbId(data);
                     var ttype = detectType(data);
@@ -668,6 +673,7 @@
                     var slug = $(this).attr('data-slug');
                     var tg = $(this).attr('data-title') || 'Thể loại';
                     if (!slug) return;
+
                     Lampa.Activity.push({
                         url: '',
                         title: tg,
@@ -682,19 +688,19 @@
                 scroll.append(body);
 
                 if (directorH) {
-                    scroll.append('<div class="kk-block"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>');
+                    scroll.append($('<div class="kk-block"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
                 }
 
                 if (castH) {
-                    scroll.append('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>');
+                    scroll.append($('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>'));
                 }
 
                 if (episodes && episodes.length) {
                     var ew = $('<div class="kk-block"></div>');
-                    ew.append('<div class="kk-block-title">Danh sách tập</div>');
+                    ew.append($('<div class="kk-block-title">Danh sách tập</div>'));
 
                     episodes.forEach(function (sv) {
-                        ew.append('<div class="kk-server">' + escapeHtml(sv.server_name || '') + '</div>');
+                        ew.append($('<div class="kk-server">' + escapeHtml(sv.server_name || '') + '</div>'));
                         var g = $('<div class="kk-eps"></div>');
 
                         (sv.server_data || []).forEach(function (ep) {
