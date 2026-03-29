@@ -90,6 +90,48 @@
             .replace(/'/g, '&#039;');
     }
 
+    function formatText(s) {
+        return escapeHtml(s || '').replace(/\n/g, '<br>');
+    }
+
+    function cleanDesc(s) {
+        s = String(s || '').replace(/<[^>]+>/g, '').trim();
+        return s || 'Không có mô tả';
+    }
+
+    function bindEnter(el, fn) {
+        var touched = false;
+
+        el.on('touchend', function (e) {
+            touched = true;
+            e.preventDefault();
+            e.stopPropagation();
+            fn.call(this, e);
+            setTimeout(function () {
+                touched = false;
+            }, 300);
+        });
+
+        el.on('click', function (e) {
+            if (touched) return;
+            e.preventDefault();
+            e.stopPropagation();
+            fn.call(this, e);
+        });
+
+        el.on('hover:enter', function (e) {
+            fn.call(this, e);
+        });
+    }
+
+    function getFirstEpisode(episodes) {
+        for (var i = 0; i < (episodes || []).length; i++) {
+            var sv = episodes[i];
+            if (sv && sv.server_data && sv.server_data.length) return sv.server_data[0];
+        }
+        return null;
+    }
+
     function normalizeItem(item) {
         if (!item) return null;
         return {
@@ -113,6 +155,7 @@
 
     function injectStyle() {
         if ($('#kk-css').length) return;
+
         $('head').append(`<style id="kk-css">
             .kk-row { margin-bottom:1.8em }
             .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.8em }
@@ -147,17 +190,8 @@
             .kk-hero-poster img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:.9em; display:block; box-shadow:0 .8em 1.8em rgba(0,0,0,.35); background:#242424 }
             .kk-hero-info { flex:1; min-width:0 }
 
-            .kk-logo {
-                max-width: 24em;
-                margin-bottom: .75em;
-            }
-            .kk-logo img {
-                max-width: 100%;
-                max-height: 9em;
-                object-fit: contain;
-                display: block;
-                filter: drop-shadow(0 .3em 1em rgba(0,0,0,.35));
-            }
+            .kk-logo { max-width:24em; margin-bottom:.75em }
+            .kk-logo img { max-width:100%; max-height:9em; object-fit:contain; display:block; filter:drop-shadow(0 .3em 1em rgba(0,0,0,.35)) }
 
             .kk-title { font-size:2.1em; line-height:1.08; font-weight:900; color:#fff; margin-bottom:.12em }
             .kk-origin { font-size:1.05em; line-height:1.35; color:rgba(255,255,255,.7) }
@@ -169,23 +203,9 @@
             .kk-genre { padding:.4em .85em; border-radius:999px; background:rgba(56,142,60,.24); border:1px solid rgba(76,175,80,.45); color:#a5d6a7; font-size:.94em; font-weight:700; cursor:pointer }
             .kk-genre.focus { background:rgba(76,175,80,.45); color:#fff }
 
-            .kk-crew {
-                margin-bottom: 1em;
-                padding: .2em 0 .1em;
-            }
-            .kk-crew b {
-                display: block;
-                font-size: 1.08em;
-                font-weight: 900;
-                color: #fff;
-                margin-bottom: .22em;
-            }
-            .kk-crew span {
-                display: block;
-                font-size: 1.05em;
-                line-height: 1.55;
-                color: rgba(255,255,255,.84);
-            }
+            .kk-crew { margin-bottom:1em; padding:.2em 0 .1em }
+            .kk-crew b { display:block; font-size:1.08em; font-weight:900; color:#fff; margin-bottom:.22em }
+            .kk-crew span { display:block; font-size:1.05em; line-height:1.55; color:rgba(255,255,255,.84) }
 
             .kk-desc { font-size:1.06em; line-height:1.68; color:rgba(255,255,255,.9); margin-bottom:1.1em }
             .kk-play { display:inline-flex; align-items:center; justify-content:center; min-width:10em; padding:.9em 1.5em; border-radius:.85em; background:#ff1424; color:#fff; font-size:1.1em; font-weight:900; cursor:pointer; box-shadow:0 .5em 1.4em rgba(255,20,36,.25) }
@@ -205,6 +225,17 @@
             .kk-eps { display:flex; flex-wrap:wrap; gap:.7em }
             .kk-ep { min-width:4em; text-align:center; padding:.75em 1em; border-radius:.7em; background:rgba(255,255,255,.09); color:#fff; font-size:.96em; font-weight:800; cursor:pointer }
             .kk-ep.focus { background:#ff2233 }
+
+            .selector,
+            .kk-play,
+            .kk-ep,
+            .kk-row-more,
+            .kk-loadmore,
+            .kk-genre,
+            .kk-card {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
 
             @media(orientation:portrait){
                 .kk-hero-flex { display:block }
@@ -227,15 +258,28 @@
     function addMenu() {
         function ins() {
             if ($('.menu__item[data-action="kkphim"]').length) return;
+
             var m = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 2v2h2V6H6zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM6 10v8h12v-8H6z"/></svg></div><div class="menu__text">KKPhim</div></li>');
-            m.on('click hover:enter', function () {
-                Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 });
+
+            bindEnter(m, function () {
+                Lampa.Activity.push({
+                    url: '',
+                    title: 'KKPhim',
+                    component: 'kkphim_main',
+                    page: 1
+                });
             });
+
             $('.menu .menu__list').first().append(m);
         }
+
         setTimeout(ins, 500);
-        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') setTimeout(ins, 500); });
-        Lampa.Listener.follow('full', function () { setTimeout(ins, 500); });
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') setTimeout(ins, 500);
+        });
+        Lampa.Listener.follow('full', function () {
+            setTimeout(ins, 500);
+        });
     }
 
     function mkCard(item) {
@@ -245,7 +289,7 @@
         var p = fullImg(item.poster_url || item.thumb_url);
         var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + escapeHtml(item.quality) + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + escapeHtml(item.episode_current) + '</div>' : '') + '</div><div class="kk-card-name">' + escapeHtml(item.name || '') + '</div><div class="kk-card-year">' + escapeHtml(item.year || '') + '</div></div>');
 
-        c.on('click hover:enter', function () {
+        bindEnter(c, function () {
             if (!item || !item.slug) {
                 Lampa.Noty.show('Phim không có slug');
                 return;
@@ -270,6 +314,36 @@
         }).join('');
     }
 
+    function applyController(scroll) {
+        Lampa.Controller.remove('content');
+
+        Lampa.Controller.add('content', {
+            toggle: function () {
+                Lampa.Controller.collectionSet(scroll.render());
+                Lampa.Controller.collectionFocus(false, scroll.render());
+            },
+            left: function () {
+                if (Navigator.canmove('left')) Navigator.move('left');
+                else Lampa.Controller.toggle('menu');
+            },
+            right: function () {
+                Navigator.move('right');
+            },
+            up: function () {
+                if (Navigator.canmove('up')) Navigator.move('up');
+                else Lampa.Controller.toggle('head');
+            },
+            down: function () {
+                Navigator.move('down');
+            },
+            back: function () {
+                Lampa.Activity.backward();
+            }
+        });
+
+        Lampa.Controller.toggle('content');
+    }
+
     function startPlugin() {
         injectStyle();
         addMenu();
@@ -289,6 +363,7 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
+
                 var loaded = 0;
 
                 cats.forEach(function (cat) {
@@ -306,8 +381,15 @@
                             var more = $('<div class="kk-row-more selector">Xem thêm</div>');
                             var rl = $('<div class="kk-row-list"></div>');
 
-                            more.on('click hover:enter', function () {
-                                Lampa.Activity.push({ url: '', title: cat.name, component: 'kkphim_category', cat: cat, page_num: 1, mode: 'api' });
+                            bindEnter(more, function () {
+                                Lampa.Activity.push({
+                                    url: '',
+                                    title: cat.name,
+                                    component: 'kkphim_category',
+                                    cat: cat,
+                                    page_num: 1,
+                                    mode: 'api'
+                                });
                             });
 
                             list.slice(0, 12).forEach(function (item) {
@@ -335,25 +417,7 @@
             };
 
             this.start = function () {
-                Lampa.Controller.add('content', {
-                    toggle: function () {
-                        Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false, scroll.render());
-                    },
-                    left: function () {
-                        if (Navigator.canmove('left')) Navigator.move('left');
-                        else Lampa.Controller.toggle('menu');
-                    },
-                    right: function () { Navigator.move('right'); },
-                    up: function () {
-                        if (Navigator.canmove('up')) Navigator.move('up');
-                        else Lampa.Controller.toggle('head');
-                    },
-                    down: function () { Navigator.move('down'); },
-                    back: function () { Lampa.Activity.backward(); }
-                });
-
-                Lampa.Controller.toggle('content');
+                applyController(scroll);
                 enableNativeScroll(scroll);
             };
 
@@ -384,12 +448,13 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
+
                 wrap.append($('<div class="kk-grid-title">' + escapeHtml(title) + '</div>'));
                 wrap.append(grid);
                 wrap.append(loadMore);
                 scroll.append(wrap);
 
-                loadMore.on('click hover:enter', function () {
+                bindEnter(loadMore, function () {
                     if (!loading && hasMore) doLoad();
                 });
 
@@ -452,25 +517,7 @@
             }
 
             this.start = function () {
-                Lampa.Controller.add('content', {
-                    toggle: function () {
-                        Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false, scroll.render());
-                    },
-                    left: function () {
-                        if (Navigator.canmove('left')) Navigator.move('left');
-                        else Lampa.Controller.toggle('menu');
-                    },
-                    right: function () { Navigator.move('right'); },
-                    up: function () {
-                        if (Navigator.canmove('up')) Navigator.move('up');
-                        else Lampa.Controller.toggle('head');
-                    },
-                    down: function () { Navigator.move('down'); },
-                    back: function () { Lampa.Activity.backward(); }
-                });
-
-                Lampa.Controller.toggle('content');
+                applyController(scroll);
                 enableNativeScroll(scroll);
             };
 
@@ -557,7 +604,7 @@
                 var ps = fullImg(data.poster_url || data.thumb_url);
                 var t = data.name || '';
                 var o = data.origin_name || '';
-                var d = data.content || 'Không có mô tả';
+                var d = cleanDesc(data.content);
                 var v = (data.tmdb && data.tmdb.vote_average) ? data.tmdb.vote_average : 'N/A';
                 var y = data.year || '';
                 var rt = data.time || '';
@@ -583,7 +630,9 @@
                     if ((!rt || rt === '') && tmdb.episode_run_time && tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0] + ' phút';
 
                     var logo = pickLogo(logos || tmdb.images);
-                    if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
+                    if (logo && logo.file_path) {
+                        logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
+                    }
 
                     if (tmdb.credits) {
                         var cast = (tmdb.credits.cast || []).slice(0, 12);
@@ -649,38 +698,36 @@
                     }
                 }
 
-                if (dir) {
+                if (dir && !directorH) {
                     crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + escapeHtml(dir) + '</span></div>';
                 }
 
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + escapeHtml(t) + '</div><div class="kk-origin">' + escapeHtml(o) + '</div></div></div></div></div>');
 
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + escapeHtml(v) + '</span>' + (y ? '<span class="kk-meta">📅 ' + escapeHtml(y) + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + escapeHtml(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + escapeHtml(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + escapeHtml(d) + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + escapeHtml(v) + '</span>' + (y ? '<span class="kk-meta">📅 ' + escapeHtml(y) + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + escapeHtml(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + escapeHtml(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + formatText(d) + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
 
-                body.find('.kk-play').on('click hover:enter', function () {
-                    try {
-                        if (episodes && episodes.length && episodes[0].server_data && episodes[0].server_data.length) {
-                            playEp(episodes[0].server_data[0]);
-                        } else {
-                            Lampa.Noty.show('Không tìm thấy tập phim');
-                        }
-                    } catch (e) {
-                        Lampa.Noty.show('Không tìm thấy tập phim');
-                    }
+                bindEnter(body.find('.kk-play'), function () {
+                    var first = getFirstEpisode(episodes);
+                    if (first) playEp(first);
+                    else Lampa.Noty.show('Không tìm thấy tập phim');
                 });
 
-                body.find('.kk-genre[data-slug]').on('click hover:enter', function () {
-                    var slug = $(this).attr('data-slug');
-                    var tg = $(this).attr('data-title') || 'Thể loại';
-                    if (!slug) return;
+                body.find('.kk-genre[data-slug]').each(function () {
+                    var g = $(this);
 
-                    Lampa.Activity.push({
-                        url: '',
-                        title: tg,
-                        component: 'kkphim_category',
-                        mode: 'category',
-                        category_slug: slug,
-                        page_num: 1
+                    bindEnter(g, function () {
+                        var slug = g.attr('data-slug');
+                        var tg = g.attr('data-title') || 'Thể loại';
+                        if (!slug) return;
+
+                        Lampa.Activity.push({
+                            url: '',
+                            title: tg,
+                            component: 'kkphim_category',
+                            mode: 'category',
+                            category_slug: slug,
+                            page_num: 1
+                        });
                     });
                 });
 
@@ -705,7 +752,9 @@
 
                         (sv.server_data || []).forEach(function (ep) {
                             var b = $('<div class="kk-ep selector">' + escapeHtml(ep.name || '') + '</div>');
-                            b.on('click hover:enter', function () { playEp(ep); });
+                            bindEnter(b, function () {
+                                playEp(ep);
+                            });
                             g.append(b);
                         });
 
@@ -730,25 +779,7 @@
             }
 
             this.start = function () {
-                Lampa.Controller.add('content', {
-                    toggle: function () {
-                        Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false, scroll.render());
-                    },
-                    left: function () {
-                        if (Navigator.canmove('left')) Navigator.move('left');
-                        else Lampa.Controller.toggle('menu');
-                    },
-                    right: function () { Navigator.move('right'); },
-                    up: function () {
-                        if (Navigator.canmove('up')) Navigator.move('up');
-                        else Lampa.Controller.toggle('head');
-                    },
-                    down: function () { Navigator.move('down'); },
-                    back: function () { Lampa.Activity.backward(); }
-                });
-
-                Lampa.Controller.toggle('content');
+                applyController(scroll);
                 enableNativeScroll(scroll);
             };
 
