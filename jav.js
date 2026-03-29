@@ -45,42 +45,6 @@
             imgs.logos[0] || null;
     }
 
-    function enableNativeScroll(scroll) {
-        var el = scroll.render();
-
-        el.css({
-            'overflow': 'hidden',
-            'position': 'relative',
-            'height': '100%'
-        });
-
-        var body = el.find('.scroll__body');
-
-        body.css({
-            'transform': 'none',
-            'position': 'relative',
-            'overflow-y': 'auto',
-            'overflow-x': 'hidden',
-            '-webkit-overflow-scrolling': 'touch',
-            'height': '100%',
-            'padding-bottom': '8em'
-        });
-
-        if (body[0]) {
-            body[0].style.setProperty('transform', 'none', 'important');
-            body[0].style.setProperty('overflow-y', 'auto', 'important');
-            body[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-            body[0].style.setProperty('height', '100%', 'important');
-            body[0].style.setProperty('padding-bottom', '8em', 'important');
-        }
-    }
-
-    function clearScroll(scroll) {
-        try {
-            scroll.render().find('.scroll__body').empty();
-        } catch (e) {}
-    }
-
     function escapeHtml(s) {
         return String(s || '')
             .replace(/&/g, '&amp;')
@@ -90,13 +54,34 @@
             .replace(/'/g, '&#039;');
     }
 
+    function cleanDesc(s) {
+        s = String(s || '').replace(/<[^>]+>/g, '').trim();
+        return s || 'Không có mô tả';
+    }
+
     function formatText(s) {
         return escapeHtml(s || '').replace(/\n/g, '<br>');
     }
 
-    function cleanDesc(s) {
-        s = String(s || '').replace(/<[^>]+>/g, '').trim();
-        return s || 'Không có mô tả';
+    function normalizeItem(item) {
+        if (!item) return null;
+        return {
+            name: item.name || item.title || '',
+            origin_name: item.origin_name || '',
+            slug: item.slug || '',
+            poster_url: item.poster_url || item.poster || '',
+            thumb_url: item.thumb_url || item.thumb || '',
+            year: item.year || '',
+            quality: item.quality || '',
+            episode_current: item.episode_current || '',
+            tmdb: item.tmdb || {},
+            category: item.category || [],
+            director: item.director || '',
+            content: item.content || '',
+            time: item.time || '',
+            episode_total: item.episode_total || '',
+            type: item.type || ''
+        };
     }
 
     function bindEnter(el, fn) {
@@ -132,30 +117,90 @@
         return null;
     }
 
-    function normalizeItem(item) {
-        if (!item) return null;
-        return {
-            name: item.name || item.title || '',
-            origin_name: item.origin_name || '',
-            slug: item.slug || '',
-            poster_url: item.poster_url || item.poster || '',
-            thumb_url: item.thumb_url || item.thumb || '',
-            year: item.year || '',
-            quality: item.quality || '',
-            episode_current: item.episode_current || '',
-            tmdb: item.tmdb || {},
-            category: item.category || [],
-            director: item.director || '',
-            content: item.content || '',
-            time: item.time || '',
-            episode_total: item.episode_total || '',
-            type: item.type || ''
-        };
+    function enableNativeScroll(scroll) {
+        var el = scroll.render();
+
+        el.css({
+            'overflow': 'hidden',
+            'position': 'relative',
+            'height': '100%'
+        });
+
+        var body = el.find('.scroll__body');
+
+        body.css({
+            'transform': 'none',
+            'position': 'relative',
+            'overflow-y': 'auto',
+            'overflow-x': 'hidden',
+            '-webkit-overflow-scrolling': 'touch',
+            'height': '100%',
+            'padding-bottom': '8em',
+            'touch-action': 'pan-y'
+        });
+
+        if (body[0]) {
+            body[0].style.setProperty('transform', 'none', 'important');
+            body[0].style.setProperty('overflow-y', 'auto', 'important');
+            body[0].style.setProperty('overflow-x', 'hidden', 'important');
+            body[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+            body[0].style.setProperty('height', '100%', 'important');
+            body[0].style.setProperty('padding-bottom', '8em', 'important');
+            body[0].style.setProperty('touch-action', 'pan-y', 'important');
+        }
+
+        setTimeout(function () {
+            var body2 = scroll.render().find('.scroll__body');
+            if (body2[0]) {
+                body2[0].style.setProperty('transform', 'none', 'important');
+                body2[0].style.setProperty('overflow-y', 'auto', 'important');
+                body2[0].style.setProperty('overflow-x', 'hidden', 'important');
+                body2[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+                body2[0].style.setProperty('touch-action', 'pan-y', 'important');
+            }
+        }, 50);
+    }
+
+    function clearScroll(scroll) {
+        try {
+            scroll.render().find('.scroll__body').empty();
+        } catch (e) {}
+    }
+
+    function applyController(scroll) {
+        Lampa.Controller.add('content', {
+            toggle: function () {
+                Lampa.Controller.collectionSet(scroll.render());
+                Lampa.Controller.collectionFocus(false, scroll.render());
+            },
+            left: function () {
+                if (Navigator.canmove('left')) Navigator.move('left');
+                else Lampa.Controller.toggle('menu');
+            },
+            right: function () {
+                Navigator.move('right');
+            },
+            up: function () {
+                if (Navigator.canmove('up')) Navigator.move('up');
+                else Lampa.Controller.toggle('head');
+            },
+            down: function () {
+                Navigator.move('down');
+            },
+            back: function () {
+                Lampa.Activity.backward();
+            }
+        });
+
+        setTimeout(function () {
+            Lampa.Controller.toggle('content');
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(false, scroll.render());
+        }, 0);
     }
 
     function injectStyle() {
         if ($('#kk-css').length) return;
-
         $('head').append(`<style id="kk-css">
             .kk-row { margin-bottom:1.8em }
             .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.8em }
@@ -246,9 +291,11 @@
                 .kk-origin { font-size:.96em }
                 .kk-play { width:100% }
             }
+
             @media(orientation:landscape){
                 .kk-hero-poster { display:block }
             }
+
             @media(max-width:768px){
                 .kk-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8em }
             }
@@ -262,24 +309,15 @@
             var m = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 2v2h2V6H6zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM6 10v8h12v-8H6z"/></svg></div><div class="menu__text">KKPhim</div></li>');
 
             bindEnter(m, function () {
-                Lampa.Activity.push({
-                    url: '',
-                    title: 'KKPhim',
-                    component: 'kkphim_main',
-                    page: 1
-                });
+                Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 });
             });
 
             $('.menu .menu__list').first().append(m);
         }
 
         setTimeout(ins, 500);
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') setTimeout(ins, 500);
-        });
-        Lampa.Listener.follow('full', function () {
-            setTimeout(ins, 500);
-        });
+        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') setTimeout(ins, 500); });
+        Lampa.Listener.follow('full', function () { setTimeout(ins, 500); });
     }
 
     function mkCard(item) {
@@ -314,36 +352,6 @@
         }).join('');
     }
 
-    function applyController(scroll) {
-        Lampa.Controller.remove('content');
-
-        Lampa.Controller.add('content', {
-            toggle: function () {
-                Lampa.Controller.collectionSet(scroll.render());
-                Lampa.Controller.collectionFocus(false, scroll.render());
-            },
-            left: function () {
-                if (Navigator.canmove('left')) Navigator.move('left');
-                else Lampa.Controller.toggle('menu');
-            },
-            right: function () {
-                Navigator.move('right');
-            },
-            up: function () {
-                if (Navigator.canmove('up')) Navigator.move('up');
-                else Lampa.Controller.toggle('head');
-            },
-            down: function () {
-                Navigator.move('down');
-            },
-            back: function () {
-                Lampa.Activity.backward();
-            }
-        });
-
-        Lampa.Controller.toggle('content');
-    }
-
     function startPlugin() {
         injectStyle();
         addMenu();
@@ -363,16 +371,12 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
-
                 var loaded = 0;
 
                 cats.forEach(function (cat) {
                     network.silent(API + cat.api + '?page=1', function (res) {
                         var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
-
-                        list = list.map(normalizeItem).filter(function (item) {
-                            return item && item.slug;
-                        });
+                        list = list.map(normalizeItem).filter(function (item) { return item && item.slug; });
 
                         if (list.length) {
                             var row = $('<div class="kk-row"></div>');
@@ -382,14 +386,7 @@
                             var rl = $('<div class="kk-row-list"></div>');
 
                             bindEnter(more, function () {
-                                Lampa.Activity.push({
-                                    url: '',
-                                    title: cat.name,
-                                    component: 'kkphim_category',
-                                    cat: cat,
-                                    page_num: 1,
-                                    mode: 'api'
-                                });
+                                Lampa.Activity.push({ url: '', title: cat.name, component: 'kkphim_category', cat: cat, page_num: 1, mode: 'api' });
                             });
 
                             list.slice(0, 12).forEach(function (item) {
@@ -448,7 +445,6 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
-
                 wrap.append($('<div class="kk-grid-title">' + escapeHtml(title) + '</div>'));
                 wrap.append(grid);
                 wrap.append(loadMore);
@@ -463,9 +459,7 @@
 
             function handleRes(res) {
                 var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
-                list = list.map(normalizeItem).filter(function (item) {
-                    return item && item.slug;
-                });
+                list = list.map(normalizeItem).filter(function (item) { return item && item.slug; });
 
                 if (!list.length) {
                     hasMore = false;
@@ -630,9 +624,7 @@
                     if ((!rt || rt === '') && tmdb.episode_run_time && tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0] + ' phút';
 
                     var logo = pickLogo(logos || tmdb.images);
-                    if (logo && logo.file_path) {
-                        logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
-                    }
+                    if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
 
                     if (tmdb.credits) {
                         var cast = (tmdb.credits.cast || []).slice(0, 12);
@@ -642,9 +634,7 @@
                         var directors = [];
 
                         if (ttype === 'movie') {
-                            directors = crew.filter(function (c) {
-                                return c.job === 'Director';
-                            });
+                            directors = crew.filter(function (c) { return c.job === 'Director'; });
                         } else {
                             directors = crew.filter(function (c) {
                                 return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director';
@@ -693,9 +683,7 @@
                         })
                         .filter(function (x) { return x.name; });
 
-                    if (localDirectors.length) {
-                        directorH = makePeopleCards(localDirectors, 'job');
-                    }
+                    if (localDirectors.length) directorH = makePeopleCards(localDirectors, 'job');
                 }
 
                 if (dir && !directorH) {
@@ -714,7 +702,6 @@
 
                 body.find('.kk-genre[data-slug]').each(function () {
                     var g = $(this);
-
                     bindEnter(g, function () {
                         var slug = g.attr('data-slug');
                         var tg = g.attr('data-title') || 'Thể loại';
@@ -752,9 +739,7 @@
 
                         (sv.server_data || []).forEach(function (ep) {
                             var b = $('<div class="kk-ep selector">' + escapeHtml(ep.name || '') + '</div>');
-                            bindEnter(b, function () {
-                                playEp(ep);
-                            });
+                            bindEnter(b, function () { playEp(ep); });
                             g.append(b);
                         });
 
