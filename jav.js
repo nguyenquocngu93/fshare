@@ -153,19 +153,34 @@
     }
 
     function openSearchPrompt() {
+        function goSearch(kw) {
+            kw = String(kw || '').trim();
+            if (!kw) return;
+
+            Lampa.Activity.push({
+                url: '',
+                title: 'Tìm kiếm',
+                component: 'kkphim_search',
+                keyword: kw,
+                page_num: 1
+            });
+        }
+
+        try {
+            if (Lampa.Input && Lampa.Input.edit) {
+                Lampa.Input.edit({
+                    title: 'Tìm phim',
+                    value: '',
+                    free: true
+                }, function (kw) {
+                    goSearch(kw);
+                });
+                return;
+            }
+        } catch (e) {}
+
         var kw = window.prompt('Nhập từ khóa tìm phim:');
-        if (!kw) return;
-
-        kw = String(kw).trim();
-        if (!kw) return;
-
-        Lampa.Activity.push({
-            url: '',
-            title: 'Tìm kiếm',
-            component: 'kkphim_search',
-            keyword: kw,
-            page_num: 1
-        });
+        goSearch(kw);
     }
 
     function enableNativeScroll(scroll) {
@@ -259,107 +274,116 @@
                 justify-content:space-between;
                 align-items:center;
                 padding:0 1.5em;
-                margin-bottom:1.2em;
-                gap: 1em;
+                margin-bottom:1.4em;
+                gap:1em;
+                position:relative;
+                z-index:5;
             }
             .kk-topbar-title {
-                font-size:1.9em;
+                font-size:2.05em;
                 font-weight:900;
                 color:#fff;
-                min-width: 0;
-                flex: 1;
+                min-width:0;
+                flex:1;
             }
             .kk-search-btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                gap: .55em;
-                min-width: 9.5em;
-                padding: .8em 1.2em;
-                border-radius: 999px;
-                background: linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.07));
-                border: 1px solid rgba(255,255,255,.10);
-                color: #fff;
-                font-size: .98em;
-                font-weight: 800;
-                cursor: pointer;
-                box-shadow: 0 .35em .9em rgba(0,0,0,.18);
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                gap:.55em;
+                min-width:10em;
+                padding:.9em 1.25em;
+                border-radius:999px;
+                background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+                border:1px solid rgba(255,255,255,.10);
+                color:#fff;
+                font-size:1.02em;
+                font-weight:800;
+                cursor:pointer;
+                box-shadow:0 .35em .9em rgba(0,0,0,.18);
             }
             .kk-search-btn.focus {
                 background:#fff;
                 color:#000;
             }
             .kk-search-ico {
-                font-size: 1.05em;
-                line-height: 1;
+                font-size:1.08em;
+                line-height:1;
             }
             .kk-search-txt {
-                line-height: 1;
-                white-space: nowrap;
+                line-height:1;
+                white-space:nowrap;
             }
 
-            .kk-row { margin-bottom:1.8em }
-            .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.8em }
-            .kk-row-title { font-size:1.5em; font-weight:900; color:#fff }
-            .kk-row-more { font-size:.95em; font-weight:800; padding:.5em .9em; border-radius:999px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer }
+            .kk-row { margin-bottom:2em }
+            .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.95em }
+            .kk-row-title { font-size:1.65em; font-weight:900; color:#fff }
+            .kk-row-more { font-size:1em; font-weight:800; padding:.58em 1em; border-radius:999px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer }
             .kk-row-more.focus { background:#fff; color:#000 }
-            .kk-row-list { display:flex; gap:.9em; overflow-x:auto; overflow-y:hidden; padding:0 1.5em .2em; -webkit-overflow-scrolling:touch }
-            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar,.kk-inline-eps::-webkit-scrollbar { display:none }
+            .kk-row-list { display:flex; gap:1em; overflow-x:auto; overflow-y:hidden; padding:0 1.5em .2em; -webkit-overflow-scrolling:touch }
+            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar { display:none }
 
-            .kk-card { flex:0 0 auto; width:9.5em; cursor:pointer }
+            .kk-card { flex:0 0 auto; width:10em; cursor:pointer }
             .kk-card--grid { width:100% }
-            .kk-card-img { position:relative; width:100%; aspect-ratio:2/3; border-radius:.9em; overflow:hidden; background:#242424 }
+            .kk-card-img { position:relative; width:100%; aspect-ratio:2/3; border-radius:1em; overflow:hidden; background:#242424 }
             .kk-card-img img { width:100%; height:100%; object-fit:cover; display:block }
-            .kk-card-q { position:absolute; top:.5em; left:.5em; padding:.2em .5em; border-radius:.4em; font-size:.7em; font-weight:800; background:#f6c344; color:#000 }
-            .kk-card-ep { position:absolute; top:.5em; right:.5em; padding:.2em .5em; border-radius:.4em; font-size:.7em; font-weight:800; background:#e53935; color:#fff }
-            .kk-card-name { margin-top:.6em; font-size:.98em; line-height:1.32; font-weight:700; color:#fff; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
-            .kk-card-year { margin-top:.2em; font-size:.88em; color:rgba(255,255,255,.55) }
+            .kk-card-q { position:absolute; top:.55em; left:.55em; padding:.24em .55em; border-radius:.45em; font-size:.74em; font-weight:800; background:#f6c344; color:#000 }
+            .kk-card-ep { position:absolute; top:.55em; right:.55em; padding:.24em .55em; border-radius:.45em; font-size:.74em; font-weight:800; background:#e53935; color:#fff }
+            .kk-card-name { margin-top:.7em; font-size:1.04em; line-height:1.34; font-weight:700; color:#fff; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+            .kk-card-year { margin-top:.24em; font-size:.94em; color:rgba(255,255,255,.55) }
 
             .kk-grid-wrap { padding:0 1.5em }
-            .kk-grid-title { font-size:1.8em; font-weight:900; color:#fff; margin-bottom:.7em }
-            .kk-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.9em }
-            .kk-loadmore { margin-top:1.1em; text-align:center; padding:.9em; border-radius:.9em; background:rgba(255,255,255,.08); color:#fff; font-size:1em; font-weight:800; cursor:pointer }
+            .kk-grid-title { font-size:2em; font-weight:900; color:#fff; margin-bottom:.8em }
+            .kk-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1em }
+            .kk-loadmore { margin-top:1.2em; text-align:center; padding:1em; border-radius:1em; background:rgba(255,255,255,.08); color:#fff; font-size:1.05em; font-weight:800; cursor:pointer }
             .kk-loadmore.focus { background:#ff2332 }
 
+            .kk-detail-wrap {
+                background:#141414;
+                border-radius:1.5em;
+                overflow:hidden;
+                margin:0 0 1em;
+            }
+
             .kk-hero {
-                position: relative;
-                margin-bottom: 0;
-                border-radius: 1.4em 1.4em 0 0;
-                overflow: hidden;
-                background: #111;
+                position:relative;
+                margin-bottom:0;
+                border-radius:0;
+                overflow:hidden;
+                background:#111;
             }
 
             .kk-hero-bg {
-                position: relative;
-                height: 24em;
+                position:relative;
+                height:26em;
             }
 
             .kk-hero-bg img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                display:block;
             }
 
             .kk-hero-mask {
-                position: absolute;
-                inset: 0;
+                position:absolute;
+                inset:0;
                 background:
                     linear-gradient(to bottom,
-                        rgba(0,0,0,.10) 0%,
-                        rgba(0,0,0,.18) 28%,
-                        rgba(0,0,0,.42) 58%,
-                        rgba(14,14,14,.88) 84%,
+                        rgba(0,0,0,.08) 0%,
+                        rgba(0,0,0,.16) 24%,
+                        rgba(0,0,0,.36) 52%,
+                        rgba(14,14,14,.78) 78%,
                         rgba(14,14,14,1) 100%);
             }
 
             .kk-hero-bottom {
-                position: absolute;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 2;
-                padding: 1.2em 1.2em 1.8em;
+                position:absolute;
+                left:0;
+                right:0;
+                bottom:0;
+                z-index:2;
+                padding:1.4em 1.4em 1.2em;
             }
 
             .kk-hero-flex { display:block }
@@ -367,285 +391,248 @@
             .kk-hero-info { min-width:0 }
 
             .kk-logo {
-                max-width: 32em;
-                margin: 0 0 1em;
+                max-width:36em;
+                margin:0 0 1.1em;
             }
 
             .kk-logo img {
-                max-width: 100%;
-                max-height: 10.5em;
-                object-fit: contain;
-                display: block;
-                filter: drop-shadow(0 .4em 1.2em rgba(0,0,0,.45));
+                max-width:100%;
+                max-height:11.5em;
+                object-fit:contain;
+                display:block;
+                filter:drop-shadow(0 .45em 1.3em rgba(0,0,0,.45));
             }
 
             .kk-title {
-                font-size: 2em;
-                line-height: 1.08;
-                font-weight: 900;
-                color: #fff;
-                margin-bottom: .18em;
+                font-size:2.35em;
+                line-height:1.05;
+                font-weight:900;
+                color:#fff;
+                margin-bottom:.2em;
             }
 
             .kk-origin {
-                font-size: 1em;
-                line-height: 1.4;
-                color: rgba(255,255,255,.78);
+                font-size:1.14em;
+                line-height:1.45;
+                color:rgba(255,255,255,.82);
             }
 
             .kk-body {
-                position: relative;
-                z-index: 3;
-                margin-top: .8em;
-                padding: 1.2em 1.2em 0;
-                background: #141414;
-                border-radius: 1.4em 1.4em 0 0;
+                position:relative;
+                z-index:3;
+                margin-top:0;
+                padding:1.45em 1.45em 0;
+                background:#141414;
+                border-radius:0;
             }
 
             .kk-metas {
-                display: flex;
-                flex-wrap: wrap;
-                gap: .55em;
-                margin-bottom: 1em;
+                display:flex;
+                flex-wrap:wrap;
+                gap:.65em;
+                margin-bottom:1.15em;
             }
 
             .kk-meta {
-                padding: .5em .85em;
-                border-radius: .8em;
-                background: rgba(255,255,255,.08);
-                color: #fff;
-                font-size: .95em;
-                font-weight: 800;
+                padding:.58em .95em;
+                border-radius:.85em;
+                background:rgba(255,255,255,.08);
+                color:#fff;
+                font-size:1.08em;
+                font-weight:800;
             }
 
             .kk-genres {
-                display: flex;
-                flex-wrap: wrap;
-                gap: .55em;
-                margin-bottom: 1em;
+                display:flex;
+                flex-wrap:wrap;
+                gap:.65em;
+                margin-bottom:1.15em;
             }
 
             .kk-genre {
-                padding: .46em .9em;
-                border-radius: .8em;
-                background: rgba(255,255,255,.08);
-                border: 1px solid rgba(255,255,255,.08);
-                color: rgba(255,255,255,.92);
-                font-size: .92em;
-                font-weight: 700;
-                cursor: pointer;
+                padding:.56em 1em;
+                border-radius:.85em;
+                background:rgba(255,255,255,.08);
+                border:1px solid rgba(255,255,255,.08);
+                color:rgba(255,255,255,.94);
+                font-size:1em;
+                font-weight:700;
+                cursor:pointer;
             }
 
             .kk-genre.focus {
-                background: rgba(255,255,255,.18);
-                color: #fff;
+                background:rgba(255,255,255,.18);
+                color:#fff;
             }
 
             .kk-crew {
-                margin-bottom: 1em;
-                padding: .2em 0 .1em;
+                margin-bottom:1.1em;
+                padding:.2em 0 .1em;
             }
 
             .kk-crew b {
-                display: block;
-                font-size: 1.08em;
-                font-weight: 900;
-                color: #fff;
-                margin-bottom: .22em;
+                display:block;
+                font-size:1.2em;
+                font-weight:900;
+                color:#fff;
+                margin-bottom:.28em;
             }
 
             .kk-crew span {
-                display: block;
-                font-size: 1.02em;
-                line-height: 1.55;
-                color: rgba(255,255,255,.84);
+                display:block;
+                font-size:1.08em;
+                line-height:1.6;
+                color:rgba(255,255,255,.86);
             }
 
             .kk-desc {
-                font-size: 1.02em;
-                line-height: 1.68;
-                color: rgba(255,255,255,.9);
-                margin-bottom: 1.2em;
+                font-size:1.18em;
+                line-height:1.78;
+                color:rgba(255,255,255,.92);
+                margin-bottom:1.35em;
             }
 
             .kk-actions {
-                display: flex;
-                align-items: center;
-                gap: .8em;
-                flex-wrap: wrap;
-                padding-top: .1em;
-                padding-bottom: .1em;
+                display:flex;
+                align-items:center;
+                gap:.8em;
+                flex-wrap:wrap;
+                padding-top:.1em;
+                padding-bottom:.1em;
             }
 
             .kk-play-wrap {
-                padding-top: 0;
-                padding-bottom: 0;
+                width:100%;
+                padding-top:0;
+                padding-bottom:0;
             }
 
             .kk-play {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                min-width: 7.2em;
-                padding: .78em 1.1em;
-                border-radius: .9em;
-                background: #ff1730;
-                color: #fff;
-                font-size: .98em;
-                font-weight: 900;
-                cursor: pointer;
-                box-shadow: 0 .45em 1.1em rgba(255,23,48,.22);
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                width:100%;
+                min-width:0;
+                padding:.9em 1.15em;
+                border-radius:1em;
+                background:#ff1730;
+                color:#fff;
+                font-size:1.15em;
+                font-weight:900;
+                cursor:pointer;
+                box-shadow:0 .5em 1.25em rgba(255,23,48,.22);
             }
 
             .kk-play.focus {
-                background: #ff3047;
-            }
-
-            .kk-inline-eps {
-                display: flex;
-                align-items: center;
-                gap: .55em;
-                flex-wrap: wrap;
-                flex: 1;
-                overflow-x: auto;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: .1em;
-            }
-
-            .kk-inline-ep {
-                min-width: 3.2em;
-                text-align: center;
-                padding: .68em .9em;
-                border-radius: .7em;
-                background: rgba(255,255,255,.09);
-                color: #fff;
-                font-size: .92em;
-                font-weight: 800;
-                cursor: pointer;
-                flex: 0 0 auto;
-            }
-
-            .kk-inline-ep.focus {
-                background: #ff2233;
-            }
-
-            .kk-inline-more {
-                padding: .68em .95em;
-                border-radius: .7em;
-                background: rgba(255,255,255,.06);
-                color: rgba(255,255,255,.92);
-                font-size: .9em;
-                font-weight: 800;
-                flex: 0 0 auto;
+                background:#ff3047;
             }
 
             .kk-section {
-                margin: 0;
-                padding: 1.15em 1.2em 0;
-                background: #141414;
+                margin:0;
+                padding:1.2em 1.45em 0;
+                background:#141414;
             }
 
             .kk-section + .kk-section {
-                margin-top: 0;
-                padding-top: 1.1em;
-                border-top: 1px solid rgba(255,255,255,.04);
+                margin-top:0;
+                padding-top:1.15em;
+                border-top:1px solid rgba(255,255,255,.04);
             }
 
             .kk-body + .kk-section {
-                margin-top: 0;
-                border-top: 1px solid rgba(255,255,255,.04);
+                margin-top:0;
+                border-top:1px solid rgba(255,255,255,.04);
             }
 
             .kk-section--last {
-                padding-bottom: 1.35em;
-                border-radius: 0 0 1.4em 1.4em;
+                padding-bottom:1.5em;
+                border-radius:0 0 1.5em 1.5em;
             }
 
             .kk-block-title {
-                font-size: 1.35em;
-                font-weight: 900;
-                color: #fff;
-                margin-bottom: .75em;
+                font-size:1.7em;
+                font-weight:900;
+                color:#fff;
+                margin-bottom:.8em;
             }
 
             .kk-cast-list {
-                display: flex;
-                gap: .85em;
-                overflow-x: auto;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                touch-action: pan-x;
-                padding-bottom: .2em;
+                display:flex;
+                gap:1em;
+                overflow-x:auto;
+                overflow-y:hidden;
+                -webkit-overflow-scrolling:touch;
+                touch-action:pan-x;
+                padding-bottom:.2em;
             }
 
             .kk-cast-card {
-                flex: 0 0 auto;
-                width: 6.8em;
-                text-align: center;
+                flex:0 0 auto;
+                width:7.4em;
+                text-align:center;
             }
 
             .kk-cast-img {
-                width: 6.2em;
-                height: 6.2em;
-                border-radius: 50%;
-                overflow: hidden;
-                background: #2b2b2b;
-                margin: 0 auto .6em;
-                border: 2px solid rgba(255,255,255,.08);
+                width:6.7em;
+                height:6.7em;
+                border-radius:50%;
+                overflow:hidden;
+                background:#2b2b2b;
+                margin:0 auto .7em;
+                border:2px solid rgba(255,255,255,.08);
             }
 
             .kk-cast-img img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                display:block;
             }
 
             .kk-cast-empty {
-                width: 100%;
-                height: 100%;
-                background: #333;
-                border-radius: 50%;
+                width:100%;
+                height:100%;
+                background:#333;
+                border-radius:50%;
             }
 
             .kk-cast-name {
-                font-size: .9em;
-                line-height: 1.32;
-                font-weight: 800;
-                color: #fff;
+                font-size:1em;
+                line-height:1.35;
+                font-weight:800;
+                color:#fff;
             }
 
             .kk-cast-role {
-                font-size: .8em;
-                line-height: 1.32;
-                color: rgba(255,255,255,.62);
-                margin-top: .16em;
+                font-size:.88em;
+                line-height:1.35;
+                color:rgba(255,255,255,.62);
+                margin-top:.18em;
             }
 
-            .kk-server { font-size:1.02em; font-weight:800; color:#63d471; margin:1em 0 .65em }
+            .kk-server { font-size:1.14em; font-weight:800; color:#63d471; margin:1em 0 .7em }
             .kk-section .kk-server:first-of-type { margin-top:.2em }
-            .kk-eps { display:flex; flex-wrap:wrap; gap:.7em }
+            .kk-eps { display:flex; flex-wrap:wrap; gap:.75em }
             .kk-section .kk-eps:last-child { padding-bottom:.2em }
-            .kk-ep { min-width:4em; text-align:center; padding:.75em 1em; border-radius:.7em; background:rgba(255,255,255,.09); color:#fff; font-size:.96em; font-weight:800; cursor:pointer }
+            .kk-ep { min-width:4.4em; text-align:center; padding:.82em 1.05em; border-radius:.8em; background:rgba(255,255,255,.09); color:#fff; font-size:1em; font-weight:800; cursor:pointer }
             .kk-ep.focus { background:#ff2233 }
 
             .kk-similar {
-                padding-bottom: 1.1em;
-                border-radius: 0 0 1.4em 1.4em;
+                padding-bottom:1.15em;
+                border-radius:0 0 1.5em 1.5em;
             }
 
             .kk-similar-list {
-                display: flex;
-                gap: .9em;
-                overflow-x: auto;
-                overflow-y: hidden;
-                -webkit-overflow-scrolling: touch;
-                padding-bottom: .25em;
+                display:flex;
+                gap:1em;
+                overflow-x:auto;
+                overflow-y:hidden;
+                -webkit-overflow-scrolling:touch;
+                padding-bottom:.25em;
             }
 
             .kk-similar-list .kk-card {
-                width: 8.6em;
+                width:9.2em;
             }
 
             .selector,
@@ -655,116 +642,103 @@
             .kk-loadmore,
             .kk-genre,
             .kk-card,
-            .kk-search-btn,
-            .kk-inline-ep {
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
+            .kk-search-btn {
+                touch-action:manipulation;
+                -webkit-tap-highlight-color:transparent;
             }
 
             @media(orientation:portrait){
-                .kk-logo img { max-height: 11em; }
-                .kk-title { font-size: 1.75em; }
-                .kk-origin { font-size: .96em; }
-
-                .kk-actions {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-
-                .kk-play {
-                    width: 100%;
-                }
-
-                .kk-inline-eps {
-                    width: 100%;
-                }
+                .kk-logo img { max-height:12em; }
+                .kk-title { font-size:2.1em; }
+                .kk-origin { font-size:1.08em; }
+                .kk-play { width:100%; }
             }
 
             @media(orientation:landscape){
                 .kk-hero {
-                    border-radius: 1.4em 1.4em 0 0;
+                    border-radius:0;
                 }
 
                 .kk-hero-bg {
-                    height: 25em;
+                    height:29em;
                 }
 
                 .kk-hero-bottom {
-                    padding: 1.4em 1.4em 2em;
+                    padding:1.5em 1.6em 1.35em;
                 }
 
                 .kk-hero-flex {
-                    display: flex;
-                    align-items: flex-end;
-                    gap: 1.2em;
+                    display:flex;
+                    align-items:flex-end;
+                    gap:1.4em;
                 }
 
                 .kk-hero-poster {
-                    display: block;
-                    width: 9em;
-                    min-width: 9em;
+                    display:block;
+                    width:10.5em;
+                    min-width:10.5em;
                 }
 
                 .kk-hero-poster img {
-                    width: 100%;
-                    aspect-ratio: 2/3;
-                    object-fit: cover;
-                    border-radius: 1em;
-                    display: block;
-                    background: #242424;
-                    box-shadow: 0 .8em 1.8em rgba(0,0,0,.38);
+                    width:100%;
+                    aspect-ratio:2/3;
+                    object-fit:cover;
+                    border-radius:1.1em;
+                    display:block;
+                    background:#242424;
+                    box-shadow:0 .8em 1.8em rgba(0,0,0,.38);
                 }
 
                 .kk-hero-info {
-                    flex: 1;
-                    min-width: 0;
-                    padding-bottom: .2em;
+                    flex:1;
+                    min-width:0;
+                    padding-bottom:.25em;
                 }
 
                 .kk-logo {
-                    max-width: 26em;
-                    margin-bottom: .9em;
+                    max-width:28em;
+                    margin-bottom:1em;
                 }
 
                 .kk-logo img {
-                    max-height: 8em;
+                    max-height:8.8em;
                 }
 
                 .kk-title {
-                    font-size: 1.95em;
+                    font-size:2.25em;
                 }
 
                 .kk-origin {
-                    font-size: .96em;
+                    font-size:1.08em;
                 }
 
                 .kk-body {
-                    margin-top: .9em;
-                    padding: 1.15em 1.4em 0;
-                    border-radius: 1.2em 1.2em 0 0;
+                    margin-top:0;
+                    padding:1.35em 1.6em 0;
+                    border-radius:0;
                 }
 
                 .kk-section {
-                    margin: 0;
-                    padding: 1.1em 1.4em 0;
+                    margin:0;
+                    padding:1.2em 1.6em 0;
                 }
 
                 .kk-section--last,
                 .kk-similar {
-                    border-radius: 0 0 1.2em 1.2em;
+                    border-radius:0 0 1.4em 1.4em;
                 }
 
                 .kk-cast-list {
-                    gap: 1em;
+                    gap:1em;
                 }
 
                 .kk-similar-list .kk-card {
-                    width: 9em;
+                    width:9.4em;
                 }
             }
 
             @media(max-width:768px){
-                .kk-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8em }
+                .kk-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.85em }
             }
         </style>`);
     }
@@ -1265,29 +1239,6 @@
 
                 var titleHtml = logoH ? '' : '<div class="kk-title">' + escapeHtml(t) + '</div>';
 
-                var inlineEpisodesHtml = '';
-
-                if (episodes && episodes.length && ttype === 'tv') {
-                    var firstServer = episodes.find(function (sv) {
-                        return sv && sv.server_data && sv.server_data.length;
-                    });
-
-                    if (firstServer) {
-                        var previewEpisodes = firstServer.server_data.slice(0, 6);
-
-                        inlineEpisodesHtml = '<div class="kk-inline-eps">';
-                        previewEpisodes.forEach(function (ep, idx) {
-                            inlineEpisodesHtml += '<div class="kk-inline-ep selector" data-ep-index="' + idx + '">' + escapeHtml(ep.name || ('Tập ' + (idx + 1))) + '</div>';
-                        });
-
-                        if (firstServer.server_data.length > 6) {
-                            inlineEpisodesHtml += '<div class="kk-inline-more">+' + (firstServer.server_data.length - 6) + ' tập</div>';
-                        }
-
-                        inlineEpisodesHtml += '</div>';
-                    }
-                }
-
                 var hero = $('<div class="kk-hero">\
                     <div class="kk-hero-bg">\
                         <img src="' + bk + '">\
@@ -1317,7 +1268,6 @@
                     <div class="kk-desc">' + formatText(d) + '</div>\
                     <div class="kk-actions">\
                         <div class="kk-play-wrap"><div class="kk-play selector">▶ Xem phim</div></div>\
-                        ' + inlineEpisodesHtml + '\
                     </div>\
                 </div>');
 
@@ -1326,23 +1276,6 @@
                     if (first) playEp(first);
                     else Lampa.Noty.show('Không tìm thấy tập phim');
                 });
-
-                if (episodes && episodes.length && ttype === 'tv') {
-                    var firstServerInline = episodes.find(function (sv) {
-                        return sv && sv.server_data && sv.server_data.length;
-                    });
-
-                    if (firstServerInline) {
-                        body.find('.kk-inline-ep').each(function () {
-                            var btn = $(this);
-                            bindEnter(btn, function () {
-                                var idx = parseInt(btn.attr('data-ep-index'), 10);
-                                var ep = firstServerInline.server_data[idx];
-                                if (ep) playEp(ep);
-                            });
-                        });
-                    }
-                }
 
                 body.find('.kk-genre[data-slug]').each(function () {
                     var g = $(this);
@@ -1362,8 +1295,10 @@
                     });
                 });
 
-                scroll.append(hero);
-                scroll.append(body);
+                var detailWrap = $('<div class="kk-detail-wrap"></div>');
+                detailWrap.append(hero);
+                detailWrap.append(body);
+                scroll.append(detailWrap);
 
                 if (directorH) {
                     scroll.append($('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
