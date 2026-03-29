@@ -22,10 +22,7 @@
         return String(str).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
     }
 
-    function toLampaCard(item) {
-        var poster = getImageUrl(item.poster_url || item.thumb_url);
-        var backdrop = getImageUrl(item.thumb_url || item.poster_url);
-
+    function convertToLampaCard(item) {
         return {
             id: item._id || item.slug || Lampa.Utils.uid(),
             title: item.name || '',
@@ -33,12 +30,12 @@
             original_title: item.origin_name || '',
             original_name: item.origin_name || '',
             overview: clearHtml(item.content || item.description || ''),
-            img: poster,
-            poster_path: poster,
-            poster: poster,
-            backdrop_path: backdrop,
+            img: getImageUrl(item.poster_url || item.thumb_url),
+            poster_path: getImageUrl(item.poster_url || item.thumb_url),
+            backdrop_path: getImageUrl(item.thumb_url || item.poster_url),
             release_date: item.year ? item.year + '-01-01' : '',
             vote_average: 0,
+            year: item.year || '',
             slug: item.slug || '',
             quality: item.quality || 'HD',
             lang: item.lang || 'Vietsub',
@@ -48,8 +45,7 @@
             country: item.country || [],
             category: item.category || [],
             media_type: 'movie',
-            kkphim: true,
-            kkphim_data: item
+            kkphim: true
         };
     }
 
@@ -65,12 +61,46 @@
         }
     }
 
-    // ==========================================
-    //  MAIN
-    // ==========================================
+    // Tạo card element giống Lampa mặc định
+    function createCardElement(movie, onEnter, onFocus) {
+        var card = $('<div class="card selector card--small"><div class="card__view"><img class="card__img" /><div class="card__prg"></div></div><div class="card__title">' + (movie.title || '') + '</div><div class="card__age">' + (movie.year || '') + '</div></div>');
+
+        var img = card.find('.card__img');
+
+        img.on('error', function () {
+            img.attr('src', './img/img_broken.svg');
+        });
+
+        // Load ảnh
+        if (movie.img || movie.poster_path) {
+            img.attr('src', movie.img || movie.poster_path);
+        } else {
+            img.attr('src', './img/img_broken.svg');
+        }
+
+        // Thêm badge quality
+        card.find('.card__view').append('<div class="card__quality" style="position:absolute;top:5px;left:5px;background:#e50914;color:#fff;font-size:0.7em;padding:2px 6px;border-radius:4px;font-weight:700;z-index:2;">' + (movie.quality || 'HD') + '</div>');
+
+        if (movie.episode_current) {
+            card.find('.card__view').append('<div style="position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,0.75);color:#fff;font-size:0.65em;padding:2px 6px;border-radius:4px;z-index:2;">' + movie.episode_current + '</div>');
+        }
+
+        card.on('hover:enter', function () {
+            if (onEnter) onEnter();
+        });
+
+        card.on('hover:focus', function () {
+            if (onFocus) onFocus(card[0]);
+        });
+
+        return card;
+    }
+
+    // ========================
+    //  MAIN - Trang chủ
+    // ========================
     function KKMain(object) {
-        var comp = new Lampa.InteractionCategory(object);
-        var scroll = comp.scroll;
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var last;
 
         var cats = [
@@ -81,12 +111,32 @@
             { title: 'TV Shows', url: 'tv-shows' }
         ];
 
-        comp.create = function () {
+        this.create = function () {
             var _this = this;
-            this.activity.loader(true);
+
+            // Header tìm kiếm
+            var header = $('<div class="selector" style="padding:15px 20px;margin-bottom:5px;font-size:1.1em;color:rgba(255,255,255,0.7);">🔍 Tìm kiếm phim KKPhim...</div>');
+            header.on('hover:enter', function () {
+                Lampa.Input.edit({ title: 'Tìm kiếm phim', value: '', free: true }, function (val) {
+                    if (!val) return;
+                    Lampa.Activity.push({
+                        url: val,
+                        title: 'Tìm: ' + val,
+                        component: 'kkphim_search',
+                        search: val,
+                        page: 1
+                    });
+                });
+            });
+            header.on('hover:focus', function () {
+                last = header[0];
+                scroll.update(header, true);
+            });
+            scroll.append(header);
+
+            _this.activity.loader(true);
 
             var loaded = 0;
-            var total = cats.length;
 
             cats.forEach(function (cat) {
                 network.silent(getApiUrl(cat.url, 1), function (response) {
@@ -94,17 +144,17 @@
                     var list = (data.items || []).slice(0, 12);
 
                     if (list.length) {
-                        buildLine(cat, list.map(toLampaCard));
+                        _this.buildLine(cat, list.map(convertToLampaCard));
                     }
 
                     loaded++;
-                    if (loaded >= total) {
+                    if (loaded >= cats.length) {
                         _this.activity.loader(false);
                         _this.activity.toggle();
                     }
                 }, function () {
                     loaded++;
-                    if (loaded >= total) {
+                    if (loaded >= cats.length) {
                         _this.activity.loader(false);
                         _this.activity.toggle();
                     }
@@ -112,12 +162,15 @@
             });
         };
 
-        function buildLine(cat, movies) {
-            var line_render = $('<div></div>');
-            var line_head = $('<div class="items-line__head"><div class="items-line__title">' + cat.title + '</div></div>');
-            var line_body = $('<div class="items-line__body"></div>');
+        this.buildLine = function (cat, movies) {
+            var _this = this;
 
+            var line = $('<div class="items-line"></div>');
+            var head = $('<div class="items-line__head"></div>');
+            var title = $('<div class="items-line__title">' + cat.title + '</div>');
             var more = $('<div class="items-line__more selector">Tất cả</div>');
+            var body = $('<div class="items-line__body"></div>');
+
             more.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: cat.url,
@@ -126,34 +179,18 @@
                     page: 1
                 });
             });
-            line_head.append(more);
+            more.on('hover:focus', function () {
+                last = more[0];
+                scroll.update(more, true);
+            });
 
-            line_render.append(line_head);
-            line_render.append(line_body);
+            head.append(title);
+            head.append(more);
+            line.append(head);
+            line.append(body);
 
             movies.forEach(function (movie) {
-                var item = Lampa.Template.get('card', {
-                    title: movie.title,
-                    release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
-                });
-
-                var img = item.find('.card__img')[0] || item.find('img')[0];
-                if (img) {
-                    if (img.tagName === 'IMG') {
-                        img.src = movie.poster_path || '';
-                    } else {
-                        $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
-                    }
-                }
-
-                item.addClass('selector');
-
-                item.on('hover:focus', function () {
-                    last = item[0];
-                    scroll.update(item, true);
-                });
-
-                item.on('hover:enter', function () {
+                var card = createCardElement(movie, function () {
                     Lampa.Activity.push({
                         url: '',
                         title: movie.title,
@@ -161,15 +198,19 @@
                         card: movie,
                         page: 1
                     });
+                }, function (target) {
+                    last = target;
+                    scroll.update(line, true);
                 });
 
-                line_body.append(item);
+                body.append(card);
             });
 
-            scroll.append(line_render);
-        }
+            scroll.append(line);
+        };
 
-        comp.start = function () {
+        this.start = function () {
+            var _this = this;
             if (Lampa.Activity.active().activity !== this.activity) return;
 
             Lampa.Controller.add('content', {
@@ -199,16 +240,22 @@
             Lampa.Controller.toggle('content');
         };
 
-        return comp;
+        this.pause = function () { };
+        this.stop = function () { };
+        this.render = function () { return scroll.render(); };
+        this.destroy = function () {
+            network.clear();
+            scroll.destroy();
+        };
     }
 
-    // ==========================================
+    // ========================
     //  CATEGORY
-    // ==========================================
+    // ========================
     function KKCategory(object) {
-        var comp = new Lampa.InteractionCategory(object);
-        var scroll = comp.scroll;
-        var body = $('<div class="category-full"></div>');
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
+        var body = $('<div class="category-full"><div class="category-full__body"></div></div>');
+        var container = body.find('.category-full__body');
         var page = 1;
         var total_pages = 1;
         var loading = false;
@@ -216,51 +263,36 @@
 
         scroll.append(body);
 
-        comp.create = function () {
-            loadPage();
+        this.create = function () {
+            this.load();
         };
 
-        function loadPage() {
+        this.load = function () {
+            var _this = this;
             if (loading) return;
             loading = true;
 
-            comp.activity.loader(true);
+            _this.activity.loader(true);
 
             network.clear();
             network.timeout(15000);
             network.silent(getApiUrl(object.url || 'new', page), function (response) {
                 loading = false;
-                comp.activity.loader(false);
+                _this.activity.loader(false);
 
                 var data = response.data || response || {};
                 var list = data.items || [];
                 total_pages = (data.params && data.params.pagination && data.params.pagination.totalPages) || 1;
 
+                if (!list.length && page === 1) {
+                    scroll.append($('<div class="empty"><div class="empty__title">Không có dữ liệu</div></div>'));
+                    _this.activity.toggle();
+                    return;
+                }
+
                 list.forEach(function (item) {
-                    var movie = toLampaCard(item);
-
-                    var card = Lampa.Template.get('card', {
-                        title: movie.title,
-                        release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
-                    });
-
-                    var img = card.find('.card__img')[0] || card.find('img')[0];
-                    if (img) {
-                        if (img.tagName === 'IMG') {
-                            img.src = movie.poster_path || '';
-                        } else {
-                            $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
-                        }
-                    }
-
-                    card.addClass('selector');
-
-                    card.on('hover:focus', function () {
-                        last = card[0];
-                        scroll.update(card, true);
-                    });
-
-                    card.on('hover:enter', function () {
+                    var movie = convertToLampaCard(item);
+                    var card = createCardElement(movie, function () {
                         Lampa.Activity.push({
                             url: '',
                             title: movie.title,
@@ -268,30 +300,37 @@
                             card: movie,
                             page: 1
                         });
+                    }, function (target) {
+                        last = target;
+                        scroll.update($(target), true);
                     });
 
-                    body.append(card);
+                    container.append(card);
                 });
 
                 if (page < total_pages) {
-                    var more = $('<div class="selector card-more"><div class="card-more__box"><div class="card-more__title">Tải thêm</div></div></div>');
+                    var more = $('<div class="selector" style="width:100%;text-align:center;padding:20px;color:rgba(255,255,255,0.6);">Tải thêm trang ' + (page + 1) + '</div>');
                     more.on('hover:enter', function () {
                         more.remove();
                         page++;
-                        loadPage();
+                        _this.load();
                     });
-                    body.append(more);
+                    more.on('hover:focus', function () {
+                        last = more[0];
+                        scroll.update(more, true);
+                    });
+                    container.append(more);
                 }
 
-                comp.activity.toggle();
+                _this.activity.toggle();
             }, function () {
                 loading = false;
-                comp.activity.loader(false);
-                comp.activity.toggle();
+                _this.activity.loader(false);
+                _this.activity.toggle();
             });
-        }
+        };
 
-        comp.start = function () {
+        this.start = function () {
             if (Lampa.Activity.active().activity !== this.activity) return;
 
             Lampa.Controller.add('content', {
@@ -315,19 +354,113 @@
             Lampa.Controller.toggle('content');
         };
 
-        return comp;
+        this.pause = function () { };
+        this.stop = function () { };
+        this.render = function () { return scroll.render(); };
+        this.destroy = function () {
+            network.clear();
+            scroll.destroy();
+        };
     }
 
-    // ==========================================
+    // ========================
+    //  SEARCH
+    // ========================
+    function KKSearch(object) {
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
+        var body = $('<div class="category-full"><div class="category-full__body"></div></div>');
+        var container = body.find('.category-full__body');
+        var keyword = object.search || '';
+        var last;
+
+        scroll.append(body);
+
+        this.create = function () {
+            var _this = this;
+            _this.activity.loader(true);
+
+            network.clear();
+            network.timeout(15000);
+            network.silent(CONFIG.api_url + '/tim-kiem?keyword=' + encodeURIComponent(keyword), function (response) {
+                _this.activity.loader(false);
+
+                var data = response.data || response || {};
+                var list = data.items || [];
+
+                if (!list.length) {
+                    scroll.append($('<div class="empty"><div class="empty__title">Không tìm thấy: ' + keyword + '</div></div>'));
+                    _this.activity.toggle();
+                    return;
+                }
+
+                list.forEach(function (item) {
+                    var movie = convertToLampaCard(item);
+                    var card = createCardElement(movie, function () {
+                        Lampa.Activity.push({
+                            url: '',
+                            title: movie.title,
+                            component: 'kkphim_full',
+                            card: movie,
+                            page: 1
+                        });
+                    }, function (target) {
+                        last = target;
+                        scroll.update($(target), true);
+                    });
+
+                    container.append(card);
+                });
+
+                _this.activity.toggle();
+            }, function () {
+                _this.activity.loader(false);
+                scroll.append($('<div class="empty"><div class="empty__title">Lỗi tìm kiếm</div></div>'));
+                _this.activity.toggle();
+            });
+        };
+
+        this.start = function () {
+            if (Lampa.Activity.active().activity !== this.activity) return;
+
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(last, scroll.render());
+                },
+                left: function () {
+                    if (Navigator.canMove('left')) Navigator.move('left');
+                    else Lampa.Controller.toggle('menu');
+                },
+                right: function () { Navigator.move('right'); },
+                up: function () {
+                    if (Navigator.canMove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function () { Navigator.move('down'); },
+                back: function () { Lampa.Activity.backward(); }
+            });
+
+            Lampa.Controller.toggle('content');
+        };
+
+        this.pause = function () { };
+        this.stop = function () { };
+        this.render = function () { return scroll.render(); };
+        this.destroy = function () {
+            network.clear();
+            scroll.destroy();
+        };
+    }
+
+    // ========================
     //  FULL / DETAIL
-    // ==========================================
+    // ========================
     function KKFull(object) {
-        var comp = new Lampa.InteractionCategory(object);
-        var scroll = comp.scroll;
+        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
         var card = object.card;
         var last;
 
-        comp.create = function () {
+        this.create = function () {
             var _this = this;
             _this.activity.loader(true);
 
@@ -342,55 +475,54 @@
                     return;
                 }
 
-                buildDetail(response);
+                _this.build(response);
                 _this.activity.toggle();
             }, function () {
                 _this.activity.loader(false);
-                scroll.append($('<div class="empty"><div class="empty__title">Lỗi tải dữ liệu</div></div>'));
+                scroll.append($('<div class="empty"><div class="empty__title">Lỗi tải phim</div></div>'));
                 _this.activity.toggle();
             });
         };
 
-        function buildDetail(data) {
+        this.build = function (data) {
+            var _this = this;
             var movie = data.movie;
             var episodes = data.episodes || [];
 
             var poster = getImageUrl(movie.poster_url || movie.thumb_url);
             var backdrop = getImageUrl(movie.thumb_url || movie.poster_url);
 
-            // Info
-            var info = $('<div class="full-start"></div>');
+            // Info section
+            var info = $('<div style="padding:20px;"></div>');
 
-            info.append('<div class="full-start__background" style="background-image:url(' + backdrop + ')"></div>');
+            // Backdrop
+            info.append('<div style="width:100%;height:200px;border-radius:12px;overflow:hidden;margin-bottom:15px;background:#222;"><img src="' + backdrop + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'"/></div>');
 
-            var body_info = $('<div class="full-start__body"></div>');
+            // Title
+            info.append('<div style="font-size:1.6em;font-weight:700;color:#fff;margin-bottom:5px;">' + (movie.name || '') + '</div>');
+            info.append('<div style="font-size:1em;color:rgba(255,255,255,0.6);margin-bottom:12px;">' + (movie.origin_name || '') + '</div>');
 
-            body_info.append('<div class="full-start__poster"><img src="' + poster + '" /></div>');
+            // Meta tags
+            var meta = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+            meta += '<span style="padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.12);font-size:0.85em;">' + (movie.year || 'N/A') + '</span>';
+            meta += '<span style="padding:4px 10px;border-radius:20px;background:#e50914;font-size:0.85em;font-weight:700;">' + (movie.quality || 'HD') + '</span>';
+            meta += '<span style="padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.12);font-size:0.85em;">' + (movie.lang || 'Vietsub') + '</span>';
+            if (movie.time) meta += '<span style="padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.12);font-size:0.85em;">' + movie.time + '</span>';
+            meta += '</div>';
+            info.append(meta);
 
-            var right = $('<div class="full-start__right"></div>');
-            right.append('<div class="full-start__name">' + (movie.name || '') + '</div>');
-            right.append('<div class="full-start__tagline">' + (movie.origin_name || '') + '</div>');
+            // Extra info
+            var extra = '<div style="font-size:0.9em;line-height:1.7;color:rgba(255,255,255,0.8);margin-bottom:12px;">';
+            extra += '<div><b>Trạng thái:</b> ' + (movie.episode_current || 'Full') + '</div>';
+            extra += '<div><b>Tổng tập:</b> ' + (movie.episode_total || 'N/A') + '</div>';
+            extra += '<div><b>Quốc gia:</b> ' + ((movie.country || []).map(function (c) { return c.name; }).join(', ') || 'N/A') + '</div>';
+            extra += '<div><b>Thể loại:</b> ' + ((movie.category || []).map(function (c) { return c.name; }).join(', ') || 'N/A') + '</div>';
+            extra += '</div>';
+            info.append(extra);
 
-            var tags = $('<div class="full-start__tags"></div>');
-            if (movie.year) tags.append('<div class="full-start__tag"><img src="./img/icon_star.svg" /><span>' + movie.year + '</span></div>');
-            if (movie.quality) tags.append('<div class="full-start__tag"><span>' + movie.quality + '</span></div>');
-            if (movie.lang) tags.append('<div class="full-start__tag"><span>' + movie.lang + '</span></div>');
-            if (movie.time) tags.append('<div class="full-start__tag"><span>' + movie.time + '</span></div>');
-            right.append(tags);
+            // Description
+            info.append('<div style="font-size:0.9em;line-height:1.6;color:rgba(255,255,255,0.65);margin-bottom:15px;">' + clearHtml(movie.content || 'Không có mô tả') + '</div>');
 
-            var countries = (movie.country || []).map(function (c) { return c.name; }).join(', ');
-            var genres = (movie.category || []).map(function (c) { return c.name; }).join(', ');
-
-            if (countries) right.append('<div class="full-start__details"><span>Quốc gia: ' + countries + '</span></div>');
-            if (genres) right.append('<div class="full-start__details"><span>Thể loại: ' + genres + '</span></div>');
-
-            right.append('<div class="full-start__details"><span>Trạng thái: ' + (movie.episode_current || 'Full') + '</span></div>');
-
-            var desc = clearHtml(movie.content || '');
-            if (desc) right.append('<div class="full-start__text">' + desc + '</div>');
-
-            body_info.append(right);
-            info.append(body_info);
             scroll.append(info);
 
             // Episodes
@@ -399,18 +531,13 @@
                     var serverData = server.server_data || [];
                     if (!serverData.length) return;
 
-                    var section = $('<div></div>');
-                    section.append('<div class="items-line__head"><div class="items-line__title">' + (server.server_name || ('Server ' + (sIdx + 1))) + ' (' + serverData.length + ' tập)</div></div>');
+                    var section = $('<div style="padding:0 20px 20px;"></div>');
+                    section.append('<div style="font-size:1.1em;font-weight:600;color:#fff;margin-bottom:10px;">' + (server.server_name || ('Server ' + (sIdx + 1))) + ' (' + serverData.length + ' tập)</div>');
 
-                    var epList = $('<div class="items-line__body" style="flex-wrap:wrap;"></div>');
+                    var list = $('<div style="display:flex;flex-wrap:wrap;gap:8px;"></div>');
 
                     serverData.forEach(function (ep, i) {
-                        var btn = $('<div class="selector tag-item" style="padding:10px 18px;margin:4px;">' + (ep.name || ('Tập ' + (i + 1))) + '</div>');
-
-                        btn.on('hover:focus', function () {
-                            last = btn[0];
-                            scroll.update(btn, true);
-                        });
+                        var btn = $('<div class="selector" style="padding:8px 16px;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;font-size:0.9em;">' + (ep.name || ('Tập ' + (i + 1))) + '</div>');
 
                         btn.on('hover:enter', function () {
                             var url = ep.link_m3u8 || ep.link_embed;
@@ -435,16 +562,23 @@
                             if (Lampa.Player.playlist) Lampa.Player.playlist(playlist);
                         });
 
-                        epList.append(btn);
+                        btn.on('hover:focus', function () {
+                            last = btn[0];
+                            scroll.update(btn, true);
+                        });
+
+                        list.append(btn);
                     });
 
-                    section.append(epList);
+                    section.append(list);
                     scroll.append(section);
                 });
+            } else {
+                scroll.append($('<div class="empty"><div class="empty__title">Phim chưa có tập</div></div>'));
             }
-        }
+        };
 
-        comp.start = function () {
+        this.start = function () {
             if (Lampa.Activity.active().activity !== this.activity) return;
 
             Lampa.Controller.add('content', {
@@ -468,123 +602,24 @@
             Lampa.Controller.toggle('content');
         };
 
-        return comp;
-    }
-
-    // ==========================================
-    //  SEARCH
-    // ==========================================
-    function KKSearch(object) {
-        var comp = new Lampa.InteractionCategory(object);
-        var scroll = comp.scroll;
-        var body = $('<div class="category-full"></div>');
-        var keyword = object.search || '';
-        var last;
-
-        scroll.append(body);
-
-        comp.create = function () {
-            var _this = this;
-            _this.activity.loader(true);
-
+        this.pause = function () { };
+        this.stop = function () { };
+        this.render = function () { return scroll.render(); };
+        this.destroy = function () {
             network.clear();
-            network.timeout(15000);
-            network.silent(CONFIG.api_url + '/tim-kiem?keyword=' + encodeURIComponent(keyword), function (response) {
-                _this.activity.loader(false);
-
-                var data = response.data || response || {};
-                var list = data.items || [];
-
-                if (!list.length) {
-                    body.append('<div class="empty"><div class="empty__title">Không tìm thấy: ' + keyword + '</div></div>');
-                    _this.activity.toggle();
-                    return;
-                }
-
-                list.forEach(function (item) {
-                    var movie = toLampaCard(item);
-
-                    var card_el = Lampa.Template.get('card', {
-                        title: movie.title,
-                        release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
-                    });
-
-                    var img = card_el.find('.card__img')[0] || card_el.find('img')[0];
-                    if (img) {
-                        if (img.tagName === 'IMG') {
-                            img.src = movie.poster_path || '';
-                        } else {
-                            $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
-                        }
-                    }
-
-                    card_el.addClass('selector');
-
-                    card_el.on('hover:focus', function () {
-                        last = card_el[0];
-                        scroll.update(card_el, true);
-                    });
-
-                    card_el.on('hover:enter', function () {
-                        Lampa.Activity.push({
-                            url: '',
-                            title: movie.title,
-                            component: 'kkphim_full',
-                            card: movie,
-                            page: 1
-                        });
-                    });
-
-                    body.append(card_el);
-                });
-
-                _this.activity.toggle();
-            }, function () {
-                _this.activity.loader(false);
-                body.append('<div class="empty"><div class="empty__title">Lỗi tìm kiếm</div></div>');
-                _this.activity.toggle();
-            });
+            scroll.destroy();
         };
-
-        comp.start = function () {
-            if (Lampa.Activity.active().activity !== this.activity) return;
-
-            Lampa.Controller.add('content', {
-                toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render());
-                    Lampa.Controller.collectionFocus(last, scroll.render());
-                },
-                left: function () {
-                    if (Navigator.canMove('left')) Navigator.move('left');
-                    else Lampa.Controller.toggle('menu');
-                },
-                right: function () { Navigator.move('right'); },
-                up: function () {
-                    if (Navigator.canMove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
-                },
-                down: function () { Navigator.move('down'); },
-                back: function () { Lampa.Activity.backward(); }
-            });
-
-            Lampa.Controller.toggle('content');
-        };
-
-        return comp;
     }
 
-    // ==========================================
-    //  MENU
-    // ==========================================
+    // ========================
+    //  REGISTER
+    // ========================
     function addMenu() {
         var wait = function () {
             if (!$('.menu__list').length) return setTimeout(wait, 500);
             if ($('[data-action="kkphim"]').length) return;
 
-            var item = $('<li class="menu__item selector" data-action="kkphim">'
-                + '<div class="menu__ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm2 2v10h12V7H6z"/></svg></div>'
-                + '<div class="menu__text">KKPhim</div>'
-                + '</li>');
+            var item = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm1 2v10h14V7H5zm2 2h3v3H7V9zm4 0h6v1h-6V9zm0 2h6v1h-6v-1zm-4 3h10v1H7v-1z"/></svg></div><div class="menu__text">KKPhim</div></li>');
 
             item.on('hover:enter', function () {
                 Lampa.Activity.push({
@@ -601,9 +636,6 @@
         wait();
     }
 
-    // ==========================================
-    //  INIT
-    // ==========================================
     function init() {
         if (!window.Lampa || !Lampa.Component) return setTimeout(init, 300);
 
@@ -621,6 +653,8 @@
             }
             setTimeout(addMenu, 2500);
         }
+
+        console.log('KKPhim: Plugin initialized');
     }
 
     if (document.readyState === 'complete') init();
