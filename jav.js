@@ -459,16 +459,18 @@
 
             .kk-cast-card {
                 flex: 0 0 auto;
-                width: 7.8em;
+                width: 6.8em;
+                text-align: center;
             }
 
             .kk-cast-img {
-                width: 100%;
-                aspect-ratio: 2/3;
-                border-radius: 1em;
+                width: 6.2em;
+                height: 6.2em;
+                border-radius: 50%;
                 overflow: hidden;
                 background: #2b2b2b;
-                margin-bottom: .55em;
+                margin: 0 auto .6em;
+                border: 2px solid rgba(255,255,255,.08);
             }
 
             .kk-cast-img img {
@@ -482,6 +484,7 @@
                 width: 100%;
                 height: 100%;
                 background: #333;
+                border-radius: 50%;
             }
 
             .kk-cast-name {
@@ -522,7 +525,76 @@
             }
 
             @media(orientation:landscape){
-                .kk-hero-poster { display:none; }
+                .kk-hero {
+                    border-radius: 1.4em 1.4em 0 0;
+                }
+
+                .kk-hero-bg {
+                    height: 25em;
+                }
+
+                .kk-hero-bottom {
+                    padding: 1.4em 1.4em 1.2em;
+                }
+
+                .kk-hero-flex {
+                    display: flex;
+                    align-items: flex-end;
+                    gap: 1.2em;
+                }
+
+                .kk-hero-poster {
+                    display: block;
+                    width: 9em;
+                    min-width: 9em;
+                }
+
+                .kk-hero-poster img {
+                    width: 100%;
+                    aspect-ratio: 2/3;
+                    object-fit: cover;
+                    border-radius: 1em;
+                    display: block;
+                    background: #242424;
+                    box-shadow: 0 .8em 1.8em rgba(0,0,0,.38);
+                }
+
+                .kk-hero-info {
+                    flex: 1;
+                    min-width: 0;
+                    padding-bottom: .2em;
+                }
+
+                .kk-logo {
+                    max-width: 26em;
+                    margin-bottom: .9em;
+                }
+
+                .kk-logo img {
+                    max-height: 8em;
+                }
+
+                .kk-title {
+                    font-size: 1.95em;
+                }
+
+                .kk-origin {
+                    font-size: .96em;
+                }
+
+                .kk-body {
+                    margin-top: -1em;
+                    padding: 1.15em 1.4em 0;
+                    border-radius: 1.2em 1.2em 0 0;
+                }
+
+                .kk-block {
+                    padding: 0 1.4em;
+                }
+
+                .kk-cast-list {
+                    gap: 1em;
+                }
             }
 
             @media(max-width:768px){
@@ -928,6 +1000,7 @@
                     </div>\
                     <div class="kk-hero-bottom">\
                         <div class="kk-hero-flex">\
+                            <div class="kk-hero-poster"><img src="' + ps + '"></div>\
                             <div class="kk-hero-info">\
                                 ' + logoH + '\
                                 ' + titleHtml + '\
