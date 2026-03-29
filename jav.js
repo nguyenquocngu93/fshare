@@ -51,21 +51,10 @@
         return vi || en || images.logos[0] || null;
     }
 
-    function slugify(str) {
-        return (str || '')
-            .toString()
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/đ/g, 'd')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-    }
-
     function enableGlobalMobileTouch() {
         $('body, .activity, .activity__body, .activity__content, .scroll, .scroll__body').css({
             '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'pan-y'
+            'touch-action': 'auto'
         });
     }
 
@@ -74,19 +63,17 @@
             'overflow-y': 'auto',
             'overflow-x': 'hidden',
             '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'pan-y',
-            'min-height': '100vh',
-            'padding-bottom': '10.5em',
+            'touch-action': 'auto',
+            'padding-bottom': '12em',
             'box-sizing': 'border-box'
         });
 
-        el[0].style.setProperty('overflow-y', 'auto', 'important');
-        el[0].style.setProperty('touch-action', 'pan-y', 'important');
-        el[0].style.setProperty('padding-bottom', '10.5em', 'important');
-
-        el.off('touchstart touchmove').on('touchstart touchmove', function (e) {
-            e.stopPropagation();
-        });
+        if (el[0]) {
+            el[0].style.setProperty('overflow-y', 'auto', 'important');
+            el[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+            el[0].style.setProperty('touch-action', 'auto', 'important');
+            el[0].style.setProperty('padding-bottom', '12em', 'important');
+        }
     }
 
     function injectStyle() {
@@ -96,14 +83,14 @@
         <style id="kkphim-style">
             .kkphim-page,
             .kkphim-detail-page {
-                min-height: 100vh;
+                min-height: 100%;
                 background: #141414;
                 color: #fff;
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
                 -webkit-overflow-scrolling: touch !important;
-                touch-action: pan-y !important;
-                padding-bottom: 10.5em;
+                touch-action: auto !important;
+                padding-bottom: 12em;
                 box-sizing: border-box;
             }
 
@@ -321,13 +308,13 @@
             }
 
             .kkphim-detail-logo {
-                max-width: 18em;
+                max-width: 20em;
                 margin-bottom: 1em;
             }
 
             .kkphim-detail-logo img {
                 max-width: 100%;
-                max-height: 6em;
+                max-height: 6.2em;
                 object-fit: contain;
                 display: block;
                 filter: drop-shadow(0 0.3em 1em rgba(0,0,0,0.4));
@@ -521,46 +508,85 @@
                 background: #ff2a38;
             }
 
-            @media (max-width: 768px) {
-                .kkphim-grid {
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
-                    gap: 0.85em;
-                }
-
+            /* PORTRAIT: ẩn poster, ưu tiên backdrop + logo + title lớn */
+            @media (orientation: portrait) {
                 .kkphim-detail-top {
-                    min-height: 34em;
+                    min-height: 32em;
                 }
 
                 .kkphim-detail-backdrop {
-                    height: 28em;
+                    height: 30em;
+                }
+
+                .kkphim-detail-backdrop img {
+                    transform: scale(1.08);
+                    filter: blur(1.5px);
+                }
+
+                .kkphim-detail-backdrop-mask {
+                    background:
+                        linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 36%, rgba(20,20,20,0.94) 82%, rgba(20,20,20,1) 100%);
                 }
 
                 .kkphim-detail-inner {
-                    gap: 1em;
-                    padding: 4.8em 1em 1.2em;
+                    display: block;
+                    padding: 6.2em 1.1em 1.5em;
                 }
 
                 .kkphim-detail-poster {
-                    width: 8.8em;
-                    min-width: 8.8em;
+                    display: none;
+                }
+
+                .kkphim-detail-logo {
+                    max-width: 16em;
+                    margin-bottom: 1em;
+                }
+
+                .kkphim-detail-logo img {
+                    max-height: 5em;
                 }
 
                 .kkphim-detail-title {
-                    font-size: 1.95em;
+                    font-size: 2.5em;
+                    line-height: 1.05;
+                    margin-bottom: 0.18em;
                 }
 
                 .kkphim-detail-origin {
-                    font-size: 1.03em;
+                    font-size: 1.15em;
+                }
+
+                .kkphim-detail-meta {
+                    gap: 0.5em;
+                }
+
+                .kkphim-meta {
+                    font-size: 0.96em;
                 }
 
                 .kkphim-detail-desc {
-                    font-size: 1.05em;
+                    font-size: 1.08em;
                     line-height: 1.65;
+                    max-width: none;
                 }
 
                 .kkphim-watch {
                     width: 100%;
-                    font-size: 1.08em;
+                    font-size: 1.12em;
+                }
+            }
+
+            /* LANDSCAPE / màn hình ngang: hiện poster */
+            @media (orientation: landscape) {
+                .kkphim-detail-poster {
+                    display: block;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .kkphim-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 0.85em;
                 }
 
                 .kkphim-section-title {
@@ -666,7 +692,8 @@
                         title: cat.name,
                         component: 'kkphim_category',
                         cat: cat,
-                        page: 1
+                        page_num: 1,
+                        mode: 'api'
                     });
                 });
 
@@ -729,6 +756,7 @@
             var html = $('<div class="kkphim-page"><div class="kkphim-page-scroll"></div></div>');
             var body = html.find('.kkphim-page-scroll');
             var comp = this;
+
             var page = object.page_num || 1;
             var title = object.title || (object.cat && object.cat.name) || 'Danh mục';
             var mode = object.mode || 'api';
@@ -756,12 +784,34 @@
                 return html;
             };
 
+            function handleCategoryResponse(res) {
+                var items = [];
+                if (res && res.items) items = res.items;
+                else if (res && res.data && res.data.items) items = res.data.items;
+
+                if (!items.length) {
+                    hasMore = false;
+                    loadMore.text('Hết dữ liệu');
+                    comp.activity.loader(false);
+                    loading = false;
+                    return;
+                }
+
+                items.forEach(function (item) {
+                    grid.append(createCard(item));
+                });
+
+                page++;
+                loading = false;
+                loadMore.text('Tải thêm');
+                comp.activity.loader(false);
+            }
+
             function loadPage() {
                 loading = true;
                 loadMore.text('Đang tải...');
 
                 var url = '';
-
                 if (mode === 'category' && categorySlug) {
                     url = API + 'v1/api/the-loai/' + categorySlug + '?page=' + page;
                 } else {
@@ -769,30 +819,25 @@
                 }
 
                 network.silent(url, function (res) {
-                    var items = [];
-                    if (res && res.items) items = res.items;
-                    else if (res && res.data && res.data.items) items = res.data.items;
-
-                    if (!items.length) {
-                        hasMore = false;
-                        loadMore.text('Hết dữ liệu');
-                        comp.activity.loader(false);
-                        return;
-                    }
-
-                    items.forEach(function (item) {
-                        grid.append(createCard(item));
-                    });
-
-                    page++;
-                    loading = false;
-                    loadMore.text('Tải thêm');
-                    comp.activity.loader(false);
+                    handleCategoryResponse(res);
                 }, function () {
-                    loading = false;
-                    loadMore.text('Tải lại');
-                    comp.activity.loader(false);
-                    Lampa.Noty.show('Lỗi tải danh mục');
+                    if (mode === 'category' && categorySlug) {
+                        var url2 = API + 'the-loai/' + categorySlug + '?page=' + page;
+
+                        network.silent(url2, function (res2) {
+                            handleCategoryResponse(res2);
+                        }, function () {
+                            loading = false;
+                            loadMore.text('Tải lại');
+                            comp.activity.loader(false);
+                            Lampa.Noty.show('Lỗi tải danh mục');
+                        });
+                    } else {
+                        loading = false;
+                        loadMore.text('Tải lại');
+                        comp.activity.loader(false);
+                        Lampa.Noty.show('Lỗi tải danh mục');
+                    }
                 });
             }
 
@@ -968,33 +1013,21 @@
                             directorText = directors.slice(0, 5).join(', ');
                         }
                     }
-
-                    if (tmdb.genres && tmdb.genres.length) {
-                        genresHtml = tmdb.genres.map(function (g) {
-                            var matched = phimApiGenres.find(function (pg) {
-                                return slugify(pg.name) === slugify(g.name);
-                            });
-
-                            var slug = matched ? matched.slug : slugify(g.name);
-
-                            return '<span class="kkphim-genre selector" data-slug="' + slug + '" data-title="' + g.name.replace(/"/g, '&quot;') + '">' + g.name + '</span>';
-                        }).join('');
-                    }
                 }
 
-                if (!genresHtml && phimApiGenres.length) {
+                if (phimApiGenres.length) {
                     genresHtml = phimApiGenres.map(function (g) {
-                        return '<span class="kkphim-genre selector" data-slug="' + (g.slug || slugify(g.name)) + '" data-title="' + (g.name || '').replace(/"/g, '&quot;') + '">' + g.name + '</span>';
+                        return '<span class="kkphim-genre selector" data-slug="' + (g.slug || '') + '" data-title="' + (g.name || '').replace(/"/g, '&quot;') + '">' + g.name + '</span>';
+                    }).join('');
+                } else if (tmdb && tmdb.genres && tmdb.genres.length) {
+                    genresHtml = tmdb.genres.map(function (g) {
+                        return '<span class="kkphim-genre">' + g.name + '</span>';
                     }).join('');
                 }
 
                 if (data.director && !directorText) {
                     if (Array.isArray(data.director)) directorText = data.director.join(', ');
                     else directorText = data.director;
-                }
-
-                if (!directorText && data.modified && data.modified.by) {
-                    directorText = data.modified.by;
                 }
 
                 if (directorText) {
@@ -1044,11 +1077,14 @@
                     }
                 });
 
-                top.find('.kkphim-genre').on('click hover:enter', function () {
+                top.find('.kkphim-genre[data-slug]').on('click hover:enter', function () {
                     var slug = $(this).attr('data-slug');
                     var titleGenre = $(this).attr('data-title') || 'Thể loại';
 
-                    if (!slug) return;
+                    if (!slug) {
+                        Lampa.Noty.show('Không tìm thấy slug thể loại');
+                        return;
+                    }
 
                     Lampa.Activity.push({
                         url: '',
