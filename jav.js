@@ -1,234 +1,223 @@
-(function () {
+(function(){
     'use strict';
 
-    try {
-        const KKPhim = {
-            name: 'KKPhim',
-            version: '1.0.0',
-            api: 'https://phimapi.com',
+    function KKPhim(){
+        let api = 'https://phimapi.com';
+        let image = 'https://phimimg.com';
 
-            init() {
-                this.addStyles();
-                this.registerComponents();
-                this.addMenu();
-                console.log('KKPhim Plugin loaded successfully');
-            },
+        let network = new Lampa.Reguest();
+        let scroll  = new Lampa.Scroll({mask:true,over:true});
+        let last    = 0;
 
-            addMenu() {
-                const menuItem = $(`
-                    <li class="menu__item selector" data-action="kkphim">
-                        <div class="menu__ico">🎬</div>
-                        <div class="menu__text">KKPhim</div>
-                    </li>
-                `);
+        let categories = [
+            {title:'🔥 Phim Mới Cập Nhật', url:'/danh-sach/phim-moi-cap-nhat?page=1'},
+            {title:'🎬 Phim Lẻ', url:'/v1/api/danh-sach/phim-le?page=1'},
+            {title:'📺 Phim Bộ', url:'/v1/api/danh-sach/phim-bo?page=1'},
+            {title:'🎨 Hoạt Hình', url:'/v1/api/danh-sach/hoat-hinh?page=1'},
+            {title:'📡 TV Shows', url:'/v1/api/danh-sach/tv-shows?page=1'}
+        ];
 
-                menuItem.on('hover:enter', () => {
-                    Lampa.Activity.push({
-                        url: '',
-                        title: 'KKPhim',
-                        component: 'kkphim_main',
-                        page: 1
-                    });
-                });
+        // ==================== COMPONENT ====================
+        let component = new Lampa.Component('kkphim');
 
-                $('.menu .menu__list').first().append(menuItem);
-            },
+        component.create = function(){
+            component.activity.loader(true);
 
-            registerComponents() {
-                // Main screen component
-                Lampa.Component.add('kkphim_main', (object) => {
-                    const activity = new Lampa.Activity(object);
-                    const scroll = new Lampa.Scroll({ mask: true });
-                    const container = $('<div class="kkphim-container"></div>');
+            scroll.minus();
+            component.activity.append(scroll.render());
 
-                    scroll.append(container);
-                    activity.append(scroll.render());
+            component.activity.loader(false);
+            component.activity.toggle();
 
-                    activity.create = () => {
-                        activity.loader(true);
-                        this.loadCategories(container, () => {
-                            activity.loader(false);
-                            activity.toggle();
-                        });
-                    };
+            loadCategories();
+        }
 
-                    activity.toggle = () => {
-                        Lampa.Activity.active(activity);
-                        scroll.update();
-                    };
+        component.toggle = function(){
+            Lampa.Activity.active(component.activity);
 
-                    activity.back = () => {
-                        Lampa.Activity.backward();
-                    };
+            scroll.update();
+        }
 
-                    return activity;
-                });
+        component.back = function(){
+            Lampa.Activity.backward();
+        }
 
-                // Detail component
-                Lampa.Component.add('kkphim_detail', (object) => {
-                    const activity = new Lampa.Activity(object);
-                    const scroll = new Lampa.Scroll({ mask: true });
-                    const container = $('<div class="kkphim-detail"></div>');
+        // ==================== LOAD CATEGORIES ====================
+        function loadCategories(){
+            let loaded = 0;
+            let count = Math.min(3, categories.length);
 
-                    scroll.append(container);
-                    activity.append(scroll.render());
+            categories.forEach((cat, index) => {
+                network.silent(api + cat.url, (data) => {
+                    let items = data.items || (data.data?.items || []);
+                    
+                    if(items.length){
+                        createRow(cat.title, items, index);
+                    }
 
-                    activity.create = () => {
-                        activity.loader(true);
-                        this.loadDetail(object.slug, container, () => {
-                            activity.loader(false);
-                            activity.toggle();
-                        });
-                    };
-
-                    activity.toggle = () => {
-                        Lampa.Activity.active(activity);
-                        scroll.update();
-                    };
-
-                    activity.back = () => {
-                        Lampa.Activity.backward();
-                    };
-
-                    return activity;
-                });
-            },
-
-            loadCategories(container, callback) {
-                const categories = [
-                    { title: 'Phim Mới Cập Nhật', url: '/danh-sach/phim-moi-cap-nhat?page=1' },
-                    { title: 'Phim Lẻ', url: '/v1/api/danh-sach/phim-le?page=1' },
-                    { title: 'Phim Bộ', url: '/v1/api/danh-sach/phim-bo?page=1' }
-                ];
-
-                let loaded = 0;
-                const total = categories.length;
-
-                categories.forEach((cat) => {
-                    this.request(cat.url, (data) => {
-                        const items = data.items || (data.data?.items || []);
-                        if (items.length > 0) {
-                            this.createRow(cat.title, items, container);
-                        }
-
-                        loaded++;
-                        if (loaded >= total) callback();
-                    }, () => {
-                        loaded++;
-                        if (loaded >= total) callback();
-                    });
-                });
-            },
-
-            createRow(title, items, container) {
-                const row = $(`
-                    <div class="kkphim-row">
-                        <div class="kkphim-row-title">${title}</div>
-                        <div class="kkphim-row-content"></div>
-                    </div>
-                `);
-
-                const content = row.find('.kkphim-row-content');
-
-                items.slice(0, 10).forEach((item) => {
-                    const card = $(`
-                        <div class="kkphim-card selector" data-slug="${item.slug}">
-                            <img src="${item.poster_url || item.thumb_url}" class="kkphim-card-img" onerror="this.src='./img/img_broken.svg'">
-                            <div class="kkphim-card-title">${item.name}</div>
-                            <div class="kkphim-card-quality">${item.quality || ''}</div>
-                        </div>
-                    `);
-
-                    card.on('hover:enter', () => {
-                        Lampa.Activity.push({
-                            url: '',
-                            title: item.name,
-                            component: 'kkphim_detail',
-                            slug: item.slug
-                        });
-                    });
-
-                    content.append(card);
-                });
-
-                container.append(row);
-            },
-
-            loadDetail(slug, container, callback) {
-                this.request(`/phim/${slug}`, (data) => {
-                    const movie = data.movie;
-                    const html = `
-                        <div class="kkphim-detail-content">
-                            <img src="${movie.thumb_url}" class="kkphim-detail-poster">
-                            <div class="kkphim-detail-info">
-                                <h1>${movie.name}</h1>
-                                <p>${movie.origin_name || ''}</p>
-                                <div class="kkphim-detail-meta">
-                                    <span>${movie.year || ''}</span>
-                                    <span>${movie.quality || ''}</span>
-                                    <span>${movie.lang || ''}</span>
-                                </div>
-                                <p class="kkphim-detail-desc">${movie.content || ''}</p>
-                            </div>
-                        </div>
-                    `;
-
-                    container.html(html);
-                    callback();
+                    loaded++;
+                    if(loaded >= count) scroll.update();
                 }, () => {
-                    container.html('<div class="kkphim-empty">Không thể tải thông tin phim</div>');
-                    callback();
+                    loaded++;
+                    if(loaded >= count) scroll.update();
                 });
-            },
-
-            request(url, success, error) {
-                const fullUrl = url.startsWith('http') ? url : this.api + url;
-                const reguest = new Lampa.Reguest();
-
-                reguest.native(fullUrl, (data) => {
-                    if (typeof data === 'string') data = JSON.parse(data);
-                    success(data);
-                }, () => {
-                    error();
-                });
-            },
-
-            addStyles() {
-                const css = `
-                    .kkphim-container { padding: 1em; }
-                    .kkphim-row { margin-bottom: 2em; }
-                    .kkphim-row-title { font-size: 1.2em; color: #fff; margin-bottom: 1em; font-weight: bold; }
-                    .kkphim-row-content { display: flex; gap: 1em; overflow-x: auto; padding-bottom: 0.5em; }
-                    .kkphim-card { width: 120px; flex-shrink: 0; }
-                    .kkphim-card-img { width: 100%; border-radius: 8px; }
-                    .kkphim-card-title { color: #fff; font-size: 0.9em; margin-top: 0.5em; }
-                    .kkphim-card-quality { color: #ff0000; font-size: 0.8em; margin-top: 0.2em; }
-                    .kkphim-detail-content { display: flex; gap: 2em; padding: 2em; }
-                    .kkphim-detail-poster { width: 200px; border-radius: 12px; }
-                    .kkphim-detail-info { color: #fff; flex: 1; }
-                    .kkphim-detail-meta { gap: 1em; display: flex; margin: 1em 0; }
-                    .kkphim-detail-desc { line-height: 1.5; margin-top: 1em; }
-                    .kkphim-empty { color: #fff; text-align: center; padding: 2em; }
-                `;
-
-                if (!$('#kkphim-styles').length) {
-                    $('head').append(`<style id="kkphim-styles">${css}</style>`);
-                }
-            }
-        };
-
-        // Initialize when Lampa is ready
-        if (window.appready) {
-            KKPhim.init();
-        } else {
-            Lampa.Listener.follow('app', (e) => {
-                if (e.type === 'ready') {
-                    KKPhim.init();
-                }
             });
         }
-    } catch (e) {
-        console.error('KKPhim Plugin Error:', e);
-        Lampa.Noty.show('Lỗi tải plugin KKPhim');
+
+        // ==================== CREATE ROW ====================
+        function createRow(title, items, index){
+            let row = $('<div class="category selector" data-index="'+index+'"></div>');
+            let title_block = $('<div class="category__title">'+title+'</div>');
+            let content = $('<div class="category__content"></div>');
+
+            row.append(title_block);
+            row.append(content);
+
+            items.slice(0,12).forEach((item) => {
+                let card = createCard(item);
+                content.append(card);
+            });
+
+            scroll.append(row);
+        }
+
+        // ==================== CREATE CARD ====================
+        function createCard(item){
+            let card = $('<div class="card selector" data-slug="'+item.slug+'"></div>');
+            let img  = $('<img class="card__img" src="'+(item.poster_url || item.thumb_url)+'" onerror="this.src=\'./img/img_broken.svg\'">');
+            let name = $('<div class="card__title">'+item.name+'</div>');
+            let meta = $('<div class="card__meta">'+(item.quality || '')+' • '+item.year+'</div>');
+
+            card.append(img);
+            card.append(name);
+            card.append(meta);
+
+            card.on('hover:enter', () => {
+                openDetail(item.slug);
+            });
+
+            card.on('hover:focus', () => {
+                scroll.update(card, true);
+            });
+
+            return card;
+        }
+
+        // ==================== OPEN DETAIL ====================
+        function openDetail(slug){
+            let detail = new Lampa.Component('kkphim_detail');
+            
+            detail.create = function(){
+                detail.activity.loader(true);
+
+                scroll.minus();
+                detail.activity.append(scroll.render());
+
+                network.silent(api + '/phim/' + slug, (data) => {
+                    let movie = data.movie;
+                    let episodes = data.episodes || [];
+
+                    renderDetail(movie, episodes);
+
+                    detail.activity.loader(false);
+                    detail.activity.toggle();
+                }, () => {
+                    scroll.append($('<div class="empty">Không thể tải thông tin phim</div>'));
+                    detail.activity.loader(false);
+                    detail.activity.toggle();
+                });
+            }
+
+            detail.toggle = function(){
+                Lampa.Activity.active(detail.activity);
+                scroll.update();
+            }
+
+            detail.back = function(){
+                Lampa.Activity.backward();
+            }
+
+            Lampa.Activity.push({
+                url:'',
+                title:slug,
+                component:'kkphim_detail',
+                component_object:detail
+            });
+        }
+
+        // ==================== RENDER DETAIL ====================
+        function renderDetail(movie, episodes){
+            let backdrop = $('<div class="backdrop"><img src="'+movie.thumb_url+'" onerror="this.src=\'./img/img_broken.svg\'"></div>');
+            let content  = $('<div class="detail__content"></div>');
+            let poster   = $('<img class="detail__poster" src="'+movie.poster_url+'" onerror="this.src=\'./img/img_broken.svg\'">');
+            let info     = $('<div class="detail__info"></div>');
+
+            info.append($('<h1 class="detail__title">'+movie.name+'</h1>'));
+            info.append($('<div class="detail__original">'+movie.origin_name+'</div>'));
+            info.append($('<div class="detail__meta">'+movie.year+' • '+movie.quality+' • '+movie.lang+'</div>'));
+            info.append($('<div class="detail__desc">'+movie.content+'</div>'));
+
+            if(episodes.length){
+                let episodes_block = $('<div class="detail__episodes"></div>');
+                episodes.forEach((server) => {
+                    let server_title = $('<div class="detail__server">'+server.server_name+'</div>');
+                    let server_episodes = $('<div class="detail__episodes-grid"></div>');
+
+                    server.server_data.forEach((ep) => {
+                        let ep_btn = $('<div class="detail__ep-btn selector">'+ep.name+'</div>');
+                        ep_btn.on('hover:enter', () => {
+                            play(ep.link_m3u8 || ep.link_embed, movie.name + ' - ' + ep.name);
+                        });
+                        server_episodes.append(ep_btn);
+                    });
+
+                    episodes_block.append(server_title);
+                    episodes_block.append(server_episodes);
+                });
+                content.append(episodes_block);
+            }
+
+            content.append(backdrop);
+            content.append(poster);
+            content.append(info);
+
+            scroll.append(content);
+        }
+
+        // ==================== PLAY VIDEO ====================
+        function play(url, title){
+            if(url){
+                Lampa.Player.play({
+                    title:title,
+                    url:url,
+                    poster:''
+                });
+            } else {
+                Lampa.Noty.show('Không tìm thấy link phát');
+            }
+        }
+
+        // ==================== ADD MENU ====================
+        function addMenu(){
+            let menu = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico">🎬</div><div class="menu__text">KKPhim</div></li>');
+            
+            menu.on('hover:enter', () => {
+                Lampa.Activity.push({
+                    url:'',
+                    title:'KKPhim',
+                    component:'kkphim',
+                    component_object:component
+                });
+            });
+
+            $('.menu .menu__list').eq(0).append(menu);
+        }
+
+        // ==================== INIT ====================
+        addMenu();
     }
+
+    // Wait for Lampa ready
+    if(window.appready) KKPhim();
+    else document.addEventListener('appready', KKPhim);
 })();
