@@ -85,20 +85,55 @@
     }
 
     function bindEnter(el, fn) {
+        var startX = 0;
+        var startY = 0;
+        var moved = false;
         var touched = false;
+        var TOUCH_LIMIT = 16;
+
+        el.on('touchstart', function (e) {
+            var t = e.originalEvent && e.originalEvent.touches
+                ? e.originalEvent.touches[0]
+                : (e.touches ? e.touches[0] : null);
+
+            if (!t) return;
+
+            startX = t.clientX;
+            startY = t.clientY;
+            moved = false;
+        });
+
+        el.on('touchmove', function (e) {
+            var t = e.originalEvent && e.originalEvent.touches
+                ? e.originalEvent.touches[0]
+                : (e.touches ? e.touches[0] : null);
+
+            if (!t) return;
+
+            var dx = Math.abs(t.clientX - startX);
+            var dy = Math.abs(t.clientY - startY);
+
+            if (dx > TOUCH_LIMIT || dy > TOUCH_LIMIT) moved = true;
+        });
 
         el.on('touchend', function (e) {
+            if (moved) return;
+
             touched = true;
             e.preventDefault();
             e.stopPropagation();
-            fn.call(this, e);
+
+            setTimeout(function () {
+                fn.call(el[0], e);
+            }, 100);
+
             setTimeout(function () {
                 touched = false;
-            }, 300);
+            }, 350);
         });
 
         el.on('click', function (e) {
-            if (touched) return;
+            if (touched || moved) return;
             e.preventDefault();
             e.stopPropagation();
             fn.call(this, e);
@@ -201,6 +236,7 @@
 
     function injectStyle() {
         if ($('#kk-css').length) return;
+
         $('head').append(`<style id="kk-css">
             .kk-row { margin-bottom:1.8em }
             .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.8em }
@@ -225,46 +261,242 @@
             .kk-loadmore { margin-top:1.1em; text-align:center; padding:.9em; border-radius:.9em; background:rgba(255,255,255,.08); color:#fff; font-size:1em; font-weight:800; cursor:pointer }
             .kk-loadmore.focus { background:#ff2332 }
 
-            .kk-hero { position:relative; margin-bottom:1.2em; border-radius:0 0 1.2em 1.2em; overflow:hidden; background:#1c1c1c }
-            .kk-hero-bg { position:relative; height:22em }
-            .kk-hero-bg img { width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.04); filter:blur(1px) }
-            .kk-hero-mask { position:absolute; inset:0; background:linear-gradient(to bottom,rgba(0,0,0,.06) 0%,rgba(0,0,0,.14) 24%,rgba(0,0,0,.42) 58%,rgba(20,20,20,.92) 86%,rgba(20,20,20,1) 100%) }
-            .kk-hero-bottom { position:absolute; left:0; right:0; bottom:0; z-index:2; padding:1.1em }
-            .kk-hero-flex { display:flex; align-items:flex-end; gap:1.2em }
-            .kk-hero-poster { width:10em; min-width:10em }
-            .kk-hero-poster img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:.9em; display:block; box-shadow:0 .8em 1.8em rgba(0,0,0,.35); background:#242424 }
-            .kk-hero-info { flex:1; min-width:0 }
+            .kk-hero {
+                position: relative;
+                margin-bottom: 0;
+                border-radius: 1.4em 1.4em 0 0;
+                overflow: hidden;
+                background: #111;
+            }
 
-            .kk-logo { max-width:24em; margin-bottom:.75em }
-            .kk-logo img { max-width:100%; max-height:9em; object-fit:contain; display:block; filter:drop-shadow(0 .3em 1em rgba(0,0,0,.35)) }
+            .kk-hero-bg {
+                position: relative;
+                height: 24em;
+            }
 
-            .kk-title { font-size:2.1em; line-height:1.08; font-weight:900; color:#fff; margin-bottom:.12em }
-            .kk-origin { font-size:1.05em; line-height:1.35; color:rgba(255,255,255,.7) }
+            .kk-hero-bg img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
 
-            .kk-body { padding:0 1.2em }
-            .kk-metas { display:flex; flex-wrap:wrap; gap:.5em; margin-bottom:.9em }
-            .kk-meta { padding:.48em .8em; border-radius:999px; background:rgba(255,255,255,.1); color:#fff; font-size:.96em; font-weight:800 }
-            .kk-genres { display:flex; flex-wrap:wrap; gap:.5em; margin-bottom:.9em }
-            .kk-genre { padding:.4em .85em; border-radius:999px; background:rgba(56,142,60,.24); border:1px solid rgba(76,175,80,.45); color:#a5d6a7; font-size:.94em; font-weight:700; cursor:pointer }
-            .kk-genre.focus { background:rgba(76,175,80,.45); color:#fff }
+            .kk-hero-mask {
+                position: absolute;
+                inset: 0;
+                background:
+                    linear-gradient(to bottom,
+                        rgba(0,0,0,.10) 0%,
+                        rgba(0,0,0,.18) 28%,
+                        rgba(0,0,0,.42) 58%,
+                        rgba(14,14,14,.88) 84%,
+                        rgba(14,14,14,1) 100%);
+            }
 
-            .kk-crew { margin-bottom:1em; padding:.2em 0 .1em }
-            .kk-crew b { display:block; font-size:1.08em; font-weight:900; color:#fff; margin-bottom:.22em }
-            .kk-crew span { display:block; font-size:1.05em; line-height:1.55; color:rgba(255,255,255,.84) }
+            .kk-hero-bottom {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 2;
+                padding: 1.2em 1.2em 1.1em;
+            }
 
-            .kk-desc { font-size:1.06em; line-height:1.68; color:rgba(255,255,255,.9); margin-bottom:1.1em }
-            .kk-play { display:inline-flex; align-items:center; justify-content:center; min-width:10em; padding:.9em 1.5em; border-radius:.85em; background:#ff1424; color:#fff; font-size:1.1em; font-weight:900; cursor:pointer; box-shadow:0 .5em 1.4em rgba(255,20,36,.25) }
-            .kk-play.focus { background:#ff3140 }
+            .kk-hero-flex {
+                display: block;
+            }
 
-            .kk-block { padding:0 1.2em; margin-top:1.5em }
-            .kk-block-title { font-size:1.5em; font-weight:900; color:#fff; margin-bottom:.7em }
-            .kk-cast-list { display:flex; gap:.85em; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; touch-action:pan-x; padding-bottom:.2em }
-            .kk-cast-card { flex:0 0 auto; width:8em }
-            .kk-cast-img { width:100%; aspect-ratio:2/3; border-radius:.85em; overflow:hidden; background:#2b2b2b; margin-bottom:.5em }
-            .kk-cast-img img { width:100%; height:100%; object-fit:cover; display:block }
-            .kk-cast-empty { width:100%; height:100%; background:#333 }
-            .kk-cast-name { font-size:.92em; line-height:1.32; font-weight:800; color:#fff }
-            .kk-cast-role { font-size:.82em; line-height:1.32; color:rgba(255,255,255,.6); margin-top:.15em }
+            .kk-hero-poster {
+                display: none;
+            }
+
+            .kk-hero-info {
+                min-width: 0;
+            }
+
+            .kk-logo {
+                max-width: 32em;
+                margin: 0 0 1em;
+            }
+
+            .kk-logo img {
+                max-width: 100%;
+                max-height: 10.5em;
+                object-fit: contain;
+                display: block;
+                filter: drop-shadow(0 .4em 1.2em rgba(0,0,0,.45));
+            }
+
+            .kk-title {
+                font-size: 2em;
+                line-height: 1.08;
+                font-weight: 900;
+                color: #fff;
+                margin-bottom: .18em;
+            }
+
+            .kk-origin {
+                font-size: 1em;
+                line-height: 1.4;
+                color: rgba(255,255,255,.78);
+            }
+
+            .kk-body {
+                position: relative;
+                z-index: 3;
+                margin-top: -1.2em;
+                padding: 1.2em 1.2em 0;
+                background: #141414;
+                border-radius: 1.4em 1.4em 0 0;
+            }
+
+            .kk-metas {
+                display: flex;
+                flex-wrap: wrap;
+                gap: .55em;
+                margin-bottom: 1em;
+            }
+
+            .kk-meta {
+                padding: .5em .85em;
+                border-radius: .8em;
+                background: rgba(255,255,255,.08);
+                color: #fff;
+                font-size: .95em;
+                font-weight: 800;
+            }
+
+            .kk-genres {
+                display: flex;
+                flex-wrap: wrap;
+                gap: .55em;
+                margin-bottom: 1em;
+            }
+
+            .kk-genre {
+                padding: .46em .9em;
+                border-radius: .8em;
+                background: rgba(255,255,255,.08);
+                border: 1px solid rgba(255,255,255,.08);
+                color: rgba(255,255,255,.92);
+                font-size: .92em;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .kk-genre.focus {
+                background: rgba(255,255,255,.18);
+                color: #fff;
+            }
+
+            .kk-crew {
+                margin-bottom: 1em;
+                padding: .2em 0 .1em;
+            }
+
+            .kk-crew b {
+                display: block;
+                font-size: 1.08em;
+                font-weight: 900;
+                color: #fff;
+                margin-bottom: .22em;
+            }
+
+            .kk-crew span {
+                display: block;
+                font-size: 1.02em;
+                line-height: 1.55;
+                color: rgba(255,255,255,.84);
+            }
+
+            .kk-desc {
+                font-size: 1.02em;
+                line-height: 1.68;
+                color: rgba(255,255,255,.9);
+                margin-bottom: 1.2em;
+            }
+
+            .kk-play {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 10em;
+                padding: .95em 1.5em;
+                border-radius: 1em;
+                background: #ff1730;
+                color: #fff;
+                font-size: 1.08em;
+                font-weight: 900;
+                cursor: pointer;
+                box-shadow: 0 .5em 1.4em rgba(255,23,48,.24);
+            }
+
+            .kk-play.focus {
+                background: #ff3047;
+            }
+
+            .kk-block {
+                padding: 0 1.2em;
+                margin-top: 1.6em;
+            }
+
+            .kk-block-title {
+                font-size: 1.35em;
+                font-weight: 900;
+                color: #fff;
+                margin-bottom: .75em;
+            }
+
+            .kk-cast-list {
+                display: flex;
+                gap: .85em;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                touch-action: pan-x;
+                padding-bottom: .2em;
+            }
+
+            .kk-cast-card {
+                flex: 0 0 auto;
+                width: 7.8em;
+            }
+
+            .kk-cast-img {
+                width: 100%;
+                aspect-ratio: 2/3;
+                border-radius: 1em;
+                overflow: hidden;
+                background: #2b2b2b;
+                margin-bottom: .55em;
+            }
+
+            .kk-cast-img img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+
+            .kk-cast-empty {
+                width: 100%;
+                height: 100%;
+                background: #333;
+            }
+
+            .kk-cast-name {
+                font-size: .9em;
+                line-height: 1.32;
+                font-weight: 800;
+                color: #fff;
+            }
+
+            .kk-cast-role {
+                font-size: .8em;
+                line-height: 1.32;
+                color: rgba(255,255,255,.62);
+                margin-top: .16em;
+            }
 
             .kk-server { font-size:1.02em; font-weight:800; color:#63d471; margin:1em 0 .65em }
             .kk-eps { display:flex; flex-wrap:wrap; gap:.7em }
@@ -283,17 +515,14 @@
             }
 
             @media(orientation:portrait){
-                .kk-hero-flex { display:block }
-                .kk-hero-poster { display:none }
-                .kk-logo { max-width:26em }
-                .kk-logo img { max-height:10em }
-                .kk-title { font-size:1.85em }
-                .kk-origin { font-size:.96em }
-                .kk-play { width:100% }
+                .kk-logo img { max-height: 11em; }
+                .kk-title { font-size: 1.75em; }
+                .kk-origin { font-size: .96em; }
+                .kk-play { width: 100%; }
             }
 
             @media(orientation:landscape){
-                .kk-hero-poster { display:block }
+                .kk-hero-poster { display:none; }
             }
 
             @media(max-width:768px){
@@ -690,9 +919,36 @@
                     crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + escapeHtml(dir) + '</span></div>';
                 }
 
-                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + escapeHtml(t) + '</div><div class="kk-origin">' + escapeHtml(o) + '</div></div></div></div></div>');
+                var titleHtml = logoH ? '' : '<div class="kk-title">' + escapeHtml(t) + '</div>';
 
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + escapeHtml(v) + '</span>' + (y ? '<span class="kk-meta">📅 ' + escapeHtml(y) + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + escapeHtml(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + escapeHtml(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + formatText(d) + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
+                var hero = $('<div class="kk-hero">\
+                    <div class="kk-hero-bg">\
+                        <img src="' + bk + '">\
+                        <div class="kk-hero-mask"></div>\
+                    </div>\
+                    <div class="kk-hero-bottom">\
+                        <div class="kk-hero-flex">\
+                            <div class="kk-hero-info">\
+                                ' + logoH + '\
+                                ' + titleHtml + '\
+                                <div class="kk-origin">' + escapeHtml(o) + '</div>\
+                            </div>\
+                        </div>\
+                    </div>\
+                </div>');
+
+                var body = $('<div class="kk-body">\
+                    <div class="kk-metas">\
+                        <span class="kk-meta">⭐ ' + escapeHtml(v) + '</span>' +
+                        (y ? '<span class="kk-meta">📅 ' + escapeHtml(y) + '</span>' : '') +
+                        (rt ? '<span class="kk-meta">⏱ ' + escapeHtml(rt) + '</span>' : '') +
+                        (epCur ? '<span class="kk-meta">🎬 ' + escapeHtml(epCur) + '</span>' : '') +
+                    '</div>\
+                    <div class="kk-genres">' + ghtml + '</div>\
+                    ' + crewH + '\
+                    <div class="kk-desc">' + formatText(d) + '</div>\
+                    <div><div class="kk-play selector">▶ Xem phim</div></div>\
+                </div>');
 
                 bindEnter(body.find('.kk-play'), function () {
                     var first = getFirstEpisode(episodes);
