@@ -51,72 +51,15 @@
         return vi || en || images.logos[0] || null;
     }
 
-    function enableGlobalMobileTouch() {
-        $('body, .activity, .activity__body, .activity__content, .scroll, .scroll__body').css({
-            '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'auto'
-        });
-    }
-
-    function addTouchScroll(el) {
-        el.css({
-            'overflow-y': 'scroll',
-            'overflow-x': 'hidden',
-            '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'manipulation',
-            'padding-bottom': '14em',
-            'box-sizing': 'border-box'
-        });
-
-        if (el[0]) {
-            el[0].style.setProperty('overflow-y', 'scroll', 'important');
-            el[0].style.setProperty('overflow-x', 'hidden', 'important');
-            el[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-            el[0].style.setProperty('touch-action', 'manipulation', 'important');
-            el[0].style.setProperty('padding-bottom', '14em', 'important');
-        }
-
-        $('.activity__body, .activity__content').css({
-            'overflow': 'hidden'
-        });
-    }
-
-    function unlockDetailScroll(el) {
-        setTimeout(function () {
-            if (!el || !el[0]) return;
-
-            var node = el[0];
-            node.scrollTop = 1;
-
-            $('.activity__body, .activity__content, .scroll, .scroll__body').css({
-                'touch-action': 'auto',
-                '-webkit-overflow-scrolling': 'touch'
-            });
-
-            node.addEventListener('touchmove', function(){}, { passive: true });
-        }, 100);
-    }
-
     function injectStyle() {
         if ($('#kkphim-style').length) return;
 
         var css = `
         <style id="kkphim-style">
-            .kkphim-page,
-            .kkphim-detail-page {
-                min-height: 100%;
-                background: #141414;
+            .kkphim-root {
                 color: #fff;
-                overflow-y: auto !important;
-                overflow-x: hidden !important;
-                -webkit-overflow-scrolling: touch !important;
-                touch-action: auto !important;
-                padding-bottom: 14em;
+                padding-bottom: 10em;
                 box-sizing: border-box;
-            }
-
-            .kkphim-page-scroll {
-                padding: 1.15em 0 2em;
             }
 
             .kkphim-row {
@@ -282,6 +225,7 @@
                 right: 0;
                 height: 38em;
                 overflow: hidden;
+                border-radius: 0 0 1.2em 1.2em;
             }
 
             .kkphim-detail-backdrop img {
@@ -537,6 +481,7 @@
 
                 .kkphim-detail-backdrop {
                     height: 31em;
+                    border-radius: 0 0 1.2em 1.2em;
                 }
 
                 .kkphim-detail-backdrop img {
@@ -665,15 +610,42 @@
         });
     }
 
+    function buildCard(item) {
+        var poster = fullImg(item.poster_url || item.thumb_url);
+
+        var card = $(
+            '<div class="kkphim-card selector">' +
+                '<div class="kkphim-card-poster">' +
+                    '<img src="' + poster + '" alt="' + (item.name || '') + '">' +
+                    (item.quality ? '<div class="kkphim-card-quality">' + item.quality + '</div>' : '') +
+                    (item.episode_current ? '<div class="kkphim-card-episode">' + item.episode_current + '</div>' : '') +
+                '</div>' +
+                '<div class="kkphim-card-name">' + (item.name || '') + '</div>' +
+                '<div class="kkphim-card-year">' + (item.year || '') + '</div>' +
+            '</div>'
+        );
+
+        card.on('click hover:enter', function () {
+            Lampa.Activity.push({
+                url: '',
+                title: item.name || 'KKPhim',
+                component: 'kkphim_detail',
+                movie: item,
+                page: 1
+            });
+        });
+
+        return card;
+    }
+
     function startPlugin() {
         injectStyle();
-        enableGlobalMobileTouch();
         addMenu();
 
         Lampa.Component.add('kkphim_main', function () {
             var network = new Lampa.Reguest();
-            var html = $('<div class="kkphim-page"><div class="kkphim-page-scroll"></div></div>');
-            var body = html.find('.kkphim-page-scroll');
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var html = $('<div class="kkphim-root"></div>');
             var comp = this;
 
             var categories = [
@@ -685,7 +657,7 @@
 
             this.create = function () {
                 this.activity.loader(true);
-                addTouchScroll(html);
+                html.append(scroll.render());
 
                 var loaded = 0;
 
@@ -695,95 +667,69 @@
                         if (res && res.items) items = res.items;
                         else if (res && res.data && res.data.items) items = res.data.items;
 
-                        if (items.length) createRow(cat, items.slice(0, 12));
+                        if (items.length) {
+                            var row = $('<div class="kkphim-row"></div>');
+                            var head = $('<div class="kkphim-row-head"></div>');
+                            var title = $('<div class="kkphim-row-title">' + cat.name + '</div>');
+                            var more = $('<div class="kkphim-row-more selector">Xem thêm</div>');
+                            var list = $('<div class="kkphim-row-list"></div>');
+
+                            more.on('click hover:enter', function () {
+                                Lampa.Activity.push({
+                                    url: '',
+                                    title: cat.name,
+                                    component: 'kkphim_category',
+                                    cat: cat,
+                                    page_num: 1,
+                                    mode: 'api'
+                                });
+                            });
+
+                            items.slice(0, 12).forEach(function (item) {
+                                list.append(buildCard(item));
+                            });
+
+                            head.append(title).append(more);
+                            row.append(head).append(list);
+                            scroll.append(row);
+                        }
 
                         loaded++;
-                        if (loaded >= categories.length) comp.activity.loader(false);
+                        if (loaded >= categories.length) {
+                            comp.activity.loader(false);
+                            setTimeout(function () {
+                                scroll.update();
+                            }, 50);
+                        }
                     }, function () {
                         loaded++;
-                        if (loaded >= categories.length) comp.activity.loader(false);
+                        if (loaded >= categories.length) {
+                            comp.activity.loader(false);
+                            setTimeout(function () {
+                                scroll.update();
+                            }, 50);
+                        }
                     });
                 });
 
                 return html;
             };
 
-            function createRow(cat, items) {
-                var row = $('<div class="kkphim-row"></div>');
-                var head = $('<div class="kkphim-row-head"></div>');
-                var title = $('<div class="kkphim-row-title">' + cat.name + '</div>');
-                var more = $('<div class="kkphim-row-more selector">Xem thêm</div>');
-                var list = $('<div class="kkphim-row-list"></div>');
-
-                more.on('click hover:enter', function () {
-                    Lampa.Activity.push({
-                        url: '',
-                        title: cat.name,
-                        component: 'kkphim_category',
-                        cat: cat,
-                        page_num: 1,
-                        mode: 'api'
-                    });
-                });
-
-                items.forEach(function (item) {
-                    list.append(createCard(item));
-                });
-
-                head.append(title);
-                head.append(more);
-                row.append(head);
-                row.append(list);
-                body.append(row);
-            }
-
-            function createCard(item) {
-                var poster = fullImg(item.poster_url || item.thumb_url);
-
-                var card = $(
-                    '<div class="kkphim-card selector">' +
-                        '<div class="kkphim-card-poster">' +
-                            '<img src="' + poster + '" alt="' + (item.name || '') + '">' +
-                            (item.quality ? '<div class="kkphim-card-quality">' + item.quality + '</div>' : '') +
-                            (item.episode_current ? '<div class="kkphim-card-episode">' + item.episode_current + '</div>' : '') +
-                        '</div>' +
-                        '<div class="kkphim-card-name">' + (item.name || '') + '</div>' +
-                        '<div class="kkphim-card-year">' + (item.year || '') + '</div>' +
-                    '</div>'
-                );
-
-                card.on('click hover:enter', function () {
-                    Lampa.Activity.push({
-                        url: '',
-                        title: item.name || 'KKPhim',
-                        component: 'kkphim_detail',
-                        movie: item,
-                        page: 1
-                    });
-                });
-
-                return card;
-            }
-
-            this.start = function () {
-                setTimeout(function () {
-                    addTouchScroll(html);
-                }, 50);
-            };
-
+            this.start = function () {};
             this.pause = function () {};
             this.stop = function () {};
             this.render = function () { return html; };
             this.destroy = function () {
                 network.clear();
+                scroll.destroy();
                 html.remove();
             };
         });
 
         Lampa.Component.add('kkphim_category', function (object) {
             var network = new Lampa.Reguest();
-            var html = $('<div class="kkphim-page"><div class="kkphim-page-scroll"></div></div>');
-            var body = html.find('.kkphim-page-scroll');
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var html = $('<div class="kkphim-root"></div>');
             var comp = this;
 
             var page = object.page_num || 1;
@@ -798,11 +744,11 @@
 
             this.create = function () {
                 this.activity.loader(true);
-                addTouchScroll(html);
+                html.append(scroll.render());
 
-                body.append('<div class="kkphim-category-title">' + title + '</div>');
-                body.append(grid);
-                body.append(loadMore);
+                scroll.append('<div class="kkphim-category-title">' + title + '</div>');
+                scroll.append(grid);
+                scroll.append(loadMore);
 
                 loadMore.on('click hover:enter', function () {
                     if (!loading && hasMore) loadPage();
@@ -823,17 +769,25 @@
                     loadMore.text('Hết dữ liệu');
                     comp.activity.loader(false);
                     loading = false;
+                    setTimeout(function () {
+                        scroll.update();
+                    }, 50);
                     return;
                 }
 
                 items.forEach(function (item) {
-                    grid.append(createCard(item));
+                    var card = buildCard(item).addClass('kkphim-card-grid');
+                    grid.append(card);
                 });
 
                 page++;
                 loading = false;
                 loadMore.text('Tải thêm');
                 comp.activity.loader(false);
+
+                setTimeout(function () {
+                    scroll.update();
+                }, 50);
             }
 
             function loadPage() {
@@ -870,58 +824,27 @@
                 });
             }
 
-            function createCard(item) {
-                var poster = fullImg(item.poster_url || item.thumb_url);
-
-                var card = $(
-                    '<div class="kkphim-card kkphim-card-grid selector">' +
-                        '<div class="kkphim-card-poster">' +
-                            '<img src="' + poster + '" alt="' + (item.name || '') + '">' +
-                            (item.quality ? '<div class="kkphim-card-quality">' + item.quality + '</div>' : '') +
-                            (item.episode_current ? '<div class="kkphim-card-episode">' + item.episode_current + '</div>' : '') +
-                        '</div>' +
-                        '<div class="kkphim-card-name">' + (item.name || '') + '</div>' +
-                        '<div class="kkphim-card-year">' + (item.year || '') + '</div>' +
-                    '</div>'
-                );
-
-                card.on('click hover:enter', function () {
-                    Lampa.Activity.push({
-                        url: '',
-                        title: item.name || 'KKPhim',
-                        component: 'kkphim_detail',
-                        movie: item,
-                        page: 1
-                    });
-                });
-
-                return card;
-            }
-
-            this.start = function () {
-                setTimeout(function () {
-                    addTouchScroll(html);
-                }, 50);
-            };
-
+            this.start = function () {};
             this.pause = function () {};
             this.stop = function () {};
             this.render = function () { return html; };
             this.destroy = function () {
                 network.clear();
+                scroll.destroy();
                 html.remove();
             };
         });
 
         Lampa.Component.add('kkphim_detail', function (object) {
             var network = new Lampa.Reguest();
-            var html = $('<div class="kkphim-detail-page"></div>');
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var html = $('<div class="kkphim-root"></div>');
             var movie = object.movie;
             var comp = this;
 
             this.create = function () {
                 this.activity.loader(true);
-                addTouchScroll(html);
+                html.append(scroll.render());
 
                 network.silent(API + 'phim/' + movie.slug, function (res) {
                     var data = res.movie || res || {};
@@ -964,15 +887,11 @@
                 comp.activity.loader(false);
 
                 setTimeout(function () {
-                    addTouchScroll(html);
-                    enableGlobalMobileTouch();
-                    unlockDetailScroll(html);
-                }, 100);
+                    scroll.update();
+                }, 80);
             }
 
             function renderDetail(data, episodes, tmdb, logos, tmdbType) {
-                html.empty();
-
                 var backdrop = fullImg(data.thumb_url || data.poster_url);
                 var poster = fullImg(data.poster_url || data.thumb_url);
                 var title = data.name || '';
@@ -1128,10 +1047,10 @@
                     });
                 });
 
-                html.append(top);
+                scroll.append(top);
 
                 if (castHtml) {
-                    html.append(
+                    scroll.append(
                         '<div class="kkphim-section">' +
                             '<div class="kkphim-section-title">Diễn viên</div>' +
                             '<div class="kkphim-cast-row">' + castHtml + '</div>' +
@@ -1159,7 +1078,7 @@
                         epWrap.append(grid);
                     });
 
-                    html.append(epWrap);
+                    scroll.append(epWrap);
                 }
             }
 
@@ -1177,19 +1096,13 @@
                 });
             }
 
-            this.start = function () {
-                setTimeout(function () {
-                    addTouchScroll(html);
-                    enableGlobalMobileTouch();
-                    unlockDetailScroll(html);
-                }, 50);
-            };
-
+            this.start = function () {};
             this.pause = function () {};
             this.stop = function () {};
             this.render = function () { return html; };
             this.destroy = function () {
                 network.clear();
+                scroll.destroy();
                 html.remove();
             };
         });
