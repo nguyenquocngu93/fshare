@@ -238,6 +238,32 @@
         if ($('#kk-css').length) return;
 
         $('head').append(`<style id="kk-css">
+            .kk-topbar {
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding:0 1.5em;
+                margin-bottom:1.2em;
+            }
+            .kk-topbar-title {
+                font-size:1.9em;
+                font-weight:900;
+                color:#fff;
+            }
+            .kk-search-btn {
+                padding:.7em 1em;
+                border-radius:.9em;
+                background:rgba(255,255,255,.08);
+                color:#fff;
+                font-size:.95em;
+                font-weight:800;
+                cursor:pointer;
+            }
+            .kk-search-btn.focus {
+                background:#fff;
+                color:#000;
+            }
+
             .kk-row { margin-bottom:1.8em }
             .kk-row-head { display:flex; justify-content:space-between; align-items:center; padding:0 1.5em; margin-bottom:.8em }
             .kk-row-title { font-size:1.5em; font-weight:900; color:#fff }
@@ -302,17 +328,9 @@
                 padding: 1.2em 1.2em 1.1em;
             }
 
-            .kk-hero-flex {
-                display: block;
-            }
-
-            .kk-hero-poster {
-                display: none;
-            }
-
-            .kk-hero-info {
-                min-width: 0;
-            }
+            .kk-hero-flex { display:block }
+            .kk-hero-poster { display:none }
+            .kk-hero-info { min-width:0 }
 
             .kk-logo {
                 max-width: 32em;
@@ -344,7 +362,7 @@
             .kk-body {
                 position: relative;
                 z-index: 3;
-                margin-top: -1.2em;
+                margin: -1.2em 1.2em 0;
                 padding: 1.2em 1.2em 0;
                 background: #141414;
                 border-radius: 1.4em 1.4em 0 0;
@@ -416,6 +434,11 @@
                 margin-bottom: 1.2em;
             }
 
+            .kk-play-wrap {
+                padding-top: .1em;
+                padding-bottom: .1em;
+            }
+
             .kk-play {
                 display: inline-flex;
                 align-items: center;
@@ -435,9 +458,23 @@
                 background: #ff3047;
             }
 
-            .kk-block {
-                padding: 0 1.2em;
-                margin-top: 1.6em;
+            .kk-section {
+                margin: 0 1.2em;
+                padding: 1.15em 1.2em 0;
+                background: #141414;
+            }
+
+            .kk-section + .kk-section {
+                padding-top: 1.35em;
+            }
+
+            .kk-body + .kk-section {
+                margin-top: 0;
+            }
+
+            .kk-section--last {
+                padding-bottom: 1.2em;
+                border-radius: 0 0 1.4em 1.4em;
             }
 
             .kk-block-title {
@@ -512,7 +549,8 @@
             .kk-row-more,
             .kk-loadmore,
             .kk-genre,
-            .kk-card {
+            .kk-card,
+            .kk-search-btn {
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: transparent;
             }
@@ -583,13 +621,18 @@
                 }
 
                 .kk-body {
-                    margin-top: -1em;
+                    margin: -1em 1.4em 0;
                     padding: 1.15em 1.4em 0;
                     border-radius: 1.2em 1.2em 0 0;
                 }
 
-                .kk-block {
-                    padding: 0 1.4em;
+                .kk-section {
+                    margin: 0 1.4em;
+                    padding: 1.1em 1.4em 0;
+                }
+
+                .kk-section--last {
+                    border-radius: 0 0 1.2em 1.2em;
                 }
 
                 .kk-cast-list {
@@ -672,6 +715,25 @@
             this.create = function () {
                 this.activity.loader(true);
                 clearScroll(scroll);
+
+                var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍 Tìm kiếm</div></div>');
+
+                bindEnter(topbar.find('.kk-search-btn'), function () {
+                    try {
+                        Lampa.Activity.push({
+                            url: '',
+                            title: 'Tìm kiếm',
+                            component: 'search'
+                        });
+                    } catch (e) {
+                        try {
+                            Lampa.Controller.toggle('head');
+                        } catch (e2) {}
+                    }
+                });
+
+                scroll.append(topbar);
+
                 var loaded = 0;
 
                 cats.forEach(function (cat) {
@@ -1020,7 +1082,7 @@
                     <div class="kk-genres">' + ghtml + '</div>\
                     ' + crewH + '\
                     <div class="kk-desc">' + formatText(d) + '</div>\
-                    <div><div class="kk-play selector">▶ Xem phim</div></div>\
+                    <div class="kk-play-wrap"><div class="kk-play selector">▶ Xem phim</div></div>\
                 </div>');
 
                 bindEnter(body.find('.kk-play'), function () {
@@ -1051,15 +1113,15 @@
                 scroll.append(body);
 
                 if (directorH) {
-                    scroll.append($('<div class="kk-block"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
+                    scroll.append($('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + directorH + '</div></div>'));
                 }
 
                 if (castH) {
-                    scroll.append($('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>'));
+                    scroll.append($('<div class="kk-section"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>'));
                 }
 
                 if (episodes && episodes.length) {
-                    var ew = $('<div class="kk-block"></div>');
+                    var ew = $('<div class="kk-section kk-section--last"></div>');
                     ew.append($('<div class="kk-block-title">Danh sách tập</div>'));
 
                     episodes.forEach(function (sv) {
