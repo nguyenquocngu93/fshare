@@ -4,6 +4,7 @@
     if (!window.Lampa) return;
 
     var network = new Lampa.Reguest();
+
     var CONFIG = {
         base_url: 'https://phimapi.com',
         api_url: 'https://phimapi.com/v1/api',
@@ -22,6 +23,9 @@
     }
 
     function toLampaCard(item) {
+        var poster = getImageUrl(item.poster_url || item.thumb_url);
+        var backdrop = getImageUrl(item.thumb_url || item.poster_url);
+
         return {
             id: item._id || item.slug || Lampa.Utils.uid(),
             title: item.name || '',
@@ -29,8 +33,10 @@
             original_title: item.origin_name || '',
             original_name: item.origin_name || '',
             overview: clearHtml(item.content || item.description || ''),
-            poster_path: getImageUrl(item.poster_url || item.thumb_url),
-            backdrop_path: getImageUrl(item.thumb_url || item.poster_url),
+            img: poster,
+            poster_path: poster,
+            poster: poster,
+            backdrop_path: backdrop,
             release_date: item.year ? item.year + '-01-01' : '',
             vote_average: 0,
             slug: item.slug || '',
@@ -59,53 +65,14 @@
         }
     }
 
-    // ========================================
-    // Tạo card đúng chuẩn Lampa
-    // ========================================
-    function createCard(movie, onEnter, onFocus) {
-        var card = Lampa.Template.get('card', {
-            title: movie.title,
-            release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
-        });
-
-        var img = card.find('.card__img')[0] || card.find('img')[0];
-
-        if (card.find('.card__img').length) {
-            card.find('.card__img').css({
-                'background-image': 'url(' + movie.poster_path + ')',
-                'background-size': 'cover',
-                'background-position': 'center'
-            });
-        }
-
-        // Fallback: nếu template dùng <img>
-        var imgEl = card.find('.card__img img');
-        if (imgEl.length) {
-            imgEl.attr('src', movie.poster_path);
-            imgEl.on('error', function () {
-                $(this).attr('src', './img/img_broken.svg');
-            });
-        }
-
-        card.addClass('selector');
-
-        card.on('hover:focus', function () {
-            if (onFocus) onFocus(card[0], movie);
-        });
-
-        card.on('hover:enter', function () {
-            if (onEnter) onEnter(movie);
-        });
-
-        return card;
-    }
-
-    // ========================================
-    // MAIN - Trang chủ
-    // ========================================
+    // ==========================================
+    //  MAIN
+    // ==========================================
     function KKMain(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true, step: 250 });
+        var comp = new Lampa.InteractionCategory(object);
+        var scroll = comp.scroll;
         var last;
+
         var cats = [
             { title: 'Phim Mới Cập Nhật', url: 'new' },
             { title: 'Phim Lẻ', url: 'phim-le' },
@@ -114,11 +81,12 @@
             { title: 'TV Shows', url: 'tv-shows' }
         ];
 
-        this.create = function () {
+        comp.create = function () {
             var _this = this;
             this.activity.loader(true);
 
             var loaded = 0;
+            var total = cats.length;
 
             cats.forEach(function (cat) {
                 network.silent(getApiUrl(cat.url, 1), function (response) {
@@ -126,17 +94,17 @@
                     var list = (data.items || []).slice(0, 12);
 
                     if (list.length) {
-                        _this.buildLine(cat, list.map(toLampaCard));
+                        buildLine(cat, list.map(toLampaCard));
                     }
 
                     loaded++;
-                    if (loaded >= cats.length) {
+                    if (loaded >= total) {
                         _this.activity.loader(false);
                         _this.activity.toggle();
                     }
                 }, function () {
                     loaded++;
-                    if (loaded >= cats.length) {
+                    if (loaded >= total) {
                         _this.activity.loader(false);
                         _this.activity.toggle();
                     }
@@ -144,15 +112,12 @@
             });
         };
 
-        this.buildLine = function (cat, movies) {
-            var _this = this;
+        function buildLine(cat, movies) {
+            var line_render = $('<div></div>');
+            var line_head = $('<div class="items-line__head"><div class="items-line__title">' + cat.title + '</div></div>');
+            var line_body = $('<div class="items-line__body"></div>');
 
-            var line = $('<div class="items-line"></div>');
-            var head = $('<div class="items-line__head"></div>');
-            var title = $('<div class="items-line__title">' + cat.title + '</div>');
             var more = $('<div class="items-line__more selector">Tất cả</div>');
-            var body = $('<div class="items-line__body"></div>');
-
             more.on('hover:enter', function () {
                 Lampa.Activity.push({
                     url: cat.url,
@@ -161,14 +126,34 @@
                     page: 1
                 });
             });
+            line_head.append(more);
 
-            head.append(title);
-            head.append(more);
-            line.append(head);
-            line.append(body);
+            line_render.append(line_head);
+            line_render.append(line_body);
 
             movies.forEach(function (movie) {
-                var card = createCard(movie, function () {
+                var item = Lampa.Template.get('card', {
+                    title: movie.title,
+                    release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
+                });
+
+                var img = item.find('.card__img')[0] || item.find('img')[0];
+                if (img) {
+                    if (img.tagName === 'IMG') {
+                        img.src = movie.poster_path || '';
+                    } else {
+                        $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
+                    }
+                }
+
+                item.addClass('selector');
+
+                item.on('hover:focus', function () {
+                    last = item[0];
+                    scroll.update(item, true);
+                });
+
+                item.on('hover:enter', function () {
                     Lampa.Activity.push({
                         url: '',
                         title: movie.title,
@@ -176,18 +161,17 @@
                         card: movie,
                         page: 1
                     });
-                }, function (target) {
-                    last = target;
-                    scroll.update($(target), true);
                 });
 
-                body.append(card);
+                line_body.append(item);
             });
 
-            scroll.append(line);
-        };
+            scroll.append(line_render);
+        }
 
-        this.start = function () {
+        comp.start = function () {
+            if (Lampa.Activity.active().activity !== this.activity) return;
+
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
@@ -197,32 +181,33 @@
                     if (Navigator.canMove('left')) Navigator.move('left');
                     else Lampa.Controller.toggle('menu');
                 },
-                right: function () { Navigator.move('right'); },
+                right: function () {
+                    Navigator.move('right');
+                },
                 up: function () {
                     if (Navigator.canMove('up')) Navigator.move('up');
                     else Lampa.Controller.toggle('head');
                 },
-                down: function () { Navigator.move('down'); },
-                back: function () { Lampa.Activity.backward(); }
+                down: function () {
+                    Navigator.move('down');
+                },
+                back: function () {
+                    Lampa.Activity.backward();
+                }
             });
 
             Lampa.Controller.toggle('content');
         };
 
-        this.pause = function () {};
-        this.stop = function () {};
-        this.render = function () { return scroll.render(); };
-        this.destroy = function () {
-            network.clear();
-            scroll.destroy();
-        };
+        return comp;
     }
 
-    // ========================================
-    // CATEGORY
-    // ========================================
+    // ==========================================
+    //  CATEGORY
+    // ==========================================
     function KKCategory(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var comp = new Lampa.InteractionCategory(object);
+        var scroll = comp.scroll;
         var body = $('<div class="category-full"></div>');
         var page = 1;
         var total_pages = 1;
@@ -231,22 +216,21 @@
 
         scroll.append(body);
 
-        this.create = function () {
-            this.load();
+        comp.create = function () {
+            loadPage();
         };
 
-        this.load = function () {
-            var _this = this;
+        function loadPage() {
             if (loading) return;
             loading = true;
 
-            _this.activity.loader(true);
+            comp.activity.loader(true);
 
             network.clear();
             network.timeout(15000);
             network.silent(getApiUrl(object.url || 'new', page), function (response) {
                 loading = false;
-                _this.activity.loader(false);
+                comp.activity.loader(false);
 
                 var data = response.data || response || {};
                 var list = data.items || [];
@@ -255,7 +239,28 @@
                 list.forEach(function (item) {
                     var movie = toLampaCard(item);
 
-                    var card = createCard(movie, function () {
+                    var card = Lampa.Template.get('card', {
+                        title: movie.title,
+                        release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
+                    });
+
+                    var img = card.find('.card__img')[0] || card.find('img')[0];
+                    if (img) {
+                        if (img.tagName === 'IMG') {
+                            img.src = movie.poster_path || '';
+                        } else {
+                            $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
+                        }
+                    }
+
+                    card.addClass('selector');
+
+                    card.on('hover:focus', function () {
+                        last = card[0];
+                        scroll.update(card, true);
+                    });
+
+                    card.on('hover:enter', function () {
                         Lampa.Activity.push({
                             url: '',
                             title: movie.title,
@@ -263,9 +268,6 @@
                             card: movie,
                             page: 1
                         });
-                    }, function (target) {
-                        last = target;
-                        scroll.update($(target), true);
                     });
 
                     body.append(card);
@@ -276,20 +278,22 @@
                     more.on('hover:enter', function () {
                         more.remove();
                         page++;
-                        _this.load();
+                        loadPage();
                     });
                     body.append(more);
                 }
 
-                _this.activity.toggle();
+                comp.activity.toggle();
             }, function () {
                 loading = false;
-                _this.activity.loader(false);
-                _this.activity.toggle();
+                comp.activity.loader(false);
+                comp.activity.toggle();
             });
-        };
+        }
 
-        this.start = function () {
+        comp.start = function () {
+            if (Lampa.Activity.active().activity !== this.activity) return;
+
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
@@ -307,27 +311,23 @@
                 down: function () { Navigator.move('down'); },
                 back: function () { Lampa.Activity.backward(); }
             });
+
             Lampa.Controller.toggle('content');
         };
 
-        this.pause = function () {};
-        this.stop = function () {};
-        this.render = function () { return scroll.render(); };
-        this.destroy = function () {
-            network.clear();
-            scroll.destroy();
-        };
+        return comp;
     }
 
-    // ========================================
-    // FULL - Chi tiết phim
-    // ========================================
+    // ==========================================
+    //  FULL / DETAIL
+    // ==========================================
     function KKFull(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var comp = new Lampa.InteractionCategory(object);
+        var scroll = comp.scroll;
         var card = object.card;
         var last;
 
-        this.create = function () {
+        comp.create = function () {
             var _this = this;
             _this.activity.loader(true);
 
@@ -337,95 +337,79 @@
                 _this.activity.loader(false);
 
                 if (!response || !response.movie) {
-                    var empty = $('<div class="torrent-empty"><div class="torrent-empty__title">Không tìm thấy phim</div></div>');
-                    scroll.append(empty);
+                    scroll.append($('<div class="empty"><div class="empty__title">Không tìm thấy phim</div></div>'));
                     _this.activity.toggle();
                     return;
                 }
 
-                _this.build(response);
+                buildDetail(response);
                 _this.activity.toggle();
             }, function () {
                 _this.activity.loader(false);
-                var empty = $('<div class="torrent-empty"><div class="torrent-empty__title">Lỗi tải dữ liệu</div></div>');
-                scroll.append(empty);
+                scroll.append($('<div class="empty"><div class="empty__title">Lỗi tải dữ liệu</div></div>'));
                 _this.activity.toggle();
             });
         };
 
-        this.build = function (data) {
-            var _this = this;
+        function buildDetail(data) {
             var movie = data.movie;
             var episodes = data.episodes || [];
+
             var poster = getImageUrl(movie.poster_url || movie.thumb_url);
             var backdrop = getImageUrl(movie.thumb_url || movie.poster_url);
 
-            // === PHẦN INFO ===
-            var info = $('<div></div>');
+            // Info
+            var info = $('<div class="full-start"></div>');
 
-            // Poster + thông tin cơ bản
-            var detailBox = $(
-                '<div style="display:flex;gap:1.5em;padding:1em 0;">' +
-                '  <div style="flex:0 0 150px;">' +
-                '    <img src="' + poster + '" style="width:100%;border-radius:10px;display:block;" onerror="this.src=\'./img/img_broken.svg\'" />' +
-                '  </div>' +
-                '  <div style="flex:1;min-width:0;">' +
-                '    <div style="font-size:1.6em;font-weight:700;color:#fff;margin-bottom:0.3em;">' + (movie.name || '') + '</div>' +
-                '    <div style="font-size:0.95em;color:rgba(255,255,255,0.6);margin-bottom:0.8em;">' + (movie.origin_name || '') + '</div>' +
-                '    <div style="display:flex;flex-wrap:wrap;gap:0.4em;margin-bottom:0.8em;">' +
-                '      <span class="full-start__tag" style="background:rgba(255,255,255,0.12);padding:4px 10px;border-radius:6px;font-size:0.85em;">' + (movie.year || '') + '</span>' +
-                '      <span class="full-start__tag" style="background:#e50914;padding:4px 10px;border-radius:6px;font-size:0.85em;font-weight:700;">' + (movie.quality || 'HD') + '</span>' +
-                '      <span class="full-start__tag" style="background:rgba(255,255,255,0.12);padding:4px 10px;border-radius:6px;font-size:0.85em;">' + (movie.lang || 'Vietsub') + '</span>' +
-                (movie.time ? '<span class="full-start__tag" style="background:rgba(255,255,255,0.12);padding:4px 10px;border-radius:6px;font-size:0.85em;">' + movie.time + '</span>' : '') +
-                '    </div>' +
-                '    <div style="font-size:0.9em;color:rgba(255,255,255,0.7);line-height:1.5;">' +
-                '      <div><b>Trạng thái:</b> ' + (movie.episode_current || 'Full') + '</div>' +
-                '      <div><b>Tổng tập:</b> ' + (movie.episode_total || 'N/A') + '</div>' +
-                '      <div><b>Quốc gia:</b> ' + ((movie.country || []).map(function (c) { return c.name; }).join(', ') || 'N/A') + '</div>' +
-                '      <div><b>Thể loại:</b> ' + ((movie.category || []).map(function (c) { return c.name; }).join(', ') || 'N/A') + '</div>' +
-                '    </div>' +
-                '  </div>' +
-                '</div>'
-            );
+            info.append('<div class="full-start__background" style="background-image:url(' + backdrop + ')"></div>');
 
-            info.append(detailBox);
+            var body_info = $('<div class="full-start__body"></div>');
 
-            // Mô tả
+            body_info.append('<div class="full-start__poster"><img src="' + poster + '" /></div>');
+
+            var right = $('<div class="full-start__right"></div>');
+            right.append('<div class="full-start__name">' + (movie.name || '') + '</div>');
+            right.append('<div class="full-start__tagline">' + (movie.origin_name || '') + '</div>');
+
+            var tags = $('<div class="full-start__tags"></div>');
+            if (movie.year) tags.append('<div class="full-start__tag"><img src="./img/icon_star.svg" /><span>' + movie.year + '</span></div>');
+            if (movie.quality) tags.append('<div class="full-start__tag"><span>' + movie.quality + '</span></div>');
+            if (movie.lang) tags.append('<div class="full-start__tag"><span>' + movie.lang + '</span></div>');
+            if (movie.time) tags.append('<div class="full-start__tag"><span>' + movie.time + '</span></div>');
+            right.append(tags);
+
+            var countries = (movie.country || []).map(function (c) { return c.name; }).join(', ');
+            var genres = (movie.category || []).map(function (c) { return c.name; }).join(', ');
+
+            if (countries) right.append('<div class="full-start__details"><span>Quốc gia: ' + countries + '</span></div>');
+            if (genres) right.append('<div class="full-start__details"><span>Thể loại: ' + genres + '</span></div>');
+
+            right.append('<div class="full-start__details"><span>Trạng thái: ' + (movie.episode_current || 'Full') + '</span></div>');
+
             var desc = clearHtml(movie.content || '');
-            if (desc) {
-                var descBox = $('<div style="padding:0.5em 0 1em;font-size:0.92em;line-height:1.6;color:rgba(255,255,255,0.75);max-height:8em;overflow:hidden;">' + desc + '</div>');
-                info.append(descBox);
-            }
+            if (desc) right.append('<div class="full-start__text">' + desc + '</div>');
 
+            body_info.append(right);
+            info.append(body_info);
             scroll.append(info);
 
-            // === PHẦN EPISODES ===
+            // Episodes
             if (episodes.length) {
                 episodes.forEach(function (server, sIdx) {
                     var serverData = server.server_data || [];
                     if (!serverData.length) return;
 
-                    var section = $('<div style="margin-top:1.2em;"></div>');
-                    var sTitle = $('<div style="font-size:1.1em;font-weight:600;color:#fff;margin-bottom:0.6em;">' +
-                        (server.server_name || ('Server ' + (sIdx + 1))) + ' (' + serverData.length + ' tập)' +
-                        '</div>');
-                    section.append(sTitle);
+                    var section = $('<div></div>');
+                    section.append('<div class="items-line__head"><div class="items-line__title">' + (server.server_name || ('Server ' + (sIdx + 1))) + ' (' + serverData.length + ' tập)</div></div>');
 
-                    var epList = $('<div style="display:flex;flex-wrap:wrap;gap:0.5em;"></div>');
+                    var epList = $('<div class="items-line__body" style="flex-wrap:wrap;"></div>');
 
                     serverData.forEach(function (ep, i) {
-                        var btn = $('<div class="selector" style="padding:0.6em 1.2em;border-radius:8px;background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;">' +
-                            (ep.name || ('Tập ' + (i + 1))) +
-                            '</div>');
+                        var btn = $('<div class="selector tag-item" style="padding:10px 18px;margin:4px;">' + (ep.name || ('Tập ' + (i + 1))) + '</div>');
 
                         btn.on('hover:focus', function () {
                             last = btn[0];
                             scroll.update(btn, true);
-                            btn.css('background', 'rgba(255,255,255,0.25)');
-                        });
-
-                        btn.on('hover:blur', function () {
-                            btn.css('background', 'rgba(255,255,255,0.1)');
                         });
 
                         btn.on('hover:enter', function () {
@@ -448,9 +432,7 @@
                                 poster: poster
                             });
 
-                            if (Lampa.Player.playlist) {
-                                Lampa.Player.playlist(playlist);
-                            }
+                            if (Lampa.Player.playlist) Lampa.Player.playlist(playlist);
                         });
 
                         epList.append(btn);
@@ -459,12 +441,12 @@
                     section.append(epList);
                     scroll.append(section);
                 });
-            } else {
-                scroll.append($('<div class="torrent-empty"><div class="torrent-empty__title">Chưa có tập phim</div></div>'));
             }
-        };
+        }
 
-        this.start = function () {
+        comp.start = function () {
+            if (Lampa.Activity.active().activity !== this.activity) return;
+
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
@@ -482,30 +464,26 @@
                 down: function () { Navigator.move('down'); },
                 back: function () { Lampa.Activity.backward(); }
             });
+
             Lampa.Controller.toggle('content');
         };
 
-        this.pause = function () {};
-        this.stop = function () {};
-        this.render = function () { return scroll.render(); };
-        this.destroy = function () {
-            network.clear();
-            scroll.destroy();
-        };
+        return comp;
     }
 
-    // ========================================
-    // SEARCH
-    // ========================================
+    // ==========================================
+    //  SEARCH
+    // ==========================================
     function KKSearch(object) {
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var comp = new Lampa.InteractionCategory(object);
+        var scroll = comp.scroll;
         var body = $('<div class="category-full"></div>');
         var keyword = object.search || '';
         var last;
 
         scroll.append(body);
 
-        this.create = function () {
+        comp.create = function () {
             var _this = this;
             _this.activity.loader(true);
 
@@ -513,11 +491,12 @@
             network.timeout(15000);
             network.silent(CONFIG.api_url + '/tim-kiem?keyword=' + encodeURIComponent(keyword), function (response) {
                 _this.activity.loader(false);
+
                 var data = response.data || response || {};
                 var list = data.items || [];
 
                 if (!list.length) {
-                    body.append('<div class="torrent-empty"><div class="torrent-empty__title">Không tìm thấy: ' + keyword + '</div></div>');
+                    body.append('<div class="empty"><div class="empty__title">Không tìm thấy: ' + keyword + '</div></div>');
                     _this.activity.toggle();
                     return;
                 }
@@ -525,7 +504,28 @@
                 list.forEach(function (item) {
                     var movie = toLampaCard(item);
 
-                    var card = createCard(movie, function () {
+                    var card_el = Lampa.Template.get('card', {
+                        title: movie.title,
+                        release_year: movie.release_date ? movie.release_date.substring(0, 4) : ''
+                    });
+
+                    var img = card_el.find('.card__img')[0] || card_el.find('img')[0];
+                    if (img) {
+                        if (img.tagName === 'IMG') {
+                            img.src = movie.poster_path || '';
+                        } else {
+                            $(img).css('background-image', 'url(' + (movie.poster_path || '') + ')');
+                        }
+                    }
+
+                    card_el.addClass('selector');
+
+                    card_el.on('hover:focus', function () {
+                        last = card_el[0];
+                        scroll.update(card_el, true);
+                    });
+
+                    card_el.on('hover:enter', function () {
                         Lampa.Activity.push({
                             url: '',
                             title: movie.title,
@@ -533,23 +533,22 @@
                             card: movie,
                             page: 1
                         });
-                    }, function (target) {
-                        last = target;
-                        scroll.update($(target), true);
                     });
 
-                    body.append(card);
+                    body.append(card_el);
                 });
 
                 _this.activity.toggle();
             }, function () {
                 _this.activity.loader(false);
-                body.append('<div class="torrent-empty"><div class="torrent-empty__title">Lỗi tìm kiếm</div></div>');
+                body.append('<div class="empty"><div class="empty__title">Lỗi tìm kiếm</div></div>');
                 _this.activity.toggle();
             });
         };
 
-        this.start = function () {
+        comp.start = function () {
+            if (Lampa.Activity.active().activity !== this.activity) return;
+
             Lampa.Controller.add('content', {
                 toggle: function () {
                     Lampa.Controller.collectionSet(scroll.render());
@@ -567,30 +566,25 @@
                 down: function () { Navigator.move('down'); },
                 back: function () { Lampa.Activity.backward(); }
             });
+
             Lampa.Controller.toggle('content');
         };
 
-        this.pause = function () {};
-        this.stop = function () {};
-        this.render = function () { return scroll.render(); };
-        this.destroy = function () {
-            network.clear();
-            scroll.destroy();
-        };
+        return comp;
     }
 
-    // ========================================
-    // REGISTER
-    // ========================================
+    // ==========================================
+    //  MENU
+    // ==========================================
     function addMenu() {
         var wait = function () {
             if (!$('.menu__list').length) return setTimeout(wait, 500);
             if ($('[data-action="kkphim"]').length) return;
 
-            var item = $('<li class="menu__item selector" data-action="kkphim">' +
-                '<div class="menu__ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm0 2v12h16V6H4zm2 2h3v3H6V8zm5 0h7v2h-7V8zm0 4h7v2h-7v-2zM6 12h3v3H6v-3z"/></svg></div>' +
-                '<div class="menu__text">KKPhim</div>' +
-                '</li>');
+            var item = $('<li class="menu__item selector" data-action="kkphim">'
+                + '<div class="menu__ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm2 2v10h12V7H6z"/></svg></div>'
+                + '<div class="menu__text">KKPhim</div>'
+                + '</li>');
 
             item.on('hover:enter', function () {
                 Lampa.Activity.push({
@@ -603,9 +597,13 @@
 
             $('.menu__list').first().append(item);
         };
+
         wait();
     }
 
+    // ==========================================
+    //  INIT
+    // ==========================================
     function init() {
         if (!window.Lampa || !Lampa.Component) return setTimeout(init, 300);
 
