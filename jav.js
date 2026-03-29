@@ -72,6 +72,12 @@
         }
     }
 
+    function clearScroll(scroll) {
+        try {
+            scroll.render().find('.scroll__body').empty();
+        } catch (e) {}
+    }
+
     function injectStyle() {
         if ($('#kk-css').length) return;
         $('head').append(`<style id="kk-css">
@@ -107,8 +113,19 @@
             .kk-hero-poster { width:10em; min-width:10em }
             .kk-hero-poster img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:.9em; display:block; box-shadow:0 .8em 1.8em rgba(0,0,0,.35); background:#242424 }
             .kk-hero-info { flex:1; min-width:0 }
-            .kk-logo { max-width:20em; margin-bottom:.7em }
-            .kk-logo img { max-width:100%; max-height:7em; object-fit:contain; display:block; filter:drop-shadow(0 .3em 1em rgba(0,0,0,.35)) }
+
+            .kk-logo {
+                max-width: 24em;
+                margin-bottom: .75em;
+            }
+            .kk-logo img {
+                max-width: 100%;
+                max-height: 9em;
+                object-fit: contain;
+                display: block;
+                filter: drop-shadow(0 .3em 1em rgba(0,0,0,.35));
+            }
+
             .kk-title { font-size:2.1em; line-height:1.08; font-weight:900; color:#fff; margin-bottom:.12em }
             .kk-origin { font-size:1.05em; line-height:1.35; color:rgba(255,255,255,.7) }
 
@@ -118,9 +135,25 @@
             .kk-genres { display:flex; flex-wrap:wrap; gap:.5em; margin-bottom:.9em }
             .kk-genre { padding:.4em .85em; border-radius:999px; background:rgba(56,142,60,.24); border:1px solid rgba(76,175,80,.45); color:#a5d6a7; font-size:.94em; font-weight:700; cursor:pointer }
             .kk-genre.focus { background:rgba(76,175,80,.45); color:#fff }
-            .kk-crew { margin-bottom:.9em }
-            .kk-crew b { display:block; font-size:1em; font-weight:900; color:#fff; margin-bottom:.2em }
-            .kk-crew span { font-size:1em; color:rgba(255,255,255,.8) }
+
+            .kk-crew {
+                margin-bottom: 1em;
+                padding: .2em 0 .1em;
+            }
+            .kk-crew b {
+                display: block;
+                font-size: 1.08em;
+                font-weight: 900;
+                color: #fff;
+                margin-bottom: .22em;
+            }
+            .kk-crew span {
+                display: block;
+                font-size: 1.05em;
+                line-height: 1.55;
+                color: rgba(255,255,255,.84);
+            }
+
             .kk-desc { font-size:1.06em; line-height:1.68; color:rgba(255,255,255,.9); margin-bottom:1.1em }
             .kk-play { display:inline-flex; align-items:center; justify-content:center; min-width:10em; padding:.9em 1.5em; border-radius:.85em; background:#ff1424; color:#fff; font-size:1.1em; font-weight:900; cursor:pointer; box-shadow:0 .5em 1.4em rgba(255,20,36,.25) }
             .kk-play.focus { background:#ff3140 }
@@ -143,8 +176,8 @@
             @media(orientation:portrait){
                 .kk-hero-flex { display:block }
                 .kk-hero-poster { display:none }
-                .kk-logo { max-width:21em }
-                .kk-logo img { max-height:7em }
+                .kk-logo { max-width:26em }
+                .kk-logo img { max-height:10em }
                 .kk-title { font-size:1.85em }
                 .kk-origin { font-size:.96em }
                 .kk-play { width:100% }
@@ -196,6 +229,7 @@
 
             this.create = function () {
                 this.activity.loader(true);
+                clearScroll(scroll);
                 var loaded = 0;
 
                 cats.forEach(function (cat) {
@@ -287,6 +321,7 @@
 
             this.create = function () {
                 this.activity.loader(true);
+                clearScroll(scroll);
                 wrap.append('<div class="kk-grid-title">' + title + '</div>');
                 wrap.append(grid);
                 wrap.append(loadMore);
@@ -377,6 +412,7 @@
 
             this.create = function () {
                 this.activity.loader(true);
+                clearScroll(scroll);
 
                 network.silent(API + 'phim/' + movie.slug, function (res) {
                     var data = res.movie || res || {};
@@ -451,9 +487,9 @@
 
                         var crew = tmdb.credits.crew || [];
                         var dirs = [];
-                        if (ttype === 'movie') dirs = crew.filter(function (c) { return c.job === 'Director' }).map(function (c) { return c.name });
-                        else dirs = crew.filter(function (c) { return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director' }).map(function (c) { return c.name });
-                        dirs = dirs.filter(function (v, i, a) { return a.indexOf(v) === i });
+                        if (ttype === 'movie') dirs = crew.filter(function (c) { return c.job === 'Director'; }).map(function (c) { return c.name; });
+                        else dirs = crew.filter(function (c) { return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director'; }).map(function (c) { return c.name; });
+                        dirs = dirs.filter(function (v, i, a) { return a.indexOf(v) === i; });
                         if (dirs.length) dir = dirs.slice(0, 5).join(', ');
                     }
                 }
