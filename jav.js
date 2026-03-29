@@ -60,20 +60,41 @@
 
     function addTouchScroll(el) {
         el.css({
-            'overflow-y': 'auto',
+            'overflow-y': 'scroll',
             'overflow-x': 'hidden',
             '-webkit-overflow-scrolling': 'touch',
-            'touch-action': 'auto',
-            'padding-bottom': '12em',
+            'touch-action': 'manipulation',
+            'padding-bottom': '14em',
             'box-sizing': 'border-box'
         });
 
         if (el[0]) {
-            el[0].style.setProperty('overflow-y', 'auto', 'important');
+            el[0].style.setProperty('overflow-y', 'scroll', 'important');
+            el[0].style.setProperty('overflow-x', 'hidden', 'important');
             el[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-            el[0].style.setProperty('touch-action', 'auto', 'important');
-            el[0].style.setProperty('padding-bottom', '12em', 'important');
+            el[0].style.setProperty('touch-action', 'manipulation', 'important');
+            el[0].style.setProperty('padding-bottom', '14em', 'important');
         }
+
+        $('.activity__body, .activity__content').css({
+            'overflow': 'hidden'
+        });
+    }
+
+    function unlockDetailScroll(el) {
+        setTimeout(function () {
+            if (!el || !el[0]) return;
+
+            var node = el[0];
+            node.scrollTop = 1;
+
+            $('.activity__body, .activity__content, .scroll, .scroll__body').css({
+                'touch-action': 'auto',
+                '-webkit-overflow-scrolling': 'touch'
+            });
+
+            node.addEventListener('touchmove', function(){}, { passive: true });
+        }, 100);
     }
 
     function injectStyle() {
@@ -90,7 +111,7 @@
                 overflow-x: hidden !important;
                 -webkit-overflow-scrolling: touch !important;
                 touch-action: auto !important;
-                padding-bottom: 12em;
+                padding-bottom: 14em;
                 box-sizing: border-box;
             }
 
@@ -436,6 +457,7 @@
                 overflow-y: hidden;
                 -webkit-overflow-scrolling: touch;
                 padding-bottom: 0.4em;
+                touch-action: pan-x;
             }
 
             .kkphim-cast-card {
@@ -508,56 +530,64 @@
                 background: #ff2a38;
             }
 
-            /* PORTRAIT: ẩn poster, ưu tiên backdrop + logo + title lớn */
             @media (orientation: portrait) {
                 .kkphim-detail-top {
-                    min-height: 32em;
+                    min-height: 36em;
                 }
 
                 .kkphim-detail-backdrop {
-                    height: 30em;
+                    height: 31em;
                 }
 
                 .kkphim-detail-backdrop img {
-                    transform: scale(1.08);
-                    filter: blur(1.5px);
+                    transform: scale(1.1);
+                    filter: blur(1px);
                 }
 
                 .kkphim-detail-backdrop-mask {
                     background:
-                        linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 36%, rgba(20,20,20,0.94) 82%, rgba(20,20,20,1) 100%);
+                        linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 26%, rgba(0,0,0,0.46) 58%, rgba(20,20,20,0.92) 84%, rgba(20,20,20,1) 100%);
                 }
 
                 .kkphim-detail-inner {
                     display: block;
-                    padding: 6.2em 1.1em 1.5em;
+                    padding: 18.5em 1.1em 1.5em;
                 }
 
                 .kkphim-detail-poster {
                     display: none;
                 }
 
+                .kkphim-detail-info {
+                    position: relative;
+                }
+
                 .kkphim-detail-logo {
-                    max-width: 16em;
-                    margin-bottom: 1em;
+                    max-width: 22em;
+                    margin-bottom: 0.75em;
                 }
 
                 .kkphim-detail-logo img {
-                    max-height: 5em;
+                    max-width: 100%;
+                    max-height: 8em;
+                    object-fit: contain;
                 }
 
                 .kkphim-detail-title {
-                    font-size: 2.5em;
-                    line-height: 1.05;
-                    margin-bottom: 0.18em;
+                    font-size: 1.9em;
+                    line-height: 1.1;
+                    margin-bottom: 0.2em;
                 }
 
                 .kkphim-detail-origin {
-                    font-size: 1.15em;
+                    font-size: 1em;
+                    line-height: 1.35;
+                    opacity: 0.9;
                 }
 
                 .kkphim-detail-meta {
                     gap: 0.5em;
+                    margin-top: 0.9em;
                 }
 
                 .kkphim-meta {
@@ -576,7 +606,6 @@
                 }
             }
 
-            /* LANDSCAPE / màn hình ngang: hiện poster */
             @media (orientation: landscape) {
                 .kkphim-detail-poster {
                     display: block;
@@ -937,6 +966,7 @@
                 setTimeout(function () {
                     addTouchScroll(html);
                     enableGlobalMobileTouch();
+                    unlockDetailScroll(html);
                 }, 100);
             }
 
@@ -957,6 +987,7 @@
                 var crewHtml = '';
                 var logoHtml = '';
                 var directorText = '';
+                var hasLogo = false;
                 var phimApiGenres = data.category || [];
 
                 if (tmdb) {
@@ -977,6 +1008,7 @@
 
                     var logo = pickLogo(logos || tmdb.images);
                     if (logo && logo.file_path) {
+                        hasLogo = true;
                         logoHtml = '<div class="kkphim-detail-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '" alt="logo"></div>';
                     }
 
@@ -1039,7 +1071,7 @@
                 }
 
                 var top = $(
-                    '<div class="kkphim-detail-top">' +
+                    '<div class="kkphim-detail-top ' + (hasLogo ? 'kkphim-has-logo' : 'kkphim-no-logo') + '">' +
                         '<div class="kkphim-detail-backdrop">' +
                             '<img src="' + backdrop + '" alt="backdrop">' +
                             '<div class="kkphim-detail-backdrop-mask"></div>' +
@@ -1149,6 +1181,7 @@
                 setTimeout(function () {
                     addTouchScroll(html);
                     enableGlobalMobileTouch();
+                    unlockDetailScroll(html);
                 }, 50);
             };
 
