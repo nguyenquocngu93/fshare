@@ -37,13 +37,39 @@
 
     function pickLogo(imgs) {
         if (!imgs || !imgs.logos || !imgs.logos.length) return null;
-        return imgs.logos.find(function(l){return l.iso_639_1==='vi'}) ||
-               imgs.logos.find(function(l){return l.iso_639_1==='en'}) ||
-               imgs.logos[0] || null;
+        return imgs.logos.find(function (l) { return l.iso_639_1 === 'vi'; }) ||
+            imgs.logos.find(function (l) { return l.iso_639_1 === 'en'; }) ||
+            imgs.logos[0] || null;
     }
 
-    function scrollSafe(s) {
-        try { s.update(s.render().find('.selector').first()); } catch(e) {}
+    function enableNativeScroll(scroll) {
+        var el = scroll.render();
+
+        el.css({
+            'overflow': 'hidden',
+            'position': 'relative',
+            'height': '100%'
+        });
+
+        var body = el.find('.scroll__body');
+
+        body.css({
+            'transform': 'none',
+            'position': 'relative',
+            'overflow-y': 'auto',
+            'overflow-x': 'hidden',
+            '-webkit-overflow-scrolling': 'touch',
+            'height': '100%',
+            'padding-bottom': '8em'
+        });
+
+        if (body[0]) {
+            body[0].style.setProperty('transform', 'none', 'important');
+            body[0].style.setProperty('overflow-y', 'auto', 'important');
+            body[0].style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+            body[0].style.setProperty('height', '100%', 'important');
+            body[0].style.setProperty('padding-bottom', '8em', 'important');
+        }
     }
 
     function injectStyle() {
@@ -136,18 +162,18 @@
         function ins() {
             if ($('.menu__item[data-action="kkphim"]').length) return;
             var m = $('<li class="menu__item selector" data-action="kkphim"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm2 2v2h2V6H6zm4 0v2h2V6h-2zm4 0v2h2V6h-2zm4 0v2h2V6h-2zM6 10v8h12v-8H6z"/></svg></div><div class="menu__text">KKPhim</div></li>');
-            m.on('click hover:enter', function(){ Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1}); });
+            m.on('click hover:enter', function () { Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 }); });
             $('.menu .menu__list').first().append(m);
         }
-        setTimeout(ins,500);
-        Lampa.Listener.follow('app',function(e){ if(e.type==='ready') setTimeout(ins,500); });
-        Lampa.Listener.follow('full',function(){ setTimeout(ins,500); });
+        setTimeout(ins, 500);
+        Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') setTimeout(ins, 500); });
+        Lampa.Listener.follow('full', function () { setTimeout(ins, 500); });
     }
 
     function mkCard(item) {
         var p = fullImg(item.poster_url || item.thumb_url);
-        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="'+p+'">'+(item.quality?'<div class="kk-card-q">'+item.quality+'</div>':'')+(item.episode_current?'<div class="kk-card-ep">'+item.episode_current+'</div>':'')+'</div><div class="kk-card-name">'+(item.name||'')+'</div><div class="kk-card-year">'+(item.year||'')+'</div></div>');
-        c.on('click hover:enter', function(){ Lampa.Activity.push({url:'',title:item.name||'KKPhim',component:'kkphim_detail',movie:item,page:1}); });
+        var c = $('<div class="kk-card selector"><div class="kk-card-img"><img src="' + p + '">' + (item.quality ? '<div class="kk-card-q">' + item.quality + '</div>' : '') + (item.episode_current ? '<div class="kk-card-ep">' + item.episode_current + '</div>' : '') + '</div><div class="kk-card-name">' + (item.name || '') + '</div><div class="kk-card-year">' + (item.year || '') + '</div></div>');
+        c.on('click hover:enter', function () { Lampa.Activity.push({ url: '', title: item.name || 'KKPhim', component: 'kkphim_detail', movie: item, page: 1 }); });
         return c;
     }
 
@@ -156,42 +182,39 @@
         addMenu();
 
         // ======= MAIN =======
-        Lampa.Component.add('kkphim_main', function(object) {
+        Lampa.Component.add('kkphim_main', function (object) {
             var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({mask:true,over:true});
-            var items = [];
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
             var comp = this;
 
             var cats = [
-                {name:'Phim Mới Cập Nhật',api:'danh-sach/phim-moi-cap-nhat',slug:'phim-moi-cap-nhat'},
-                {name:'Phim Bộ',api:'v1/api/danh-sach/phim-bo',slug:'phim-bo'},
-                {name:'Phim Lẻ',api:'v1/api/danh-sach/phim-le',slug:'phim-le'},
-                {name:'Hoạt Hình',api:'v1/api/danh-sach/hoat-hinh',slug:'hoat-hinh'}
+                { name: 'Phim Mới Cập Nhật', api: 'danh-sach/phim-moi-cap-nhat', slug: 'phim-moi-cap-nhat' },
+                { name: 'Phim Bộ', api: 'v1/api/danh-sach/phim-bo', slug: 'phim-bo' },
+                { name: 'Phim Lẻ', api: 'v1/api/danh-sach/phim-le', slug: 'phim-le' },
+                { name: 'Hoạt Hình', api: 'v1/api/danh-sach/hoat-hinh', slug: 'hoat-hinh' }
             ];
 
-            this.create = function() {
+            this.create = function () {
                 this.activity.loader(true);
                 var loaded = 0;
 
-                cats.forEach(function(cat){
-                    network.silent(API+cat.api+'?page=1', function(res){
-                        var list = (res&&res.items) ? res.items : (res&&res.data&&res.data.items) ? res.data.items : [];
+                cats.forEach(function (cat) {
+                    network.silent(API + cat.api + '?page=1', function (res) {
+                        var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
 
                         if (list.length) {
                             var row = $('<div class="kk-row"></div>');
                             var head = $('<div class="kk-row-head"></div>');
-                            var t = $('<div class="kk-row-title">'+cat.name+'</div>');
+                            var t = $('<div class="kk-row-title">' + cat.name + '</div>');
                             var more = $('<div class="kk-row-more selector">Xem thêm</div>');
                             var rl = $('<div class="kk-row-list"></div>');
 
-                            more.on('click hover:enter', function(){
-                                Lampa.Activity.push({url:'',title:cat.name,component:'kkphim_category',cat:cat,page_num:1,mode:'api'});
+                            more.on('click hover:enter', function () {
+                                Lampa.Activity.push({ url: '', title: cat.name, component: 'kkphim_category', cat: cat, page_num: 1, mode: 'api' });
                             });
 
-                            list.slice(0,12).forEach(function(item){
-                                var card = mkCard(item);
-                                items.push(card);
-                                rl.append(card);
+                            list.slice(0, 12).forEach(function (item) {
+                                rl.append(mkCard(item));
                             });
 
                             head.append(t).append(more);
@@ -204,7 +227,7 @@
                             comp.activity.loader(false);
                             comp.start();
                         }
-                    }, function(){
+                    }, function () {
                         loaded++;
                         if (loaded >= cats.length) {
                             comp.activity.loader(false);
@@ -214,65 +237,67 @@
                 });
             };
 
-            this.start = function() {
-                Lampa.Controller.add('content',{
-                    toggle: function(){
+            this.start = function () {
+                Lampa.Controller.add('content', {
+                    toggle: function () {
                         Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false,scroll.render());
+                        Lampa.Controller.collectionFocus(false, scroll.render());
                     },
-                    left: function(){
+                    left: function () {
                         if (Navigator.canmove('left')) Navigator.move('left');
                         else Lampa.Controller.toggle('menu');
                     },
-                    right: function(){ Navigator.move('right'); },
-                    up: function(){
+                    right: function () { Navigator.move('right'); },
+                    up: function () {
                         if (Navigator.canmove('up')) Navigator.move('up');
                         else Lampa.Controller.toggle('head');
                     },
-                    down: function(){ Navigator.move('down'); },
-                    back: function(){ Lampa.Activity.backward(); }
+                    down: function () { Navigator.move('down'); },
+                    back: function () { Lampa.Activity.backward(); }
                 });
+
                 Lampa.Controller.toggle('content');
+                enableNativeScroll(scroll);
             };
 
-            this.pause = function(){};
-            this.stop = function(){};
-            this.render = function(){ return scroll.render(); };
-            this.destroy = function(){
+            this.pause = function () {};
+            this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () {
                 network.clear();
                 scroll.destroy();
             };
         });
 
         // ======= CATEGORY =======
-        Lampa.Component.add('kkphim_category', function(object) {
+        Lampa.Component.add('kkphim_category', function (object) {
             var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({mask:true,over:true});
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
             var comp = this;
-            var page = object.page_num||1;
-            var title = object.title||(object.cat&&object.cat.name)||'Danh mục';
-            var mode = object.mode||'api';
-            var apiPath = object.cat?object.cat.api:null;
-            var catSlug = object.category_slug||'';
+            var page = object.page_num || 1;
+            var title = object.title || (object.cat && object.cat.name) || 'Danh mục';
+            var mode = object.mode || 'api';
+            var apiPath = object.cat ? object.cat.api : null;
+            var catSlug = object.category_slug || '';
             var wrap = $('<div class="kk-grid-wrap"></div>');
             var grid = $('<div class="kk-grid"></div>');
             var loadMore = $('<div class="kk-loadmore selector">Tải thêm</div>');
             var loading = false;
             var hasMore = true;
 
-            this.create = function() {
+            this.create = function () {
                 this.activity.loader(true);
-                wrap.append('<div class="kk-grid-title">'+title+'</div>');
+                wrap.append('<div class="kk-grid-title">' + title + '</div>');
                 wrap.append(grid);
                 wrap.append(loadMore);
                 scroll.append(wrap);
 
-                loadMore.on('click hover:enter', function(){ if(!loading&&hasMore) doLoad(); });
+                loadMore.on('click hover:enter', function () { if (!loading && hasMore) doLoad(); });
                 doLoad();
             };
 
             function handleRes(res) {
-                var list = (res&&res.items)?res.items:(res&&res.data&&res.data.items)?res.data.items:[];
+                var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
 
                 if (!list.length) {
                     hasMore = false;
@@ -283,7 +308,7 @@
                     return;
                 }
 
-                list.forEach(function(item){
+                list.forEach(function (item) {
                     grid.append(mkCard(item).addClass('kk-card--grid'));
                 });
 
@@ -298,64 +323,66 @@
                 loading = true;
                 loadMore.text('Đang tải...');
 
-                var url = (mode==='category'&&catSlug) ? API+'v1/api/the-loai/'+catSlug+'?page='+page : API+apiPath+'?page='+page;
+                var url = (mode === 'category' && catSlug) ? API + 'v1/api/the-loai/' + catSlug + '?page=' + page : API + apiPath + '?page=' + page;
 
-                network.silent(url, function(res){ handleRes(res); }, function(){
-                    if (mode==='category'&&catSlug) {
-                        network.silent(API+'the-loai/'+catSlug+'?page='+page, function(r2){ handleRes(r2); }, function(){
-                            loading=false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
+                network.silent(url, function (res) { handleRes(res); }, function () {
+                    if (mode === 'category' && catSlug) {
+                        network.silent(API + 'the-loai/' + catSlug + '?page=' + page, function (r2) { handleRes(r2); }, function () {
+                            loading = false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
                         });
                     } else {
-                        loading=false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
+                        loading = false; loadMore.text('Tải lại'); comp.activity.loader(false); Lampa.Noty.show('Lỗi tải danh mục');
                     }
                 });
             }
 
-            this.start = function() {
-                Lampa.Controller.add('content',{
-                    toggle: function(){
+            this.start = function () {
+                Lampa.Controller.add('content', {
+                    toggle: function () {
                         Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false,scroll.render());
+                        Lampa.Controller.collectionFocus(false, scroll.render());
                     },
-                    left: function(){
+                    left: function () {
                         if (Navigator.canmove('left')) Navigator.move('left');
                         else Lampa.Controller.toggle('menu');
                     },
-                    right: function(){ Navigator.move('right'); },
-                    up: function(){
+                    right: function () { Navigator.move('right'); },
+                    up: function () {
                         if (Navigator.canmove('up')) Navigator.move('up');
                         else Lampa.Controller.toggle('head');
                     },
-                    down: function(){ Navigator.move('down'); },
-                    back: function(){ Lampa.Activity.backward(); }
+                    down: function () { Navigator.move('down'); },
+                    back: function () { Lampa.Activity.backward(); }
                 });
+
                 Lampa.Controller.toggle('content');
+                enableNativeScroll(scroll);
             };
 
-            this.pause = function(){};
-            this.stop = function(){};
-            this.render = function(){ return scroll.render(); };
-            this.destroy = function(){
+            this.pause = function () {};
+            this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () {
                 network.clear();
                 scroll.destroy();
             };
         });
 
         // ======= DETAIL =======
-        Lampa.Component.add('kkphim_detail', function(object) {
+        Lampa.Component.add('kkphim_detail', function (object) {
             var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({mask:true,over:true});
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
             var movie = object.movie;
             var comp = this;
 
-            this.create = function() {
+            this.create = function () {
                 this.activity.loader(true);
 
-                network.silent(API+'phim/'+movie.slug, function(res){
-                    var data = res.movie||res||{};
-                    var episodes = res.episodes||[];
+                network.silent(API + 'phim/' + movie.slug, function (res) {
+                    var data = res.movie || res || {};
+                    var episodes = res.episodes || [];
                     loadAll(data, episodes);
-                }, function(){
+                }, function () {
                     comp.activity.loader(false);
                     Lampa.Noty.show('Lỗi tải thông tin phim');
                 });
@@ -368,14 +395,14 @@
                     var tmdb = null, logos = null;
 
                     if (tid) {
-                        try { tmdb = await tmdbFetch('/'+ttype+'/'+tid+'?language=vi-VN&append_to_response=credits,images'); } catch(e) {
-                            try { tmdb = await tmdbFetch('/'+ttype+'/'+tid+'?language=en-US&append_to_response=credits,images'); } catch(e2) {}
+                        try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=vi-VN&append_to_response=credits,images'); } catch (e) {
+                            try { tmdb = await tmdbFetch('/' + ttype + '/' + tid + '?language=en-US&append_to_response=credits,images'); } catch (e2) { }
                         }
-                        try { logos = await tmdbFetch('/'+ttype+'/'+tid+'/images'); } catch(e3) {}
+                        try { logos = await tmdbFetch('/' + ttype + '/' + tid + '/images'); } catch (e3) { }
                     }
 
                     buildDetail(data, episodes, tmdb, logos, ttype);
-                } catch(e) {
+                } catch (e) {
                     buildDetail(data, episodes, null, null, 'movie');
                 }
 
@@ -384,99 +411,99 @@
             }
 
             function buildDetail(data, episodes, tmdb, logos, ttype) {
-                var bk = fullImg(data.thumb_url||data.poster_url);
-                var ps = fullImg(data.poster_url||data.thumb_url);
-                var t = data.name||'';
-                var o = data.origin_name||'';
-                var d = data.content||'Không có mô tả';
-                var v = (data.tmdb&&data.tmdb.vote_average)?data.tmdb.vote_average:'N/A';
-                var y = data.year||'';
-                var rt = data.time||'';
-                var ep = data.episode_current||'';
+                var bk = fullImg(data.thumb_url || data.poster_url);
+                var ps = fullImg(data.poster_url || data.thumb_url);
+                var t = data.name || '';
+                var o = data.origin_name || '';
+                var d = data.content || 'Không có mô tả';
+                var v = (data.tmdb && data.tmdb.vote_average) ? data.tmdb.vote_average : 'N/A';
+                var y = data.year || '';
+                var rt = data.time || '';
+                var epCur = data.episode_current || '';
                 var ghtml = '';
                 var castH = '';
                 var crewH = '';
                 var logoH = '';
                 var dir = '';
-                var pCats = data.category||[];
+                var pCats = data.category || [];
 
                 if (tmdb) {
-                    if (tmdb.backdrop_path) bk = TMDB_IMG+tmdb.backdrop_path;
-                    if (tmdb.poster_path) ps = TMDB_IMG+tmdb.poster_path;
-                    if (tmdb.title||tmdb.name) t = tmdb.title||tmdb.name;
-                    if (tmdb.original_title||tmdb.original_name) o = tmdb.original_title||tmdb.original_name;
+                    if (tmdb.backdrop_path) bk = TMDB_IMG + tmdb.backdrop_path;
+                    if (tmdb.poster_path) ps = TMDB_IMG + tmdb.poster_path;
+                    if (tmdb.title || tmdb.name) t = tmdb.title || tmdb.name;
+                    if (tmdb.original_title || tmdb.original_name) o = tmdb.original_title || tmdb.original_name;
                     if (tmdb.overview) d = tmdb.overview;
                     if (tmdb.vote_average) v = Number(tmdb.vote_average).toFixed(1);
-                    if (tmdb.release_date) y = tmdb.release_date.slice(0,4);
-                    if (!y&&tmdb.first_air_date) y = tmdb.first_air_date.slice(0,4);
-                    if (tmdb.runtime) rt = tmdb.runtime+' phút';
-                    if ((!rt||rt==='')&&tmdb.episode_run_time&&tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0]+' phút';
+                    if (tmdb.release_date) y = tmdb.release_date.slice(0, 4);
+                    if (!y && tmdb.first_air_date) y = tmdb.first_air_date.slice(0, 4);
+                    if (tmdb.runtime) rt = tmdb.runtime + ' phút';
+                    if ((!rt || rt === '') && tmdb.episode_run_time && tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0] + ' phút';
 
-                    var logo = pickLogo(logos||tmdb.images);
-                    if (logo&&logo.file_path) logoH = '<div class="kk-logo"><img src="'+TMDB_IMG_W500+logo.file_path+'"></div>';
+                    var logo = pickLogo(logos || tmdb.images);
+                    if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
 
                     if (tmdb.credits) {
-                        var cast = (tmdb.credits.cast||[]).slice(0,10);
-                        castH = cast.map(function(c){
-                            var av = c.profile_path?'<img src="'+TMDB_IMG_W500+c.profile_path+'">':'<div class="kk-cast-empty"></div>';
-                            return '<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-name">'+(c.name||'')+'</div><div class="kk-cast-role">'+(c.character||'')+'</div></div>';
+                        var cast = (tmdb.credits.cast || []).slice(0, 10);
+                        castH = cast.map(function (c) {
+                            var av = c.profile_path ? '<img src="' + TMDB_IMG_W500 + c.profile_path + '">' : '<div class="kk-cast-empty"></div>';
+                            return '<div class="kk-cast-card"><div class="kk-cast-img">' + av + '</div><div class="kk-cast-name">' + (c.name || '') + '</div><div class="kk-cast-role">' + (c.character || '') + '</div></div>';
                         }).join('');
 
-                        var crew = tmdb.credits.crew||[];
+                        var crew = tmdb.credits.crew || [];
                         var dirs = [];
-                        if (ttype==='movie') dirs = crew.filter(function(c){return c.job==='Director'}).map(function(c){return c.name});
-                        else dirs = crew.filter(function(c){return c.job==='Creator'||c.job==='Director'||c.job==='Series Director'}).map(function(c){return c.name});
-                        dirs = dirs.filter(function(v,i,a){return a.indexOf(v)===i});
-                        if (dirs.length) dir = dirs.slice(0,5).join(', ');
+                        if (ttype === 'movie') dirs = crew.filter(function (c) { return c.job === 'Director' }).map(function (c) { return c.name });
+                        else dirs = crew.filter(function (c) { return c.job === 'Creator' || c.job === 'Director' || c.job === 'Series Director' }).map(function (c) { return c.name });
+                        dirs = dirs.filter(function (v, i, a) { return a.indexOf(v) === i });
+                        if (dirs.length) dir = dirs.slice(0, 5).join(', ');
                     }
                 }
 
                 if (pCats.length) {
-                    ghtml = pCats.map(function(g){
-                        return '<span class="kk-genre selector" data-slug="'+(g.slug||'')+'" data-title="'+(g.name||'').replace(/"/g,'&quot;')+'">'+ g.name+'</span>';
+                    ghtml = pCats.map(function (g) {
+                        return '<span class="kk-genre selector" data-slug="' + (g.slug || '') + '" data-title="' + (g.name || '').replace(/"/g, '&quot;') + '">' + g.name + '</span>';
                     }).join('');
-                } else if (tmdb&&tmdb.genres&&tmdb.genres.length) {
-                    ghtml = tmdb.genres.map(function(g){ return '<span class="kk-genre">'+g.name+'</span>'; }).join('');
+                } else if (tmdb && tmdb.genres && tmdb.genres.length) {
+                    ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + g.name + '</span>'; }).join('');
                 }
 
-                if (data.director&&!dir) {
-                    dir = Array.isArray(data.director)?data.director.join(', '):data.director;
+                if (data.director && !dir) {
+                    dir = Array.isArray(data.director) ? data.director.join(', ') : data.director;
                 }
 
-                if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>'+dir+'</span></div>';
+                if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + dir + '</span></div>';
 
-                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="'+bk+'"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="'+ps+'"></div><div class="kk-hero-info">'+logoH+'<div class="kk-title">'+t+'</div><div class="kk-origin">'+o+'</div></div></div></div></div>');
+                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + '<div class="kk-title">' + t + '</div><div class="kk-origin">' + o + '</div></div></div></div></div>');
 
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ '+v+'</span>'+(y?'<span class="kk-meta">📅 '+y+'</span>':'')+(rt?'<span class="kk-meta">⏱ '+rt+'</span>':'')+(ep?'<span class="kk-meta">🎬 '+ep+'</span>':'')+'</div><div class="kk-genres">'+ghtml+'</div>'+crewH+'<div class="kk-desc">'+d+'</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + v + '</span>' + (y ? '<span class="kk-meta">📅 ' + y + '</span>' : '') + (rt ? '<span class="kk-meta">⏱ ' + rt + '</span>' : '') + (epCur ? '<span class="kk-meta">🎬 ' + epCur + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + d + '</div><div><div class="kk-play selector">▶ Xem phim</div></div></div>');
 
-                body.find('.kk-play').on('click hover:enter', function(){
-                    try { playEp(episodes[0].server_data[0]); } catch(e){ Lampa.Noty.show('Không tìm thấy tập phim'); }
+                body.find('.kk-play').on('click hover:enter', function () {
+                    try { playEp(episodes[0].server_data[0]); } catch (e) { Lampa.Noty.show('Không tìm thấy tập phim'); }
                 });
 
-                body.find('.kk-genre[data-slug]').on('click hover:enter', function(){
+                body.find('.kk-genre[data-slug]').on('click hover:enter', function () {
                     var slug = $(this).attr('data-slug');
-                    var tg = $(this).attr('data-title')||'Thể loại';
+                    var tg = $(this).attr('data-title') || 'Thể loại';
                     if (!slug) return;
-                    Lampa.Activity.push({url:'',title:tg,component:'kkphim_category',mode:'category',category_slug:slug,page_num:1});
+                    Lampa.Activity.push({ url: '', title: tg, component: 'kkphim_category', mode: 'category', category_slug: slug, page_num: 1 });
                 });
 
                 scroll.append(hero);
                 scroll.append(body);
 
                 if (castH) {
-                    scroll.append('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">'+castH+'</div></div>');
+                    scroll.append('<div class="kk-block"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>');
                 }
 
-                if (episodes&&episodes.length) {
+                if (episodes && episodes.length) {
                     var ew = $('<div class="kk-block"></div>');
                     ew.append('<div class="kk-block-title">Danh sách tập</div>');
 
-                    episodes.forEach(function(sv){
-                        ew.append('<div class="kk-server">'+sv.server_name+'</div>');
+                    episodes.forEach(function (sv) {
+                        ew.append('<div class="kk-server">' + sv.server_name + '</div>');
                         var g = $('<div class="kk-eps"></div>');
-                        (sv.server_data||[]).forEach(function(ep){
-                            var b = $('<div class="kk-ep selector">'+ep.name+'</div>');
-                            b.on('click hover:enter', function(){ playEp(ep); });
+                        (sv.server_data || []).forEach(function (ep) {
+                            var b = $('<div class="kk-ep selector">' + ep.name + '</div>');
+                            b.on('click hover:enter', function () { playEp(ep); });
                             g.append(b);
                         });
                         ew.append(g);
@@ -487,36 +514,38 @@
             }
 
             function playEp(ep) {
-                var link = ep.link_m3u8||ep.link_embed||'';
+                var link = ep.link_m3u8 || ep.link_embed || '';
                 if (!link) { Lampa.Noty.show('Không có link phát'); return; }
-                Lampa.Player.play({ title:(movie.name||'')+' - '+(ep.name||''), url:link });
+                Lampa.Player.play({ title: (movie.name || '') + ' - ' + (ep.name || ''), url: link });
             }
 
-            this.start = function() {
-                Lampa.Controller.add('content',{
-                    toggle: function(){
+            this.start = function () {
+                Lampa.Controller.add('content', {
+                    toggle: function () {
                         Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.collectionFocus(false,scroll.render());
+                        Lampa.Controller.collectionFocus(false, scroll.render());
                     },
-                    left: function(){
+                    left: function () {
                         if (Navigator.canmove('left')) Navigator.move('left');
                         else Lampa.Controller.toggle('menu');
                     },
-                    right: function(){ Navigator.move('right'); },
-                    up: function(){
+                    right: function () { Navigator.move('right'); },
+                    up: function () {
                         if (Navigator.canmove('up')) Navigator.move('up');
                         else Lampa.Controller.toggle('head');
                     },
-                    down: function(){ Navigator.move('down'); },
-                    back: function(){ Lampa.Activity.backward(); }
+                    down: function () { Navigator.move('down'); },
+                    back: function () { Lampa.Activity.backward(); }
                 });
+
                 Lampa.Controller.toggle('content');
+                enableNativeScroll(scroll);
             };
 
-            this.pause = function(){};
-            this.stop = function(){};
-            this.render = function(){ return scroll.render(); };
-            this.destroy = function(){
+            this.pause = function () {};
+            this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () {
                 network.clear();
                 scroll.destroy();
             };
@@ -524,5 +553,5 @@
     }
 
     if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function(e){ if(e.type==='ready') startPlugin(); });
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
