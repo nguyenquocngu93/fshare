@@ -11,19 +11,37 @@
     var API_URL = 'https://phimapi.com/';
 
     function startPlugin() {
-        // Thêm component chính
+        // Đăng ký component trước
         Lampa.Component.add('kkphim', KKPhimComponent);
 
-        // Thêm vào menu
-        Lampa.Template.add('menu_kkphim', '<img src="https://img.icons8.com/color/48/film-reel.png" />');
-        
-        Lampa.Menu.add({
-            title: 'KKPhim',
-            component: 'kkphim',
-            icon: Lampa.Template.get('menu_kkphim', {}, true)
+        // Thêm vào menu sidebar ĐÚNG CÁCH
+        Lampa.Listener.follow('full', function(e) {
+            if (e.type == 'complite') {
+                // Tạo icon SVG
+                var icon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 12c0 .55-.45 1-1 1s-1-.45-1-1V9c0-.55.45-1 1-1s1 .45 1 1v3zm6 0c0 .55-.45 1-1 1s-1-.45-1-1V9c0-.55.45-1 1-1s1 .45 1 1v3z" fill="white"/></svg>';
+
+                // Thêm item vào menu
+                var item = $('<li class="menu__item selector" data-action="kkphim">\
+                    <div class="menu__ico">' + icon + '</div>\
+                    <div class="menu__text">KKPhim</div>\
+                </li>');
+
+                // Thêm vào menu (sau item "Главная" hoặc vị trí bạn muốn)
+                item.on('hover:enter', function() {
+                    Lampa.Activity.push({
+                        url: '',
+                        title: 'KKPhim',
+                        component: 'kkphim',
+                        page: 1
+                    });
+                });
+
+                // Append vào menu
+                $('.menu .menu__list').eq(0).append(item);
+            }
         });
 
-        // CSS tùy chỉnh
+        // Thêm CSS
         addCustomCSS();
     }
 
@@ -49,24 +67,28 @@
         };
 
         function loadCategories() {
+            var loaded = 0;
             categories.forEach(function(cat, index) {
-                loadCategory(cat, index === categories.length - 1);
+                loadCategory(cat, function() {
+                    loaded++;
+                    if (loaded === categories.length) {
+                        Lampa.Controller.enable('content');
+                    }
+                });
             });
         }
 
-        function loadCategory(category, isLast) {
+        function loadCategory(category, callback) {
             var url = API_URL + 'danh-sach/' + category.slug + '?page=' + category.page;
 
             network.silent(url, function(data) {
                 if (data && data.items) {
                     createRow(category.name, data.items, category);
-                    if (isLast) {
-                        scroll.append(html);
-                        Lampa.Controller.enable('content');
-                    }
                 }
+                if (callback) callback();
             }, function(error) {
                 console.log('Error loading category:', category.name);
+                if (callback) callback();
             });
         }
 
@@ -74,7 +96,7 @@
             var row = $('<div class="kkphim-row"></div>');
             var rowTitle = $('<div class="kkphim-row-title">' + title + '</div>');
             var rowContent = $('<div class="kkphim-row-content"></div>');
-            var viewMore = $('<div class="kkphim-view-more">Xem thêm →</div>');
+            var viewMore = $('<div class="kkphim-view-more selector">Xem thêm →</div>');
 
             // Hiển thị tối đa 10 phim mỗi row
             var displayMovies = movies.slice(0, 10);
@@ -84,7 +106,7 @@
                 rowContent.append(card);
             });
 
-            viewMore.on('click', function() {
+            viewMore.on('hover:enter', function() {
                 openCategoryPage(category);
             });
 
@@ -134,7 +156,6 @@
         }
 
         function openCategoryPage(category) {
-            // Mở trang danh mục đầy đủ
             Lampa.Activity.push({
                 url: '',
                 title: category.name,
@@ -365,7 +386,8 @@
                 transition: opacity 0.3s;
             }
 
-            .kkphim-view-more:hover {
+            .kkphim-view-more:hover,
+            .kkphim-view-more.focus {
                 opacity: 1;
             }
 
