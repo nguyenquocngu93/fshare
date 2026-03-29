@@ -152,19 +152,20 @@
         return null;
     }
 
-    function openSearch() {
-        try {
-            var btn = $('.head__action.selector, .search-source.selector, .open--search, .head .search, .head__search').first();
-            if (btn.length) {
-                btn.trigger('click');
-                btn.trigger('hover:enter');
-                return;
-            }
-        } catch (e) {}
+    function openSearchPrompt() {
+        var kw = window.prompt('Nhập từ khóa tìm phim:');
+        if (!kw) return;
 
-        try {
-            Lampa.Controller.toggle('head');
-        } catch (e2) {}
+        kw = String(kw).trim();
+        if (!kw) return;
+
+        Lampa.Activity.push({
+            url: '',
+            title: 'Tìm kiếm',
+            component: 'kkphim_search',
+            keyword: kw,
+            page_num: 1
+        });
     }
 
     function enableNativeScroll(scroll) {
@@ -287,7 +288,7 @@
             .kk-row-more { font-size:.95em; font-weight:800; padding:.5em .9em; border-radius:999px; background:rgba(255,255,255,.08); color:#fff; cursor:pointer }
             .kk-row-more.focus { background:#fff; color:#000 }
             .kk-row-list { display:flex; gap:.9em; overflow-x:auto; overflow-y:hidden; padding:0 1.5em .2em; -webkit-overflow-scrolling:touch }
-            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar { display:none }
+            .kk-row-list::-webkit-scrollbar,.kk-cast-list::-webkit-scrollbar,.kk-similar-list::-webkit-scrollbar { display:none }
 
             .kk-card { flex:0 0 auto; width:9.5em; cursor:pointer }
             .kk-card--grid { width:100% }
@@ -482,16 +483,18 @@
             }
 
             .kk-section + .kk-section {
-                margin-top: .65em;
+                margin-top: 0;
                 padding-top: 1.1em;
+                border-top: 1px solid rgba(255,255,255,.04);
             }
 
             .kk-body + .kk-section {
                 margin-top: 0;
+                border-top: 1px solid rgba(255,255,255,.04);
             }
 
             .kk-section--last {
-                padding-bottom: 1.2em;
+                padding-bottom: 1.35em;
                 border-radius: 0 0 1.4em 1.4em;
             }
 
@@ -563,8 +566,22 @@
             .kk-ep { min-width:4em; text-align:center; padding:.75em 1em; border-radius:.7em; background:rgba(255,255,255,.09); color:#fff; font-size:.96em; font-weight:800; cursor:pointer }
             .kk-ep.focus { background:#ff2233 }
 
-            .kk-similar .kk-row-list {
-                padding: 0 0 .2em;
+            .kk-similar {
+                padding-bottom: 1.1em;
+                border-radius: 0 0 1.4em 1.4em;
+            }
+
+            .kk-similar-list {
+                display: flex;
+                gap: .9em;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: .25em;
+            }
+
+            .kk-similar-list .kk-card {
+                width: 8.6em;
             }
 
             .selector,
@@ -655,12 +672,17 @@
                     padding: 1.1em 1.4em 0;
                 }
 
-                .kk-section--last {
+                .kk-section--last,
+                .kk-similar {
                     border-radius: 0 0 1.2em 1.2em;
                 }
 
                 .kk-cast-list {
                     gap: 1em;
+                }
+
+                .kk-similar-list .kk-card {
+                    width: 9em;
                 }
             }
 
@@ -743,7 +765,7 @@
                 var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍</div></div>');
 
                 bindEnter(topbar.find('.kk-search-btn'), function () {
-                    openSearch();
+                    openSearchPrompt();
                 });
 
                 scroll.append(topbar);
@@ -884,6 +906,103 @@
                         comp.activity.loader(false);
                         Lampa.Noty.show('Lỗi tải danh mục');
                     }
+                });
+            }
+
+            this.start = function () {
+                applyController(scroll);
+                enableNativeScroll(scroll);
+            };
+
+            this.pause = function () {};
+            this.stop = function () {};
+            this.render = function () { return scroll.render(); };
+            this.destroy = function () {
+                network.clear();
+                scroll.destroy();
+            };
+        });
+
+        Lampa.Component.add('kkphim_search', function (object) {
+            var network = new Lampa.Reguest();
+            var scroll = new Lampa.Scroll({ mask: true, over: true });
+            var comp = this;
+            var keyword = object.keyword || '';
+            var page = object.page_num || 1;
+            var wrap = $('<div class="kk-grid-wrap"></div>');
+            var grid = $('<div class="kk-grid"></div>');
+            var loadMore = $('<div class="kk-loadmore selector">Tải thêm</div>');
+            var loading = false;
+            var hasMore = true;
+
+            this.create = function () {
+                this.activity.loader(true);
+                clearScroll(scroll);
+
+                wrap.append($('<div class="kk-grid-title">Kết quả: ' + escapeHtml(keyword) + '</div>'));
+                wrap.append(grid);
+                wrap.append(loadMore);
+                scroll.append(wrap);
+
+                bindEnter(loadMore, function () {
+                    if (!loading && hasMore) doLoad();
+                });
+
+                doLoad();
+            };
+
+            function handleRes(res) {
+                var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
+                list = list.map(normalizeItem).filter(function (item) {
+                    return item && item.slug;
+                });
+
+                if (!list.length && page === 1) {
+                    hasMore = false;
+                    loadMore.text('Không có kết quả');
+                    comp.activity.loader(false);
+                    loading = false;
+                    comp.start();
+                    return;
+                }
+
+                if (!list.length) {
+                    hasMore = false;
+                    loadMore.text('Hết dữ liệu');
+                    comp.activity.loader(false);
+                    loading = false;
+                    comp.start();
+                    return;
+                }
+
+                list.forEach(function (item) {
+                    grid.append(mkCard(item).addClass('kk-card--grid'));
+                });
+
+                page++;
+                loading = false;
+                loadMore.text('Tải thêm');
+                comp.activity.loader(false);
+                comp.start();
+            }
+
+            function doLoad() {
+                loading = true;
+                loadMore.text('Đang tải...');
+
+                var url = API + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(keyword) + '&page=' + page;
+
+                network.silent(url, function (res) {
+                    handleRes(res);
+                }, function () {
+                    network.silent(API + 'tim-kiem?keyword=' + encodeURIComponent(keyword) + '&page=' + page, function (r2) {
+                        handleRes(r2);
+                    }, function () {
+                        loading = false;
+                        loadMore.text('Tải lại');
+                        comp.activity.loader(false);
+                        Lampa.Noty.show('Lỗi tìm kiếm');
+                    });
                 });
             }
 
@@ -1192,7 +1311,7 @@
                 var row = $('<div class="kk-section kk-section--last kk-similar"></div>');
                 row.append($('<div class="kk-block-title">' + escapeHtml(title) + '</div>'));
 
-                var rl = $('<div class="kk-row-list"></div>');
+                var rl = $('<div class="kk-similar-list"></div>');
                 list.forEach(function (item) {
                     rl.append(mkCard(item));
                 });
