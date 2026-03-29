@@ -251,11 +251,13 @@
                 color:#fff;
             }
             .kk-search-btn {
-                padding:.7em 1em;
+                min-width:3em;
+                text-align:center;
+                padding:.7em .9em;
                 border-radius:.9em;
                 background:rgba(255,255,255,.08);
                 color:#fff;
-                font-size:.95em;
+                font-size:1em;
                 font-weight:800;
                 cursor:pointer;
             }
@@ -362,7 +364,7 @@
             .kk-body {
                 position: relative;
                 z-index: 3;
-                margin: -1.2em 1.2em 0;
+                margin-top: -1.2em;
                 padding: 1.2em 1.2em 0;
                 background: #141414;
                 border-radius: 1.4em 1.4em 0 0;
@@ -459,7 +461,7 @@
             }
 
             .kk-section {
-                margin: 0 1.2em;
+                margin: 0;
                 padding: 1.15em 1.2em 0;
                 background: #141414;
             }
@@ -621,13 +623,13 @@
                 }
 
                 .kk-body {
-                    margin: -1em 1.4em 0;
+                    margin-top: -1em;
                     padding: 1.15em 1.4em 0;
                     border-radius: 1.2em 1.2em 0 0;
                 }
 
                 .kk-section {
-                    margin: 0 1.4em;
+                    margin: 0;
                     padding: 1.1em 1.4em 0;
                 }
 
@@ -716,20 +718,12 @@
                 this.activity.loader(true);
                 clearScroll(scroll);
 
-                var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍 Tìm kiếm</div></div>');
+                var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍</div></div>');
 
                 bindEnter(topbar.find('.kk-search-btn'), function () {
                     try {
-                        Lampa.Activity.push({
-                            url: '',
-                            title: 'Tìm kiếm',
-                            component: 'search'
-                        });
-                    } catch (e) {
-                        try {
-                            Lampa.Controller.toggle('head');
-                        } catch (e2) {}
-                    }
+                        Lampa.Controller.toggle('head');
+                    } catch (e) {}
                 });
 
                 scroll.append(topbar);
