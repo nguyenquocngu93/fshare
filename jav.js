@@ -152,6 +152,21 @@
         return null;
     }
 
+    function openSearch() {
+        try {
+            var btn = $('.head__action.selector, .search-source.selector, .open--search, .head .search, .head__search').first();
+            if (btn.length) {
+                btn.trigger('click');
+                btn.trigger('hover:enter');
+                return;
+            }
+        } catch (e) {}
+
+        try {
+            Lampa.Controller.toggle('head');
+        } catch (e2) {}
+    }
+
     function enableNativeScroll(scroll) {
         var el = scroll.render();
 
@@ -467,7 +482,8 @@
             }
 
             .kk-section + .kk-section {
-                padding-top: 1.35em;
+                margin-top: .65em;
+                padding-top: 1.1em;
             }
 
             .kk-body + .kk-section {
@@ -541,9 +557,15 @@
             }
 
             .kk-server { font-size:1.02em; font-weight:800; color:#63d471; margin:1em 0 .65em }
+            .kk-section .kk-server:first-of-type { margin-top:.2em }
             .kk-eps { display:flex; flex-wrap:wrap; gap:.7em }
+            .kk-section .kk-eps:last-child { padding-bottom:.2em }
             .kk-ep { min-width:4em; text-align:center; padding:.75em 1em; border-radius:.7em; background:rgba(255,255,255,.09); color:#fff; font-size:.96em; font-weight:800; cursor:pointer }
             .kk-ep.focus { background:#ff2233 }
+
+            .kk-similar .kk-row-list {
+                padding: 0 0 .2em;
+            }
 
             .selector,
             .kk-play,
@@ -721,9 +743,7 @@
                 var topbar = $('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div><div class="kk-search-btn selector">🔍</div></div>');
 
                 bindEnter(topbar.find('.kk-search-btn'), function () {
-                    try {
-                        Lampa.Controller.toggle('head');
-                    } catch (e) {}
+                    openSearch();
                 });
 
                 scroll.append(topbar);
@@ -1115,7 +1135,7 @@
                 }
 
                 if (episodes && episodes.length) {
-                    var ew = $('<div class="kk-section kk-section--last"></div>');
+                    var ew = $('<div class="kk-section kk-episodes-section"></div>');
                     ew.append($('<div class="kk-block-title">Danh sách tập</div>'));
 
                     episodes.forEach(function (sv) {
@@ -1133,6 +1153,52 @@
 
                     scroll.append(ew);
                 }
+
+                loadSimilar(data);
+            }
+
+            function loadSimilar(data) {
+                var cats = data.category || [];
+                if (!cats.length || !cats[0].slug) {
+                    scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                    return;
+                }
+
+                var slug = cats[0].slug;
+                var title = 'Phim liên quan';
+
+                network.silent(API + 'v1/api/the-loai/' + slug + '?page=1', function (res) {
+                    handleSimilar(res, title);
+                }, function () {
+                    network.silent(API + 'the-loai/' + slug + '?page=1', function (res2) {
+                        handleSimilar(res2, title);
+                    }, function () {
+                        scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                    });
+                });
+            }
+
+            function handleSimilar(res, title) {
+                var list = (res && res.items) ? res.items : (res && res.data && res.data.items) ? res.data.items : [];
+                list = list.map(normalizeItem).filter(function (item) {
+                    return item && item.slug && item.slug !== movie.slug;
+                }).slice(0, 12);
+
+                if (!list.length) {
+                    scroll.render().find('.kk-episodes-section').addClass('kk-section--last');
+                    return;
+                }
+
+                var row = $('<div class="kk-section kk-section--last kk-similar"></div>');
+                row.append($('<div class="kk-block-title">' + escapeHtml(title) + '</div>'));
+
+                var rl = $('<div class="kk-row-list"></div>');
+                list.forEach(function (item) {
+                    rl.append(mkCard(item));
+                });
+
+                row.append(rl);
+                scroll.append(row);
             }
 
             function playEp(ep) {
