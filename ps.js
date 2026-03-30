@@ -201,26 +201,64 @@ async function oTorTV(tid,title,poster,imdb){Lampa.Noty.show('Tải season...');
 function pTorEp(season,imdb,title,poster){var items=[];for(var i=1;i<=(season.episode_count||1);i++)items.push({title:'S'+pd(season.season_number)+'E'+pd(i),value:{s:season.season_number,e:i}});Lampa.Select.show({title:season.name,items:items,onSelect:async function(a){var lb=title+' S'+pd(a.value.s)+'E'+pd(a.value.e);Lampa.Noty.show('Tìm '+lb+'...');try{var st=await fStreams('tv',imdb,a.value.s,a.value.e);if(!st.length){Lampa.Noty.show('Không có');return;}showStr(st,lb,poster);}catch(e){Lampa.Noty.show('Lỗi: '+(e.message||''));}},onBack:function(){Lampa.Controller.toggle('content');}});}
 
 /* ── cards ── */
+// Thay thế function mkC trong JS:
 function mkC(item){
     var n=nm(item);if(!n)return $('<div></div>');
     var p=fImg(n.poster_url||n.thumb_url);
+    var vote=n.tmdb&&n.tmdb.vote_average?Number(n.tmdb.vote_average):0;
+    var vPct=Math.min(vote*10,100);
+    var vClass=vote>=7?'kk-card-vote-fill--high':vote>=5?'kk-card-vote-fill--mid':'kk-card-vote-fill--low';
     var h='<div class="kk-card selector">';
-    h+='<div class="kk-card-img"><img src="'+p+'" loading="lazy">';
+    h+='<div class="kk-card-img">';
+    if(p)h+='<img src="'+p+'" loading="lazy">';
+    else h+='<div class="kk-card-noposter"><span>No Poster</span></div>';
     if(n.quality)h+='<div class="kk-card-q">'+E(n.quality)+'</div>';
     if(n.episode_current)h+='<div class="kk-card-ep">'+E(n.episode_current)+'</div>';
+    if(vote>0)h+='<div class="kk-card-vote-bar"><div class="kk-card-vote-fill '+vClass+'" style="width:'+vPct+'%"></div></div>';
     h+='</div>';
     h+='<div class="kk-card-body">';
     h+='<div class="kk-card-name">'+E(n.name)+'</div>';
     if(n.origin_name&&n.origin_name!==n.name)h+='<div class="kk-card-origin">'+E(n.origin_name)+'</div>';
     h+='<div class="kk-card-meta">';
     if(n.year)h+='<span class="kk-card-year">'+E(n.year)+'</span>';
-    if(n.time)h+='<span class="kk-card-time">⏱ '+E(n.time)+'</span>';
+    if(n.time)h+='<span class="kk-card-time">'+E(n.time)+'</span>';
     if(n.episode_total&&n.episode_total!=='1')h+='<span class="kk-card-eps">'+E(n.episode_total)+' tập</span>';
     h+='</div>';
     if(n.category&&n.category.length){var cats=n.category.slice(0,2).map(function(c){return E(c.name||'');}).join(' · ');h+='<div class="kk-card-cats">'+cats+'</div>';}
     h+='</div></div>';
     var c=$(h);
     bE(c,function(){if(n.slug)Lampa.Activity.push({url:'',title:n.name||'',component:'kkphim_detail',movie:n,page:1});});
+    return c;
+}
+
+// Thay thế function mkTC trong JS:
+function mkTC(item){
+    var d=tNorm(item);if(!d||!d.tmdb_id)return $('<div></div>');
+    var img=d.poster_url?'<img src="'+d.poster_url+'" loading="lazy">':'<div class="kk-card-noposter"><span>No Poster</span></div>';
+    var typeLabel=d.media_type==='tv'?'TV':'Film';
+    var lang=item.original_language?item.original_language.toUpperCase():'';
+    var origName=item.original_title||item.original_name||'';
+    var overview=item.overview?item.overview.substring(0,80)+'…':'';
+    var vote=item.vote_average?Number(item.vote_average):0;
+    var vPct=Math.min(vote*10,100);
+    var vClass=vote>=7?'kk-card-vote-fill--high':vote>=5?'kk-card-vote-fill--mid':'kk-card-vote-fill--low';
+    var h='<div class="kk-card selector">';
+    h+='<div class="kk-card-img">'+img;
+    if(d.vote)h+='<div class="kk-card-q">⭐ '+E(d.vote)+'</div>';
+    h+='<div class="kk-card-ep kk-card-ep--type">'+typeLabel+'</div>';
+    if(vote>0)h+='<div class="kk-card-vote-bar"><div class="kk-card-vote-fill '+vClass+'" style="width:'+vPct+'%"></div></div>';
+    h+='</div>';
+    h+='<div class="kk-card-body">';
+    h+='<div class="kk-card-name">'+E(d.name)+'</div>';
+    if(origName&&origName!==d.name)h+='<div class="kk-card-origin">'+E(origName)+'</div>';
+    h+='<div class="kk-card-meta">';
+    if(d.year)h+='<span class="kk-card-year">'+E(d.year)+'</span>';
+    if(lang)h+='<span class="kk-card-lang">'+lang+'</span>';
+    h+='</div>';
+    if(overview)h+='<div class="kk-card-overview">'+E(overview)+'</div>';
+    h+='</div></div>';
+    var c=$(h);
+    bE(c,function(){Lampa.Activity.push({url:'',title:d.name||'',component:'kkphim_tmdb_detail',tmdb_id:d.tmdb_id,media_type:d.media_type,page:1});});
     return c;
 }
 
