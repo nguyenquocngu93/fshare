@@ -313,14 +313,40 @@ function mkCastList(castArr,hasTmdb){
 /* ── đạo diễn ── */
 function mkDirHtml(dirs,isTmdb){
     if(!dirs||!dirs.length)return'';
-    var parts=dirs.map(function(c){
-        if(isTmdb&&c.id)return'<span class="kk-dir-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>';
-        return'<span>'+E(c.name||'')+'</span>';
-    });
-    return'<div class="kk-crew"><b>Đạo diễn</b><span>'+parts.join('<span style="color:rgba(255,255,255,.3)"> · </span>')+'</span></div>';
+    var first=dirs[0];
+    var rest=dirs.slice(1);
+
+    var avatarH=first.profile_path
+        ?'<div class="kk-crew-avatar"><img src="'+TMDB_W500+first.profile_path+'" loading="lazy"></div>'
+        :'<div class="kk-crew-avatar"><div class="kk-crew-avatar-empty"></div></div>';
+
+    var nameH=(isTmdb&&first.id)
+        ?'<span class="kk-crew-name selector" data-pid="'+first.id+'">'+E(first.name||'')+'</span>'
+        :'<span class="kk-crew-name">'+E(first.name||'')+'</span>';
+
+    var restH='';
+    if(rest.length){
+        var restNames=rest.map(function(c){
+            return(isTmdb&&c.id)
+                ?'<span class="kk-crew-rest-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>'
+                :'<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';
+        });
+        restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';
+    }
+
+    return'<div class="kk-crew">'+
+        avatarH+
+        '<div class="kk-crew-info">'+
+            '<span class="kk-crew-label">Đạo diễn</span>'+
+            nameH+
+            '<span class="kk-crew-role">'+E(first.job||'Director')+'</span>'+
+            restH+
+        '</div>'+
+    '</div>';
 }
+
 function bindDirClicks(el){
-    el.find('.kk-dir-name[data-pid]').each(function(){
+    el.find('.kk-crew-name[data-pid], .kk-crew-rest-name[data-pid]').each(function(){
         var sp=$(this);
         bE(sp,function(){
             var pid=sp.attr('data-pid');
@@ -370,14 +396,34 @@ function gHtml(genres,isTmdb){
 /* ── hero ── */
 function mkHero(bk,ps,logoH,tH,origin,extra){
     extra=extra||{};
-    var infoBar='';
-    if(extra.vote||extra.status||extra.rated){
-        infoBar='<div class="kk-hero-infobar">';
-        if(extra.vote)infoBar+='<span class="kk-hib-vote">'+E(extra.vote)+' <small>TMDB</small></span>';
-        if(extra.rated)infoBar+='<span class="kk-hib-badge">'+E(extra.rated)+'</span>';
-        if(extra.status)infoBar+='<span class="kk-hib-badge">'+E(extra.status)+'</span>';
-        infoBar+='</div>';
-    }
+    var posterH=ps?'<img src="'+ps+'" loading="lazy">':'';
+    return $('<div class="kk-hero">'+
+        '<div class="kk-hero-backdrop">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-hero-backdrop-empty"></div>')+'</div>'+
+        '<div class="kk-hero-card">'+
+            '<div class="kk-hero-poster-wrap"><div class="kk-hero-poster">'+posterH+'</div></div>'+
+            '<div class="kk-hero-meta">'+
+                (extra.year||extra.country?
+                    '<div class="kk-hm-yc">'+
+                        (extra.year?'<span class="kk-hm-year">'+E(extra.year)+'</span>':'')+
+                        (extra.country?'<span class="kk-hm-country">'+E(extra.country)+'</span>':'')+
+                    '</div>':'')+
+                (logoH||tH)+
+                (extra.tagline?'<div class="kk-hm-tagline">'+E(extra.tagline)+'</div>':'')+
+                '<div class="kk-hm-badges">'+
+                    (extra.vote?'<span class="kk-hm-vote">'+E(extra.vote)+' <small>TMDB</small></span>':'')+
+                    (extra.rated?'<span class="kk-hm-badge">'+E(extra.rated)+'</span>':'')+
+                    (extra.status?'<span class="kk-hm-badge">'+E(extra.status)+'</span>':'')+
+                '</div>'+
+                (extra.runtime||extra.genres?
+                    '<div class="kk-hm-rtg">'+
+                        (extra.runtime?'<span class="kk-hm-rt">'+E(extra.runtime)+'</span>':'')+
+                        (extra.runtime&&extra.genres?'<span class="kk-hm-dot">•</span>':'')+
+                        (extra.genres?'<span class="kk-hm-genres">'+E(extra.genres)+'</span>':'')+
+                    '</div>':'')+
+            '</div>'+
+        '</div>'+
+    '</div>');
+}
     var runtimeGenre='';
     if(extra.runtime||extra.genres){
         runtimeGenre='<div class="kk-hero-rtg">';
@@ -407,10 +453,13 @@ function mkHero(bk,ps,logoH,tH,origin,extra){
 /* ── body ── */
 function mkBody(v,y,rt,extra,genreHtml,crewH,desc){
     return $('<div class="kk-body">'+
-        '<div class="kk-genres">'+genreHtml+'</div>'+
+        '<div class="kk-body-genres">'+genreHtml+'</div>'+
         crewH+
-        '<div class="kk-desc">'+fTxt(desc)+'</div>'+
-        '</div>');
+        '<div class="kk-body-desc">'+
+            '<span class="kk-body-desc-label">Nội dung</span>'+
+            '<div class="kk-body-desc-text">'+fTxt(desc)+'</div>'+
+        '</div>'+
+    '</div>');
 }
 
 function inCSS(){if($('#kk-css').length)return;var l=document.createElement('link');l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;document.head.appendChild(l);}
