@@ -102,6 +102,274 @@
         go(window.prompt('T\u00ecm phim TMDB:'));
     }
 
+    // ==================== DROPDOWN MENU SYSTEM ====================
+    function closeAllDropdowns() {
+        $('.kk-dropdown-menu').removeClass('kk-dropdown-open');
+        setTimeout(function () {
+            $('.kk-dropdown-menu').not('.kk-dropdown-open').css('display', 'none');
+        }, 300);
+    }
+
+    function toggleDropdown(btn, menu) {
+        var isOpen = menu.hasClass('kk-dropdown-open');
+        closeAllDropdowns();
+        if (!isOpen) {
+            menu.css('display', 'block');
+            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
+        }
+    }
+
+    // Inject dropdown CSS
+    function injectDropdownCSS() {
+        if ($('#kk-dropdown-css').length) return;
+        var css = '' +
+            '.kk-dropdown-wrap { position: relative; display: inline-block; width: 100%; margin-bottom: 0.3em; }' +
+            '.kk-dropdown-btn { display: flex; align-items: center; justify-content: space-between; padding: 0.7em 1em; border-radius: 0.6em; font-size: 1em; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }' +
+            '.kk-dropdown-btn .kk-dd-arrow { margin-left: 0.5em; transition: transform 0.3s; font-size: 0.8em; }' +
+            '.kk-dropdown-open + .kk-dropdown-btn .kk-dd-arrow, .kk-dropdown-wrap.open .kk-dd-arrow { transform: rotate(180deg); }' +
+            '.kk-dropdown-btn--kkphim { background: rgba(255,107,0,0.15); border-color: rgba(255,107,0,0.4); color: #ff6b00; }' +
+            '.kk-dropdown-btn--kkphim:hover, .kk-dropdown-btn--kkphim:focus { background: rgba(255,107,0,0.25); border-color: rgba(255,107,0,0.6); }' +
+            '.kk-dropdown-btn--ophim { background: rgba(0,150,255,0.15); border-color: rgba(0,150,255,0.4); color: #0096ff; }' +
+            '.kk-dropdown-btn--ophim:hover, .kk-dropdown-btn--ophim:focus { background: rgba(0,150,255,0.25); border-color: rgba(0,150,255,0.6); }' +
+            '.kk-dropdown-btn--source { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.4); color: #4ade80; }' +
+            '.kk-dropdown-btn--source:hover, .kk-dropdown-btn--source:focus { background: rgba(74,222,128,0.25); border-color: rgba(74,222,128,0.6); }' +
+            '.kk-dropdown-btn--disabled { background: rgba(100,100,100,0.15); border-color: rgba(100,100,100,0.3); color: #888; cursor: default; }' +
+            '.kk-dropdown-menu { display: none; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; opacity: 0; background: rgba(30,30,35,0.98); border-radius: 0.5em; margin-top: 0.3em; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }' +
+            '.kk-dropdown-menu.kk-dropdown-open { max-height: 60vh; overflow-y: auto; opacity: 1; }' +
+            '.kk-dropdown-menu::-webkit-scrollbar { width: 4px; }' +
+            '.kk-dropdown-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }' +
+            '.kk-dd-server-title { padding: 0.5em 1em 0.3em; font-size: 0.85em; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.05); }' +
+            '.kk-dd-server-title:not(:first-child) { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 0.2em; }' +
+            '.kk-dd-ep-item { padding: 0.6em 1em; font-size: 0.95em; color: rgba(255,255,255,0.85); cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 0.5em; }' +
+            '.kk-dd-ep-item:hover, .kk-dd-ep-item:focus, .kk-dd-ep-item.focus { background: rgba(255,255,255,0.1); }' +
+            '.kk-dd-ep-item .kk-dd-ep-icon { font-size: 0.8em; opacity: 0.6; }' +
+            '.kk-dd-ep-item .kk-dd-ep-name { flex: 1; }' +
+            '.kk-dd-ep-item .kk-dd-ep-badge { font-size: 0.75em; padding: 0.15em 0.4em; border-radius: 0.3em; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }' +
+            '.kk-dd-loading { padding: 1.5em; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9em; }' +
+            '.kk-dd-empty { padding: 1em; text-align: center; color: rgba(255,100,100,0.7); font-size: 0.9em; }' +
+            '.kk-source-actions { display: flex; flex-direction: column; gap: 0.3em; margin-bottom: 0.5em; }' +
+            '';
+        $('<style id="kk-dropdown-css"></style>').text(css).appendTo('head');
+    }
+
+    // Build dropdown button + menu for a source
+    function buildSourceDropdown(sourceKey, sourceName, slug, title, mediaType, cssClass) {
+        var wrap = $('<div class="kk-dropdown-wrap"></div>');
+        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
+        var menu = $('<div class="kk-dropdown-menu"></div>');
+        var loaded = false;
+
+        wrap.append(btn).append(menu);
+
+        bindEnter(btn, function () {
+            if (menu.hasClass('kk-dropdown-open')) {
+                closeAllDropdowns();
+                return;
+            }
+            closeAllDropdowns();
+            menu.css('display', 'block');
+            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
+
+            if (!loaded) {
+                loaded = true;
+                menu.html('<div class="kk-dd-loading">\u23f3 \u0110ang t\u1ea3i...</div>');
+                var source = SOURCES[sourceKey];
+                fetchDetail(source, slug).then(function (detail) {
+                    if (!detail || !detail.episodes || !detail.episodes.length) {
+                        menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+                        return;
+                    }
+                    renderEpisodesInDropdown(menu, detail.episodes, title);
+                }).catch(function (e) {
+                    menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
+                });
+            }
+        });
+
+        return wrap;
+    }
+
+    // Build dropdown for source detail page (already has episodes)
+    function buildSourceDetailDropdown(episodes, title, sourceName, cssClass) {
+        var wrap = $('<div class="kk-dropdown-wrap"></div>');
+        var totalEps = 0;
+        (episodes || []).forEach(function (sv) { totalEps += (sv.server_data || []).length; });
+        var label = sourceName + ' (' + totalEps + ' t\u1eadp)';
+        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(label) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
+        var menu = $('<div class="kk-dropdown-menu"></div>');
+
+        wrap.append(btn).append(menu);
+
+        // Pre-render episodes
+        if (!episodes || !episodes.length) {
+            bindEnter(btn, function () {
+                Lampa.Noty.show('Kh\u00f4ng c\u00f3 t\u1eadp');
+            });
+            return wrap;
+        }
+
+        // If only 1 episode total, play directly
+        if (totalEps === 1) {
+            var ep = getFirstEp(episodes);
+            if (ep) {
+                var link = ep.link_m3u8 || ep.link_embed || '';
+                bindEnter(btn, function () {
+                    if (link) Lampa.Player.play({ title: title, url: link });
+                    else Lampa.Noty.show('Kh\u00f4ng c\u00f3 link');
+                });
+                return wrap;
+            }
+        }
+
+        renderEpisodesInDropdown(menu, episodes, title);
+
+        bindEnter(btn, function () {
+            if (menu.hasClass('kk-dropdown-open')) {
+                closeAllDropdowns();
+                return;
+            }
+            closeAllDropdowns();
+            menu.css('display', 'block');
+            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
+        });
+
+        return wrap;
+    }
+
+    function renderEpisodesInDropdown(menu, episodes, title) {
+        menu.empty();
+        if (!episodes || !episodes.length) {
+            menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+            return;
+        }
+
+        episodes.forEach(function (sv) {
+            var serverName = sv.server_name || 'Server';
+            var epCount = (sv.server_data || []).length;
+
+            // Server title with episode count and type hint
+            var serverLabel = serverName;
+            if (serverName.toLowerCase().indexOf('thuy\u1ebft minh') > -1 || serverName.toLowerCase().indexOf('thuyet minh') > -1 || serverName.toLowerCase().indexOf('tm') > -1) {
+                serverLabel = '\ud83c\uddfb\ud83c\uddf3 ' + serverName;
+            } else if (serverName.toLowerCase().indexOf('vietsub') > -1 || serverName.toLowerCase().indexOf('sub') > -1) {
+                serverLabel = '\ud83d\udcdd ' + serverName;
+            } else if (serverName.toLowerCase().indexOf('l\u1ed3ng') > -1 || serverName.toLowerCase().indexOf('long') > -1) {
+                serverLabel = '\ud83c\udfa4 ' + serverName;
+            } else {
+                serverLabel = '\ud83d\udcfa ' + serverName;
+            }
+
+            menu.append('<div class="kk-dd-server-title">' + esc(serverLabel) + ' (' + epCount + ' t\u1eadp)</div>');
+
+            (sv.server_data || []).forEach(function (ep) {
+                var link = ep.link_m3u8 || ep.link_embed || '';
+                var epItem = $('<div class="kk-dd-ep-item selector">' +
+                    '<span class="kk-dd-ep-icon">\u25b6</span>' +
+                    '<span class="kk-dd-ep-name">' + esc(ep.name || 'T\u1eadp') + '</span>' +
+                    '</div>');
+
+                if (link) {
+                    bindEnter(epItem, function () {
+                        closeAllDropdowns();
+                        Lampa.Player.play({ title: title + ' - ' + (ep.name || ''), url: link });
+                    });
+                } else {
+                    epItem.css('opacity', '0.4');
+                    bindEnter(epItem, function () {
+                        Lampa.Noty.show('Kh\u00f4ng c\u00f3 link');
+                    });
+                }
+
+                menu.append(epItem);
+            });
+        });
+    }
+
+    // Build dropdown for TV with seasons (TMDB detail)
+    function buildTVSourceDropdown(sourceKey, sourceName, slug, title, origTitle, cssClass) {
+        var wrap = $('<div class="kk-dropdown-wrap"></div>');
+        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
+        var menu = $('<div class="kk-dropdown-menu"></div>');
+        var loaded = false;
+
+        wrap.append(btn).append(menu);
+
+        bindEnter(btn, function () {
+            if (menu.hasClass('kk-dropdown-open')) {
+                closeAllDropdowns();
+                return;
+            }
+            closeAllDropdowns();
+            menu.css('display', 'block');
+            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
+
+            if (!loaded) {
+                loaded = true;
+                menu.html('<div class="kk-dd-loading">\u23f3 \u0110ang t\u1ea3i...</div>');
+                var source = SOURCES[sourceKey];
+
+                // Try to find all seasons for this source
+                findAllSeasonSlugs(source, title, origTitle).then(function (seasonEntries) {
+                    if (!seasonEntries.length && slug) {
+                        seasonEntries = [{ slug: slug, name: title, season: 1, source: source }];
+                    }
+                    if (!seasonEntries.length) {
+                        menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng t\u00ecm th\u1ea5y</div>');
+                        return;
+                    }
+
+                    // Group by season
+                    var seasonMap = {};
+                    seasonEntries.forEach(function (e) {
+                        if (!seasonMap[e.season]) seasonMap[e.season] = [];
+                        seasonMap[e.season].push(e);
+                    });
+                    var seasonNums = Object.keys(seasonMap).map(Number).sort(function (a, b) { return a - b; });
+
+                    if (seasonNums.length === 1) {
+                        // Load directly
+                        loadSeasonIntoDropdown(menu, seasonMap[seasonNums[0]], title, seasonNums[0]);
+                    } else {
+                        // Show season picker in dropdown
+                        menu.empty();
+                        seasonNums.forEach(function (sn) {
+                            var seasonItem = $('<div class="kk-dd-ep-item selector" style="font-weight:600;">' +
+                                '<span class="kk-dd-ep-icon">\ud83d\udcfa</span>' +
+                                '<span class="kk-dd-ep-name">Season ' + sn + '</span>' +
+                                '<span class="kk-dd-ep-badge">' + seasonMap[sn].length + ' ngu\u1ed3n</span>' +
+                                '</div>');
+                            bindEnter(seasonItem, function () {
+                                loadSeasonIntoDropdown(menu, seasonMap[sn], title, sn);
+                            });
+                            menu.append(seasonItem);
+                        });
+                    }
+                }).catch(function (e) {
+                    menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
+                });
+            }
+        });
+
+        return wrap;
+    }
+
+    async function loadSeasonIntoDropdown(menu, entries, title, seasonNum) {
+        menu.html('<div class="kk-dd-loading">\u23f3 T\u1ea3i t\u1eadp Season ' + seasonNum + '...</div>');
+        try {
+            var allEps = [];
+            for (var i = 0; i < entries.length; i++) {
+                var detail = await fetchDetail(entries[i].source, entries[i].slug);
+                if (detail && detail.episodes && detail.episodes.length) {
+                    renderEpisodesInDropdown(menu, detail.episodes, title + ' S' + pad(seasonNum));
+                    return;
+                }
+            }
+            menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+        } catch (e) {
+            menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i</div>');
+        }
+    }
+
     // ==================== TORRSERVER ====================
     function tsUrl(p) { var h = getTSHost(); if (!h) return ''; h = h.replace(/\/+$/, ''); if (h.indexOf('http') !== 0) h = 'http://' + h; return h + p; }
     function tsHdr() { var h = { 'Content-Type': 'application/json' }; var pw = getTSPass(); if (pw) h['Authorization'] = 'Basic ' + btoa('admin:' + pw); return h; }
@@ -143,7 +411,6 @@
     async function getTmdbSeasons(id) { try { var r = await tmdbFetch('/tv/' + id + '?language=' + tLang()); if (r && r.seasons) return r.seasons.filter(function (s) { return s.season_number > 0; }).map(function (s) { return { season_number: s.season_number, name: s.name || ('Season ' + s.season_number), episode_count: s.episode_count || 0 }; }); } catch (e) {} return []; }
     async function loadGenres(type) { if (_genreCache[type]) return _genreCache[type]; try { var r = await tmdbFetch('/genre/' + type + '/list?language=' + tLang()); _genreCache[type] = r.genres || []; return _genreCache[type]; } catch (e) { return []; } }
 
-    // TMDB list functions
     var TMDB_FN = {
         trending: function (p) { return tmdbFetch('/trending/all/week?language=' + tLang() + '&page=' + p); },
         trending_day: function (p) { return tmdbFetch('/trending/all/day?language=' + tLang() + '&page=' + p); },
@@ -206,132 +473,11 @@
         return results;
     }
 
-    async function gatherAllSeasons(title, origTitle, slugs) {
-        var all = [];
-        (await findAllSeasonSlugs(SOURCES.kkphim, title, origTitle)).forEach(function (s) { all.push(s); });
-        (await findAllSeasonSlugs(SOURCES.ophim, title, origTitle)).forEach(function (s) { all.push(s); });
-        if (!all.length) { if (slugs.kkphim) all.push({ slug: slugs.kkphim, name: title, season: 1, source: SOURCES.kkphim }); if (slugs.ophim) all.push({ slug: slugs.ophim, name: title, season: 1, source: SOURCES.ophim }); }
-        var map = {}; all.forEach(function (s) { if (!map[s.season]) map[s.season] = []; map[s.season].push(s); }); return map;
-    }
-
     async function loadSeasonEpisodes(entry) {
         var detail = await fetchDetail(entry.source, entry.slug); if (!detail || !detail.episodes || !detail.episodes.length) return [];
         var eps = [], seen = {};
         detail.episodes.forEach(function (sv) { (sv.server_data || []).forEach(function (ep) { var link = ep.link_m3u8 || ep.link_embed || ''; if (link && !seen[ep.name]) { seen[ep.name] = true; eps.push({ name: ep.name || '', link: link, source: entry.source.name }); } }); });
         return eps;
-    }
-
-    // ==================== PLAY HELPERS ====================
-    function showSourceEpisodePicker(data, episodes, title) {
-        if (!episodes || !episodes.length) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 t\u1eadp'); return; }
-        var totalEps = 0; episodes.forEach(function (sv) { totalEps += (sv.server_data || []).length; });
-        if (totalEps === 1) { var ep = getFirstEp(episodes); if (!ep) return; var link = ep.link_m3u8 || ep.link_embed || ''; if (link) Lampa.Player.play({ title: title, url: link }); return; }
-        if (episodes.length > 1) {
-            Lampa.Select.show({ title: 'Ch\u1ecdn server', items: episodes.map(function (sv) { return { title: (sv.server_name || 'Server') + ' (' + (sv.server_data || []).length + ' t\u1eadp)', value: sv }; }), onSelect: function (a) { showEpList(a.value, title); }, onBack: function () { Lampa.Controller.toggle('content'); } });
-        } else showEpList(episodes[0], title);
-    }
-
-    function showEpList(sv, title) {
-        Lampa.Select.show({ title: (sv.server_name || 'Server') + ' (' + (sv.server_data || []).length + ' t\u1eadp)', items: (sv.server_data || []).map(function (ep) { return { title: ep.name || 'T\u1eadp', value: ep }; }),
-            onSelect: function (a) { var link = a.value.link_m3u8 || a.value.link_embed || ''; if (!link) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 link'); return; } Lampa.Player.play({ title: title + ' - ' + (a.value.name || ''), url: link }); },
-            onBack: function () { Lampa.Controller.toggle('content'); } });
-    }
-
-    // FIX: Play movie - cho chọn nguồn nếu có cả 2
-    async function playMovieFromSlugs(slugs, title) {
-        var sources = [];
-        if (slugs.kkphim) sources.push({ name: 'KKPhim', slug: slugs.kkphim, source: SOURCES.kkphim });
-        if (slugs.ophim) sources.push({ name: 'OPhim', slug: slugs.ophim, source: SOURCES.ophim });
-        if (!sources.length) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 ngu\u1ed3n'); return; }
-
-        if (sources.length === 1) {
-            await playFromSource(sources[0], title);
-        } else {
-            Lampa.Select.show({
-                title: 'Ch\u1ecdn ngu\u1ed3n ph\u00e1t',
-                items: sources.map(function (s) { return { title: '\u25b6 ' + s.name, value: s }; }),
-                onSelect: function (a) { playFromSource(a.value, title); },
-                onBack: function () { Lampa.Controller.toggle('content'); }
-            });
-        }
-    }
-
-    async function playFromSource(src, title) {
-        Lampa.Noty.show('T\u1ea3i t\u1eeb ' + src.name + '...');
-        try {
-            var detail = await fetchDetail(src.source, src.slug);
-            if (!detail || !detail.episodes || !detail.episodes.length) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 t\u1eadp phim'); return; }
-            var ep = getFirstEp(detail.episodes);
-            if (!ep) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 link'); return; }
-            var link = ep.link_m3u8 || ep.link_embed || '';
-            if (!link) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 link'); return; }
-            Lampa.Player.play({ title: title, url: link });
-        } catch (e) { Lampa.Noty.show('L\u1ed7i: ' + (e.message || '')); }
-    }
-
-    // FIX: Play TV - cho chọn nguồn nếu có cả 2
-    async function playTVFromSlugs(slugs, title, origTitle) {
-        Lampa.Noty.show('\u0110ang t\u00ecm t\u1ea5t c\u1ea3 seasons...');
-        try {
-            var seasonMap = await gatherAllSeasons(title, origTitle, slugs);
-            var seasonNums = Object.keys(seasonMap).map(Number).sort(function (a, b) { return a - b; });
-            if (!seasonNums.length) { Lampa.Noty.show('Kh\u00f4ng t\u00ecm th\u1ea5y season'); return; }
-            if (seasonNums.length === 1) {
-                pickSeasonSource(seasonMap[seasonNums[0]], title, seasonNums[0]);
-            } else {
-                Lampa.Select.show({
-                    title: 'Ch\u1ecdn Season (' + seasonNums.length + ')',
-                    items: seasonNums.map(function (sn) {
-                        var entries = seasonMap[sn];
-                        var srcs = entries.map(function (e) { return e.source.name; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
-                        return { title: 'Season ' + sn + ' (' + srcs + ')', value: { entries: entries, season: sn } };
-                    }),
-                    onSelect: function (a) { pickSeasonSource(a.value.entries, title, a.value.season); },
-                    onBack: function () { Lampa.Controller.toggle('content'); }
-                });
-            }
-        } catch (e) { Lampa.Noty.show('L\u1ed7i: ' + (e.message || '')); }
-    }
-
-    async function pickSeasonSource(entries, title, seasonNum) {
-        // Gom theo source
-        var bySource = {};
-        entries.forEach(function (e) {
-            if (!bySource[e.source.name]) bySource[e.source.name] = [];
-            bySource[e.source.name].push(e);
-        });
-        var sourceNames = Object.keys(bySource);
-
-        if (sourceNames.length === 1) {
-            // Chỉ 1 nguồn, load luôn
-            await loadAndShowEps(entries, title, seasonNum);
-        } else {
-            // Nhiều nguồn, cho chọn
-            Lampa.Select.show({
-                title: 'Ch\u1ecdn ngu\u1ed3n - Season ' + seasonNum,
-                items: sourceNames.map(function (sn) {
-                    return { title: '\u25b6 ' + sn + ' (' + bySource[sn].length + ' slug)', value: bySource[sn] };
-                }),
-                onSelect: async function (a) { await loadAndShowEps(a.value, title, seasonNum); },
-                onBack: function () { Lampa.Controller.toggle('content'); }
-            });
-        }
-    }
-
-    async function loadAndShowEps(entries, title, seasonNum) {
-        Lampa.Noty.show('T\u1ea3i t\u1eadp Season ' + seasonNum + '...');
-        var allEps = [];
-        for (var i = 0; i < entries.length; i++) {
-            var eps = await loadSeasonEpisodes(entries[i]);
-            if (eps.length > allEps.length) allEps = eps;
-        }
-        if (!allEps.length) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 t\u1eadp n\u00e0o'); return; }
-        Lampa.Select.show({
-            title: 'Season ' + seasonNum + ' (' + allEps.length + ' t\u1eadp)',
-            items: allEps.map(function (ep) { return { title: ep.name + ' [' + ep.source + ']', value: ep }; }),
-            onSelect: function (a) { if (!a.value.link) { Lampa.Noty.show('Kh\u00f4ng c\u00f3 link'); return; } Lampa.Player.play({ title: title + ' S' + pad(seasonNum) + ' - ' + a.value.name, url: a.value.link }); },
-            onBack: function () { Lampa.Controller.toggle('content'); }
-        });
     }
 
     // ==================== TORRENTIO ====================
@@ -408,6 +554,7 @@
     // ==================== START ====================
     function startPlugin() {
         injectCSS();
+        injectDropdownCSS();
         addMenu();
 
         // ===== SETTINGS =====
@@ -416,16 +563,12 @@
             this.create = function () {
                 clearScroll(scroll); var s = loadSettings(), w = $('<div class="kk-stg-wrap"></div>');
                 w.append('<div class="kk-stg-title">\u2699\ufe0f C\u00e0i \u0111\u1eb7t</div>');
-                // Nguon
                 var g0 = mkGroup('\ud83d\udcfa Ngu\u1ed3n phim'); var cur = s.source || 'ophim';
                 Object.keys(SOURCES).forEach(function (k) { var src = SOURCES[k]; g0.append(mkOpt(src.name, 'API: ' + src.api, cur === k, function () { saveSettings({ source: k }); Lampa.Noty.show(src.name); comp.create(); })); }); w.append(g0);
-                // Grid
                 var g5 = mkGroup('\ud83c\udfa8 Giao di\u1ec7n'); var curGrid = s.card_style || '3';
                 [{ k:'2',n:'2 c\u1ed9t' },{ k:'3',n:'3 c\u1ed9t' },{ k:'4',n:'4 c\u1ed9t' }].forEach(function (opt) { g5.append(mkOpt(opt.n, 'S\u1ed1 c\u1ed9t l\u01b0\u1edbi phim', curGrid === opt.k, function () { saveSettings({ card_style: opt.k }); Lampa.Noty.show(opt.n); comp.create(); })); }); w.append(g5);
-                // Lang
                 var g6 = mkGroup('\ud83c\udf10 Ng\u00f4n ng\u1eef TMDB'); var curLang = s.tmdb_lang || 'vi-VN';
                 [{ k:'vi-VN',n:'Ti\u1ebfng Vi\u1ec7t' },{ k:'en-US',n:'English' },{ k:'ja-JP',n:'\u65e5\u672c\u8a9e' },{ k:'ko-KR',n:'\ud55c\uad6d\uc5b4' },{ k:'zh-CN',n:'\u4e2d\u6587' }].forEach(function (opt) { g6.append(mkOpt(opt.n, opt.k, curLang === opt.k, function () { saveSettings({ tmdb_lang: opt.k }); _genreCache = { movie: null, tv: null }; Lampa.Noty.show(opt.n); comp.create(); })); }); w.append(g6);
-                // TS
                 var g1 = mkGroup('\ud83d\udda5\ufe0f TorrServer');
                 g1.append(mkInput('\u0110\u1ecba ch\u1ec9', 'V\u00ed d\u1ee5: 192.168.1.100:8090', s.torrserver_host || 'Ch\u01b0a c\u00e0i', '\u0110\u1ecba ch\u1ec9 TorrServer', 'torrserver_host', s));
                 g1.append(mkInput('M\u1eadt kh\u1ea9u', '\u0110\u1ec3 tr\u1ed1ng n\u1ebfu kh\u00f4ng c\u00f3', s.torrserver_password ? '\u2022\u2022\u2022\u2022' : 'Kh\u00f4ng', 'M\u1eadt kh\u1ea9u', 'torrserver_password', s));
@@ -433,22 +576,19 @@
                 var ti = si('\ud83d\udd0c Ki\u1ec3m tra k\u1ebft n\u1ed1i', 'Ping TorrServer', 'Nh\u1ea5n');
                 bindEnter(ti, async function () { if (!getTSHost()) { st1.show().attr('class', 'kk-stg-status kk-stg-status--err').text('\u274c Ch\u01b0a nh\u1eadp \u0111\u1ecba ch\u1ec9'); return; } st1.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('\u23f3 \u0110ang ki\u1ec3m tra...'); try { var r = await fetch(tsUrl('/echo'), { headers: tsHdr() }); st1.attr('class', 'kk-stg-status ' + (r.ok ? 'kk-stg-status--ok' : 'kk-stg-status--err')).text(r.ok ? '\u2705 Th\u00e0nh c\u00f4ng!' : '\u274c L\u1ed7i: ' + r.status); } catch (e) { st1.attr('class', 'kk-stg-status kk-stg-status--err').text('\u274c ' + (e.message || '')); } });
                 g1.append(ti).append(st1); w.append(g1);
-                // Torrentio
                 var g2 = mkGroup('\ud83e\uddf2 Torrentio');
                 g2.append(mkInput('Config URL', 'D\u00e1n link manifest', s.torrentio_config ? 'C\u00f3' : 'M\u1eb7c \u0111\u1ecbnh', 'Torrentio Config', 'torrentio_config', s));
                 var st2 = $('<div class="kk-stg-status" style="display:none"></div>');
                 var tti = si('\ud83e\uddea Ki\u1ec3m tra Torrentio', 'Th\u1eed v\u1edbi Inception', 'Nh\u1ea5n');
                 bindEnter(tti, async function () { st2.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('\u23f3'); var c = cleanTioConfig(getTioConfig()); var u = TORRENTIO_BASE + (c ? '/' + c : '') + '/stream/movie/tt1375666.json'; try { var r = await fetch(u); if (!r.ok) { st2.attr('class', 'kk-stg-status kk-stg-status--err').text('\u274c ' + r.status); return; } var d = await r.json(); st2.attr('class', 'kk-stg-status kk-stg-status--ok').text('\u2705 ' + (d.streams || []).length + ' torrent'); } catch (e) { st2.attr('class', 'kk-stg-status kk-stg-status--err').text('\u274c ' + (e.message || '')); } });
                 g2.append(tti).append(st2); w.append(g2);
-                // Cache
                 var g7 = mkGroup('\ud83d\uddc3\ufe0f Cache');
                 var cc = si('X\u00f3a cache th\u1ec3 lo\u1ea1i', '\u0110\u1eb7t l\u1ea1i TMDB genres', 'X\u00f3a');
                 bindEnter(cc, function () { _genreCache = { movie: null, tv: null }; Lampa.Noty.show('\u0110\u00e3 x\u00f3a'); }); g7.append(cc); w.append(g7);
-                // Delete
                 var g4 = $('<div class="kk-stg-group"></div>');
                 var cl = si('\ud83d\uddd1\ufe0f X\u00f3a to\u00e0n b\u1ed9', 'Kh\u00f4i ph\u1ee5c m\u1eb7c \u0111\u1ecbnh', 'X\u00f3a'); cl.find('.kk-stg-value').css('color', '#f87171');
                 bindEnter(cl, function () { localStorage.removeItem(SETTINGS_KEY); _genreCache = { movie: null, tv: null }; Lampa.Noty.show('\u0110\u00e3 x\u00f3a'); Lampa.Activity.backward(); }); g4.append(cl); w.append(g4);
-                w.append('<div class="kk-stg-ver">KKPhim Plugin v2.1</div>');
+                w.append('<div class="kk-stg-ver">KKPhim Plugin v2.2</div>');
                 scroll.append(w); comp.start();
             };
             function mkGroup(t) { return $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">' + t + '</div>'); }
@@ -521,7 +661,7 @@
             function (obj) { return '\ud83d\udd0d TMDB: ' + (obj.keyword || ''); }
         );
 
-        // ===== TMDB GENRE (mixed movie+tv, wrap bar) =====
+        // ===== TMDB GENRE =====
         Lampa.Component.add('kkphim_tmdb_genre', function (obj) {
             var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
             var curGid = String(obj.genre_id || '');
@@ -551,8 +691,7 @@
                 if (!tvDone) promises.push(tmdbDiscover('tv', curGid, tvPage).then(function (r) { var items = r.results || []; if (!items.length) tvDone = true; else { items.forEach(function (i) { i.media_type = 'tv'; }); allItems = allItems.concat(items); tvPage++; } }).catch(function () { tvDone = true; }));
                 Promise.all(promises).then(function () {
                     allItems.sort(function (a, b) { return (b.popularity || 0) - (a.popularity || 0); });
-                    var added = 0;
-                    for (var i = 0; i < allItems.length; i++) { var key = allItems[i].media_type + '_' + allItems[i].id; if (!renderedSet[key]) { renderedSet[key] = true; grid.append(mkTmdbCard(allItems[i]).addClass('kk-card--grid')); added++; } }
+                    for (var i = 0; i < allItems.length; i++) { var key = allItems[i].media_type + '_' + allItems[i].id; if (!renderedSet[key]) { renderedSet[key] = true; grid.append(mkTmdbCard(allItems[i]).addClass('kk-card--grid')); } }
                     hasMore = !(movieDone && tvDone); lm.text(hasMore ? 'T\u1ea3i th\u00eam' : (Object.keys(renderedSet).length ? 'H\u1ebft' : 'Kh\u00f4ng c\u00f3 k\u1ebft qu\u1ea3'));
                     loading = false; comp.activity.loader(false); comp.start();
                 }).catch(function () { loading = false; lm.text('L\u1ed7i'); comp.activity.loader(false); });
@@ -560,7 +699,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { scroll.destroy(); };
         });
 
-        // ===== TMDB DETAIL =====
+        // ===== TMDB DETAIL (with separate KKPhim/OPhim dropdown buttons) =====
         Lampa.Component.add('kkphim_tmdb_detail', function (obj) {
             var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this, tmdbId = obj.tmdb_id, mediaType = obj.media_type || 'movie';
             this.create = function () {
@@ -586,23 +725,54 @@
                 if (tmdb.credits) { castH = mkPeople((tmdb.credits.cast || []).slice(0, 12), 'character'); var dirs = (tmdb.credits.crew || []).filter(function (c) { return c.job === 'Director' || c.job === 'Creator' || c.job === 'Series Director'; }).filter(function (p, i, a) { return a.findIndex(function (x) { return x.name === p.name; }) === i; }).slice(0, 10); if (dirs.length) { dir = dirs.map(function (c) { return c.name; }).join(', '); dirH = mkPeople(dirs.map(function (c) { return { name: c.name, profile_path: c.profile_path, job: c.job || '\u0110\u1ea1o di\u1ec5n' }; }), 'job'); } }
                 if (dir) crewH = '<div class="kk-crew"><b>\u0110\u1ea1o di\u1ec5n</b><span>' + esc(dir) + '</span></div>';
                 var imdbId = (tmdb.external_ids && tmdb.external_ids.imdb_id) || null;
-                var hasSlug = !!(slugs.kkphim || slugs.ophim);
-                var foundSrcs = []; if (slugs.kkphim) foundSrcs.push('KKPhim'); if (slugs.ophim) foundSrcs.push('OPhim');
-                var slugInfoHtml = hasSlug ? '<div class="kk-slug-info kk-slug-found">\u2705 Ngu\u1ed3n: ' + foundSrcs.join(', ') + '</div>' : '<div class="kk-slug-info kk-slug-notfound">\u26a0\ufe0f Kh\u00f4ng t\u00ecm th\u1ea5y ngu\u1ed3n ph\u00e1t \u2014 Ch\u1ec9 c\u00f3 Torrent</div>';
+
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg">' + (bk ? '<img src="' + bk + '">' : '') + '<div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster">' + (ps ? '<img src="' + ps + '">' : '') + '</div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
-                var actHtml = '';
-                if (mediaType === 'movie') { actHtml += hasSlug ? '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector" data-action="play-movie">\u25b6 Xem phim</div></div>' : '<div class="kk-act-wrap"><div class="kk-act kk-act--disabled">\u25b6 Kh\u00f4ng c\u00f3 ngu\u1ed3n</div></div>'; actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector" data-action="torrent-movie">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>'; }
-                else { actHtml += hasSlug ? '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector" data-action="play-tv">\u25b6 Xem phim</div></div>' : '<div class="kk-act-wrap"><div class="kk-act kk-act--disabled">\u25b6 Kh\u00f4ng c\u00f3 ngu\u1ed3n</div></div>'; actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector" data-action="torrent-tv">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>'; }
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epTotal ? '<span class="kk-meta">\ud83c\udfac ' + esc(epTotal) + '</span>' : '') + (nSeasons ? '<span class="kk-meta">\ud83d\udcfa ' + esc(nSeasons) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + slugInfoHtml + '<div class="kk-desc">' + fmtTxt(d) + '</div><div class="kk-actions">' + actHtml + '</div></div>');
+
+                // Build action buttons with dropdowns
+                var actionsContainer = $('<div class="kk-actions"></div>');
+                var sourceActions = $('<div class="kk-source-actions"></div>');
+
+                // KKPhim button with dropdown
+                if (slugs.kkphim) {
+                    if (mediaType === 'movie') {
+                        sourceActions.append(buildSourceDropdown('kkphim', 'KKPhim', slugs.kkphim, t, mediaType, 'kk-dropdown-btn--kkphim'));
+                    } else {
+                        sourceActions.append(buildTVSourceDropdown('kkphim', 'KKPhim', slugs.kkphim, t, o, 'kk-dropdown-btn--kkphim'));
+                    }
+                }
+
+                // OPhim button with dropdown
+                if (slugs.ophim) {
+                    if (mediaType === 'movie') {
+                        sourceActions.append(buildSourceDropdown('ophim', 'OPhim', slugs.ophim, t, mediaType, 'kk-dropdown-btn--ophim'));
+                    } else {
+                        sourceActions.append(buildTVSourceDropdown('ophim', 'OPhim', slugs.ophim, t, o, 'kk-dropdown-btn--ophim'));
+                    }
+                }
+
+                if (!slugs.kkphim && !slugs.ophim) {
+                    sourceActions.append('<div class="kk-dropdown-btn kk-dropdown-btn--disabled">\u26a0\ufe0f Kh\u00f4ng t\u00ecm th\u1ea5y ngu\u1ed3n ph\u00e1t</div>');
+                }
+
+                actionsContainer.append(sourceActions);
+
+                // Torrent button
+                var torrentBtn = $('<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
+                if (mediaType === 'movie') {
+                    bindEnter(torrentBtn.find('.kk-act--torrent'), function () { openTorrentMovie(tmdbId, t, ps, imdbId); });
+                } else {
+                    bindEnter(torrentBtn.find('.kk-act--torrent'), function () { openTorrentTV(tmdbId, t, ps, imdbId); });
+                }
+                actionsContainer.append(torrentBtn);
+
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epTotal ? '<span class="kk-meta">\ud83c\udfac ' + esc(epTotal) + '</span>' : '') + (nSeasons ? '<span class="kk-meta">\ud83d\udcfa ' + esc(nSeasons) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div></div>');
+
+                body.append(actionsContainer);
+
                 // Genre click
                 body.find('.kk-genre[data-gid]').each(function () { var g = $(this); bindEnter(g, function () { Lampa.Activity.push({ url: '', title: g.attr('data-gname') || 'Th\u1ec3 lo\u1ea1i', component: 'kkphim_tmdb_genre', genre_id: g.attr('data-gid'), page_num: 1 }); }); });
-                // FIX: Play movie - cho chọn nguồn
-                bindEnter(body.find('[data-action="play-movie"]'), function () { playMovieFromSlugs(slugs, t); });
-                // FIX: Play TV - cho chọn nguồn
-                bindEnter(body.find('[data-action="play-tv"]'), function () { playTVFromSlugs(slugs, t, o); });
-                bindEnter(body.find('[data-action="torrent-movie"]'), function () { openTorrentMovie(tmdbId, t, ps, imdbId); });
-                bindEnter(body.find('[data-action="torrent-tv"]'), function () { openTorrentTV(tmdbId, t, ps, imdbId); });
+
                 var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
                 if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">\u0110\u1ea1o di\u1ec5n</div><div class="kk-cast-list">' + dirH + '</div></div>');
                 if (castH) dw.append('<div class="kk-section"><div class="kk-block-title">Di\u1ec5n vi\u00ean</div><div class="kk-cast-list">' + castH + '</div></div>');
@@ -633,7 +803,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ===== DETAIL (source) =====
+        // ===== DETAIL (source) - with dropdown for episodes =====
         Lampa.Component.add('kkphim_detail', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), movie = norm(obj.movie), comp = this, rendered = false;
             this.create = function () { this.activity.loader(true); clearScroll(scroll); rendered = false; if (!movie || !movie.slug) { this.activity.loader(false); scroll.append('<div class="empty__body"><div class="empty__title">Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u</div></div>'); comp.start(); return; } network.silent(SRC_API() + 'phim/' + movie.slug, function (res) { if (rendered) return; loadAll(norm(res.movie || res || {}), res.episodes || []); }, function () { comp.activity.loader(false); Lampa.Noty.show('L\u1ed7i t\u1ea3i phim'); }); };
@@ -651,12 +821,37 @@
                 if (data.director && !dir) dir = Array.isArray(data.director) ? data.director.join(', ') : String(data.director || '');
                 if (dir && !dirH) crewH = '<div class="kk-crew"><b>\u0110\u1ea1o di\u1ec5n</b><span>' + esc(dir) + '</span></div>';
                 var hasTmdb = !!getTmdbId(data);
-                var tBtn = hasTmdb ? '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>' : '';
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o2) + '</div></div></div></div></div>');
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">\ud83c\udfac ' + esc(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div><div class="kk-actions"><div class="kk-act-wrap"><div class="kk-act kk-act--play selector">\u25b6 Xem phim</div></div>' + tBtn + '</div></div>');
-                bindEnter(body.find('.kk-act--play'), function () { showSourceEpisodePicker(data, episodes, data.name || t); });
-                if (hasTmdb) { bindEnter(body.find('.kk-act--torrent'), function () { var tid2 = getTmdbId(data); if (ttype === 'tv') openTorrentTV(tid2, data.name || '', ps, null); else openTorrentMovie(tid2, data.name || '', ps, null); }); }
+
+                // Build action buttons with dropdown for current source
+                var actionsContainer = $('<div class="kk-actions"></div>');
+                var sourceActions = $('<div class="kk-source-actions"></div>');
+
+                // Determine current source name
+                var currentSource = getSource();
+                var sourceCssClass = currentSource.key === 'kkphim' ? 'kk-dropdown-btn--kkphim' : 'kk-dropdown-btn--ophim';
+
+                // Build dropdown with episodes from current source
+                if (episodes && episodes.length) {
+                    sourceActions.append(buildSourceDetailDropdown(episodes, data.name || t, currentSource.name, sourceCssClass));
+                } else {
+                    sourceActions.append('<div class="kk-dropdown-btn kk-dropdown-btn--disabled">\u26a0\ufe0f Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+                }
+
+                actionsContainer.append(sourceActions);
+
+                // Torrent button
+                if (hasTmdb) {
+                    var tBtn = $('<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
+                    bindEnter(tBtn.find('.kk-act--torrent'), function () { var tid2 = getTmdbId(data); if (ttype === 'tv') openTorrentTV(tid2, data.name || '', ps, null); else openTorrentMovie(tid2, data.name || '', ps, null); });
+                    actionsContainer.append(tBtn);
+                }
+
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">\ud83c\udfac ' + esc(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div></div>');
+
+                body.append(actionsContainer);
+
                 body.find('.kk-genre[data-slug]').each(function () { var g = $(this); bindEnter(g, function () { var slug = g.attr('data-slug'); if (slug) Lampa.Activity.push({ url: '', title: g.attr('data-title') || '', component: 'kkphim_category', mode: 'category', category_slug: slug, page_num: 1 }); }); });
                 var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
                 if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">\u0110\u1ea1o di\u1ec5n</div><div class="kk-cast-list">' + dirH + '</div></div>');
