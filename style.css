@@ -194,3 +194,39 @@
 @media(max-width:768px){
     .kk-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.75em}
 }
+/* ===== v2.9.2 FONT SIZE FIX ===== */
+
+/* Meta badges (⭐ 8.1, 📅 2020, etc) */
+.kk-meta{padding:.6em 1em;border-radius:.8em;background:rgba(255,255,255,.08);color:#fff;font-size:1.3em;font-weight:800}
+
+/* Genre chips */
+.kk-genre{padding:.6em 1em;border-radius:.8em;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.95);font-size:1.2em;font-weight:700;cursor:pointer}
+
+/* Director crew */
+.kk-crew b{font-size:1.4em;font-weight:900;color:#fff;display:block;margin-bottom:.3em}
+.kk-crew span{font-size:1.2em;color:rgba(255,255,255,.88)}
+
+/* Description */
+.kk-desc{font-size:1.4em;line-height:1.85;color:rgba(255,255,255,.88);margin:0 0 1.3em}
+
+/* Origin name under title */
+.kk-origin{font-size:1.25em;line-height:1.5;color:rgba(255,255,255,.82)}
+
+/* Card text bigger */
+.kk-card-name{margin-top:.65em;font-size:1.15em;line-height:1.35;font-weight:800;color:#fff}
+.kk-card-year{margin-top:.22em;font-size:1em;color:rgba(255,255,255,.6);font-weight:600}
+
+/* Section titles */
+.kk-block-title{font-size:1.9em;font-weight:900;color:#fff;margin:0 0 .85em}
+
+/* Cast names */
+.kk-cast-name{font-size:1.08em;font-weight:800;color:#fff}
+.kk-cast-role{font-size:.95em;color:rgba(255,255,255,.6);margin-top:.15em}
+
+/* Source button text */
+.kk-src-btn .kk-sb-main{font-size:1.35em;line-height:1.3;font-weight:900}
+.kk-src-btn .kk-sb-sub{font-size:.95em;opacity:.8;margin-top:.22em}
+
+/* Episode chips */
+.kk-ep-c{font-size:1.05em;font-weight:600;min-height:2.5em}
+.kk-sv-hd{font-size:1.05em}
