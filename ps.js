@@ -447,7 +447,99 @@ function startPlugin(){
             var tb2=$('<div class="kk-srcbtn selector kk-srcbtn--off" style="background:rgba(1,180,228,.15);border-color:rgba(1,180,228,.4);color:#01b4e4">TMDB</div>');
             bE(tb2,function(){Lampa.Activity.push({url:'',title:'TMDB',component:'kkphim_tmdb_main',page:1});});
             sb.append(tb2);scroll.append(sb);
+            
+/* ══ NETFLIX BANNER ══ */
+function mkNetflixBanner(){
+    var banner=$('<div class="kk-nf-banner"></div>');
+    var slideIdx=0,slides=[],timer=null;
 
+    tFetch('/trending/all/week?language='+tmLang()+'&page=1').then(function(res){
+        var items=(res.results||[]).filter(function(i){return i.backdrop_path&&i.vote_average>=6;}).slice(0,5);
+        if(!items.length)return;
+        slides=items;
+        renderSlide(0);
+        startAuto();
+    }).catch(function(){});
+
+    function renderSlide(idx){
+        var item=slides[idx];if(!item)return;
+        var bk=item.backdrop_path?TMDB_IMG+item.backdrop_path:'';
+        var ps=item.poster_path?TMDB_W500+item.poster_path:'';
+        var t=item.title||item.name||'';
+        var o=item.original_title||item.original_name||'';
+        var y=(item.release_date||item.first_air_date||'').slice(0,4);
+        var v=item.vote_average?Number(item.vote_average).toFixed(1):'';
+        var d=item.overview?item.overview.substring(0,120)+'…':'';
+        var mt=item.media_type||(item.first_air_date?'tv':'movie');
+        var tid=item.id;
+
+        banner.html(
+            '<div class="kk-nf-bg">'+(bk?'<img src="'+bk+'">':'<div class="kk-nf-bg-empty"></div>')+'</div>'+
+            '<div class="kk-nf-overlay"></div>'+
+            '<div class="kk-nf-content">'+
+                '<div class="kk-nf-info">'+
+                    '<div class="kk-nf-meta">'+
+                        (y?'<span class="kk-nf-year">'+y+'</span>':'')+
+                        (v?'<span class="kk-nf-vote">⭐ '+v+'</span>':'')+
+                        '<span class="kk-nf-type">'+(mt==='tv'?'TV SERIES':'FILM')+'</span>'+
+                    '</div>'+
+                    '<div class="kk-nf-title">'+E(t)+'</div>'+
+                    (o&&o!==t?'<div class="kk-nf-origin">'+E(o)+'</div>':'')+
+                    (d?'<div class="kk-nf-desc">'+E(d)+'</div>':'')+
+                    '<div class="kk-nf-btns">'+
+                        '<div class="kk-nf-play selector">▶ XEM NGAY</div>'+
+                        '<div class="kk-nf-info-btn selector">ⓘ Chi tiết</div>'+
+                    '</div>'+
+                '</div>'+
+                '<div class="kk-nf-poster-wrap">'+
+                    (ps?'<div class="kk-nf-poster"><img src="'+ps+'"></div>':'')+
+                '</div>'+
+            '</div>'+
+            '<div class="kk-nf-dots"></div>'+
+            '<div class="kk-nf-prev selector">‹</div>'+
+            '<div class="kk-nf-next selector">›</div>'
+        );
+
+        // Dots
+        var dotsEl=banner.find('.kk-nf-dots');
+        slides.forEach(function(_,i){
+            dotsEl.append('<span class="kk-nf-dot'+(i===idx?' kk-nf-dot--active':'')+'" data-i="'+i+'"></span>');
+        });
+
+        // Click: XEM NGAY
+        banner.find('.kk-nf-play').on('click',function(){
+            Lampa.Activity.push({url:'',title:t,component:'kkphim_tmdb_detail',tmdb_id:tid,media_type:mt,page:1});
+        });
+        // Click: Chi tiết
+        banner.find('.kk-nf-info-btn').on('click',function(){
+            Lampa.Activity.push({url:'',title:t,component:'kkphim_tmdb_detail',tmdb_id:tid,media_type:mt,page:1});
+        });
+        // Click: Poster
+        banner.find('.kk-nf-poster-wrap').on('click',function(){
+            Lampa.Activity.push({url:'',title:t,component:'kkphim_tmdb_detail',tmdb_id:tid,media_type:mt,page:1});
+        });
+        // Click: Dot
+        banner.find('.kk-nf-dot').on('click',function(){
+            slideIdx=parseInt($(this).attr('data-i'));renderSlide(slideIdx);resetAuto();
+        });
+        // Click: Prev/Next
+        banner.find('.kk-nf-prev').on('click',function(){
+            slideIdx=(slideIdx-1+slides.length)%slides.length;renderSlide(slideIdx);resetAuto();
+        });
+        banner.find('.kk-nf-next').on('click',function(){
+            slideIdx=(slideIdx+1)%slides.length;renderSlide(slideIdx);resetAuto();
+        });
+
+        // Hover: hiện nút prev/next
+        banner.on('mouseenter',function(){banner.find('.kk-nf-prev,.kk-nf-next').css('opacity','1');});
+        banner.on('mouseleave',function(){banner.find('.kk-nf-prev,.kk-nf-next').css('opacity','0');});
+    }
+
+    function startAuto(){timer=setInterval(function(){slideIdx=(slideIdx+1)%slides.length;renderSlide(slideIdx);},7000);}
+    function resetAuto(){clearInterval(timer);startAuto();}
+
+    return banner;
+}
             /* Tạo các row với infinite scroll ngang */
             cats.forEach(function(cat){
                 var row=$('<div class="kk-row"></div>');
