@@ -47,7 +47,6 @@
     function detectType(d) { if (d && d.tmdb && d.tmdb.type === 'tv') return 'tv'; if (d && d.tmdb && d.tmdb.type === 'movie') return 'movie'; if (d && (d.type === 'series' || d.type === 'tvshows' || d.type === 'hoathinh')) return 'tv'; if (d && d.episode_total && d.episode_total !== '1') return 'tv'; return 'movie'; }
     function getTmdbId(d) { return (d && d.tmdb && d.tmdb.id) ? d.tmdb.id : null; }
     function getFirstEp(eps) { for (var i = 0; i < (eps || []).length; i++) if (eps[i] && eps[i].server_data && eps[i].server_data.length) return eps[i].server_data[0]; return null; }
-
     function pickLogo(imgs) { if (!imgs || !imgs.logos || !imgs.logos.length) return null; return imgs.logos.find(function (l) { return l.iso_639_1 === 'vi'; }) || imgs.logos.find(function (l) { return l.iso_639_1 === 'en'; }) || imgs.logos[0] || null; }
 
     function cleanTioConfig(raw) {
@@ -102,117 +101,156 @@
         go(window.prompt('T\u00ecm phim TMDB:'));
     }
 
-    // ==================== DROPDOWN MENU SYSTEM ====================
-    function closeAllDropdowns() {
-        $('.kk-dropdown-menu').removeClass('kk-dropdown-open');
-        setTimeout(function () {
-            $('.kk-dropdown-menu').not('.kk-dropdown-open').css('display', 'none');
-        }, 300);
-    }
-
-    function toggleDropdown(btn, menu) {
-        var isOpen = menu.hasClass('kk-dropdown-open');
-        closeAllDropdowns();
-        if (!isOpen) {
-            menu.css('display', 'block');
-            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
-        }
-    }
-
-    // Inject dropdown CSS
-    function injectDropdownCSS() {
-        if ($('#kk-dropdown-css').length) return;
+    // ==================== COLLAPSE/EXPAND SYSTEM ====================
+    function injectCollapseCSS() {
+        if ($('#kk-collapse-css').length) return;
         var css = '' +
-            '.kk-dropdown-wrap { position: relative; display: inline-block; width: 100%; margin-bottom: 0.3em; }' +
-            '.kk-dropdown-btn { display: flex; align-items: center; justify-content: space-between; padding: 0.7em 1em; border-radius: 0.6em; font-size: 1em; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }' +
-            '.kk-dropdown-btn .kk-dd-arrow { margin-left: 0.5em; transition: transform 0.3s; font-size: 0.8em; }' +
-            '.kk-dropdown-open + .kk-dropdown-btn .kk-dd-arrow, .kk-dropdown-wrap.open .kk-dd-arrow { transform: rotate(180deg); }' +
-            '.kk-dropdown-btn--kkphim { background: rgba(255,107,0,0.15); border-color: rgba(255,107,0,0.4); color: #ff6b00; }' +
-            '.kk-dropdown-btn--kkphim:hover, .kk-dropdown-btn--kkphim:focus { background: rgba(255,107,0,0.25); border-color: rgba(255,107,0,0.6); }' +
-            '.kk-dropdown-btn--ophim { background: rgba(0,150,255,0.15); border-color: rgba(0,150,255,0.4); color: #0096ff; }' +
-            '.kk-dropdown-btn--ophim:hover, .kk-dropdown-btn--ophim:focus { background: rgba(0,150,255,0.25); border-color: rgba(0,150,255,0.6); }' +
-            '.kk-dropdown-btn--source { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.4); color: #4ade80; }' +
-            '.kk-dropdown-btn--source:hover, .kk-dropdown-btn--source:focus { background: rgba(74,222,128,0.25); border-color: rgba(74,222,128,0.6); }' +
-            '.kk-dropdown-btn--disabled { background: rgba(100,100,100,0.15); border-color: rgba(100,100,100,0.3); color: #888; cursor: default; }' +
-            '.kk-dropdown-menu { display: none; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease; opacity: 0; background: rgba(30,30,35,0.98); border-radius: 0.5em; margin-top: 0.3em; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }' +
-            '.kk-dropdown-menu.kk-dropdown-open { max-height: 60vh; overflow-y: auto; opacity: 1; }' +
-            '.kk-dropdown-menu::-webkit-scrollbar { width: 4px; }' +
-            '.kk-dropdown-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }' +
-            '.kk-dd-server-title { padding: 0.5em 1em 0.3em; font-size: 0.85em; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.05); }' +
-            '.kk-dd-server-title:not(:first-child) { border-top: 1px solid rgba(255,255,255,0.08); margin-top: 0.2em; }' +
-            '.kk-dd-ep-item { padding: 0.6em 1em; font-size: 0.95em; color: rgba(255,255,255,0.85); cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 0.5em; }' +
-            '.kk-dd-ep-item:hover, .kk-dd-ep-item:focus, .kk-dd-ep-item.focus { background: rgba(255,255,255,0.1); }' +
-            '.kk-dd-ep-item .kk-dd-ep-icon { font-size: 0.8em; opacity: 0.6; }' +
-            '.kk-dd-ep-item .kk-dd-ep-name { flex: 1; }' +
-            '.kk-dd-ep-item .kk-dd-ep-badge { font-size: 0.75em; padding: 0.15em 0.4em; border-radius: 0.3em; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }' +
-            '.kk-dd-loading { padding: 1.5em; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.9em; }' +
-            '.kk-dd-empty { padding: 1em; text-align: center; color: rgba(255,100,100,0.7); font-size: 0.9em; }' +
-            '.kk-source-actions { display: flex; flex-direction: column; gap: 0.3em; margin-bottom: 0.5em; }' +
+            '.kk-expand-wrap{margin-bottom:.4em}' +
+            '.kk-expand-btn{display:flex;align-items:center;gap:.5em;padding:.65em 1.1em;border-radius:.55em;font-size:1em;font-weight:600;cursor:pointer;transition:all .2s;border:2px solid transparent;user-select:none}' +
+            '.kk-expand-btn .kk-eb-arrow{transition:transform .3s;font-size:.7em}' +
+            '.kk-expand-btn.open .kk-eb-arrow{transform:rotate(180deg)}' +
+            '.kk-expand-btn--kkphim{background:rgba(255,107,0,.15);border-color:rgba(255,107,0,.4);color:#ff6b00}' +
+            '.kk-expand-btn--kkphim:hover,.kk-expand-btn--kkphim:focus{background:rgba(255,107,0,.25);border-color:rgba(255,107,0,.6)}' +
+            '.kk-expand-btn--ophim{background:rgba(0,150,255,.15);border-color:rgba(0,150,255,.4);color:#0096ff}' +
+            '.kk-expand-btn--ophim:hover,.kk-expand-btn--ophim:focus{background:rgba(0,150,255,.25);border-color:rgba(0,150,255,.6)}' +
+            '.kk-expand-btn--source{background:rgba(74,222,128,.15);border-color:rgba(74,222,128,.4);color:#4ade80}' +
+            '.kk-expand-btn--source:hover,.kk-expand-btn--source:focus{background:rgba(74,222,128,.25);border-color:rgba(74,222,128,.6)}' +
+            '.kk-expand-btn--disabled{background:rgba(100,100,100,.12);border-color:rgba(100,100,100,.25);color:#666;cursor:default}' +
+            '.kk-expand-panel{overflow:hidden;max-height:0;opacity:0;transition:max-height .4s ease,opacity .3s ease;margin-top:0}' +
+            '.kk-expand-panel.open{max-height:9999px;opacity:1;margin-top:.3em}' +
+            '.kk-ep-panel-inner{background:rgba(20,20,25,.85);border-radius:.5em;border:1px solid rgba(255,255,255,.08);overflow:hidden}' +
+            '.kk-ep-server{padding:.5em .8em .3em;font-size:.8em;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.04em}' +
+            '.kk-ep-server:not(:first-child){border-top:1px solid rgba(255,255,255,.06);margin-top:.15em}' +
+            '.kk-ep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(3.2em,1fr));gap:.3em;padding:.3em .6em .5em}' +
+            '.kk-ep-item{display:flex;align-items:center;justify-content:center;padding:.45em .3em;border-radius:.4em;font-size:.85em;color:rgba(255,255,255,.8);background:rgba(255,255,255,.06);cursor:pointer;transition:all .15s;text-align:center;min-height:2em;word-break:break-all}' +
+            '.kk-ep-item:hover,.kk-ep-item:focus,.kk-ep-item.focus{background:rgba(255,255,255,.18);color:#fff}' +
+            '.kk-ep-item--nolink{opacity:.35;cursor:default}' +
+            '.kk-ep-loading{padding:1.2em;text-align:center;color:rgba(255,255,255,.4);font-size:.9em}' +
+            '.kk-ep-empty{padding:1em;text-align:center;color:rgba(255,100,100,.6);font-size:.85em}' +
+            '.kk-season-item{display:flex;align-items:center;gap:.6em;padding:.6em .8em;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.04)}' +
+            '.kk-season-item:hover,.kk-season-item:focus,.kk-season-item.focus{background:rgba(255,255,255,.1)}' +
+            '.kk-season-item:last-child{border-bottom:none}' +
+            '.kk-season-name{flex:1;font-size:.9em;color:rgba(255,255,255,.85)}' +
+            '.kk-season-badge{font-size:.75em;padding:.15em .45em;border-radius:.3em;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}' +
+            '.kk-back-btn{display:flex;align-items:center;gap:.4em;padding:.5em .8em;font-size:.8em;color:rgba(255,255,255,.5);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s}' +
+            '.kk-back-btn:hover,.kk-back-btn:focus,.kk-back-btn.focus{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8)}' +
             '';
-        $('<style id="kk-dropdown-css"></style>').text(css).appendTo('head');
+        $('<style id="kk-collapse-css"></style>').text(css).appendTo('head');
     }
 
-    // Build dropdown button + menu for a source
-    function buildSourceDropdown(sourceKey, sourceName, slug, title, mediaType, cssClass) {
-        var wrap = $('<div class="kk-dropdown-wrap"></div>');
-        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
-        var menu = $('<div class="kk-dropdown-menu"></div>');
+    // Build expand button + hidden panel for a source (movie - TMDB detail)
+    function buildSourceExpand(sourceKey, sourceName, slug, title, cssClass) {
+        var wrap = $('<div class="kk-expand-wrap"></div>');
+        var btn = $('<div class="kk-expand-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-eb-arrow">\u25bc</span></div>');
+        var panel = $('<div class="kk-expand-panel"></div>');
+        var inner = $('<div class="kk-ep-panel-inner"></div>');
+        panel.append(inner);
+        wrap.append(btn).append(panel);
         var loaded = false;
 
-        wrap.append(btn).append(menu);
-
         bindEnter(btn, function () {
-            if (menu.hasClass('kk-dropdown-open')) {
-                closeAllDropdowns();
-                return;
-            }
-            closeAllDropdowns();
-            menu.css('display', 'block');
-            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
-
-            if (!loaded) {
-                loaded = true;
-                menu.html('<div class="kk-dd-loading">\u23f3 \u0110ang t\u1ea3i...</div>');
-                var source = SOURCES[sourceKey];
-                fetchDetail(source, slug).then(function (detail) {
-                    if (!detail || !detail.episodes || !detail.episodes.length) {
-                        menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
-                        return;
-                    }
-                    renderEpisodesInDropdown(menu, detail.episodes, title);
-                }).catch(function (e) {
-                    menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
-                });
+            var isOpen = panel.hasClass('open');
+            if (isOpen) {
+                panel.removeClass('open');
+                btn.removeClass('open');
+            } else {
+                panel.addClass('open');
+                btn.addClass('open');
+                if (!loaded) {
+                    loaded = true;
+                    inner.html('<div class="kk-ep-loading">\u23f3 \u0110ang t\u1ea3i...</div>');
+                    var source = SOURCES[sourceKey];
+                    fetchDetail(source, slug).then(function (detail) {
+                        if (!detail || !detail.episodes || !detail.episodes.length) {
+                            inner.html('<div class="kk-ep-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+                            return;
+                        }
+                        renderEpisodesPanel(inner, detail.episodes, title);
+                    }).catch(function (e) {
+                        inner.html('<div class="kk-ep-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
+                    });
+                }
             }
         });
 
         return wrap;
     }
 
-    // Build dropdown for source detail page (already has episodes)
-    function buildSourceDetailDropdown(episodes, title, sourceName, cssClass) {
-        var wrap = $('<div class="kk-dropdown-wrap"></div>');
+    // Build expand button + hidden panel for TV source (TMDB detail)
+    function buildTVSourceExpand(sourceKey, sourceName, slug, title, origTitle, cssClass) {
+        var wrap = $('<div class="kk-expand-wrap"></div>');
+        var btn = $('<div class="kk-expand-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-eb-arrow">\u25bc</span></div>');
+        var panel = $('<div class="kk-expand-panel"></div>');
+        var inner = $('<div class="kk-ep-panel-inner"></div>');
+        panel.append(inner);
+        wrap.append(btn).append(panel);
+        var loaded = false;
+
+        bindEnter(btn, function () {
+            var isOpen = panel.hasClass('open');
+            if (isOpen) {
+                panel.removeClass('open');
+                btn.removeClass('open');
+            } else {
+                panel.addClass('open');
+                btn.addClass('open');
+                if (!loaded) {
+                    loaded = true;
+                    inner.html('<div class="kk-ep-loading">\u23f3 \u0110ang t\u00ecm seasons...</div>');
+                    var source = SOURCES[sourceKey];
+                    findAllSeasonSlugs(source, title, origTitle).then(function (entries) {
+                        if (!entries.length && slug) {
+                            entries = [{ slug: slug, name: title, season: 1, source: source }];
+                        }
+                        if (!entries.length) {
+                            inner.html('<div class="kk-ep-empty">\u274c Kh\u00f4ng t\u00ecm th\u1ea5y</div>');
+                            return;
+                        }
+                        var seasonMap = {};
+                        entries.forEach(function (e) {
+                            if (!seasonMap[e.season]) seasonMap[e.season] = [];
+                            seasonMap[e.season].push(e);
+                        });
+                        var seasonNums = Object.keys(seasonMap).map(Number).sort(function (a, b) { return a - b; });
+                        if (seasonNums.length === 1) {
+                            loadSeasonPanel(inner, seasonMap[seasonNums[0]], title, seasonNums[0]);
+                        } else {
+                            renderSeasonList(inner, seasonMap, seasonNums, title);
+                        }
+                    }).catch(function (e) {
+                        inner.html('<div class="kk-ep-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
+                    });
+                }
+            }
+        });
+
+        return wrap;
+    }
+
+    // Build expand for source detail page (already has episodes)
+    function buildDetailExpand(episodes, title, sourceName, cssClass) {
+        var wrap = $('<div class="kk-expand-wrap"></div>');
         var totalEps = 0;
         (episodes || []).forEach(function (sv) { totalEps += (sv.server_data || []).length; });
         var label = sourceName + ' (' + totalEps + ' t\u1eadp)';
-        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(label) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
-        var menu = $('<div class="kk-dropdown-menu"></div>');
+        var btn = $('<div class="kk-expand-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(label) + '</span><span class="kk-eb-arrow">\u25bc</span></div>');
+        var panel = $('<div class="kk-expand-panel"></div>');
+        var inner = $('<div class="kk-ep-panel-inner"></div>');
+        panel.append(inner);
+        wrap.append(btn).append(panel);
 
-        wrap.append(btn).append(menu);
-
-        // Pre-render episodes
-        if (!episodes || !episodes.length) {
-            bindEnter(btn, function () {
-                Lampa.Noty.show('Kh\u00f4ng c\u00f3 t\u1eadp');
-            });
+        if (!episodes || !episodes.length || totalEps === 0) {
+            btn.addClass('kk-expand-btn--disabled').find('span:first').text('\u26a0\ufe0f ' + sourceName + ' - Kh\u00f4ng c\u00f3 t\u1eadp');
             return wrap;
         }
 
-        // If only 1 episode total, play directly
+        // 1 ep total: play directly
         if (totalEps === 1) {
             var ep = getFirstEp(episodes);
             if (ep) {
                 var link = ep.link_m3u8 || ep.link_embed || '';
+                btn.find('span:first').text('\u25b6 ' + sourceName + ' - Ph\u00e1t ngay');
+                btn.find('.kk-eb-arrow').remove();
                 bindEnter(btn, function () {
                     if (link) Lampa.Player.play({ title: title, url: link });
                     else Lampa.Noty.show('Kh\u00f4ng c\u00f3 link');
@@ -221,153 +259,94 @@
             }
         }
 
-        renderEpisodesInDropdown(menu, episodes, title);
+        renderEpisodesPanel(inner, episodes, title);
 
         bindEnter(btn, function () {
-            if (menu.hasClass('kk-dropdown-open')) {
-                closeAllDropdowns();
-                return;
-            }
-            closeAllDropdowns();
-            menu.css('display', 'block');
-            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
-        });
-
-        return wrap;
-    }
-
-    function renderEpisodesInDropdown(menu, episodes, title) {
-        menu.empty();
-        if (!episodes || !episodes.length) {
-            menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
-            return;
-        }
-
-        episodes.forEach(function (sv) {
-            var serverName = sv.server_name || 'Server';
-            var epCount = (sv.server_data || []).length;
-
-            // Server title with episode count and type hint
-            var serverLabel = serverName;
-            if (serverName.toLowerCase().indexOf('thuy\u1ebft minh') > -1 || serverName.toLowerCase().indexOf('thuyet minh') > -1 || serverName.toLowerCase().indexOf('tm') > -1) {
-                serverLabel = '\ud83c\uddfb\ud83c\uddf3 ' + serverName;
-            } else if (serverName.toLowerCase().indexOf('vietsub') > -1 || serverName.toLowerCase().indexOf('sub') > -1) {
-                serverLabel = '\ud83d\udcdd ' + serverName;
-            } else if (serverName.toLowerCase().indexOf('l\u1ed3ng') > -1 || serverName.toLowerCase().indexOf('long') > -1) {
-                serverLabel = '\ud83c\udfa4 ' + serverName;
+            var isOpen = panel.hasClass('open');
+            if (isOpen) {
+                panel.removeClass('open');
+                btn.removeClass('open');
             } else {
-                serverLabel = '\ud83d\udcfa ' + serverName;
-            }
-
-            menu.append('<div class="kk-dd-server-title">' + esc(serverLabel) + ' (' + epCount + ' t\u1eadp)</div>');
-
-            (sv.server_data || []).forEach(function (ep) {
-                var link = ep.link_m3u8 || ep.link_embed || '';
-                var epItem = $('<div class="kk-dd-ep-item selector">' +
-                    '<span class="kk-dd-ep-icon">\u25b6</span>' +
-                    '<span class="kk-dd-ep-name">' + esc(ep.name || 'T\u1eadp') + '</span>' +
-                    '</div>');
-
-                if (link) {
-                    bindEnter(epItem, function () {
-                        closeAllDropdowns();
-                        Lampa.Player.play({ title: title + ' - ' + (ep.name || ''), url: link });
-                    });
-                } else {
-                    epItem.css('opacity', '0.4');
-                    bindEnter(epItem, function () {
-                        Lampa.Noty.show('Kh\u00f4ng c\u00f3 link');
-                    });
-                }
-
-                menu.append(epItem);
-            });
-        });
-    }
-
-    // Build dropdown for TV with seasons (TMDB detail)
-    function buildTVSourceDropdown(sourceKey, sourceName, slug, title, origTitle, cssClass) {
-        var wrap = $('<div class="kk-dropdown-wrap"></div>');
-        var btn = $('<div class="kk-dropdown-btn ' + cssClass + ' selector"><span>\u25b6 ' + esc(sourceName) + '</span><span class="kk-dd-arrow">\u25bc</span></div>');
-        var menu = $('<div class="kk-dropdown-menu"></div>');
-        var loaded = false;
-
-        wrap.append(btn).append(menu);
-
-        bindEnter(btn, function () {
-            if (menu.hasClass('kk-dropdown-open')) {
-                closeAllDropdowns();
-                return;
-            }
-            closeAllDropdowns();
-            menu.css('display', 'block');
-            setTimeout(function () { menu.addClass('kk-dropdown-open'); }, 10);
-
-            if (!loaded) {
-                loaded = true;
-                menu.html('<div class="kk-dd-loading">\u23f3 \u0110ang t\u1ea3i...</div>');
-                var source = SOURCES[sourceKey];
-
-                // Try to find all seasons for this source
-                findAllSeasonSlugs(source, title, origTitle).then(function (seasonEntries) {
-                    if (!seasonEntries.length && slug) {
-                        seasonEntries = [{ slug: slug, name: title, season: 1, source: source }];
-                    }
-                    if (!seasonEntries.length) {
-                        menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng t\u00ecm th\u1ea5y</div>');
-                        return;
-                    }
-
-                    // Group by season
-                    var seasonMap = {};
-                    seasonEntries.forEach(function (e) {
-                        if (!seasonMap[e.season]) seasonMap[e.season] = [];
-                        seasonMap[e.season].push(e);
-                    });
-                    var seasonNums = Object.keys(seasonMap).map(Number).sort(function (a, b) { return a - b; });
-
-                    if (seasonNums.length === 1) {
-                        // Load directly
-                        loadSeasonIntoDropdown(menu, seasonMap[seasonNums[0]], title, seasonNums[0]);
-                    } else {
-                        // Show season picker in dropdown
-                        menu.empty();
-                        seasonNums.forEach(function (sn) {
-                            var seasonItem = $('<div class="kk-dd-ep-item selector" style="font-weight:600;">' +
-                                '<span class="kk-dd-ep-icon">\ud83d\udcfa</span>' +
-                                '<span class="kk-dd-ep-name">Season ' + sn + '</span>' +
-                                '<span class="kk-dd-ep-badge">' + seasonMap[sn].length + ' ngu\u1ed3n</span>' +
-                                '</div>');
-                            bindEnter(seasonItem, function () {
-                                loadSeasonIntoDropdown(menu, seasonMap[sn], title, sn);
-                            });
-                            menu.append(seasonItem);
-                        });
-                    }
-                }).catch(function (e) {
-                    menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i: ' + esc(e.message || '') + '</div>');
-                });
+                panel.addClass('open');
+                btn.addClass('open');
             }
         });
 
         return wrap;
     }
 
-    async function loadSeasonIntoDropdown(menu, entries, title, seasonNum) {
-        menu.html('<div class="kk-dd-loading">\u23f3 T\u1ea3i t\u1eadp Season ' + seasonNum + '...</div>');
+    function renderSeasonList(container, seasonMap, seasonNums, title) {
+        container.empty();
+        seasonNums.forEach(function (sn) {
+            var item = $('<div class="kk-season-item selector">' +
+                '<span class="kk-season-name">\ud83d\udcfa Season ' + sn + '</span>' +
+                '<span class="kk-season-badge">' + seasonMap[sn].length + ' ngu\u1ed3n</span>' +
+                '</div>');
+            bindEnter(item, function () {
+                loadSeasonPanel(container, seasonMap[sn], title, sn, function () {
+                    renderSeasonList(container, seasonMap, seasonNums, title);
+                });
+            });
+            container.append(item);
+        });
+    }
+
+    async function loadSeasonPanel(container, entries, title, seasonNum, backFn) {
+        container.html('<div class="kk-ep-loading">\u23f3 T\u1ea3i Season ' + seasonNum + '...</div>');
         try {
-            var allEps = [];
             for (var i = 0; i < entries.length; i++) {
                 var detail = await fetchDetail(entries[i].source, entries[i].slug);
                 if (detail && detail.episodes && detail.episodes.length) {
-                    renderEpisodesInDropdown(menu, detail.episodes, title + ' S' + pad(seasonNum));
+                    container.empty();
+                    if (backFn) {
+                        var back = $('<div class="kk-back-btn selector">\u2190 Quay l\u1ea1i</div>');
+                        bindEnter(back, backFn);
+                        container.append(back);
+                    }
+                    renderEpisodesPanelInto(container, detail.episodes, title + ' S' + pad(seasonNum));
                     return;
                 }
             }
-            menu.html('<div class="kk-dd-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+            container.html('<div class="kk-ep-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
         } catch (e) {
-            menu.html('<div class="kk-dd-empty">\u274c L\u1ed7i</div>');
+            container.html('<div class="kk-ep-empty">\u274c L\u1ed7i</div>');
         }
+    }
+
+    function renderEpisodesPanel(container, episodes, title) {
+        container.empty();
+        renderEpisodesPanelInto(container, episodes, title);
+    }
+
+    function renderEpisodesPanelInto(container, episodes, title) {
+        if (!episodes || !episodes.length) {
+            container.append('<div class="kk-ep-empty">\u274c Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+            return;
+        }
+        episodes.forEach(function (sv) {
+            var serverName = sv.server_name || 'Server';
+            var epCount = (sv.server_data || []).length;
+            var icon = '\ud83d\udcfa';
+            var sn = serverName.toLowerCase();
+            if (sn.indexOf('thuy\u1ebft minh') > -1 || sn.indexOf('thuyet minh') > -1) icon = '\ud83c\uddfb\ud83c\uddf3';
+            else if (sn.indexOf('vietsub') > -1 || sn.indexOf('sub') > -1) icon = '\ud83d\udcdd';
+            else if (sn.indexOf('l\u1ed3ng') > -1 || sn.indexOf('long') > -1) icon = '\ud83c\udfa4';
+            container.append('<div class="kk-ep-server">' + icon + ' ' + esc(serverName) + ' (' + epCount + ')</div>');
+            var grid = $('<div class="kk-ep-grid"></div>');
+            (sv.server_data || []).forEach(function (ep) {
+                var link = ep.link_m3u8 || ep.link_embed || '';
+                var item = $('<div class="kk-ep-item selector' + (link ? '' : ' kk-ep-item--nolink') + '">' + esc(ep.name || 'T\u1eadp') + '</div>');
+                if (link) {
+                    bindEnter(item, function () {
+                        Lampa.Player.play({ title: title + ' - ' + (ep.name || ''), url: link });
+                    });
+                } else {
+                    bindEnter(item, function () { Lampa.Noty.show('Kh\u00f4ng c\u00f3 link'); });
+                }
+                grid.append(item);
+            });
+            container.append(grid);
+        });
     }
 
     // ==================== TORRSERVER ====================
@@ -473,13 +452,6 @@
         return results;
     }
 
-    async function loadSeasonEpisodes(entry) {
-        var detail = await fetchDetail(entry.source, entry.slug); if (!detail || !detail.episodes || !detail.episodes.length) return [];
-        var eps = [], seen = {};
-        detail.episodes.forEach(function (sv) { (sv.server_data || []).forEach(function (ep) { var link = ep.link_m3u8 || ep.link_embed || ''; if (link && !seen[ep.name]) { seen[ep.name] = true; eps.push({ name: ep.name || '', link: link, source: entry.source.name }); } }); });
-        return eps;
-    }
-
     // ==================== TORRENTIO ====================
     function tioUrl(type, imdbId, s, e) { var t = type === 'tv' ? 'series' : 'movie', id = imdbId; if (type === 'tv' && s && e) id = imdbId + ':' + s + ':' + e; var c = cleanTioConfig(getTioConfig()); return TORRENTIO_BASE + (c ? '/' + c : '') + '/stream/' + t + '/' + id + '.json'; }
 
@@ -554,7 +526,7 @@
     // ==================== START ====================
     function startPlugin() {
         injectCSS();
-        injectDropdownCSS();
+        injectCollapseCSS();
         addMenu();
 
         // ===== SETTINGS =====
@@ -588,7 +560,7 @@
                 var g4 = $('<div class="kk-stg-group"></div>');
                 var cl = si('\ud83d\uddd1\ufe0f X\u00f3a to\u00e0n b\u1ed9', 'Kh\u00f4i ph\u1ee5c m\u1eb7c \u0111\u1ecbnh', 'X\u00f3a'); cl.find('.kk-stg-value').css('color', '#f87171');
                 bindEnter(cl, function () { localStorage.removeItem(SETTINGS_KEY); _genreCache = { movie: null, tv: null }; Lampa.Noty.show('\u0110\u00e3 x\u00f3a'); Lampa.Activity.backward(); }); g4.append(cl); w.append(g4);
-                w.append('<div class="kk-stg-ver">KKPhim Plugin v2.2</div>');
+                w.append('<div class="kk-stg-ver">KKPhim Plugin v2.3</div>');
                 scroll.append(w); comp.start();
             };
             function mkGroup(t) { return $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">' + t + '</div>'); }
@@ -649,13 +621,13 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { scroll.destroy(); };
         });
 
-        // ===== TMDB LIST (generic) =====
+        // ===== TMDB LIST =====
         makeGridComp('kkphim_tmdb_list',
             function (obj, page) { var fn = TMDB_FN[obj.listType] || TMDB_FN.trending; return fn(page).then(function (r) { return (r.results || []).filter(function (i) { return i.media_type !== 'person'; }); }); },
             function (obj) { return obj.title || 'TMDB'; }
         );
 
-        // ===== TMDB SEARCH (generic) =====
+        // ===== TMDB SEARCH =====
         makeGridComp('kkphim_tmdb_search',
             function (obj, page) { return tmdbSearchMulti(obj.keyword || '', page).then(function (r) { return (r.results || []).filter(function (i) { return i.media_type !== 'person'; }); }); },
             function (obj) { return '\ud83d\udd0d TMDB: ' + (obj.keyword || ''); }
@@ -668,7 +640,6 @@
             var grid = $('<div class="kk-grid"></div>'), lm = $('<div class="kk-loadmore selector">T\u1ea3i th\u00eam</div>');
             var loading = false, hasMore = true, movieDone = false, tvDone = false, moviePage = 1, tvPage = 1;
             var allItems = [], renderedSet = {};
-
             this.create = function () {
                 comp.activity.loader(true); clearScroll(scroll);
                 grid.css('grid-template-columns', 'repeat(' + getCardStyle() + ',minmax(0,1fr))');
@@ -699,7 +670,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { scroll.destroy(); };
         });
 
-        // ===== TMDB DETAIL (with separate KKPhim/OPhim dropdown buttons) =====
+        // ===== TMDB DETAIL (with expand buttons for KKPhim/OPhim) =====
         Lampa.Component.add('kkphim_tmdb_detail', function (obj) {
             var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this, tmdbId = obj.tmdb_id, mediaType = obj.media_type || 'movie';
             this.create = function () {
@@ -725,53 +696,49 @@
                 if (tmdb.credits) { castH = mkPeople((tmdb.credits.cast || []).slice(0, 12), 'character'); var dirs = (tmdb.credits.crew || []).filter(function (c) { return c.job === 'Director' || c.job === 'Creator' || c.job === 'Series Director'; }).filter(function (p, i, a) { return a.findIndex(function (x) { return x.name === p.name; }) === i; }).slice(0, 10); if (dirs.length) { dir = dirs.map(function (c) { return c.name; }).join(', '); dirH = mkPeople(dirs.map(function (c) { return { name: c.name, profile_path: c.profile_path, job: c.job || '\u0110\u1ea1o di\u1ec5n' }; }), 'job'); } }
                 if (dir) crewH = '<div class="kk-crew"><b>\u0110\u1ea1o di\u1ec5n</b><span>' + esc(dir) + '</span></div>';
                 var imdbId = (tmdb.external_ids && tmdb.external_ids.imdb_id) || null;
-
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg">' + (bk ? '<img src="' + bk + '">' : '') + '<div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster">' + (ps ? '<img src="' + ps + '">' : '') + '</div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
 
-                // Build action buttons with dropdowns
-                var actionsContainer = $('<div class="kk-actions"></div>');
-                var sourceActions = $('<div class="kk-source-actions"></div>');
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epTotal ? '<span class="kk-meta">\ud83c\udfac ' + esc(epTotal) + '</span>' : '') + (nSeasons ? '<span class="kk-meta">\ud83d\udcfa ' + esc(nSeasons) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div></div>');
 
-                // KKPhim button with dropdown
+                // Genre click
+                body.find('.kk-genre[data-gid]').each(function () { var g = $(this); bindEnter(g, function () { Lampa.Activity.push({ url: '', title: g.attr('data-gname') || 'Th\u1ec3 lo\u1ea1i', component: 'kkphim_tmdb_genre', genre_id: g.attr('data-gid'), page_num: 1 }); }); });
+
+                // Actions area
+                var actions = $('<div class="kk-actions" style="display:flex;flex-direction:column;gap:.3em"></div>');
+
+                // KKPhim expand button
                 if (slugs.kkphim) {
                     if (mediaType === 'movie') {
-                        sourceActions.append(buildSourceDropdown('kkphim', 'KKPhim', slugs.kkphim, t, mediaType, 'kk-dropdown-btn--kkphim'));
+                        actions.append(buildSourceExpand('kkphim', 'KKPhim', slugs.kkphim, t, 'kk-expand-btn--kkphim'));
                     } else {
-                        sourceActions.append(buildTVSourceDropdown('kkphim', 'KKPhim', slugs.kkphim, t, o, 'kk-dropdown-btn--kkphim'));
+                        actions.append(buildTVSourceExpand('kkphim', 'KKPhim', slugs.kkphim, t, o, 'kk-expand-btn--kkphim'));
                     }
                 }
 
-                // OPhim button with dropdown
+                // OPhim expand button
                 if (slugs.ophim) {
                     if (mediaType === 'movie') {
-                        sourceActions.append(buildSourceDropdown('ophim', 'OPhim', slugs.ophim, t, mediaType, 'kk-dropdown-btn--ophim'));
+                        actions.append(buildSourceExpand('ophim', 'OPhim', slugs.ophim, t, 'kk-expand-btn--ophim'));
                     } else {
-                        sourceActions.append(buildTVSourceDropdown('ophim', 'OPhim', slugs.ophim, t, o, 'kk-dropdown-btn--ophim'));
+                        actions.append(buildTVSourceExpand('ophim', 'OPhim', slugs.ophim, t, o, 'kk-expand-btn--ophim'));
                     }
                 }
 
                 if (!slugs.kkphim && !slugs.ophim) {
-                    sourceActions.append('<div class="kk-dropdown-btn kk-dropdown-btn--disabled">\u26a0\ufe0f Kh\u00f4ng t\u00ecm th\u1ea5y ngu\u1ed3n ph\u00e1t</div>');
+                    actions.append('<div class="kk-expand-btn kk-expand-btn--disabled">\u26a0\ufe0f Kh\u00f4ng t\u00ecm th\u1ea5y ngu\u1ed3n ph\u00e1t</div>');
                 }
 
-                actionsContainer.append(sourceActions);
-
                 // Torrent button
-                var torrentBtn = $('<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
+                var torrentBtn = $('<div class="kk-act-wrap" style="margin-top:.3em"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
                 if (mediaType === 'movie') {
                     bindEnter(torrentBtn.find('.kk-act--torrent'), function () { openTorrentMovie(tmdbId, t, ps, imdbId); });
                 } else {
                     bindEnter(torrentBtn.find('.kk-act--torrent'), function () { openTorrentTV(tmdbId, t, ps, imdbId); });
                 }
-                actionsContainer.append(torrentBtn);
+                actions.append(torrentBtn);
 
-                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epTotal ? '<span class="kk-meta">\ud83c\udfac ' + esc(epTotal) + '</span>' : '') + (nSeasons ? '<span class="kk-meta">\ud83d\udcfa ' + esc(nSeasons) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div></div>');
-
-                body.append(actionsContainer);
-
-                // Genre click
-                body.find('.kk-genre[data-gid]').each(function () { var g = $(this); bindEnter(g, function () { Lampa.Activity.push({ url: '', title: g.attr('data-gname') || 'Th\u1ec3 lo\u1ea1i', component: 'kkphim_tmdb_genre', genre_id: g.attr('data-gid'), page_num: 1 }); }); });
+                body.append(actions);
 
                 var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
                 if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">\u0110\u1ea1o di\u1ec5n</div><div class="kk-cast-list">' + dirH + '</div></div>');
@@ -782,7 +749,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { scroll.destroy(); };
         });
 
-        // ===== CATEGORY (source) =====
+        // ===== CATEGORY =====
         Lampa.Component.add('kkphim_category', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
             var page = obj.page_num || 1, title = obj.title || (obj.cat && obj.cat.name) || '', mode = obj.mode || 'api', apiPath = obj.cat ? obj.cat.api : null, catSlug = obj.category_slug || '';
@@ -793,7 +760,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ===== SEARCH (source) =====
+        // ===== SEARCH =====
         Lampa.Component.add('kkphim_search', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this, kw = obj.keyword || '', page = obj.page_num || 1;
             var grid = $('<div class="kk-grid"></div>'), lm = $('<div class="kk-loadmore selector">T\u1ea3i th\u00eam</div>'), loading = false, hasMore = true;
@@ -803,7 +770,7 @@
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); }; this.pause = function () {}; this.stop = function () {}; this.render = function () { return scroll.render(); }; this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ===== DETAIL (source) - with dropdown for episodes =====
+        // ===== DETAIL (source) - with expand panel =====
         Lampa.Component.add('kkphim_detail', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true }), movie = norm(obj.movie), comp = this, rendered = false;
             this.create = function () { this.activity.loader(true); clearScroll(scroll); rendered = false; if (!movie || !movie.slug) { this.activity.loader(false); scroll.append('<div class="empty__body"><div class="empty__title">Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u</div></div>'); comp.start(); return; } network.silent(SRC_API() + 'phim/' + movie.slug, function (res) { if (rendered) return; loadAll(norm(res.movie || res || {}), res.episodes || []); }, function () { comp.activity.loader(false); Lampa.Noty.show('L\u1ed7i t\u1ea3i phim'); }); };
@@ -824,35 +791,30 @@
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
                 var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o2) + '</div></div></div></div></div>');
 
-                // Build action buttons with dropdown for current source
-                var actionsContainer = $('<div class="kk-actions"></div>');
-                var sourceActions = $('<div class="kk-source-actions"></div>');
-
-                // Determine current source name
-                var currentSource = getSource();
-                var sourceCssClass = currentSource.key === 'kkphim' ? 'kk-dropdown-btn--kkphim' : 'kk-dropdown-btn--ophim';
-
-                // Build dropdown with episodes from current source
-                if (episodes && episodes.length) {
-                    sourceActions.append(buildSourceDetailDropdown(episodes, data.name || t, currentSource.name, sourceCssClass));
-                } else {
-                    sourceActions.append('<div class="kk-dropdown-btn kk-dropdown-btn--disabled">\u26a0\ufe0f Kh\u00f4ng c\u00f3 t\u1eadp</div>');
-                }
-
-                actionsContainer.append(sourceActions);
-
-                // Torrent button
-                if (hasTmdb) {
-                    var tBtn = $('<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
-                    bindEnter(tBtn.find('.kk-act--torrent'), function () { var tid2 = getTmdbId(data); if (ttype === 'tv') openTorrentTV(tid2, data.name || '', ps, null); else openTorrentMovie(tid2, data.name || '', ps, null); });
-                    actionsContainer.append(tBtn);
-                }
-
                 var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">\u2b50 ' + esc(v) + '</span>' + (y ? '<span class="kk-meta">\ud83d\udcc5 ' + esc(y) + '</span>' : '') + (rt ? '<span class="kk-meta">\u23f1 ' + esc(rt) + '</span>' : '') + (epCur ? '<span class="kk-meta">\ud83c\udfac ' + esc(epCur) + '</span>' : '') + '</div><div class="kk-genres">' + ghtml + '</div>' + crewH + '<div class="kk-desc">' + fmtTxt(d) + '</div></div>');
 
-                body.append(actionsContainer);
-
                 body.find('.kk-genre[data-slug]').each(function () { var g = $(this); bindEnter(g, function () { var slug = g.attr('data-slug'); if (slug) Lampa.Activity.push({ url: '', title: g.attr('data-title') || '', component: 'kkphim_category', mode: 'category', category_slug: slug, page_num: 1 }); }); });
+
+                // Actions with expand panel
+                var actions = $('<div class="kk-actions" style="display:flex;flex-direction:column;gap:.3em"></div>');
+
+                var currentSource = getSource();
+                var sourceCssClass = currentSource.key === 'kkphim' ? 'kk-expand-btn--kkphim' : 'kk-expand-btn--ophim';
+
+                if (episodes && episodes.length) {
+                    actions.append(buildDetailExpand(episodes, data.name || t, currentSource.name, sourceCssClass));
+                } else {
+                    actions.append('<div class="kk-expand-btn kk-expand-btn--disabled">\u26a0\ufe0f Kh\u00f4ng c\u00f3 t\u1eadp</div>');
+                }
+
+                if (hasTmdb) {
+                    var tBtn = $('<div class="kk-act-wrap" style="margin-top:.3em"><div class="kk-act kk-act--torrent selector">\ud83e\uddf2 Torrent' + (getTSHost() ? ' \u2192 TS' : '') + '</div></div>');
+                    bindEnter(tBtn.find('.kk-act--torrent'), function () { var tid2 = getTmdbId(data); if (ttype === 'tv') openTorrentTV(tid2, data.name || '', ps, null); else openTorrentMovie(tid2, data.name || '', ps, null); });
+                    actions.append(tBtn);
+                }
+
+                body.append(actions);
+
                 var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
                 if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">\u0110\u1ea1o di\u1ec5n</div><div class="kk-cast-list">' + dirH + '</div></div>');
                 if (castH) dw.append('<div class="kk-section"><div class="kk-block-title">Di\u1ec5n vi\u00ean</div><div class="kk-cast-list">' + castH + '</div></div>');
