@@ -1,203 +1,313 @@
-(function () {
-  'use strict';
+(function() {
+    'use strict';
 
-  const TORRSERVER = 'http://gren439e.tsarea.tv:8880';
+    var component_name = 'nguonc';
+    var base_url = 'https://phim.nguonc.com';
+    var api_url = 'https://phim.nguonc.com/api';
 
-  let current = null;
+    // Parse HTML từ NguồnC
+    function parseMovies(html) {
+        var movies = [];
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+        
+        // Selector tùy thuộc cấu trúc HTML của NguồnC
+        var items = doc.querySelectorAll('.movie-item, .film-item, .item');
+        
+        items.forEach(function(item) {
+            var link = item.querySelector('a');
+            var img = item.querySelector('img');
+            var title = item.querySelector('.title, .name, h3');
+            
+            if (link && title) {
+                movies.push({
+                    id: link.href.split('/').pop(),
+                    title: title.textContent.trim(),
+                    poster: img ? img.src : '',
+                    url: link.href
+                });
+            }
+        });
+        
+        return movies;
+    }
 
-  // ===== GET ID =====
-  function getTmdbId(d) {
-    return d?.card?.id || d?.movie?.id || d?.id || null;
-  }
+    // Lấy danh sách phim mới
+    function getLatestMovies(page, callback) {
+        $.ajax({
+            url: base_url + '/phim-moi-cap-nhat?page=' + page,
+            method: 'GET',
+            success: function(html) {
+                var movies = parseMovies(html);
+                callback(movies);
+            },
+            error: function() {
+                Lampa.Noty.show('Không thể tải danh sách phim');
+                callback([]);
+            }
+        });
+    }
 
-  function getImdbId(d) {
-    return d?.imdb_id || d?.movie?.imdb_id || null;
-  }
+    // Tìm kiếm phim
+    function searchMovies(query, callback) {
+        $.ajax({
+            url: base_url + '/tim-kiem?keyword=' + encodeURIComponent(query),
+            method: 'GET',
+            success: function(html) {
+                var movies = parseMovies(html);
+                callback(movies);
+            },
+            error: function() {
+                callback([]);
+            }
+        });
+    }
 
-  // ===== LẤY SEASON =====
-  function getSeasonCount() {
-    return current?.card?.number_of_seasons || 1;
-  }
+    // Lấy thông tin phim + tập
+    function getMovieInfo(movieId, callback) {
+        $.ajax({
+            url: base_url + '/phim/' + movieId,
+            method: 'GET',
+            success: function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                
+                var episodes = [];
+                var episodeElements = doc.querySelectorAll('.episode a, .ep-item');
+                
+                episodeElements.forEach(function(ep, index) {
+                    episodes.push({
+                        number: index + 1,
+                        title: ep.textContent.trim(),
+                        url: ep.href || ep.getAttribute('data-url')
+                    });
+                });
+                
+                var poster = doc.querySelector('.movie-poster img, .film-poster img');
+                var title = doc.querySelector('h1, .movie-title');
+                var desc = doc.querySelector('.description, .summary');
+                
+                callback({
+                    id: movieId,
+                    title: title ? title.textContent.trim() : '',
+                    poster: poster ? poster.src : '',
+                    description: desc ? desc.textContent.trim() : '',
+                    episodes: episodes
+                });
+            },
+            error: function() {
+                Lampa.Noty.show('Không thể tải thông tin phim');
+                callback(null);
+            }
+        });
+    }
 
-  // ===== LẤY EPISODE / SEASON =====
-  function getEpisodePerSeason() {
-    const totalSeasons = current?.card?.number_of_seasons || 1;
-    const totalEpisodes = current?.card?.number_of_episodes || 0;
+    // Lấy link video từ tập phim
+    function getVideoUrl(episodeUrl, callback) {
+        $.ajax({
+            url: episodeUrl,
+            method: 'GET',
+            success: function(html) {
+                // Tìm link video trong HTML
+                var videoMatch = html.match(/(https?:\/\/[^"']+\.(m3u8|mp4)[^"']*)/i);
+                var embedMatch = html.match(/iframe[^>]+src=["']([^"']+)["']/i);
+                
+                if (videoMatch) {
+                    callback({
+                        type: 'direct',
+                        url: videoMatch[1]
+                    });
+                } else if (embedMatch) {
+                    callback({
+                        type: 'embed',
+                        url: embedMatch[1]
+                    });
+                } else {
+                    callback(null);
+                }
+            },
+            error: function() {
+                callback(null);
+            }
+        });
+    }
 
-    if (!totalEpisodes) return 20;
+    // Component chính
+    Lampa.Component.add(component_name, {
+        name: 'NguồnC',
+        type: 'video',
+        category: 'Phim Việt',
 
-    let avg = Math.ceil(totalEpisodes / totalSeasons);
+        create: function() {
+            this.activity = arguments[0];
+            this.movies = [];
+            this.page = 1;
+            this.render();
+        },
 
-    // clamp cho hợp lý
-    if (avg < 6) avg = 6;
-    if (avg > 30) avg = 30;
+        render: function() {
+            var _this = this;
+            
+            var html = $('<div class="component-full">' +
+                '<div class="component-head">' +
+                    '<div class="component__title">NguồnC - Phim Mới</div>' +
+                '</div>' +
+                '<div class="category-full">' +
+                    '<div class="items-cards"></div>' +
+                    '<div class="button selector load-more">Tải thêm</div>' +
+                '</div>' +
+            '</div>');
 
-    return avg;
-  }
+            var container = html.find('.items-cards');
+            var loadMore = html.find('.load-more');
 
-  // ===== MATCH EP =====
-  function matchEpisode(stream, season, episode) {
-    const name = (stream.name || '').toLowerCase();
+            function renderMovies(movies) {
+                movies.forEach(function(movie) {
+                    var card = $('<div class="card selector">' +
+                        '<div class="card__view">' +
+                            '<img src="' + (movie.poster || 'https://via.placeholder.com/200x300') + '" class="card__img">' +
+                            '<div class="card__quality"></div>' +
+                        '</div>' +
+                        '<div class="card__title">' + movie.title + '</div>' +
+                    '</div>');
 
-    const s = season.toString().padStart(2, '0');
-    const e = episode.toString().padStart(2, '0');
+                    card.on('hover:enter', function() {
+                        // Mở trang chi tiết phim
+                        Lampa.Activity.push({
+                            url: '',
+                            component: 'nguonc_detail',
+                            id: movie.id,
+                            title: movie.title
+                        });
+                    });
 
-    const patterns = [
-      `s${s}e${e}`,
-      `s${season}e${episode}`,
-      `${season}x${e}`,
-      `${season}x${episode}`,
-      `e${e}`,
-      `episode ${episode}`
-    ];
+                    container.append(card);
+                });
+            }
 
-    return patterns.some(p => name.includes(p));
-  }
+            // Load phim ban đầu
+            getLatestMovies(this.page, function(movies) {
+                _this.movies = movies;
+                renderMovies(movies);
+            });
 
-  // ===== SORT =====
-  function sortStreams(streams, season, episode) {
-    return streams.sort((a, b) => {
+            // Nút tải thêm
+            loadMore.on('hover:enter', function() {
+                _this.page++;
+                getLatestMovies(_this.page, function(movies) {
+                    renderMovies(movies);
+                });
+            });
 
-      const aMatch = matchEpisode(a, season, episode);
-      const bMatch = matchEpisode(b, season, episode);
+            this.activity.render().find('.activity__body').html(html);
 
-      if (aMatch && !bMatch) return -1;
-      if (!aMatch && bMatch) return 1;
+            this.start = function() {
+                Lampa.Controller.add('content', {
+                    toggle: function() {
+                        Lampa.Controller.collectionSet(html);
+                        Lampa.Controller.collectionFocus(false, html);
+                    },
+                    back: function() {
+                        Lampa.Activity.backward();
+                    }
+                });
+                Lampa.Controller.toggle('content');
+            };
 
-      const good = ['rutor', 'rutracker'];
-
-      const aGood = good.some(s => (a.name || '').toLowerCase().includes(s));
-      const bGood = good.some(s => (b.name || '').toLowerCase().includes(s));
-
-      if (aGood && !bGood) return -1;
-      if (!aGood && bGood) return 1;
-
-      return (b.seeders || 0) - (a.seeders || 0);
+            this.pause = function() {};
+            this.stop = function() {};
+            this.destroy = function() {};
+        }
     });
-  }
 
-  // ===== MENU SEASON =====
-  function selectSeason(tmdb, imdb) {
-    const total = getSeasonCount();
+    // Component chi tiết phim
+    Lampa.Component.add('nguonc_detail', {
+        name: 'Chi tiết phim',
+        type: 'video',
 
-    const list = [];
+        create: function() {
+            this.activity = arguments[0];
+            this.movieData = null;
+            this.render();
+        },
 
-    for (let i = 1; i <= total; i++) {
-      list.push({
-        title: 'Season ' + i,
-        season: i
-      });
-    }
+        render: function() {
+            var _this = this;
+            var movieId = this.activity.id;
 
-    Lampa.Select.show({
-      title: 'Chọn Season',
-      items: list,
-      onSelect: (item) => selectEpisode(tmdb, imdb, item.season)
+            var html = $('<div class="component-full">' +
+                '<div class="full-start">' +
+                    '<div class="full-start__background"></div>' +
+                    '<div class="full-start__content">' +
+                        '<div class="full-start__poster">' +
+                            '<img src="" class="full-start__img">' +
+                        '</div>' +
+                        '<div class="full-start__info">' +
+                            '<div class="full-start__title"></div>' +
+                            '<div class="full-start__description"></div>' +
+                            '<div class="full-start__buttons">' +
+                                '<div class="button selector play">Xem phim</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="full-episodes">' +
+                        '<div class="full-episodes__title">Danh sách tập</div>' +
+                        '<div class="full-episodes__list"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>');
+
+            var poster = html.find('.full-start__img');
+            var title = html.find('.full-start__title');
+            var desc = html.find('.full-start__description');
+            var episodesList = html.find('.full-episodes__list');
+
+            getMovieInfo(movieId, function(data) {
+                if (!data) return;
+                
+                _this.movieData = data;
+                poster.attr('src', data.poster);
+                title.text(data.title);
+                desc.text(data.description);
+
+                // Render danh sách tập
+                data.episodes.forEach(function(ep) {
+                    var epBtn = $('<div class="button selector episode">' +
+                        'Tập ' + ep.number +
+                    '</div>');
+
+                    epBtn.on('hover:enter', function() {
+                        getVideoUrl(ep.url, function(video) {
+                            if (video) {
+                                Lampa.Player.play({
+                                    url: video.url,
+                                    title: data.title + ' - Tập ' + ep.number
+                                });
+                            } else {
+                                Lampa.Noty.show('Không thể tải link video');
+                            }
+                        });
+                    });
+
+                    episodesList.append(epBtn);
+                });
+            });
+
+            this.activity.render().find('.activity__body').html(html);
+
+            this.start = function() {
+                Lampa.Controller.add('content', {
+                    toggle: function() {
+                        Lampa.Controller.collectionSet(html);
+                        Lampa.Controller.collectionFocus(false, html);
+                    },
+                    back: function() {
+                        Lampa.Activity.backward();
+                    }
+                });
+                Lampa.Controller.toggle('content');
+            };
+        }
     });
-  }
-
-  // ===== MENU EPISODE =====
-  function selectEpisode(tmdb, imdb, season) {
-    const max = getEpisodePerSeason();
-
-    const list = [];
-
-    for (let i = 1; i <= max; i++) {
-      list.push({
-        title: 'Episode ' + i,
-        episode: i
-      });
-    }
-
-    Lampa.Select.show({
-      title: 'Season ' + season,
-      items: list,
-      onSelect: (item) =>
-        loadStreams('series', tmdb, imdb, season, item.episode)
-    });
-  }
-
-  // ===== LOAD =====
-  function loadStreams(type, tmdb, imdb, s, e) {
-
-    let url = '';
-
-    if (type === 'movie') {
-      url = tmdb
-        ? `https://torrentio.strem.fun/stream/movie/tmdb:${tmdb}.json`
-        : `https://torrentio.strem.fun/stream/movie/${imdb}.json`;
-    } else {
-      url = tmdb
-        ? `https://torrentio.strem.fun/stream/series/tmdb:${tmdb}:${s}:${e}.json`
-        : `https://torrentio.strem.fun/stream/series/${imdb}:${s}:${e}.json`;
-    }
-
-    $.get(url, function (res) {
-
-      if (!res?.streams?.length) {
-        Lampa.Noty.show('Không có torrent');
-        return;
-      }
-
-      let streams = res.streams;
-
-      if (type === 'series') {
-        streams = sortStreams(streams, s, e);
-      }
-
-      const items = streams.map(s => ({
-        title: s.name,
-        infoHash: s.infoHash,
-        fileIdx: s.fileIdx || 0
-      }));
-
-      Lampa.Select.show({
-        title: 'Streams',
-        items: items,
-        onSelect: (i) => play(i)
-      });
-    });
-  }
-
-  // ===== PLAY =====
-  function play(item) {
-    const name = encodeURIComponent(current?.title || current?.name || 'video');
-
-    const url = `${TORRSERVER}/stream/${name}?link=${item.infoHash}&index=${item.fileIdx}&play`;
-
-    Lampa.Player.play({ url });
-  }
-
-  // ===== BUTTON =====
-  function addButton() {
-    $('.torrentio-btn').remove();
-
-    const btn = $('<div class="full-start__button selector torrentio-btn">')
-      .text('🔎 Torrentio')
-      .on('hover:enter', open);
-
-    $('.full-start-new__buttons').append(btn);
-  }
-
-  function open() {
-    const tmdb = getTmdbId(current);
-    const imdb = getImdbId(current);
-
-    const seasons = current?.card?.number_of_seasons;
-
-    if (seasons && seasons > 0) {
-      selectSeason(tmdb, imdb);
-    } else {
-      loadStreams('movie', tmdb, imdb);
-    }
-  }
-
-  // ===== INIT =====
-  Lampa.Listener.follow('full', function (e) {
-    if (e.type === 'complite') {
-      current = e.data || {};
-      setTimeout(addButton, 300);
-    }
-  });
 
 })();
