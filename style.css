@@ -1,4 +1,4 @@
-/* KKPhim Plugin - Complete CSS */
+/* KKPhim Plugin - Complete CSS v3 */
 
 /* ===== TOPBAR ===== */
 .kk-topbar{display:flex;justify-content:space-between;align-items:center;padding:0 1.5em;margin-bottom:.8em;gap:1em;z-index:5}
@@ -151,23 +151,24 @@
 
 /* ===== DETAIL WRAP ===== */
 .kk-detail-wrap {
-    background: #111;
+    background: #1a1a1e;
     overflow: hidden;
     margin: 0 0 1em;
 }
 
-/* ===== HERO - backdrop + card liền mạch ===== */
+/* ===== HERO ===== */
 .kk-hero {
-    background: #111;
     position: relative;
+    background: #1a1a1e;
 }
+
+/* Backdrop */
 .kk-hero-backdrop {
     width: 100%;
     aspect-ratio: 16/9;
     overflow: hidden;
     position: relative;
-    background: #1a1a1a;
-    /* Không bo góc backdrop - để liền mạch */
+    background: #222;
     border-radius: 0;
 }
 .kk-hero-backdrop img {
@@ -179,26 +180,25 @@
     background: linear-gradient(135deg,#1a1a2e,#16213e);
 }
 
-/* Gradient chuyển tiếp mượt từ backdrop sang card */
+/* Gradient mượt từ backdrop sang nền */
 .kk-hero-backdrop::after {
     content: '';
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    height: 40%;
-    background: linear-gradient(to bottom, transparent, rgba(17,17,17,.85) 70%, #111 100%);
+    height: 50%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(26,26,30,.6) 50%, #1a1a1e 100%);
     pointer-events: none;
 }
 
-/* Hero card: không bo góc trên, nối liền backdrop */
+/* Hero card nối liền, không bo góc */
 .kk-hero-card {
     display: flex;
     flex-direction: column;
-    padding: 1.6em 1.5em 1.8em;
-    background: #111;
+    padding: 0 1.5em 1.8em;
+    background: transparent;
     gap: .7em;
-    /* Không bo góc - nối liền với backdrop */
     border-radius: 0;
-    margin-top: -2em;
+    margin-top: -4em;
     position: relative;
     z-index: 2;
 }
@@ -216,37 +216,29 @@
     align-items: center; flex-wrap: wrap;
 }
 .kk-hm-year {
-    font-size: 1.1em;
-    color: rgba(255,255,255,.55);
+    font-size: 1.15em;
+    color: rgba(255,255,255,.6);
     font-weight: 700;
 }
 .kk-hm-country {
-    font-size: 1.05em;
+    font-size: 1.1em;
     color: #38bdf8;
     font-weight: 800;
 }
 
-/* Logo với nền glass mờ */
+/* Logo - không nền, nằm giữa phần nối backdrop-nền */
 .kk-logo {
     max-width: 100%;
     margin: 0;
-    display: inline-block;
-    align-self: flex-start;
+    display: block;
 }
 .kk-logo img {
-    max-width: 85%;
-    max-height: 8em;
+    max-width: 80%;
+    max-height: 7em;
     object-fit: contain;
     display: block;
-    padding: .8em 1.2em;
-    border-radius: 16px;
-    /* Glass morphism cho logo */
-    background: rgba(255,255,255,.08);
-    backdrop-filter: blur(24px) saturate(1.6);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
-    border: 1px solid rgba(255,255,255,.12);
-    box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1);
-    filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
+    filter: drop-shadow(0 2px 16px rgba(0,0,0,.8));
+    /* Không background, không border */
 }
 
 /* Title */
@@ -256,12 +248,13 @@
     font-weight: 900;
     color: #fff;
     margin: 0;
+    text-shadow: 0 2px 12px rgba(0,0,0,.6);
 }
 
 /* Origin */
 .kk-origin {
     font-size: 1.15em;
-    color: rgba(255,255,255,.4);
+    color: rgba(255,255,255,.45);
     margin: 0;
 }
 
@@ -287,13 +280,13 @@
 }
 .kk-hm-vote small {
     font-size: .5em; font-weight: 600;
-    color: rgba(255,255,255,.35);
+    color: rgba(255,255,255,.4);
     margin-left: 3px;
 }
 .kk-hm-badge {
     font-size: 1.05em;
     color: rgba(255,255,255,.65);
-    border: 1px solid rgba(255,255,255,.25);
+    border: 1px solid rgba(255,255,255,.3);
     border-radius: 6px;
     padding: 4px 12px;
     font-weight: 600;
@@ -305,18 +298,18 @@
     flex-wrap: wrap; gap: 8px;
     font-size: 1.1em;
 }
-.kk-hm-dot { color: rgba(255,255,255,.2); }
+.kk-hm-dot { color: rgba(255,255,255,.25); }
 .kk-hm-rt { color: rgba(255,255,255,.65); font-weight: 700; }
-.kk-hm-genres { color: rgba(255,255,255,.45); }
+.kk-hm-genres { color: rgba(255,255,255,.5); }
 
 /* ===== BODY ===== */
 .kk-body {
-    background: #111;
+    background: #1a1a1e;
     padding: 0;
     border-radius: 0;
 }
 
-/* Genres - to hơn */
+/* Genres */
 .kk-body-genres {
     display: flex; flex-wrap: wrap;
     gap: .8em;
@@ -336,7 +329,7 @@
 .kk-genre.focus,
 .kk-genre:hover { background: rgba(255,255,255,.18); }
 
-/* ===== CREW (có ảnh, layout ngang) - to hơn ===== */
+/* ===== CREW (đạo diễn) ===== */
 .kk-crew {
     margin: 2em 1.5em 0;
     display: flex; align-items: flex-start; gap: 1.4em;
@@ -356,7 +349,7 @@
 }
 .kk-crew-info {
     flex: 1; display: flex; flex-direction: column;
-    gap: .5em; padding-top: .2em;
+    gap: .4em; padding-top: .2em;
 }
 .kk-crew-label {
     font-size: 1em; font-weight: 800;
@@ -386,11 +379,11 @@
 .kk-crew-rest-name.selector.focus,
 .kk-crew-rest-name.selector:hover { color: #38bdf8; }
 
-/* ===== DESCRIPTION - to hơn ===== */
+/* ===== DESCRIPTION ===== */
 .kk-body-desc {
     margin: 2em 1.5em 0;
     padding: 1.5em 1.6em;
-    background: rgba(255,255,255,.04);
+    background: rgba(255,255,255,.05);
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,.08);
 }
@@ -413,7 +406,7 @@
     width: 100%; box-sizing: border-box;
 }
 
-/* ===== SOURCE BUTTONS - to hơn ===== */
+/* ===== SOURCE BUTTONS ===== */
 .kk-src-btn {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -455,7 +448,7 @@
 .kk-ep-bk:hover,.kk-ep-bk:focus,.kk-ep-bk.focus{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8)}
 
 /* ===== SECTIONS ===== */
-.kk-section { padding: 2.5em 1.5em 0; background: #111; }
+.kk-section { padding: 2.5em 1.5em 0; background: #1a1a1e; }
 .kk-section + .kk-section { border-top: 1px solid rgba(255,255,255,.06); }
 .kk-body + .kk-section { border-top: 1px solid rgba(255,255,255,.06); }
 .kk-section--last { padding-bottom: 2.5em; }
@@ -466,42 +459,41 @@
     margin: 0 0 1.4em; display: block;
 }
 
-/* ===== CAST - TO HƠN, THOÁNG HƠN ===== */
+/* ===== CAST - layout giống đạo diễn: ảnh to trái + tên phải ===== */
 .kk-cast-list {
-    display: flex; gap: 1em;
+    display: flex; gap: 1.2em;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
     touch-action: pan-x; padding-bottom: .5em;
 }
 .kk-cast-list::-webkit-scrollbar { display: none; }
 
-/* Card cast: ảnh trên + tên dưới, to và thoáng */
 .kk-cast-card {
     flex: 0 0 auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: .6em;
-    width: 8em;
+    gap: 1em;
+    width: 18em;
     cursor: default;
     background: rgba(255,255,255,.04);
-    border-radius: 14px;
-    padding: .8em .8em 1em;
+    border-radius: 12px;
+    padding: .8em;
     border: 1px solid rgba(255,255,255,.06);
-    text-align: center;
 }
 .kk-cast-card.selector,
 .kk-cast-card[data-pid] { cursor: pointer; }
 .kk-cast-card.focus,
 .kk-cast-card:hover { background: rgba(255,255,255,.09); }
 
-/* Ảnh cast: tròn, to */
+/* Ảnh cast: to, tỉ lệ 2/3 giống đạo diễn */
 .kk-cast-img {
     flex-shrink: 0;
-    width: 5.5em; height: 5.5em;
-    border-radius: 50%;
+    width: 5.5em;
+    aspect-ratio: 2/3;
+    border-radius: 10px;
     overflow: hidden;
     background: #2a2a2a;
-    border: 2px solid rgba(255,255,255,.1);
+    border: none;
     margin: 0;
 }
 .kk-cast-img img {
@@ -513,25 +505,24 @@
     background: linear-gradient(135deg,#2a2a2a,#1a1a1a);
 }
 
-/* Tên + role bên dưới */
+/* Tên + role bên phải */
 .kk-cast-info {
     flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: .25em;
-    align-items: center;
+    display: flex; flex-direction: column; gap: .3em;
 }
 .kk-cast-name {
-    font-size: 1.05em; font-weight: 700; color: #fff;
+    font-size: 1.15em; font-weight: 800; color: #fff;
     line-height: 1.3;
     display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; text-align: center;
+    overflow: hidden;
 }
 .kk-cast-role {
-    font-size: .88em; color: rgba(255,255,255,.4);
+    font-size: .95em; color: rgba(255,255,255,.4);
     line-height: 1.3;
     display: -webkit-box;
-    -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-    overflow: hidden; text-align: center;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* ===== SIMILAR ===== */
@@ -606,36 +597,116 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-/* ===== LANDSCAPE ===== */
+/* ===== LANDSCAPE - Backdrop nền full, poster + logo chồng lên ===== */
 @media (orientation: landscape) {
-    .kk-hero-backdrop { border-radius: 0; }
-    .kk-hero-card {
-        flex-direction: row; align-items: flex-start;
-        gap: 1.6em; padding: 1.8em 2.2em 2em;
-        border-radius: 0;
-        margin-top: -3em;
+    /* Backdrop làm nền full screen phía sau */
+    .kk-hero {
+        position: relative;
+        min-height: 100vh;
     }
+    .kk-hero-backdrop {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100%; height: 100%;
+        aspect-ratio: auto;
+        border-radius: 0;
+        z-index: 0;
+    }
+    /* Gradient đè lên backdrop */
+    .kk-hero-backdrop::after {
+        height: 100%;
+        background: linear-gradient(
+            to right,
+            rgba(26,26,30,.92) 0%,
+            rgba(26,26,30,.7) 40%,
+            rgba(26,26,30,.3) 65%,
+            transparent 100%
+        ),
+        linear-gradient(
+            to top,
+            #1a1a1e 0%,
+            rgba(26,26,30,.8) 15%,
+            transparent 40%
+        );
+    }
+
+    /* Hero card: nằm trên backdrop */
+    .kk-hero-card {
+        position: relative;
+        z-index: 2;
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 2.5em;
+        padding: 3em 2.5em 2.5em;
+        margin-top: 0;
+        min-height: 80vh;
+        background: transparent;
+    }
+
+    /* Poster hiện, to, bo góc, shadow */
     .kk-hero-poster-wrap {
-        display: block; flex-shrink: 0; width: 10em;
+        display: block;
+        flex-shrink: 0;
+        width: 16em;
+        z-index: 3;
     }
     .kk-hero-poster {
-        display: block; width: 100%;
-        aspect-ratio: 2/3; border-radius: 12px;
-        overflow: hidden; background: #2a2a2a;
+        display: block;
+        width: 100%;
+        aspect-ratio: 2/3;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #2a2a2a;
+        box-shadow: 0 12px 40px rgba(0,0,0,.7), 0 4px 16px rgba(0,0,0,.5);
     }
-    .kk-hero-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .kk-hero-meta { flex: 1; }
-    .kk-logo img { max-height: 8em; }
-    .kk-title { font-size: 2.8em; }
+    .kk-hero-poster img {
+        width: 100%; height: 100%;
+        object-fit: cover; display: block;
+    }
+
+    /* Meta bên phải */
+    .kk-hero-meta {
+        flex: 1;
+        padding-bottom: 1em;
+    }
+
+    /* Logo to hơn */
+    .kk-logo img {
+        max-height: 10em;
+        max-width: 90%;
+        filter: drop-shadow(0 4px 20px rgba(0,0,0,.9));
+    }
+
+    .kk-title {
+        font-size: 3em;
+        text-shadow: 0 3px 16px rgba(0,0,0,.8);
+    }
+
+    .kk-hm-vote { font-size: 2em; }
+    .kk-hm-badge { font-size: 1.1em; }
+    .kk-hm-rtg { font-size: 1.2em; }
+    .kk-hm-tagline { font-size: 1.3em; }
+    .kk-hm-year { font-size: 1.3em; }
+    .kk-hm-country { font-size: 1.2em; }
+
+    /* Body sections */
     .kk-body-genres,
     .kk-crew,
     .kk-body-desc,
-    .kk-actions { padding-left: 2.2em; padding-right: 2.2em; }
-    .kk-section { padding-left: 2.2em; padding-right: 2.2em; }
-    .kk-similar-list .kk-card { width: 10em; }
-    .kk-cast-card { width: 9em; }
-    .kk-cast-img { width: 6em; height: 6em; }
+    .kk-actions { padding-left: 2.5em; padding-right: 2.5em; }
+    .kk-section { padding-left: 2.5em; padding-right: 2.5em; }
+
+    .kk-similar-list .kk-card { width: 11em; }
+    .kk-cast-card { width: 20em; }
+    .kk-cast-img { width: 6em; }
+    .kk-cast-name { font-size: 1.2em; }
+    .kk-cast-role { font-size: 1em; }
     .kk-row-list .kk-card { width: 13em; }
+
+    .kk-body-desc-text { font-size: 1.3em; }
+    .kk-genre { font-size: 1.2em; }
+    .kk-crew-name { font-size: 1.6em; }
+    .kk-crew-avatar { width: 8em; }
 }
 
 @media (max-width: 768px) {
