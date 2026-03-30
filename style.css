@@ -1,4 +1,4 @@
-/* KKPhim Plugin v2.7 */
+/* KKPhim Plugin v2.8 */
 
 /* ===== TOPBAR ===== */
 .kk-topbar{display:flex;justify-content:space-between;align-items:center;padding:0 1.5em;margin-bottom:.8em;gap:1em;z-index:5}
@@ -34,10 +34,10 @@
 .kk-card--grid{width:100%}
 .kk-card-img{position:relative;width:100%;aspect-ratio:2/3;border-radius:.9em;overflow:hidden;background:#242424}
 .kk-card-img img{width:100%;height:100%;object-fit:cover}
-.kk-card-q{position:absolute;top:.5em;left:.5em;padding:.2em .5em;border-radius:.4em;font-size:.7em;font-weight:800;background:#f6c344;color:#000}
-.kk-card-ep{position:absolute;top:.5em;right:.5em;padding:.2em .5em;border-radius:.4em;font-size:.7em;font-weight:800;background:#e53935;color:#fff}
-.kk-card-name{margin-top:.6em;font-size:1em;line-height:1.3;font-weight:700;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.kk-card-year{margin-top:.18em;font-size:.88em;color:rgba(255,255,255,.5)}
+.kk-card-q{position:absolute;top:.5em;left:.5em;padding:.25em .55em;border-radius:.4em;font-size:.78em;font-weight:800;background:#f6c344;color:#000}
+.kk-card-ep{position:absolute;top:.5em;right:.5em;padding:.25em .55em;border-radius:.4em;font-size:.78em;font-weight:800;background:#e53935;color:#fff}
+.kk-card-name{margin-top:.6em;font-size:1.08em;line-height:1.3;font-weight:800;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kk-card-year{margin-top:.2em;font-size:.95em;color:rgba(255,255,255,.55);font-weight:600}
 
 /* ===== GRID ===== */
 .kk-grid-wrap{padding:0 1.5em}
@@ -72,16 +72,16 @@
 .kk-desc{font-size:1.25em;line-height:1.75;color:rgba(255,255,255,.88);margin:0 0 1.3em}
 
 /* ===== ACTIONS ===== */
-.kk-actions{display:flex;flex-wrap:wrap;gap:.7em;padding:.1em 0 .2em}
+.kk-actions{display:flex;flex-direction:column;gap:.7em;padding:.1em 0 .2em}
 .kk-act-wrap{width:100%}
-.kk-act{display:flex;align-items:center;justify-content:center;flex-direction:column;width:100%;padding:.95em;border-radius:.95em;font-size:1.15em;font-weight:900;cursor:pointer;min-height:3.8em}
+.kk-act{display:flex;align-items:center;justify-content:center;flex-direction:column;width:100%;padding:.95em;border-radius:.95em;font-size:1.15em;font-weight:900;cursor:pointer;min-height:3.8em;box-sizing:border-box}
 .kk-act--play{background:#ff1730;color:#fff}
 .kk-act--play.focus{background:#ff3047}
 .kk-act--torrent{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
 .kk-act--torrent.focus{background:linear-gradient(135deg,#818cf8,#a78bfa)}
 .kk-act--disabled{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.35);cursor:default}
 
-/* ===== SOURCE EXPAND BUTTONS ===== */
+/* ===== SOURCE EXPAND BUTTONS - FULL WIDTH ROW ===== */
 .kk-src-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:1em 1em;border-radius:.7em;font-weight:700;cursor:pointer;border:none;text-align:center;user-select:none;box-sizing:border-box;margin-bottom:.35em;min-height:3.8em}
 .kk-src-btn .kk-sb-main{font-size:1.2em;line-height:1.3}
 .kk-src-btn .kk-sb-sub{font-size:.82em;opacity:.75;margin-top:.15em}
@@ -92,6 +92,11 @@
 .kk-src-btn--current{background:linear-gradient(135deg,#2da85a,#5cdb8a);color:#fff}
 .kk-src-btn--no{background:rgba(80,80,80,.4);color:rgba(255,255,255,.35);cursor:default;min-height:auto;padding:.7em 1em}
 .kk-src-btn.focus{filter:brightness(1.2)}
+
+/* TMDB: 3 source buttons in a row */
+.kk-actions--tmdb{display:flex;flex-direction:column;gap:.7em;padding:.1em 0 .2em}
+.kk-src-row{display:flex;gap:.6em;width:100%}
+.kk-src-row .kk-src-btn{margin-bottom:0;flex:1}
 
 /* ===== EPISODE PANEL ===== */
 .kk-ep-box{display:none;background:rgba(15,15,20,.93);border-radius:.55em;margin-bottom:.5em;border:1px solid rgba(255,255,255,.07);overflow:hidden}
