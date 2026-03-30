@@ -152,20 +152,23 @@
 /* ===== DETAIL WRAP ===== */
 .kk-detail-wrap {
     background: #111;
-    border-radius: 1.4em;
     overflow: hidden;
     margin: 0 0 1em;
 }
 
-/* ===== HERO - backdrop bo góc ===== */
-.kk-hero { background: #111; }
+/* ===== HERO - backdrop + card liền mạch ===== */
+.kk-hero {
+    background: #111;
+    position: relative;
+}
 .kk-hero-backdrop {
     width: 100%;
     aspect-ratio: 16/9;
     overflow: hidden;
     position: relative;
     background: #1a1a1a;
-    border-radius: 1.4em 1.4em 0 0;
+    /* Không bo góc backdrop - để liền mạch */
+    border-radius: 0;
 }
 .kk-hero-backdrop img {
     width: 100%; height: 100%;
@@ -176,17 +179,28 @@
     background: linear-gradient(135deg,#1a1a2e,#16213e);
 }
 
-/* Hero card: glass effect lấy màu backdrop */
+/* Gradient chuyển tiếp mượt từ backdrop sang card */
+.kk-hero-backdrop::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40%;
+    background: linear-gradient(to bottom, transparent, rgba(17,17,17,.85) 70%, #111 100%);
+    pointer-events: none;
+}
+
+/* Hero card: không bo góc trên, nối liền backdrop */
 .kk-hero-card {
     display: flex;
     flex-direction: column;
     padding: 1.6em 1.5em 1.8em;
-    /* Glass morphism */
-    background: rgba(20,20,20,.82);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    background: #111;
     gap: .7em;
-    border-radius: 0 0 1.4em 1.4em;
+    /* Không bo góc - nối liền với backdrop */
+    border-radius: 0;
+    margin-top: -2em;
+    position: relative;
+    z-index: 2;
 }
 .kk-hero-poster-wrap { display: none; }
 .kk-hero-poster { display: none; }
@@ -212,18 +226,32 @@
     font-weight: 800;
 }
 
-/* Logo */
-.kk-logo { max-width: 100%; margin: 0; }
+/* Logo với nền glass mờ */
+.kk-logo {
+    max-width: 100%;
+    margin: 0;
+    display: inline-block;
+    align-self: flex-start;
+}
 .kk-logo img {
-    max-width: 100%; max-height: 8em;
+    max-width: 85%;
+    max-height: 8em;
     object-fit: contain;
-    filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
     display: block;
+    padding: .8em 1.2em;
+    border-radius: 16px;
+    /* Glass morphism cho logo */
+    background: rgba(255,255,255,.08);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.1);
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,.7));
 }
 
 /* Title */
 .kk-title {
-    font-size: 2.2em;
+    font-size: 2.6em;
     line-height: 1.1;
     font-weight: 900;
     color: #fff;
@@ -232,14 +260,14 @@
 
 /* Origin */
 .kk-origin {
-    font-size: 1em;
+    font-size: 1.15em;
     color: rgba(255,255,255,.4);
     margin: 0;
 }
 
 /* Tagline */
 .kk-hm-tagline {
-    font-size: 1.1em;
+    font-size: 1.2em;
     color: rgba(255,255,255,.55);
     font-style: italic;
     line-height: 1.5;
@@ -248,10 +276,10 @@
 /* Vote + badges */
 .kk-hm-badges {
     display: flex; flex-wrap: wrap;
-    gap: .6em; align-items: center;
+    gap: .7em; align-items: center;
 }
 .kk-hm-vote {
-    font-size: 1.6em;
+    font-size: 1.8em;
     font-weight: 900;
     color: #facc15;
     letter-spacing: .3px;
@@ -263,19 +291,19 @@
     margin-left: 3px;
 }
 .kk-hm-badge {
-    font-size: .95em;
+    font-size: 1.05em;
     color: rgba(255,255,255,.65);
     border: 1px solid rgba(255,255,255,.25);
     border-radius: 6px;
-    padding: 3px 10px;
+    padding: 4px 12px;
     font-weight: 600;
 }
 
 /* Runtime · Genres */
 .kk-hm-rtg {
     display: flex; align-items: center;
-    flex-wrap: wrap; gap: 6px;
-    font-size: 1em;
+    flex-wrap: wrap; gap: 8px;
+    font-size: 1.1em;
 }
 .kk-hm-dot { color: rgba(255,255,255,.2); }
 .kk-hm-rt { color: rgba(255,255,255,.65); font-weight: 700; }
@@ -288,19 +316,19 @@
     border-radius: 0;
 }
 
-/* Genres */
+/* Genres - to hơn */
 .kk-body-genres {
     display: flex; flex-wrap: wrap;
-    gap: .7em;
-    padding: 1.8em 1.5em 0;
+    gap: .8em;
+    padding: 2em 1.5em 0;
 }
 .kk-genre {
-    padding: .6em 1.3em;
+    padding: .7em 1.4em;
     border-radius: 2em;
     background: rgba(255,255,255,.08);
     border: 1px solid rgba(255,255,255,.15);
     color: rgba(255,255,255,.9);
-    font-size: 1.1em; font-weight: 700;
+    font-size: 1.15em; font-weight: 700;
     cursor: pointer;
     transition: background .15s;
     white-space: nowrap;
@@ -308,14 +336,14 @@
 .kk-genre.focus,
 .kk-genre:hover { background: rgba(255,255,255,.18); }
 
-/* ===== CREW (có ảnh, layout ngang) ===== */
+/* ===== CREW (có ảnh, layout ngang) - to hơn ===== */
 .kk-crew {
-    margin: 1.8em 1.5em 0;
-    display: flex; align-items: flex-start; gap: 1.2em;
+    margin: 2em 1.5em 0;
+    display: flex; align-items: flex-start; gap: 1.4em;
 }
 .kk-crew-avatar {
-    flex-shrink: 0; width: 6em;
-    aspect-ratio: 2/3; border-radius: 10px;
+    flex-shrink: 0; width: 7em;
+    aspect-ratio: 2/3; border-radius: 12px;
     overflow: hidden; background: #2a2a2a;
 }
 .kk-crew-avatar img {
@@ -328,75 +356,75 @@
 }
 .kk-crew-info {
     flex: 1; display: flex; flex-direction: column;
-    gap: .4em; padding-top: .2em;
+    gap: .5em; padding-top: .2em;
 }
 .kk-crew-label {
-    font-size: .9em; font-weight: 800;
+    font-size: 1em; font-weight: 800;
     color: rgba(255,255,255,.35);
     text-transform: uppercase; letter-spacing: .08em;
 }
 .kk-crew-name {
-    font-size: 1.35em; font-weight: 900;
+    font-size: 1.5em; font-weight: 900;
     color: #fff; line-height: 1.3; display: block;
 }
 .kk-crew-name.selector { cursor: pointer; }
 .kk-crew-name.selector.focus,
 .kk-crew-name.selector:hover { color: #38bdf8; }
 .kk-crew-role {
-    font-size: .95em;
+    font-size: 1.05em;
     color: rgba(255,255,255,.4);
 }
 .kk-crew-rest {
     display: flex; flex-wrap: wrap;
-    gap: .5em; margin-top: .3em;
+    gap: .6em; margin-top: .3em;
 }
 .kk-crew-rest-name {
-    font-size: 1em; font-weight: 700;
+    font-size: 1.1em; font-weight: 700;
     color: rgba(255,255,255,.6);
 }
 .kk-crew-rest-name.selector { cursor: pointer; }
 .kk-crew-rest-name.selector.focus,
 .kk-crew-rest-name.selector:hover { color: #38bdf8; }
 
-/* ===== DESCRIPTION ===== */
+/* ===== DESCRIPTION - to hơn ===== */
 .kk-body-desc {
-    margin: 1.8em 1.5em 0;
-    padding: 1.3em 1.4em;
+    margin: 2em 1.5em 0;
+    padding: 1.5em 1.6em;
     background: rgba(255,255,255,.04);
-    border-radius: 14px;
+    border-radius: 16px;
     border: 1px solid rgba(255,255,255,.08);
 }
 .kk-body-desc-label {
-    font-size: .9em; font-weight: 800;
+    font-size: 1em; font-weight: 800;
     color: rgba(255,255,255,.35);
     text-transform: uppercase; letter-spacing: .08em;
-    margin-bottom: .85em; display: block;
+    margin-bottom: 1em; display: block;
 }
 .kk-body-desc-text {
-    font-size: 1.15em; line-height: 1.85;
+    font-size: 1.25em; line-height: 1.9;
     color: rgba(255,255,255,.78);
 }
 
 /* ===== ACTIONS ===== */
 .kk-actions {
     display: flex; flex-direction: column;
-    gap: .75em;
-    padding: 1.8em 1.5em 0;
+    gap: .85em;
+    padding: 2em 1.5em 0;
     width: 100%; box-sizing: border-box;
 }
 
-/* ===== SOURCE BUTTONS ===== */
+/* ===== SOURCE BUTTONS - to hơn ===== */
 .kk-src-btn {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     width: 100%; box-sizing: border-box;
-    padding: 1.2em 1.4em; border-radius: 1em;
+    padding: 1.4em 1.5em; border-radius: 1.1em;
     font-weight: 700; cursor: pointer; border: none;
     text-align: center; user-select: none;
-    min-height: 4.5em; margin-bottom: 0;
+    min-height: 5em; margin-bottom: 0;
 }
-.kk-src-btn .kk-sb-main { font-size: 1.4em; line-height: 1.3; font-weight: 900; }
-.kk-src-btn .kk-sb-sub { font-size: 1em; opacity: .8; margin-top: .25em; }
+.kk-src-btn .kk-sb-main { font-size: 1.5em; line-height: 1.3; font-weight: 900; }
+.kk-src-btn .kk-sb-sub { font-size: 1.1em; opacity: .8; margin-top: .3em; }
 .kk-src-btn .kk-arrow { font-size: .65em; transition: transform .3s; display: inline-block; margin-left: .35em; }
 .kk-src-btn.kk-open .kk-arrow { transform: rotate(180deg); }
 .kk-src-btn--kkphim { background: linear-gradient(135deg,#e06000,#ff8c32); color: #fff; }
@@ -427,52 +455,53 @@
 .kk-ep-bk:hover,.kk-ep-bk:focus,.kk-ep-bk.focus{background:rgba(255,255,255,.08);color:rgba(255,255,255,.8)}
 
 /* ===== SECTIONS ===== */
-.kk-section { padding: 2em 1.5em 0; background: #111; }
+.kk-section { padding: 2.5em 1.5em 0; background: #111; }
 .kk-section + .kk-section { border-top: 1px solid rgba(255,255,255,.06); }
 .kk-body + .kk-section { border-top: 1px solid rgba(255,255,255,.06); }
-.kk-section--last { padding-bottom: 2em; }
+.kk-section--last { padding-bottom: 2.5em; }
 .kk-block-title {
-    font-size: 1em; font-weight: 800;
+    font-size: 1.2em; font-weight: 800;
     color: rgba(255,255,255,.4);
     text-transform: uppercase; letter-spacing: .1em;
-    margin: 0 0 1.2em; display: block;
+    margin: 0 0 1.4em; display: block;
 }
 
-/* ===== CAST - vuông, layout ngang như Lampa ===== */
+/* ===== CAST - TO HƠN, THOÁNG HƠN ===== */
 .kk-cast-list {
-    display: flex; gap: 1.2em;
+    display: flex; gap: 1em;
     overflow-x: auto; -webkit-overflow-scrolling: touch;
     touch-action: pan-x; padding-bottom: .5em;
 }
 .kk-cast-list::-webkit-scrollbar { display: none; }
 
-/* Card cast: ảnh trái + tên phải */
+/* Card cast: ảnh trên + tên dưới, to và thoáng */
 .kk-cast-card {
     flex: 0 0 auto;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
-    gap: .9em;
-    width: 14em;
+    gap: .6em;
+    width: 8em;
     cursor: default;
     background: rgba(255,255,255,.04);
-    border-radius: 10px;
-    padding: .6em .8em .6em .6em;
+    border-radius: 14px;
+    padding: .8em .8em 1em;
     border: 1px solid rgba(255,255,255,.06);
+    text-align: center;
 }
 .kk-cast-card.selector,
 .kk-cast-card[data-pid] { cursor: pointer; }
 .kk-cast-card.focus,
 .kk-cast-card:hover { background: rgba(255,255,255,.09); }
 
-/* Ảnh cast: vuông tỉ lệ 1/1 */
+/* Ảnh cast: tròn, to */
 .kk-cast-img {
     flex-shrink: 0;
-    width: 4em; height: 4em;
-    border-radius: 8px;
+    width: 5.5em; height: 5.5em;
+    border-radius: 50%;
     overflow: hidden;
     background: #2a2a2a;
-    border: none;
+    border: 2px solid rgba(255,255,255,.1);
     margin: 0;
 }
 .kk-cast-img img {
@@ -484,20 +513,25 @@
     background: linear-gradient(135deg,#2a2a2a,#1a1a1a);
 }
 
-/* Tên + role bên phải */
+/* Tên + role bên dưới */
 .kk-cast-info {
     flex: 1; min-width: 0;
-    display: flex; flex-direction: column; gap: .2em;
+    display: flex; flex-direction: column; gap: .25em;
+    align-items: center;
 }
 .kk-cast-name {
-    font-size: 1em; font-weight: 700; color: #fff;
+    font-size: 1.05em; font-weight: 700; color: #fff;
     line-height: 1.3;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-align: center;
 }
 .kk-cast-role {
-    font-size: .85em; color: rgba(255,255,255,.4);
+    font-size: .88em; color: rgba(255,255,255,.4);
     line-height: 1.3;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden; text-align: center;
 }
 
 /* ===== SIMILAR ===== */
@@ -574,11 +608,12 @@
 
 /* ===== LANDSCAPE ===== */
 @media (orientation: landscape) {
-    .kk-hero-backdrop { border-radius: 1.4em 1.4em 0 0; }
+    .kk-hero-backdrop { border-radius: 0; }
     .kk-hero-card {
         flex-direction: row; align-items: flex-start;
         gap: 1.6em; padding: 1.8em 2.2em 2em;
-        border-radius: 0 0 1.4em 1.4em;
+        border-radius: 0;
+        margin-top: -3em;
     }
     .kk-hero-poster-wrap {
         display: block; flex-shrink: 0; width: 10em;
@@ -591,14 +626,15 @@
     .kk-hero-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .kk-hero-meta { flex: 1; }
     .kk-logo img { max-height: 8em; }
-    .kk-title { font-size: 2.4em; }
+    .kk-title { font-size: 2.8em; }
     .kk-body-genres,
     .kk-crew,
     .kk-body-desc,
     .kk-actions { padding-left: 2.2em; padding-right: 2.2em; }
     .kk-section { padding-left: 2.2em; padding-right: 2.2em; }
     .kk-similar-list .kk-card { width: 10em; }
-    .kk-cast-card { width: 16em; }
+    .kk-cast-card { width: 9em; }
+    .kk-cast-img { width: 6em; height: 6em; }
     .kk-row-list .kk-card { width: 13em; }
 }
 
