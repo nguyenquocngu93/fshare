@@ -251,16 +251,18 @@ function mkTC(item){
 }
 
 /* ── cast ── */
+// Thay thế function mkCastList trong JS:
+
 function mkCastList(castArr,hasTmdb){
     var list=$('<div class="kk-cast-list"></div>');
     castArr.forEach(function(c){
         var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'">':'<div class="kk-cast-empty"></div>';
         var card;
         if(hasTmdb&&c.id){
-            card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div>');
+            card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
             bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});
         }else{
-            card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div>');
+            card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
         }
         list.append(card);
     });
