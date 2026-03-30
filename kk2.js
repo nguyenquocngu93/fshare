@@ -13,11 +13,8 @@
     var TMDB_IMG = 'https://image.tmdb.org/t/p/original';
     var TMDB_IMG_W500 = 'https://image.tmdb.org/t/p/w500';
     var TORRENTIO_BASE = 'https://torrentio.strem.fun';
-    var SUBDL_API = 'https://api.subdl.com/api/v1/subtitles';
-    var SUBDL_CDN = 'https://dl.subdl.com';
     var SETTINGS_KEY = 'kkphim_settings';
 
-    // ===================== SETTINGS =====================
     function loadSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; } }
     function saveSettings(o) { try { var c = loadSettings(); Object.keys(o).forEach(function (k) { c[k] = o[k]; }); localStorage.setItem(SETTINGS_KEY, JSON.stringify(c)); } catch (e) {} }
     function getSourceKey() { return loadSettings().source || 'ophim'; }
@@ -27,7 +24,6 @@
     function getTSHost() { return loadSettings().torrserver_host || ''; }
     function getTSPass() { return loadSettings().torrserver_password || ''; }
     function getTioConfig() { return loadSettings().torrentio_config || ''; }
-    function getSubMode() { return loadSettings().sub_mode || 'ask'; }
 
     function fullImg(u) {
         if (!u) return '';
@@ -36,7 +32,6 @@
         return base ? base + u : u;
     }
 
-    // ===================== TORRENTIO =====================
     function cleanTioConfig(raw) {
         if (!raw) return ''; raw = String(raw).trim(); if (!raw) return '';
         var m = raw.match(/torrentio\.strem\.fun\/([^\/]+?)\/manifest\.json/i); if (m) return m[1];
@@ -69,7 +64,7 @@
         return m;
     }
 
-    async function playViaTS(stream, title, poster, fileIdx, movieData, ttype, season, episode) {
+    async function playViaTS(stream, title, poster, fileIdx) {
         if (!getTSHost()) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
         Lampa.Noty.show('Đang gửi TorrServer...');
         try {
@@ -89,190 +84,13 @@
                 Lampa.Select.show({
                     title: '📁 File (' + files.length + ')',
                     items: files.map(function (f, i) { var n = (f.path || ('File ' + i)).split('/').pop(); var s = f.length ? (f.length / 1048576).toFixed(0) + 'MB' : ''; return { title: n + (s ? ' (' + s + ')' : ''), value: f }; }),
-                    onSelect: async function (a) { await playUrlWithSub(tsUrl('/stream/fname?link=' + hash + '&index=' + a.value.id + '&play'), title + ' - ' + (a.value.path || '').split('/').pop(), movieData, ttype, season, episode); },
+                    onSelect: function (a) { Lampa.Player.play({ title: title + ' - ' + (a.value.path || '').split('/').pop(), url: tsUrl('/stream/fname?link=' + hash + '&index=' + a.value.id + '&play') }); },
                     onBack: function () { Lampa.Controller.toggle('content'); }
                 });
                 return;
             }
-            await playUrlWithSub(playUrl, title, movieData, ttype, season, episode);
+            Lampa.Player.play({ title: title, url: playUrl });
         } catch (e) { Lampa.Noty.show('Lỗi TS: ' + (e.message || '')); }
-    }
-
-    // ===================== SUBTITLE =====================
-    var _subCache = {};
-
-    function srtToVtt(srt) {
-        return 'WEBVTT\n\n' + srt
-            .replace(/\r\n/g, '\n')
-            .replace(/\r/g, '\n')
-            .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
-    }
-
-    async function loadJSZip() {
-        if (window.JSZip) return;
-        await new Promise(function (ok, fail) {
-            var s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-            s.onload = ok; s.onerror = fail;
-            document.head.appendChild(s);
-        });
-    }
-
-    async function resolveSubUrl(sub) {
-        if (!sub || !sub.url) return '';
-        try {
-            var text = '';
-            if (sub.isZip) {
-                await loadJSZip();
-                var r = await fetch(sub.url);
-                var buf = await r.arrayBuffer();
-                var zip = await JSZip.loadAsync(buf);
-                var srtFile = null;
-                zip.forEach(function (path, entry) {
-                    if (!srtFile && !entry.dir && path.match(/\.(srt|vtt|ass|ssa|sub)$/i)) srtFile = entry;
-                });
-                if (srtFile) text = await srtFile.async('text');
-            } else {
-                var r2 = await fetch(sub.url);
-                text = await r2.text();
-            }
-            if (!text) return sub.url;
-            if (text.indexOf('WEBVTT') === -1) text = srtToVtt(text);
-            return URL.createObjectURL(new Blob([text], { type: 'text/vtt;charset=utf-8' }));
-        } catch (e) {
-            console.log('[KKPhim] Sub resolve err:', e);
-            return sub.url;
-        }
-    }
-
-    async function searchSubs(imdbId, tmdbId, type, season, episode, title) {
-        var ck = (imdbId || tmdbId || title || '') + ':' + (season || 0) + ':' + (episode || 0);
-        if (_subCache[ck]) return _subCache[ck];
-        try {
-            var p = [];
-            if (imdbId) p.push('imdb_id=' + imdbId);
-            else if (tmdbId) p.push('tmdb_id=' + tmdbId);
-            else if (title) p.push('film_name=' + encodeURIComponent(title));
-            else { _subCache[ck] = []; return []; }
-            if (type === 'tv' && season && episode) { p.push('season_number=' + season); p.push('episode_number=' + episode); }
-            p.push('languages=vi,en');
-            p.push('subs_per_page=30');
-            p.push('type=' + (type === 'tv' ? 'tv' : 'movie'));
-            var r = await fetch(SUBDL_API + '?' + p.join('&'));
-            if (r.ok) {
-                var d = await r.json();
-                if (d.status && d.subtitles && d.subtitles.length) {
-                    var results = d.subtitles.map(function (s) {
-                        var lang = (s.language || s.lang || '').toLowerCase();
-                        var lm = { vi: '🇻🇳 Tiếng Việt', vietnamese: '🇻🇳 Tiếng Việt', en: '🇬🇧 English', english: '🇬🇧 English', zh: '🇨🇳 中文', ja: '🇯🇵 日本語', ko: '🇰🇷 한국어', th: '🇹🇭 ไทย', id: '🇮🇩 Indonesia' };
-                        var label = lm[lang] || lang.toUpperCase();
-                        if (s.release_name) label += ' · ' + s.release_name;
-                        if (s.author) label += ' (' + s.author + ')';
-                        return { label: label, url: SUBDL_CDN + s.url, language: lang, isZip: (s.url || '').endsWith('.zip') };
-                    });
-                    _subCache[ck] = results; return results;
-                }
-            }
-        } catch (e) { console.log('[KKPhim] Sub search err:', e); }
-        _subCache[ck] = []; return [];
-    }
-
-    function playWithSubTrack(videoUrl, title, subUrl, subLabel) {
-        Lampa.Player.play({ title: title, url: videoUrl });
-        if (!subUrl) return;
-
-        var attempts = 0;
-        var injectSub = setInterval(function () {
-            attempts++;
-            if (attempts > 40) { clearInterval(injectSub); return; }
-
-            var video = document.querySelector('video');
-            if (!video || !video.src) return;
-
-            clearInterval(injectSub);
-
-            Array.from(video.querySelectorAll('track[data-kkphim]')).forEach(function (t) { t.remove(); });
-
-            var track = document.createElement('track');
-            track.kind = 'subtitles';
-            track.label = subLabel || 'Subtitle';
-            track.srclang = 'vi';
-            track.src = subUrl;
-            track.setAttribute('data-kkphim', '1');
-            track.default = true;
-            video.appendChild(track);
-
-            track.addEventListener('load', function () {
-                try {
-                    for (var i = 0; i < video.textTracks.length; i++) {
-                        video.textTracks[i].mode = video.textTracks[i].label === (subLabel || 'Subtitle') ? 'showing' : 'disabled';
-                    }
-                } catch (e) {}
-            });
-
-            setTimeout(function () {
-                try {
-                    for (var i = 0; i < video.textTracks.length; i++) {
-                        if (video.textTracks[i].label === (subLabel || 'Subtitle')) {
-                            video.textTracks[i].mode = 'showing';
-                        }
-                    }
-                } catch (e) {}
-            }, 800);
-
-            Lampa.Noty.show('📝 ' + (subLabel || 'Subtitle'));
-        }, 500);
-    }
-
-    async function playUrlWithSub(videoUrl, title, movieData, ttype, season, episode) {
-        var mode = getSubMode();
-
-        if (mode === 'off') {
-            Lampa.Player.play({ title: title, url: videoUrl });
-            return;
-        }
-
-        var tmdbId = movieData ? getTmdbId(movieData) : null;
-        var imdbId = null;
-        if (tmdbId) { try { imdbId = await getImdbId(ttype || 'movie', tmdbId); } catch (e) {} }
-
-        var subs = [];
-        try { subs = await searchSubs(imdbId, tmdbId, ttype, season, episode, movieData ? (movieData.name || '') : ''); } catch (e) {}
-
-        if (!subs.length) {
-            Lampa.Player.play({ title: title, url: videoUrl });
-            return;
-        }
-
-        if (mode === 'auto') {
-            var auto = subs.find(function (s) { return s.language === 'vi' || s.language === 'vietnamese'; })
-                     || subs.find(function (s) { return s.language === 'en' || s.language === 'english'; })
-                     || subs[0];
-            Lampa.Noty.show('Tải phụ đề...');
-            var subUrl = await resolveSubUrl(auto);
-            playWithSubTrack(videoUrl, title, subUrl, auto.label);
-            return;
-        }
-
-        // ask
-        var sorted = subs.slice().sort(function (a, b) {
-            var o = { vi: 0, vietnamese: 0, en: 1, english: 1 };
-            return (o[a.language] !== undefined ? o[a.language] : 2) - (o[b.language] !== undefined ? o[b.language] : 2);
-        });
-
-        Lampa.Select.show({
-            title: '📝 Phụ đề (' + subs.length + ')',
-            items: [{ title: '❌ Không dùng', value: null }].concat(
-                sorted.slice(0, 20).map(function (s) { return { title: s.label, value: s }; })
-            ),
-            onSelect: async function (a) {
-                if (!a.value) { Lampa.Player.play({ title: title, url: videoUrl }); return; }
-                Lampa.Noty.show('Tải phụ đề...');
-                var su = await resolveSubUrl(a.value);
-                playWithSubTrack(videoUrl, title, su, a.value.label);
-            },
-            onBack: function () { Lampa.Player.play({ title: title, url: videoUrl }); }
-        });
     }
 
     function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -286,152 +104,222 @@
     async function getImdbId(type, id) { if (!id) return null; try { return (await tmdbFetch('/' + type + '/' + id + '/external_ids')).imdb_id || null; } catch (e) { return null; } }
     async function getTmdbSeasons(id) { try { var r = await tmdbFetch('/tv/' + id + '?language=vi-VN'); if (r && r.seasons) return r.seasons.filter(function (s) { return s.season_number > 0; }).map(function (s) { return { season_number: s.season_number, name: s.name || ('Season ' + s.season_number), episode_count: s.episode_count || 0 }; }); } catch (e) {} return []; }
 
-    // ===================== TMDB BROWSE =====================
-    async function tmdbTrending(page) {
-        return await tmdbFetch('/trending/all/week?language=vi-VN&page=' + (page || 1));
-    }
-    async function tmdbPopularMovies(page) {
-        return await tmdbFetch('/movie/popular?language=vi-VN&page=' + (page || 1));
-    }
-    async function tmdbPopularTV(page) {
-        return await tmdbFetch('/tv/popular?language=vi-VN&page=' + (page || 1));
-    }
-    async function tmdbTopRatedMovies(page) {
-        return await tmdbFetch('/movie/top_rated?language=vi-VN&page=' + (page || 1));
-    }
-    async function tmdbTopRatedTV(page) {
-        return await tmdbFetch('/tv/top_rated?language=vi-VN&page=' + (page || 1));
-    }
-    async function tmdbSearch(query, page) {
-        return await tmdbFetch('/search/multi?language=vi-VN&query=' + encodeURIComponent(query) + '&page=' + (page || 1));
-    }
-    async function tmdbDetail(type, id) {
-        return await tmdbFetch('/' + type + '/' + id + '?language=vi-VN&append_to_response=credits,images,similar,external_ids');
-    }
-    async function tmdbImages(type, id) {
-        return await tmdbFetch('/' + type + '/' + id + '/images');
-    }
+    async function tmdbTrending(page) { return await tmdbFetch('/trending/all/week?language=vi-VN&page=' + (page || 1)); }
+    async function tmdbPopularMovies(page) { return await tmdbFetch('/movie/popular?language=vi-VN&page=' + (page || 1)); }
+    async function tmdbPopularTV(page) { return await tmdbFetch('/tv/popular?language=vi-VN&page=' + (page || 1)); }
+    async function tmdbTopRatedMovies(page) { return await tmdbFetch('/movie/top_rated?language=vi-VN&page=' + (page || 1)); }
+    async function tmdbTopRatedTV(page) { return await tmdbFetch('/tv/top_rated?language=vi-VN&page=' + (page || 1)); }
+    async function tmdbSearchMulti(query, page) { return await tmdbFetch('/search/multi?language=vi-VN&query=' + encodeURIComponent(query) + '&page=' + (page || 1)); }
+    async function tmdbDetailFull(type, id) { return await tmdbFetch('/' + type + '/' + id + '?language=vi-VN&append_to_response=credits,images,similar,external_ids'); }
+    async function tmdbImagesFull(type, id) { return await tmdbFetch('/' + type + '/' + id + '/images'); }
 
     function tmdbNormCard(item) {
         if (!item) return null;
         var mt = item.media_type || (item.first_air_date ? 'tv' : 'movie');
-        var title = item.title || item.name || '';
-        var origTitle = item.original_title || item.original_name || '';
-        var year = (item.release_date || item.first_air_date || '').slice(0, 4);
-        var poster = item.poster_path ? TMDB_IMG_W500 + item.poster_path : '';
-        var vote = item.vote_average ? Number(item.vote_average).toFixed(1) : '';
         return {
-            tmdb_id: item.id,
-            media_type: mt,
-            name: title,
-            origin_name: origTitle,
-            poster_url: poster,
-            year: year,
-            vote: vote,
+            tmdb_id: item.id, media_type: mt,
+            name: item.title || item.name || '',
+            origin_name: item.original_title || item.original_name || '',
+            poster_url: item.poster_path ? TMDB_IMG_W500 + item.poster_path : '',
+            year: (item.release_date || item.first_air_date || '').slice(0, 4),
+            vote: item.vote_average ? Number(item.vote_average).toFixed(1) : '',
             overview: item.overview || ''
         };
     }
 
     // ===================== SLUG FINDER =====================
-    // Tìm slug phim từ KKPhim và OPhim dựa trên tên phim
-    async function findSlugFromSources(title, origTitle, year, mediaType) {
-        var results = { kkphim: null, ophim: null };
-        var searchTerms = [];
-        if (title) searchTerms.push(title);
-        if (origTitle && origTitle !== title) searchTerms.push(origTitle);
-
-        for (var si = 0; si < searchTerms.length; si++) {
-            var kw = searchTerms[si];
-
-            // Search KKPhim
-            if (!results.kkphim) {
-                try {
-                    var r1 = await fetch(SOURCES.kkphim.api + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=1');
-                    if (r1.ok) {
-                        var d1 = await r1.json();
-                        var items1 = (d1 && d1.data && d1.data.items) || (d1 && d1.items) || [];
-                        var found1 = matchSlug(items1, title, origTitle, year);
-                        if (found1) results.kkphim = { slug: found1.slug, source: SOURCES.kkphim };
-                    }
-                } catch (e) { console.log('[KKPhim] slug search kkphim err:', e); }
-            }
-
-            // Search OPhim
-            if (!results.ophim) {
-                try {
-                    var r2 = await fetch(SOURCES.ophim.api + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=1');
-                    if (r2.ok) {
-                        var d2 = await r2.json();
-                        var items2 = (d2 && d2.data && d2.data.items) || (d2 && d2.items) || [];
-                        var found2 = matchSlug(items2, title, origTitle, year);
-                        if (found2) results.ophim = { slug: found2.slug, source: SOURCES.ophim };
-                    }
-                } catch (e) { console.log('[KKPhim] slug search ophim err:', e); }
-            }
-
-            if (results.kkphim && results.ophim) break;
-        }
-
-        return results;
-    }
-
-    function matchSlug(items, title, origTitle, year) {
-        if (!items || !items.length) return null;
-        var normalT = normStr(title);
-        var normalO = normStr(origTitle);
-
-        // Exact match first
-        for (var i = 0; i < items.length; i++) {
-            var it = items[i];
-            var n1 = normStr(it.name || it.title || '');
-            var n2 = normStr(it.origin_name || it.original_name || '');
-            if ((normalT && n1 === normalT) || (normalT && n2 === normalT) ||
-                (normalO && n1 === normalO) || (normalO && n2 === normalO)) {
-                if (!year || !it.year || String(it.year) === String(year)) {
-                    return it;
-                }
-            }
-        }
-
-        // Fuzzy match
-        for (var j = 0; j < items.length; j++) {
-            var it2 = items[j];
-            var m1 = normStr(it2.name || it2.title || '');
-            var m2 = normStr(it2.origin_name || it2.original_name || '');
-            if ((normalT && (m1.indexOf(normalT) > -1 || normalT.indexOf(m1) > -1)) ||
-                (normalO && (m2.indexOf(normalO) > -1 || normalO.indexOf(m2) > -1))) {
-                if (!year || !it2.year || String(it2.year) === String(year)) {
-                    return it2;
-                }
-            }
-        }
-
-        return items[0] || null; // fallback first result
+    async function searchSourceSlug(source, kw) {
+        try {
+            var r = await fetch(source.api + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=1');
+            if (!r.ok) return [];
+            var d = await r.json();
+            return (d && d.data && d.data.items) || (d && d.items) || [];
+        } catch (e) { return []; }
     }
 
     function normStr(s) {
-        return String(s || '').toLowerCase().trim()
-            .replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g, '')
-            .replace(/\s+/g, ' ');
+        return String(s || '').toLowerCase().trim().replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g, '').replace(/\s+/g, ' ');
     }
 
-    // Lấy detail + episodes từ một source cụ thể
-    async function fetchSourceDetail(slug, source) {
-        try {
-            var url = source.api + 'phim/' + slug;
-            var r = await fetch(url);
-            if (!r.ok) return null;
-            var res = await r.json();
-            var movie = norm(res.movie || res || {});
-            var episodes = res.episodes || [];
-            return { movie: movie, episodes: episodes, source: source };
-        } catch (e) {
-            console.log('[KKPhim] fetchSourceDetail err:', e);
-            return null;
+    function matchBest(items, title, origTitle, year) {
+        if (!items || !items.length) return null;
+        var nT = normStr(title), nO = normStr(origTitle);
+        // exact
+        for (var i = 0; i < items.length; i++) {
+            var n1 = normStr(items[i].name || items[i].title || '');
+            var n2 = normStr(items[i].origin_name || items[i].original_name || '');
+            if ((nT && (n1 === nT || n2 === nT)) || (nO && (n1 === nO || n2 === nO))) {
+                if (!year || !items[i].year || String(items[i].year) === String(year)) return items[i];
+            }
         }
+        // fuzzy
+        for (var j = 0; j < items.length; j++) {
+            var m1 = normStr(items[j].name || items[j].title || '');
+            var m2 = normStr(items[j].origin_name || items[j].original_name || '');
+            if ((nT && (m1.indexOf(nT) > -1 || nT.indexOf(m1) > -1)) || (nO && (m2.indexOf(nO) > -1 || nO.indexOf(m2) > -1))) {
+                if (!year || !items[j].year || String(items[j].year) === String(year)) return items[j];
+            }
+        }
+        return null;
     }
 
-    // ===================== TORRENTIO SEARCH =====================
+    async function findAllSlugs(title, origTitle, year) {
+        var results = { kkphim: null, ophim: null };
+        var terms = [title];
+        if (origTitle && origTitle !== title) terms.push(origTitle);
+
+        for (var i = 0; i < terms.length; i++) {
+            if (!results.kkphim) {
+                var items1 = await searchSourceSlug(SOURCES.kkphim, terms[i]);
+                var f1 = matchBest(items1, title, origTitle, year);
+                if (f1 && f1.slug) results.kkphim = f1.slug;
+            }
+            if (!results.ophim) {
+                var items2 = await searchSourceSlug(SOURCES.ophim, terms[i]);
+                var f2 = matchBest(items2, title, origTitle, year);
+                if (f2 && f2.slug) results.ophim = f2.slug;
+            }
+            if (results.kkphim && results.ophim) break;
+        }
+        return results;
+    }
+
+    async function fetchDetail(source, slug) {
+        try {
+            var r = await fetch(source.api + 'phim/' + slug);
+            if (!r.ok) return null;
+            var d = await r.json();
+            return { movie: d.movie || d || {}, episodes: d.episodes || [] };
+        } catch (e) { return null; }
+    }
+
+    // ===================== PHIM BỘ: GOM SEASONS =====================
+    // Gom tất cả seasons từ cả 2 nguồn
+    // Mỗi nguồn đăng season theo từng post (slug khác nhau)
+    // Ví dụ: "one-piece", "one-piece-season-2", etc.
+
+    async function findAllSeasonSlugs(source, title, origTitle) {
+        // Tìm slug gốc + các slug season
+        var results = [];
+        try {
+            var items = await searchSourceSlug(source, title);
+            if (!items.length && origTitle) items = await searchSourceSlug(source, origTitle);
+
+            var nT = normStr(title);
+            var nO = normStr(origTitle);
+
+            // Lọc tất cả kết quả liên quan
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                if (!it.slug) continue;
+                var n1 = normStr(it.name || it.title || '');
+                var n2 = normStr(it.origin_name || it.original_name || '');
+
+                // Kiểm tra tên có match không
+                var match = false;
+                if (nT && (n1.indexOf(nT) > -1 || nT.indexOf(n1) > -1 || n1 === nT)) match = true;
+                if (nO && (n2.indexOf(nO) > -1 || nO.indexOf(n2) > -1 || n2 === nO)) match = true;
+                // Cũng match nếu slug chứa slug gốc
+                if (!match && results.length > 0) {
+                    var baseSlug = normStr(results[0].slug);
+                    var curSlug = normStr(it.slug);
+                    if (curSlug.indexOf(baseSlug) > -1 || baseSlug.indexOf(curSlug) > -1) match = true;
+                }
+
+                if (match) {
+                    // Tìm season number từ tên
+                    var sn = extractSeasonNum(it.name || it.title || '', it.slug || '');
+                    results.push({
+                        slug: it.slug,
+                        name: it.name || it.title || '',
+                        season: sn,
+                        source: source
+                    });
+                }
+            }
+        } catch (e) {
+            console.log('[KKPhim] findAllSeasonSlugs err:', e);
+        }
+        return results;
+    }
+
+    function extractSeasonNum(name, slug) {
+        // Thử extract season number
+        var m = name.match(/season\s*(\d+)/i) || name.match(/phần\s*(\d+)/i) || name.match(/mùa\s*(\d+)/i) ||
+                slug.match(/season-(\d+)/i) || slug.match(/phan-(\d+)/i) || slug.match(/mua-(\d+)/i) ||
+                name.match(/S(\d+)/i);
+        if (m) return parseInt(m[1]);
+
+        // Kiểm tra có phải season 2, 3... dựa vào số cuối
+        var numMatch = name.match(/(\d+)$/) || slug.match(/-(\d+)$/);
+        if (numMatch) {
+            var n = parseInt(numMatch[1]);
+            if (n >= 2 && n <= 30) return n; // likely season number
+        }
+
+        return 1; // default season 1
+    }
+
+    async function gatherAllSeasons(title, origTitle, slugs) {
+        // Thu thập tất cả season slugs từ cả 2 nguồn
+        var allSeasonSlugs = [];
+
+        // Tìm từ KKPhim
+        var kkSeasons = await findAllSeasonSlugs(SOURCES.kkphim, title, origTitle);
+        kkSeasons.forEach(function (s) { allSeasonSlugs.push(s); });
+
+        // Tìm từ OPhim
+        var opSeasons = await findAllSeasonSlugs(SOURCES.ophim, title, origTitle);
+        opSeasons.forEach(function (s) { allSeasonSlugs.push(s); });
+
+        // Nếu không tìm được từ search, dùng slugs đã có
+        if (!allSeasonSlugs.length) {
+            if (slugs.kkphim) allSeasonSlugs.push({ slug: slugs.kkphim, name: title, season: 1, source: SOURCES.kkphim });
+            if (slugs.ophim) allSeasonSlugs.push({ slug: slugs.ophim, name: title, season: 1, source: SOURCES.ophim });
+        }
+
+        // Gom theo season number, ưu tiên nguồn có tập nhiều hơn
+        var seasonMap = {};
+        allSeasonSlugs.forEach(function (s) {
+            var key = s.season;
+            if (!seasonMap[key]) seasonMap[key] = [];
+            seasonMap[key].push(s);
+        });
+
+        return seasonMap;
+    }
+
+    async function loadSeasonEpisodes(seasonEntry) {
+        var detail = await fetchDetail(seasonEntry.source, seasonEntry.slug);
+        if (!detail || !detail.episodes || !detail.episodes.length) return [];
+
+        var eps = [];
+        detail.episodes.forEach(function (sv) {
+            (sv.server_data || []).forEach(function (ep) {
+                var link = ep.link_m3u8 || ep.link_embed || '';
+                if (link) {
+                    eps.push({
+                        name: ep.name || ep.slug || '',
+                        slug: ep.slug || '',
+                        link: link,
+                        server: sv.server_name || 'Server',
+                        source: seasonEntry.source.name
+                    });
+                }
+            });
+        });
+
+        // Deduplicate by episode name, keep first
+        var seen = {};
+        return eps.filter(function (e) {
+            var k = e.name;
+            if (seen[k]) return false;
+            seen[k] = true;
+            return true;
+        });
+    }
+
+    // ===================== TORRENTIO =====================
     function tioUrl(type, imdbId, s, e) {
         var t = type === 'tv' ? 'series' : 'movie', id = imdbId;
         if (type === 'tv' && s && e) id = imdbId + ':' + s + ':' + e;
@@ -449,78 +337,99 @@
         });
     }
 
-    function showTioResults(streams, title, poster, movieData, ttype, season, episode) {
+    function showTioResults(streams, title, poster, ttype, season, episode) {
         var ts = !!getTSHost();
         Lampa.Select.show({
             title: '🧲 ' + title + ' (' + streams.length + ')' + (ts ? ' → TS' : ''),
             items: streams.slice(0, 40).map(function (s) { var l = s.name; if (s.size) l += ' | ' + s.size; if (s.seeds) l += ' | 👤' + s.seeds; if (s.rawName) l += ' [' + s.rawName + ']'; return { title: l, value: s }; }),
             onSelect: function (a) {
                 var s = a.value;
-                if (ts && s.infoHash) playViaTS(s, title, poster, s.fileIdx, movieData, ttype, season, episode);
-                else if (s.url) playUrlWithSub(s.url, title, movieData, ttype, season, episode);
+                if (ts && s.infoHash) playViaTS(s, title, poster, s.fileIdx);
+                else if (s.url) Lampa.Player.play({ title: title, url: s.url });
                 else Lampa.Noty.show(s.infoHash ? 'Chưa cấu hình TS!' : 'Không có link');
             },
             onBack: function () { Lampa.Controller.toggle('content'); }
         });
     }
 
-    async function openTorrentSearch(tmdbId, ttype, data, poster, imdbId) {
-        if (ttype === 'tv') { tvTorrentPicker(tmdbId, data, null, poster, imdbId); return; }
+    async function openTorrentMovie(tmdbId, title, poster, imdbId) {
         Lampa.Noty.show('Tìm torrent...');
         try {
-            var imdb = imdbId || await getImdbId(ttype, tmdbId);
+            var imdb = imdbId || await getImdbId('movie', tmdbId);
             if (!imdb) { Lampa.Noty.show('Không tìm IMDB ID'); return; }
-            var streams = await fetchTio(ttype, imdb);
+            var streams = await fetchTio('movie', imdb);
             if (!streams.length) { Lampa.Noty.show('Không có torrent'); return; }
-            showTioResults(streams, data.name || '', poster, data, ttype, null, null);
+            showTioResults(streams, title, poster, 'movie', null, null);
         } catch (e) { Lampa.Noty.show('Lỗi: ' + (e.message || '')); }
     }
 
-    async function tvTorrentPicker(tmdbId, data, episodes, poster, imdbId) {
+    async function openTorrentTV(tmdbId, title, poster, imdbId) {
         Lampa.Noty.show('Tải seasons...');
-        var seasons = await getTmdbSeasons(tmdbId);
-        var imdb = imdbId || await getImdbId('tv', tmdbId);
-        if (!imdb) imdb = await getImdbId('movie', tmdbId);
-        if (!imdb) { Lampa.Noty.show('Không tìm IMDB ID'); return; }
-        if (seasons.length > 1) pickSeason(seasons, imdb, data, poster);
-        else if (seasons.length === 1) pickEpFrom(seasons[0], imdb, data, poster);
-        else pickEpFB(imdb, data, episodes, poster);
+        try {
+            var imdb = imdbId || await getImdbId('tv', tmdbId);
+            if (!imdb) { Lampa.Noty.show('Không tìm IMDB ID'); return; }
+            var seasons = await getTmdbSeasons(tmdbId);
+            if (seasons.length > 1) {
+                Lampa.Select.show({
+                    title: '📺 Season',
+                    items: seasons.map(function (s) { return { title: s.name + (s.episode_count ? ' (' + s.episode_count + ' tập)' : ''), value: s }; }),
+                    onSelect: function (a) { pickTorrentEp(a.value, imdb, title, poster); },
+                    onBack: function () { Lampa.Controller.toggle('content'); }
+                });
+            } else if (seasons.length === 1) {
+                pickTorrentEp(seasons[0], imdb, title, poster);
+            } else {
+                promptTorrentEp(1, imdb, title, poster);
+            }
+        } catch (e) { Lampa.Noty.show('Lỗi: ' + (e.message || '')); }
     }
 
     function pad(n) { return (n < 10 ? '0' : '') + n; }
 
-    function pickSeason(seasons, imdb, data, poster) {
+    function pickTorrentEp(season, imdb, title, poster) {
+        if (!season.episode_count) { promptTorrentEp(season.season_number, imdb, title, poster); return; }
+        var items = [];
+        for (var i = 1; i <= season.episode_count; i++) items.push({ title: 'S' + pad(season.season_number) + 'E' + pad(i), value: { s: season.season_number, e: i } });
         Lampa.Select.show({
-            title: '📺 Season',
-            items: seasons.map(function (s) { return { title: s.name + (s.episode_count ? ' (' + s.episode_count + ' tập)' : ''), value: s }; }),
-            onSelect: function (a) { if (a.value.episode_count > 0) pickEpFrom(a.value, imdb, data, poster); else promptEp(a.value.season_number, imdb, data, poster); },
+            title: '📺 ' + season.name,
+            items: items,
+            onSelect: async function (a) {
+                var label = title + ' S' + pad(a.value.s) + 'E' + pad(a.value.e);
+                Lampa.Noty.show('Tìm ' + label + '...');
+                try {
+                    var streams = await fetchTio('tv', imdb, a.value.s, a.value.e);
+                    if (!streams.length) { Lampa.Noty.show('Không có torrent'); return; }
+                    showTioResults(streams, label, poster, 'tv', a.value.s, a.value.e);
+                } catch (e) { Lampa.Noty.show('Lỗi: ' + (e.message || '')); }
+            },
             onBack: function () { Lampa.Controller.toggle('content'); }
         });
     }
 
-    function pickEpFrom(season, imdb, data, poster) {
-        var items = []; for (var i = 1; i <= season.episode_count; i++) items.push({ title: 'S' + pad(season.season_number) + 'E' + pad(i), value: { s: season.season_number, e: i } });
-        Lampa.Select.show({ title: '📺 ' + season.name, items: items, onSelect: function (a) { doTvSearch(imdb, data, a.value.s, a.value.e, poster); }, onBack: function () { Lampa.Controller.toggle('content'); } });
-    }
-
-    function pickEpFB(imdb, data, episodes, poster) {
-        var eps = [];
-        if (episodes) episodes.forEach(function (sv) { (sv.server_data || []).forEach(function (ep) { var n = parseInt((ep.name || '').replace(/[^\d]/g, '')) || 0; if (n > 0 && eps.indexOf(n) === -1) eps.push(n); }); });
-        eps.sort(function (a, b) { return a - b; });
-        if (!eps.length) { promptEp(1, imdb, data, poster); return; }
-        Lampa.Select.show({ title: '📺 Chọn tập', items: eps.map(function (n) { return { title: 'S01E' + pad(n), value: { s: 1, e: n } }; }), onSelect: function (a) { doTvSearch(imdb, data, a.value.s, a.value.e, poster); }, onBack: function () { Lampa.Controller.toggle('content'); } });
-    }
-
-    function promptEp(ds, imdb, data, poster) {
-        try { if (Lampa.Input && Lampa.Input.edit) { Lampa.Input.edit({ title: 'Season:Episode', value: ds + ':1', free: true }, function (v) { var p = String(v || ds + ':1').split(':'); doTvSearch(imdb, data, parseInt(p[0]) || ds, parseInt(p[1]) || 1, poster); }); return; } } catch (e) {}
+    function promptTorrentEp(ds, imdb, title, poster) {
+        try {
+            if (Lampa.Input && Lampa.Input.edit) {
+                Lampa.Input.edit({ title: 'Season:Episode', value: ds + ':1', free: true }, async function (v) {
+                    var p = String(v || ds + ':1').split(':');
+                    var s = parseInt(p[0]) || ds, e = parseInt(p[1]) || 1;
+                    var label = title + ' S' + pad(s) + 'E' + pad(e);
+                    Lampa.Noty.show('Tìm ' + label + '...');
+                    try {
+                        var streams = await fetchTio('tv', imdb, s, e);
+                        if (!streams.length) { Lampa.Noty.show('Không có torrent'); return; }
+                        showTioResults(streams, label, poster, 'tv', s, e);
+                    } catch (err) { Lampa.Noty.show('Lỗi: ' + (err.message || '')); }
+                });
+                return;
+            }
+        } catch (e) {}
         var v = window.prompt('Season:Episode', ds + ':1'), p = String(v || ds + ':1').split(':');
-        doTvSearch(imdb, data, parseInt(p[0]) || ds, parseInt(p[1]) || 1, poster);
-    }
-
-    async function doTvSearch(imdb, data, s, e, poster) {
-        var label = (data.name || '') + ' S' + pad(s) + 'E' + pad(e);
-        Lampa.Noty.show('Tìm ' + label + '...');
-        try { var streams = await fetchTio('tv', imdb, s, e); if (!streams.length) { Lampa.Noty.show('Không có torrent'); return; } showTioResults(streams, label, poster, data, 'tv', s, e); } catch (err) { Lampa.Noty.show('Lỗi: ' + (err.message || '')); }
+        var s = parseInt(p[0]) || ds, e2 = parseInt(p[1]) || 1;
+        (async function () {
+            var label = title + ' S' + pad(s) + 'E' + pad(e2);
+            Lampa.Noty.show('Tìm ' + label + '...');
+            try { var streams = await fetchTio('tv', imdb, s, e2); if (!streams.length) { Lampa.Noty.show('Không có torrent'); return; } showTioResults(streams, label, '', 'tv', s, e2); } catch (err) { Lampa.Noty.show('Lỗi: ' + (err.message || '')); }
+        })();
     }
 
     // ===================== HELPERS =====================
@@ -534,21 +443,12 @@
     function norm(i) {
         if (!i) return null;
         return {
-            name: i.name || i.title || '',
-            origin_name: i.origin_name || '',
-            slug: i.slug || '',
-            poster_url: i.poster_url || i.poster || '',
-            thumb_url: i.thumb_url || i.thumb || '',
-            year: i.year || '',
-            quality: i.quality || '',
-            episode_current: i.episode_current || '',
-            tmdb: i.tmdb || {},
-            category: Array.isArray(i.category) ? i.category : [],
-            director: i.director || '',
-            content: i.content || '',
-            time: i.time || '',
-            episode_total: i.episode_total || '',
-            type: i.type || ''
+            name: i.name || i.title || '', origin_name: i.origin_name || '', slug: i.slug || '',
+            poster_url: i.poster_url || i.poster || '', thumb_url: i.thumb_url || i.thumb || '',
+            year: i.year || '', quality: i.quality || '', episode_current: i.episode_current || '',
+            tmdb: i.tmdb || {}, category: Array.isArray(i.category) ? i.category : [],
+            director: i.director || '', content: i.content || '', time: i.time || '',
+            episode_total: i.episode_total || '', type: i.type || ''
         };
     }
 
@@ -627,13 +527,7 @@
             (data.media_type === 'tv' ? '<div class="kk-card-ep">TV</div>' : '') +
             '</div><div class="kk-card-name">' + esc(data.name) + '</div><div class="kk-card-year">' + esc(data.year) + '</div></div>');
         bindEnter(c, function () {
-            Lampa.Activity.push({
-                url: '', title: data.name || '',
-                component: 'kkphim_tmdb_detail',
-                tmdb_id: data.tmdb_id,
-                media_type: data.media_type,
-                page: 1
-            });
+            Lampa.Activity.push({ url: '', title: data.name || '', component: 'kkphim_tmdb_detail', tmdb_id: data.tmdb_id, media_type: data.media_type, page: 1 });
         });
         return c;
     }
@@ -704,10 +598,6 @@
             .kk-act--play.focus{background:#ff3047}
             .kk-act--torrent{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
             .kk-act--torrent.focus{background:linear-gradient(135deg,#818cf8,#a78bfa)}
-            .kk-act--sub{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff}
-            .kk-act--sub.focus{background:rgba(255,255,255,.18)}
-            .kk-act--source{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399}
-            .kk-act--source.focus{background:rgba(16,185,129,.3)}
             .kk-act--disabled{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.35);cursor:default}
             .kk-section{padding:1.25em 1.5em 0;background:#141414}
             .kk-section+.kk-section{padding-top:1.15em;border-top:1px solid rgba(255,255,255,.04)}
@@ -745,7 +635,6 @@
             .kk-stg-status--ok{background:rgba(74,222,128,.12);color:#4ade80}
             .kk-stg-status--err{background:rgba(248,113,113,.12);color:#f87171}
             .kk-stg-status--loading{background:rgba(255,255,255,.06);color:rgba(255,255,255,.5)}
-            video::cue{background:rgba(0,0,0,.75);color:#fff;font-size:1.2em;line-height:1.5;padding:.2em .6em;border-radius:.3em}
             .selector,.kk-act,.kk-ep,.kk-row-more,.kk-loadmore,.kk-genre,.kk-card,.kk-btn,.kk-stg-item,.kk-srcbtn{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
             @media(orientation:landscape){
                 .kk-hero-bg{height:28em}
@@ -790,7 +679,6 @@
                 var s = loadSettings(), w = $('<div class="kk-stg-wrap"></div>');
                 w.append('<div class="kk-stg-title">⚙️ Cài đặt</div>');
 
-                // Nguồn
                 var g0 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">📺 Nguồn phim</div>');
                 var cur = s.source || 'ophim';
                 Object.keys(SOURCES).forEach(function (k) {
@@ -801,7 +689,6 @@
                 });
                 w.append(g0);
 
-                // TorrServer
                 var g1 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">🖥️ TorrServer</div>');
                 var hi = si('Địa chỉ', '192.168.1.100:8090', s.torrserver_host || 'Chưa cài');
                 bindEnter(hi, function () { pi('Địa chỉ TorrServer', s.torrserver_host || '', function (v) { v = (v || '').trim(); saveSettings({ torrserver_host: v }); s.torrserver_host = v; hi.find('.kk-stg-value').text(v || 'Chưa cài'); }); });
@@ -814,7 +701,6 @@
                 g1.append(ti).append(st1);
                 w.append(g1);
 
-                // Torrentio
                 var g2 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">🧲 Torrentio</div>');
                 var tii = si('Config', 'Paste manifest URL', s.torrentio_config ? 'Có' : 'Mặc định');
                 bindEnter(tii, function () { pi('Config', s.torrentio_config || '', function (v) { v = (v || '').trim(); saveSettings({ torrentio_config: v }); s.torrentio_config = v; tii.find('.kk-stg-value').text(v ? 'Có' : 'Mặc định'); }); });
@@ -824,25 +710,6 @@
                 g2.append(tti).append(st2);
                 w.append(g2);
 
-                // Phụ đề
-                var g3 = $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">📝 Phụ đề</div>');
-                var subM = s.sub_mode || 'ask';
-                [
-                    { k: 'ask', n: 'Hỏi mỗi lần', d: 'Chọn sub trước khi phát' },
-                    { k: 'auto', n: 'Tự động (Việt)', d: 'Ưu tiên tiếng Việt' },
-                    { k: 'off', n: 'Tắt', d: 'Không tìm sub' }
-                ].forEach(function (sm) {
-                    var it = si(sm.n, sm.d, subM === sm.k ? '✅' : 'Chọn');
-                    if (subM === sm.k) it.find('.kk-stg-value').css('color', '#4ade80');
-                    bindEnter(it, function () { saveSettings({ sub_mode: sm.k }); Lampa.Noty.show('Sub: ' + sm.n); comp.create(); });
-                    g3.append(it);
-                });
-                var tsi = si('🧪 Test sub', 'Thử Inception', 'Nhấn'), st3 = $('<div class="kk-stg-status" style="display:none"></div>');
-                bindEnter(tsi, function () { testSub(st3); });
-                g3.append(tsi).append(st3);
-                w.append(g3);
-
-                // Xóa
                 var g4 = $('<div class="kk-stg-group"></div>');
                 var cl = si('🗑️ Xóa cài đặt', '', 'Xóa');
                 cl.find('.kk-stg-value').css('color', '#f87171');
@@ -858,7 +725,6 @@
             function pi(t, c, cb) { try { if (Lampa.Input && Lampa.Input.edit) { Lampa.Input.edit({ title: t, value: c || '', free: true, nosave: true }, cb); return; } } catch (e) {} var v = window.prompt(t, c || ''); if (v !== null) cb(v); }
             async function testTS(el) { if (!getTSHost()) { el.show().attr('class', 'kk-stg-status kk-stg-status--err').text('❌ Chưa nhập'); return; } el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); try { var r = await fetch(tsUrl('/echo'), { headers: tsHdr() }); el.attr('class', 'kk-stg-status ' + (r.ok ? 'kk-stg-status--ok' : 'kk-stg-status--err')).text(r.ok ? '✅ OK' : '❌ ' + r.status); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
             async function testTIO(el) { el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); var c = cleanTioConfig(getTioConfig()); var u = TORRENTIO_BASE + (c ? '/' + c : '') + '/stream/movie/tt1375666.json'; try { var r = await fetch(u); if (!r.ok) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + r.status); return; } var d = await r.json(); el.attr('class', 'kk-stg-status kk-stg-status--ok').text('✅ ' + (d.streams || []).length + ' torrent'); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
-            async function testSub(el) { el.show().attr('class', 'kk-stg-status kk-stg-status--loading').text('⏳'); try { var subs = await searchSubs('tt1375666', null, 'movie', null, null, 'Inception'); el.attr('class', 'kk-stg-status ' + (subs.length ? 'kk-stg-status--ok' : 'kk-stg-status--err')).text(subs.length ? '✅ ' + subs.length + ' sub' : '❌ Không có'); } catch (e) { el.attr('class', 'kk-stg-status kk-stg-status--err').text('❌ ' + (e.message || '')); } }
 
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
             this.pause = function () {}; this.stop = function () {};
@@ -885,7 +751,6 @@
                 bindEnter($(tb.find('.kk-btn')[1]), function () { Lampa.Activity.push({ url: '', title: 'Cài đặt', component: 'kkphim_settings' }); });
                 scroll.append(tb);
 
-                // Source bar: KKPhim, OPhim, TMDB
                 var sb = $('<div class="kk-srcbar"></div>');
                 Object.keys(SOURCES).forEach(function (k) {
                     var s = SOURCES[k], on = k === src.key;
@@ -893,11 +758,8 @@
                     bindEnter(btn, function () { if (on) return; saveSettings({ source: k }); Lampa.Noty.show(s.name); comp.create(); });
                     sb.append(btn);
                 });
-                // TMDB tab
                 var tmdbBtn = $('<div class="kk-srcbtn selector kk-srcbtn--off" style="background:rgba(1,180,228,.15);border-color:rgba(1,180,228,.4);color:#01b4e4">TMDB</div>');
-                bindEnter(tmdbBtn, function () {
-                    Lampa.Activity.push({ url: '', title: 'TMDB', component: 'kkphim_tmdb_main', page: 1 });
-                });
+                bindEnter(tmdbBtn, function () { Lampa.Activity.push({ url: '', title: 'TMDB', component: 'kkphim_tmdb_main', page: 1 }); });
                 sb.append(tmdbBtn);
                 scroll.append(sb);
 
@@ -905,8 +767,7 @@
 
                 var loaded = 0;
                 cats.forEach(function (cat) {
-                    var url = SRC_API() + cat.api + '?page=1';
-                    network.silent(url, function (res) {
+                    network.silent(SRC_API() + cat.api + '?page=1', function (res) {
                         var list = ((res && res.items) || (res && res.data && res.data.items) || []).map(norm).filter(function (i) { return i && i.slug; });
                         if (list.length) {
                             var row = $('<div class="kk-row"></div>');
@@ -943,7 +804,6 @@
                 bindEnter($(tb.find('.kk-btn')[1]), function () { Lampa.Activity.push({ url: '', title: 'Cài đặt', component: 'kkphim_settings' }); });
                 scroll.append(tb);
 
-                // Source bar
                 var sb = $('<div class="kk-srcbar"></div>');
                 Object.keys(SOURCES).forEach(function (k) {
                     var s = SOURCES[k];
@@ -951,18 +811,17 @@
                     bindEnter(btn, function () { saveSettings({ source: k }); Lampa.Activity.push({ url: '', title: 'KKPhim', component: 'kkphim_main', page: 1 }); });
                     sb.append(btn);
                 });
-                var tmdbBtn = $('<div class="kk-srcbtn selector kk-srcbtn--on" style="background:rgba(1,180,228,.25);border-color:rgba(1,180,228,.5);color:#01b4e4">TMDB</div>');
-                sb.append(tmdbBtn);
+                sb.append('<div class="kk-srcbtn kk-srcbtn--on" style="background:rgba(1,180,228,.25);border-color:rgba(1,180,228,.5);color:#01b4e4">TMDB</div>');
                 scroll.append(sb);
 
                 if (getTSHost()) scroll.append($('<div class="kk-tsbar"><div class="kk-tsbadge">🖥️ ' + esc(getTSHost()) + '</div></div>'));
 
                 var sections = [
-                    { name: '🔥 Xu hướng tuần', fn: tmdbTrending, component: 'kkphim_tmdb_list', listType: 'trending' },
-                    { name: '🎬 Phim lẻ phổ biến', fn: tmdbPopularMovies, component: 'kkphim_tmdb_list', listType: 'popular_movies' },
-                    { name: '📺 Phim bộ phổ biến', fn: tmdbPopularTV, component: 'kkphim_tmdb_list', listType: 'popular_tv' },
-                    { name: '⭐ Phim lẻ đánh giá cao', fn: tmdbTopRatedMovies, component: 'kkphim_tmdb_list', listType: 'top_movies' },
-                    { name: '⭐ Phim bộ đánh giá cao', fn: tmdbTopRatedTV, component: 'kkphim_tmdb_list', listType: 'top_tv' }
+                    { name: '🔥 Xu hướng tuần', fn: tmdbTrending, lt: 'trending' },
+                    { name: '🎬 Phim lẻ phổ biến', fn: tmdbPopularMovies, lt: 'popular_movies' },
+                    { name: '📺 Phim bộ phổ biến', fn: tmdbPopularTV, lt: 'popular_tv' },
+                    { name: '⭐ Phim lẻ đánh giá cao', fn: tmdbTopRatedMovies, lt: 'top_movies' },
+                    { name: '⭐ Phim bộ đánh giá cao', fn: tmdbTopRatedTV, lt: 'top_tv' }
                 ];
 
                 var loaded = 0;
@@ -973,9 +832,7 @@
                             var row = $('<div class="kk-row"></div>');
                             var more = $('<div class="kk-row-more selector">Xem thêm</div>');
                             var rl = $('<div class="kk-row-list"></div>');
-                            bindEnter(more, function () {
-                                Lampa.Activity.push({ url: '', title: sec.name, component: sec.component, listType: sec.listType, page_num: 1 });
-                            });
+                            bindEnter(more, function () { Lampa.Activity.push({ url: '', title: sec.name, component: 'kkphim_tmdb_list', listType: sec.lt, page_num: 1 }); });
                             items.slice(0, 12).forEach(function (i) { rl.append(mkTmdbCard(i)); });
                             row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">' + esc(sec.name) + '</div>').append(more)).append(rl);
                             scroll.append(row);
@@ -994,16 +851,9 @@
         // ========== TMDB LIST ==========
         Lampa.Component.add('kkphim_tmdb_list', function (obj) {
             var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
-            var listType = obj.listType || 'trending', page = obj.page_num || 1;
+            var page = obj.page_num || 1;
             var grid = $('<div class="kk-grid"></div>'), lm = $('<div class="kk-loadmore selector">Tải thêm</div>'), loading = false, hasMore = true;
-
-            var fetchFn = {
-                trending: tmdbTrending,
-                popular_movies: tmdbPopularMovies,
-                popular_tv: tmdbPopularTV,
-                top_movies: tmdbTopRatedMovies,
-                top_tv: tmdbTopRatedTV
-            }[listType] || tmdbTrending;
+            var fetchFn = { trending: tmdbTrending, popular_movies: tmdbPopularMovies, popular_tv: tmdbPopularTV, top_movies: tmdbTopRatedMovies, top_tv: tmdbTopRatedTV }[obj.listType] || tmdbTrending;
 
             this.create = function () {
                 comp.activity.loader(true); clearScroll(scroll);
@@ -1043,7 +893,7 @@
 
             function doLoad() {
                 loading = true; lm.text('Đang tải...');
-                tmdbSearch(kw, page).then(function (res) {
+                tmdbSearchMulti(kw, page).then(function (res) {
                     var items = (res.results || []).filter(function (i) { return i.media_type !== 'person'; });
                     if (!items.length) { hasMore = false; lm.text(page === 1 ? 'Không có' : 'Hết'); comp.activity.loader(false); loading = false; comp.start(); return; }
                     items.forEach(function (i) { grid.append(mkTmdbCard(i).addClass('kk-card--grid')); });
@@ -1060,34 +910,25 @@
         // ========== TMDB DETAIL ==========
         Lampa.Component.add('kkphim_tmdb_detail', function (obj) {
             var scroll = new Lampa.Scroll({ mask: true, over: true }), comp = this;
-            var tmdbId = obj.tmdb_id;
-            var mediaType = obj.media_type || 'movie';
+            var tmdbId = obj.tmdb_id, mediaType = obj.media_type || 'movie';
 
             this.create = function () {
                 comp.activity.loader(true); clearScroll(scroll);
-                if (!tmdbId) {
-                    comp.activity.loader(false);
-                    scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu</div></div>');
-                    comp.start(); return;
-                }
+                if (!tmdbId) { comp.activity.loader(false); scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu</div></div>'); comp.start(); return; }
 
-                tmdbDetail(mediaType, tmdbId).then(async function (tmdb) {
+                tmdbDetailFull(mediaType, tmdbId).then(async function (tmdb) {
                     var logos = null;
-                    try { logos = await tmdbImages(mediaType, tmdbId); } catch (e) {}
+                    try { logos = await tmdbImagesFull(mediaType, tmdbId); } catch (e) {}
 
-                    // Tìm slug từ cả hai nguồn
                     var title = tmdb.title || tmdb.name || '';
                     var origTitle = tmdb.original_title || tmdb.original_name || '';
                     var year = (tmdb.release_date || tmdb.first_air_date || '').slice(0, 4);
 
                     Lampa.Noty.show('Tìm nguồn phát...');
-                    var slugs = await findSlugFromSources(title, origTitle, year, mediaType);
+                    var slugs = await findAllSlugs(title, origTitle, year);
 
-                    buildTmdbDetail(tmdb, logos, slugs);
-                }).catch(function (e) {
-                    comp.activity.loader(false);
-                    Lampa.Noty.show('Lỗi tải TMDB: ' + (e.message || ''));
-                });
+                    await buildTmdbDetail(tmdb, logos, slugs);
+                }).catch(function (    e	) { comp.activity.loader(false); Lampa.Noty.show('Lỗi TMDB: ' + (e.message || '')); });
             };
 
             async function buildTmdbDetail(tmdb, logos, slugs) {
@@ -1097,22 +938,20 @@
                 var ps = tmdb.poster_path ? TMDB_IMG_W500 + tmdb.poster_path : '';
                 var t = tmdb.title || tmdb.name || '';
                 var o = tmdb.original_title || tmdb.original_name || '';
-                var d = tmdb.overview || 'Không có mô tả';
+                var d = tmdb.overview    || 'Không có mô tả';
                 var v = tmdb.vote_average ? Number(tmdb.vote_average).toFixed(1) : 'N/A';
                 var y = (tmdb.release_date || tmdb.first_air_date || '').slice(0, 4);
                 var rt = tmdb.runtime ? tmdb.runtime + ' phút' : '';
-                if (!rt && tmdb.episode_run_time && tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0] + ' phút/tập';
+                if (!rt c&& tmdb.episode_run_time && tmdb.episode_run_time.length) rt = tmdb.episode_run_time[0] + ' phút/tập';
                 var epTotal = tmdb.number_of_episodes ? tmdb.number_of_episodes + ' tập' : '';
-                var seasons = tmdb.number_of_seasons ? tmdb.number_of_seasons + ' season' : '';
+                var nSeasons = tmdb.number_of_seasons ? tmdb.number_of_seasons + ' season' : '';
 
-                var logo = pickLogo(logos || (tmdb.images || {}));
+                var logo = pickLogo(logos || (    tmdb.images || {}));
                 var logoH = '';
                 if (logo && logo.file_path) logoH = '<div class="kk-logo"><img src="' + TMDB_IMG_W500 + logo.file_path + '"></div>';
 
                 var ghtml = '';
-                if (tmdb.genres && tmdb.genres.length) {
-                    ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + esc(g.name || '') + '</span>'; }).join('');
-                }
+                if (tmdb.genres && tmdb.genres.length) ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + esc(g.name || '') + '</span>'; }).join('');
 
                 var castH = '', dirH = '', crewH = '', dir = '';
                 if (tmdb.credits) {
@@ -1126,94 +965,121 @@
                 }
                 if (dir) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + esc(dir) + '</span></div>';
 
-                // Determine IMDB
                 var imdbId = (tmdb.external_ids && tmdb.external_ids.imdb_id) || null;
-                if (!imdbId) { try { imdbId = await getImdbId(mediaType, tmdbId); } catch (e) {} }
 
-                // Slug status
-                var hasAnySlug = !!(slugs.kkphim || slugs.ophim);
+                var hasSlug = !!(slugs.kkphim || slugs.ophim);
                 var slugInfoHtml = '';
-                if (hasAnySlug) {
+                if (hasSlug) {
                     var foundSrcs = [];
                     if (slugs.kkphim) foundSrcs.push('KKPhim');
                     if (slugs.ophim) foundSrcs.push('OPhim');
-                    slugInfoHtml = '<div class="kk-slug-info kk-slug-found">✅ Tìm thấy trên: ' + foundSrcs.join(', ') + '</div>';
+                    slugInfoHtml = '<div class="kk-slug-info kk-slug-found">✅ Nguồn: ' + foundSrcs.join(', ') + '</div>';
                 } else {
-                    slugInfoHtml = '<div class="kk-slug-info kk-slug-notfound">⚠️ Không tìm thấy nguồn phát - Chỉ có link Torrent</div>';
+                    slugInfoHtml = '<div class="kk-slug-info kk-slug-notfound">⚠️ Không tìm thấy nguồn phát — Chỉ có Torrent</div>';
                 }
 
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
 
-                var hero = $('<div class="kk-hero"><div class="kk-hero-bg">' +
-                    (bk ? '<img src="' + bk + '">' : '') +
-                    '<div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster">' +
-                    (ps ? '<img src="' + ps + '">' : '') +
-                    '</div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
+                var hero = $('<div class="kk-hero"><div class="kk-hero-bg">' + (bk ? '<img src="' + bk + '">' : '') + '<div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster">' + (ps ? '<img src="' + ps + '">' : '') + '</div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
 
-                // Build action buttons
-                var actionsHtml = '';
+                // ===== BUILD ACTIONS =====
+                var actHtml = '';
 
-                // Play buttons for found sources
-                if (slugs.kkphim) {
-                    actionsHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector" data-source="kkphim" data-slug="' + esc(slugs.kkphim.slug) + '">▶ KKPhim</div></div>';
+                if (mediaType === 'movie') {
+                    // PHIM LẺ: 1 button phát, bấm phát luôn
+                    if (hasSlug) {
+                        actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector" data-action="play-movie">▶ Xem phim</div></div>';
+                    } else {
+                        actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--disabled">▶ Không có nguồn phát</div></div>';
+                    }
+                    // Tor	ent
+                    actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector" data-action="torrent-movie">🧲 Torrent' + (getTSHost() ? ' → (TS' : '') + '</div></div>';
+                }	else {
+                    // PHIM BỘ: button hiện season/tập
+                    if (hasSlug) {
+                        actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector" data-action="play-tv">▶ Xem phim</div></div>';
+                    } else {
+                        actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--disabled">▶ Không có nguồn phát</div></div>';
+                    }
+                    // Torrent TV
+                    actHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector" data-action="torrent-tv">🧲 Torrent' + (getTSHost() ? ' → TS' : '') + '</div></div>';
                 }
-                if (slugs.ophim) {
-                    actionsHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--source selector" data-source="ophim" data-slug="' + esc(slugs.ophim.slug) + '">▶ OPhim</div></div>';
-                }
-
-                if (!hasAnySlug) {
-                    actionsHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--disabled">▶ Không có nguồn phát</div></div>';
-                }
-
-                // Torrent button
-                actionsHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">🧲 Torrent' + (getTSHost() ? ' → TS' : '') + '</div></div>';
-
-                // Sub button
-                actionsHtml += '<div class="kk-act-wrap"><div class="kk-act kk-act--sub selector">📝 Phụ đề</div></div>';
 
                 var body = $('<div class="kk-body">' +
-                    '<div class="kk-metas"><span class="kk-meta">⭐ ' + esc(v) + '</span>' +
+                    '<div class="k    k-metas"><span class="kk-meta">⭐ ' + esc(v) + '</span>' +
                     (y ? '<span class="kk-meta">📅 ' + esc(y) + '</span>' : '') +
                     (rt ? '<span class="kk-meta">⏱ ' + esc(rt) + '</span>' : '') +
                     (epTotal ? '<span class="kk-meta">🎬 ' + esc(epTotal) + '</span>' : '') +
-                    (seasons ? '<span class="kk-meta">📺 ' + esc(seasons) + '</span>' : '') +
+                    (nSeasons ? '<span class="kk-meta">📺 ' + esc(nSeasons) + '</span>' : '') +
                     '</div>' +
                     '<div class="kk-genres">' + ghtml + '</div>' + crewH +
                     slugInfoHtml +
                     '<div class="kk-desc">' + fmtTxt(d) + '</div>' +
-                    '<div class="kk-actions">' + actionsHtml + '</div></div>');
+                    '<div class="kk-actions">' + actHtml + '</div></div>');
 
-                // Bind play buttons
-                body.find('.kk-act--play[data-slug], .kk-act--source[data-slug]').each(function () {
-                    var btn = $(this);
-                    bindEnter(btn, function () {
-                        var srcKey = btn.attr('data-source');
-                        var slug = btn.attr('data-slug');
-                        var src = SOURCES[srcKey];
-                        if (!src || !slug) return;
-                        Lampa.Noty.show('Tải phim từ ' + src.name + '...');
-                        openSourceDetail(slug, src, t, mediaType);
-                    });
+                // =====ISSANCEès =====
+
+                //. Phim lẻ - play
+                bindEnter(body.find('[data-action="play-movie"]'), async function () {
+                    // Chọn nguồn tốt nhất, tải detail, phát tập đầu
+                    var slug = slugs.kkphim || slugs.ophim;
+                    var src = slugs.kkphim ? SOURCES.kkphim : SOURCES.oph139;
+                    Lampa.Noty.show('Tải từ(  ' + src.name + '...');
+                    try {
+                        var detail = await fetchDetail(src, slug);
+                        if (!detail || !detail.episodes || !detail.episodes.length) {
+                            // Thử nguồn khác
+                            if (slugs.kkphim && slugs.ophim) {
+                    	            src	 =	 src.key === 'kkphim' ? SOURCES.oph-im : SOURCES.kkphim;
+                                slug = src.key === 'kkphim	'	 ? slugs.kkphim : slugs.ophim;
+                                detail = await fetchDetail(src, slug);
+                            }
+                        }
+                        if (!detail || !detail.episodes || !detail.episodes.length) { Lampa.Noty.show('Không có t    ập	 phim'); return; }
+                        var ep = getFirstEp(detail.episodes);
+                        if (!ep) { Lampa.Noty.show('Không có link'); return; }
+                        var link = ep.link_m3u8 || ep.link_embed || '';
+                        if (!link) { Lampa.Noty.show('Không có link'); return; }
+                        Lampa.Player.play({ title: t, url: link });
+                    } catch (e) { Lampa.Noty.show('Lỗi:   ' + (e.message || '')); }
                 });
 
-                // Bind torrent
-                var movieDataForTorrent = { name: t, origin_name: o, tmdb: { id: tmdbId, type: mediaType } };
-                bindEnter(body.find('.kk-act--torrent'), function () {
-                    openTorrentSearch(tmdbId, mediaType, movieDataForTorrent, ps, imdbId);
+                // Phim bộ - play (    hiện season picker)
+                bindEnter(body.find('[data-action="play-tv"]'), async function () {
+                    Lampa.Noty.show('Đang tìm tất cả seasons...');
+                    try {
+                        var seasonMap = await gatherAllSeasons(t, o, slugs);
+                        var seasonN        ums = Object.keys(seasonMap).map(Number).sort(function (a, b) { return a - b; });
+
+                        if (!seasonNums.length) { Lampa.Noty.show('Không tìm thấy seasons'); return; }
+
+                        if (seasonNums.length === 1) {
+                            // Chỉ 1 season - load episodes luôn
+                            loadAndShowEpisodes(seasonMap[seasonNums[0]], t, seasonNums[0]);
+                        } else {
+                            // Nhiều seasons - chọn
+                            Lampa.Select.show({
+                                title: '📺 Chọn Season (' + seasonNums.length + ')',
+                                items: seasonNums.map(function (sn) {
+                                    var entries = seasonMap[sn];
+                                    var srcs = entries.map(function (e) { return e.source.name; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+                                    return { title: 'Season ' + sn + ' (' + srcs + ')', value: { entries: entries, season: sn } };
+                                }),
+                                onSelect: function (a) { loadAndShowEpisodes(a.value.entries, t, a.value.season); },
+                                onBack: function () { Lampa.Controller.toggle('content'); }
+                            });
+                        }
+                    } catch (e) { Lampa.Noty.show('Lỗi: ' + (e.message || '')); }
                 });
 
-                // Bind sub
-                bindEnter(body.find('.kk-act--sub'), async function () {
-                    Lampa.Noty.show('Tìm phụ đề...');
-                    var subs = await searchSubs(imdbId, tmdbId, mediaType, null, null, t);
-                    if (!subs.length) { Lampa.Noty.show('Không có phụ đề'); return; }
-                    var sorted = subs.slice().sort(function (a, b) { var o = { vi: 0, vietnamese: 0, en: 1, english: 1 }; return (o[a.language] !== undefined ? o[a.language] : 2) - (o[b.language] !== undefined ? o[b.language] : 2); });
-                    Lampa.Select.show({
-                        title: '📝 Phụ đề (' + subs.length + ')',
-                        items: sorted.slice(0, 20).map(function (s) { return { title: s.label, value: s }; }),
-                        onSelect: function (a) { Lampa.Noty.show('✅ ' + a.value.label); Lampa.Controller.toggle('content'); },
-                        onBack: function () { Lampa.Controller.toggle('content'); }
-                    });
+                // Torrent movie
+                bindEnter(body.find('[data-action="torrent-movie"]'), function () {
+                    openTorrentMovie(tmdbId, t, ps, imdbId);
+                });
+
+                // Torrent TV
+                bindEnter(body.find('[data-action="torrent-tv"]'), function () {
+                    openTorrentTV(tmdbId, t, ps, imdbId);
                 });
 
                 var dw = $('<div class="kk-detail-wrap"></div>').append(hero).append(body);
@@ -1221,90 +1087,45 @@
                 if (dirH) dw.append('<div class="kk-section"><div class="kk-block-title">Đạo diễn</div><div class="kk-cast-list">' + dirH + '</div></div>');
                 if (castH) dw.append('<div class="kk-section"><div class="kk-block-title">Diễn viên</div><div class="kk-cast-list">' + castH + '</div></div>');
 
-                // Similar
                 if (tmdb.similar && tmdb.similar.results && tmdb.similar.results.length) {
                     var simRow = $('<div class="kk-section kk-section--last kk-similar"></div>').append('<div class="kk-block-title">Phim liên quan</div>');
                     var simList = $('<div class="kk-similar-list"></div>');
-                    tmdb.similar.results.slice(0, 12).forEach(function (i) {
-                        if (!i.media_type) i.media_type = mediaType;
-                        simList.append(mkTmdbCard(i));
-                    });
+                    tmdb.similar.results.slice(0, 12).forEach(function (i) { if (!i.media_type) i.media_type = mediaType; simList.append(mkTmdbCard(i)); });
                     simRow.append(simList); dw.append(simRow);
-                } else {
-                    dw.append('<div class="kk-section kk-section--last"></div>');
-                }
+                } else dw.append('<div class="kk-section kk-section--last"></div>');
 
                 scroll.append(dw);
                 comp.activity.loader(false); comp.start();
             }
 
-            async function openSourceDetail(slug, source, title, ttype) {
-                try {
-                    var detail = await fetchSourceDetail(slug, source);
-                    if (!detail || !detail.episodes || !detail.episodes.length) {
-                        Lampa.Noty.show('Không tải được tập phim');
-                        return;
-                    }
+            async function loadAndShowEpisodes(seasonEntries, title, seasonNum) {
+                Lampa.Noty.show('Tải tập Season ' + seasonNum + '...');
 
-                    var episodes = detail.episodes;
-                    if (episodes.length === 1 && episodes[0].server_data && episodes[0].server_data.length === 1) {
-                        // Single episode - play directly
-                        var ep = episodes[0].server_data[0];
-                        var link = ep.link_m3u8 || ep.link_embed || '';
+                // Thử load từ mỗi entry cho đến khi có episodes
+                var allEps = [];
+                for (var i = 0; i < seasonEntries.length; i++) {
+                    var eps = await loadSeasonEpisodes(seasonEntries[i]);
+                    if (eps.length > allEps.length) allEps = eps; // Giữ nguồn có nhiều tập hơn
+                }
+
+                if (!allEps.length) {
+                    Lampa.Noty.show('Không có tập nào');
+                    return;
+                }
+
+                // Hiện danh sách tập
+                Lampa.Select.show({
+                    title: '📺 Season ' + seasonNum + ' (' + allEps.length + ' tập)',
+                    items: allEps.map(function (ep) {
+                        return { title: ep.name + ' [' + ep.source + ']', value: ep };
+                    }),
+                    onSelect: function (a) {
+                        var link = a.value.link;
                         if (!link) { Lampa.Noty.show('Không có link'); return; }
-                        var movieData = detail.movie || { name: title, tmdb: { id: tmdbId, type: mediaType } };
-                        var epNum = parseInt((ep.name || '').replace(/[^\d]/g, '')) || null;
-                        playUrlWithSub(link, title + ' - ' + (ep.name || ''), movieData, ttype, ttype === 'tv' ? 1 : null, epNum);
-                    } else {
-                        // Multiple episodes - show picker
-                        showEpisodePicker(episodes, detail.movie || { name: title, tmdb: { id: tmdbId, type: mediaType } }, title, ttype, source.name);
-                    }
-                } catch (e) {
-                    Lampa.Noty.show('Lỗi: ' + (e.message || ''));
-                }
-            }
-
-            function showEpisodePicker(episodes, movieData, title, ttype, sourceName) {
-                if (episodes.length === 1) {
-                    // Single server
-                    var sv = episodes[0];
-                    var items = (sv.server_data || []).map(function (ep) {
-                        return { title: (ep.name || 'Tập'), value: ep };
-                    });
-                    Lampa.Select.show({
-                        title: '▶ ' + sourceName + ' - ' + (sv.server_name || 'Server'),
-                        items: items,
-                        onSelect: function (a) {
-                            var link = a.value.link_m3u8 || a.value.link_embed || '';
-                            if (!link) { Lampa.Noty.show('Không có link'); return; }
-                            var epNum = parseInt((a.value.name || '').replace(/[^\d]/g, '')) || null;
-                            playUrlWithSub(link, title + ' - ' + (a.value.name || ''), movieData, ttype, ttype === 'tv' ? 1 : null, epNum);
-                        },
-                        onBack: function () { Lampa.Controller.toggle('content'); }
-                    });
-                } else {
-                    // Multiple servers - pick server first
-                    Lampa.Select.show({
-                        title: '▶ ' + sourceName + ' - Chọn server',
-                        items: episodes.map(function (sv) { return { title: sv.server_name || 'Server', value: sv }; }),
-                        onSelect: function (a) {
-                            var sv = a.value;
-                            var items2 = (sv.server_data || []).map(function (ep) { return { title: (ep.name || 'Tập'), value: ep }; });
-                            Lampa.Select.show({
-                                title: '▶ ' + (sv.server_name || 'Server'),
-                                items: items2,
-                                onSelect: function (b) {
-                                    var link = b.value.link_m3u8 || b.value.link_embed || '';
-                                    if (!link) { Lampa.Noty.show('Không có link'); return; }
-                                    var epNum = parseInt((b.value.name || '').replace(/[^\d]/g, '')) || null;
-                                    playUrlWithSub(link, title + ' - ' + (b.value.name || ''), movieData, ttype, ttype === 'tv' ? 1 : null, epNum);
-                                },
-                                onBack: function () { Lampa.Controller.toggle('content'); }
-                            });
-                        },
-                        onBack: function () { Lampa.Controller.toggle('content'); }
-                    });
-                }
+                        Lampa.Player.play({ title: title + ' S' + pad(seasonNum) + ' - ' + a.value.name, url: link });
+                    },
+                    onBack: function () { Lampa.Controller.toggle('content'); }
+                });
             }
 
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
@@ -1326,14 +1147,6 @@
                 doLoad();
             };
 
-            function apiListUrl(catApi, pg) {
-                return SRC_API() + catApi + '?page=' + pg;
-            }
-
-            function apiCatUrlLocal(slug, pg) {
-                return SRC_API() + 'v1/api/the-loai/' + slug + '?page=' + pg;
-            }
-
             function hr(res) {
                 var list = ((res && res.items) || (res && res.data && res.data.items) || []).map(norm).filter(function (i) { return i && i.slug; });
                 if (!list.length) { hasMore = false; lm.text('Hết'); comp.activity.loader(false); loading = false; comp.start(); return; }
@@ -1343,7 +1156,7 @@
 
             function doLoad() {
                 loading = true; lm.text('Đang tải...');
-                var url = (mode === 'category' && catSlug) ? apiCatUrlLocal(catSlug, page) : apiListUrl(apiPath, page);
+                var url = (mode === 'category' && catSlug) ? SRC_API() + 'v1/api/the-loai/' + catSlug + '?page=' + page : SRC_API() + apiPath + '?page=' + page;
                 network.silent(url, hr, function () {
                     if (mode === 'category' && catSlug) {
                         network.silent(SRC_API() + 'the-loai/' + catSlug + '?page=' + page, hr, function () { loading = false; lm.text('Lỗi'); comp.activity.loader(false); });
@@ -1379,8 +1192,7 @@
 
             function doLoad() {
                 loading = true; lm.text('Đang tải...');
-                var url = SRC_API() + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page;
-                network.silent(url, hr, function () {
+                network.silent(SRC_API() + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page, hr, function () {
                     network.silent(SRC_API() + 'tim-kiem?keyword=' + encodeURIComponent(kw) + '&page=' + page, hr, function () { loading = false; lm.text('Lỗi'); comp.activity.loader(false); });
                 });
             }
@@ -1391,25 +1203,20 @@
             this.destroy = function () { network.clear(); scroll.destroy(); };
         });
 
-        // ========== DETAIL (original source detail) ==========
+        // ========== DETAIL (source detail) ==========
         Lampa.Component.add('kkphim_detail', function (obj) {
             var network = new Lampa.Reguest(), scroll = new Lampa.Scroll({ mask: true, over: true });
-            var rawMovie = obj.movie;
-            var movie = norm(rawMovie);
+            var movie = norm(obj.movie);
             var comp = this, rendered = false;
 
             this.create = function () {
                 this.activity.loader(true); clearScroll(scroll); rendered = false;
-                if (!movie || !movie.slug) {
-                    this.activity.loader(false);
-                    scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu</div></div>');
-                    comp.start(); return;
-                }
-                var detailUrl = SRC_API() + 'phim/' + movie.slug;
-                network.silent(detailUrl, function (res) {
+                if (!movie || !movie.slug) { this.activity.loader(false); scroll.append('<div class="empty__body"><div class="empty__title">Không có dữ liệu</div></div>'); comp.start(); return; }
+                network.silent(SRC_API() + 'phim/' + movie.slug, function (res) {
                     if (rendered) return;
-                    var parsed = { movie: norm(res.movie || res || {}), episodes: res.episodes || [] };
-                    loadAll(parsed.movie, parsed.episodes);
+                    var data = norm(res.movie || res || {});
+                    var episodes = res.episodes || [];
+                    loadAll(data, episodes);
                 }, function () { comp.activity.loader(false); Lampa.Noty.show('Lỗi tải phim'); });
             };
 
@@ -1432,12 +1239,11 @@
 
             function build(data, episodes, tmdb, logos, ttype) {
                 clearScroll(scroll);
-
                 if (!Array.isArray(data.category)) data.category = [];
 
                 var bk = fullImg(data.thumb_url || data.poster_url);
                 var ps = fullImg(data.poster_url || data.thumb_url);
-                var t = data.name || '', o = data.origin_name || '', d = cleanDesc(data.content);
+                var t = data.name || '', o2 = data.origin_name || '', d = cleanDesc(data.content);
                 var v = (data.tmdb && data.tmdb.vote_average) || 'N/A';
                 var y = data.year || '', rt = data.time || '', epCur = data.episode_current || '';
                 var ghtml = '', castH = '', dirH = '', crewH = '', logoH = '', dir = '';
@@ -1446,7 +1252,7 @@
                     if (tmdb.backdrop_path) bk = TMDB_IMG + tmdb.backdrop_path;
                     if (tmdb.poster_path) ps = TMDB_IMG + tmdb.poster_path;
                     if (tmdb.title || tmdb.name) t = tmdb.title || tmdb.name;
-                    if (tmdb.original_title || tmdb.original_name) o = tmdb.original_title || tmdb.original_name;
+                    if (tmdb.original_title || tmdb.original_name) o2 = tmdb.original_title || tmdb.original_name;
                     if (tmdb.overview) d = tmdb.overview;
                     if (tmdb.vote_average) v = Number(tmdb.vote_average).toFixed(1);
                     if (tmdb.release_date) y = tmdb.release_date.slice(0, 4);
@@ -1466,68 +1272,41 @@
                 }
 
                 var pCats = data.category || [];
-                if (pCats.length) {
-                    ghtml = pCats.map(function (g) {
-                        if (!g) return '';
-                        return '<span class="kk-genre selector" data-slug="' + esc(g.slug || '') + '" data-title="' + esc(g.name || '') + '">' + esc(g.name || '') + '</span>';
-                    }).join('');
-                } else if (tmdb && tmdb.genres) {
-                    ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + esc(g.name || '') + '</span>'; }).join('');
-                }
+                if (pCats.length) ghtml = pCats.map(function (g) { return g ? '<span class="kk-genre selector" data-slug="' + esc(g.slug || '') + '" data-title="' + esc(g.name || '') + '">' + esc(g.name || '') + '</span>' : ''; }).join('');
+                else if (tmdb && tmdb.genres) ghtml = tmdb.genres.map(function (g) { return '<span class="kk-genre">' + esc(g.name || '') + '</span>'; }).join('');
 
-                if (data.director && !dir) {
-                    dir = Array.isArray(data.director) ? data.director.join(', ') : String(data.director || '');
-                }
+                if (data.director && !dir) dir = Array.isArray(data.director) ? data.director.join(', ') : String(data.director || '');
                 if (dir && !dirH) crewH = '<div class="kk-crew"><b>Đạo diễn</b><span>' + esc(dir) + '</span></div>';
 
                 var hasTmdb = !!getTmdbId(data);
                 var tBtn = hasTmdb ? '<div class="kk-act-wrap"><div class="kk-act kk-act--torrent selector">🧲 Torrent' + (getTSHost() ? ' → TS' : '') + '</div></div>' : '';
-                var subBtn = '<div class="kk-act-wrap"><div class="kk-act kk-act--sub selector">📝 Phụ đề</div></div>';
                 var tH = logoH ? '' : '<div class="kk-title">' + esc(t) + '</div>';
 
-                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o) + '</div></div></div></div></div>');
+                var hero = $('<div class="kk-hero"><div class="kk-hero-bg"><img src="' + bk + '"><div class="kk-hero-mask"></div></div><div class="kk-hero-bottom"><div class="kk-hero-flex"><div class="kk-hero-poster"><img src="' + ps + '"></div><div class="kk-hero-info">' + logoH + tH + '<div class="kk-origin">' + esc(o2) + '</div></div></div></div></div>');
 
-                var body = $('<div class="kk-body">' +
-                    '<div class="kk-metas"><span class="kk-meta">⭐ ' + esc(v) + '</span>' +
+                var body = $('<div class="kk-body"><div class="kk-metas"><span class="kk-meta">⭐ ' + esc(v) + '</span>' +
                     (y ? '<span class="kk-meta">📅 ' + esc(y) + '</span>' : '') +
                     (rt ? '<span class="kk-meta">⏱ ' + esc(rt) + '</span>' : '') +
                     (epCur ? '<span class="kk-meta">🎬 ' + esc(epCur) + '</span>' : '') + '</div>' +
                     '<div class="kk-genres">' + ghtml + '</div>' + crewH +
                     '<div class="kk-desc">' + fmtTxt(d) + '</div>' +
-                    '<div class="kk-actions">' +
-                        '<div class="kk-act-wrap"><div class="kk-act kk-act--play selector">▶ Xem phim</div></div>' +
-                        tBtn + subBtn +
-                    '</div></div>');
+                    '<div class="kk-actions"><div class="kk-act-wrap"><div class="kk-act kk-act--play selector">▶ Xem phim</div></div>' + tBtn + '</div></div>');
 
                 bindEnter(body.find('.kk-act--play'), function () {
                     var f = getFirstEp(episodes);
                     if (!f) { Lampa.Noty.show('Không có tập'); return; }
                     var link = f.link_m3u8 || f.link_embed || '';
                     if (!link) { Lampa.Noty.show('Không có link'); return; }
-                    var epNum = parseInt((f.name || '').replace(/[^\d]/g, '')) || null;
-                    playUrlWithSub(link, (data.name || '') + ' - ' + (f.name || ''), data, ttype, ttype === 'tv' ? 1 : null, epNum);
+                    Lampa.Player.play({ title: (data.name || '') + ' - ' + (f.name || ''), url: link });
                 });
 
                 if (hasTmdb) {
                     bindEnter(body.find('.kk-act--torrent'), function () {
-                        openTorrentSearch(getTmdbId(data), ttype, data, ps);
+                        var tid2 = getTmdbId(data);
+                        if (ttype === 'tv') openTorrentTV(tid2, data.name || '', ps, null);
+                        else openTorrentMovie(tid2, data.name || '', ps, null);
                     });
                 }
-
-                bindEnter(body.find('.kk-act--sub'), async function () {
-                    var tmdbId2 = getTmdbId(data), imdb = null;
-                    if (tmdbId2) try { imdb = await getImdbId(ttype, tmdbId2); } catch (e) {}
-                    Lampa.Noty.show('Tìm phụ đề...');
-                    var subs = await searchSubs(imdb, tmdbId2, ttype, null, null, data.name || '');
-                    if (!subs.length) { Lampa.Noty.show('Không có phụ đề'); return; }
-                    var sorted = subs.slice().sort(function (a, b) { var o = { vi: 0, vietnamese: 0, en: 1, english: 1 }; return (o[a.language] !== undefined ? o[a.language] : 2) - (o[b.language] !== undefined ? o[b.language] : 2); });
-                    Lampa.Select.show({
-                        title: '📝 Phụ đề (' + subs.length + ')',
-                        items: sorted.slice(0, 20).map(function (s) { return { title: s.label, value: s }; }),
-                        onSelect: function (a) { Lampa.Noty.show('✅ ' + a.value.label); Lampa.Controller.toggle('content'); },
-                        onBack: function () { Lampa.Controller.toggle('content'); }
-                    });
-                });
 
                 body.find('.kk-genre[data-slug]').each(function () {
                     var g = $(this);
@@ -1552,8 +1331,7 @@
                             bindEnter(b, function () {
                                 var link = ep.link_m3u8 || ep.link_embed || '';
                                 if (!link) { Lampa.Noty.show('Không có link'); return; }
-                                var epNum = parseInt((ep.name || '').replace(/[^\d]/g, '')) || null;
-                                playUrlWithSub(link, (data.name || '') + ' - ' + (ep.name || ''), data, ttype, ttype === 'tv' ? 1 : null, epNum);
+                                Lampa.Player.play({ title: (data.name || '') + ' - ' + (ep.name || ''), url: link });
                             });
                             g.append(b);
                         });
@@ -1566,8 +1344,7 @@
 
                 var cats = data.category || [];
                 if (cats.length && cats[0] && cats[0].slug) {
-                    var catUrl = SRC_API() + 'v1/api/the-loai/' + cats[0].slug + '?page=1';
-                    network.silent(catUrl, function (r) {
+                    network.silent(SRC_API() + 'v1/api/the-loai/' + cats[0].slug + '?page=1', function (r) {
                         var list = ((r && r.items) || (r && r.data && r.data.items) || []).map(norm).filter(function (i) { return i && i.slug && i.slug !== movie.slug; }).slice(0, 12);
                         if (list.length) {
                             var row = $('<div class="kk-section kk-section--last kk-similar"></div>').append('<div class="kk-block-title">Phim liên quan</div>');
@@ -1576,9 +1353,7 @@
                             row.append(rl); dw.append(row);
                         } else dw.append('<div class="kk-section kk-section--last"></div>');
                     }, function () { dw.append('<div class="kk-section kk-section--last"></div>'); });
-                } else {
-                    dw.append('<div class="kk-section kk-section--last"></div>');
-                }
+                } else dw.append('<div class="kk-section kk-section--last"></div>');
             }
 
             this.start = function () { applyCtrl(scroll); enableScroll(scroll); };
