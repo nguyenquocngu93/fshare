@@ -1918,3 +1918,6 @@
         grid-template-columns: repeat(2, 1fr) !important;
     }
 }
+.kk-grid--cat-h {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
