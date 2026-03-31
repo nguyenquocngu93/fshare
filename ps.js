@@ -438,6 +438,7 @@ function mkBody(v,y,rt,extra,genreHtml,crewH,desc){
 }
 
 function inCSS(){if($('#kk-css').length)return;var l=document.createElement('link');l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;document.head.appendChild(l);}
+
 function addM(){
     function ins(){
         if($('.menu__item[data-action="kkphim"]').length)return;
@@ -447,6 +448,78 @@ function addM(){
     }
     setTimeout(ins,500);
     Lampa.Listener.follow('app',function(e){if(e.type==='ready')setTimeout(ins,500);});
+}
+
+/* ── Floating Action Button ── */
+function addFAB(){
+    if($('#kk-fab').length)return;
+    var fab=$('<div id="kk-fab" class="kk-fab selector">'+
+        '<div class="kk-fab-icon kk-fab-icon--main">'+
+            '<svg class="kk-fab-svg kk-fab-svg--menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>'+
+            '<svg class="kk-fab-svg kk-fab-svg--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'+
+        '</div>'+
+    '</div>');
+    var overlay=$('<div id="kk-fab-overlay" class="kk-fab-overlay"></div>');
+    var menu=$('<div id="kk-fab-menu" class="kk-fab-menu">'+
+        '<div class="kk-fab-item selector" data-act="settings">'+
+            '<div class="kk-fab-item-label">Cài đặt</div>'+
+            '<div class="kk-fab-item-btn">'+
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'+
+            '</div>'+
+        '</div>'+
+        '<div class="kk-fab-item selector" data-act="search">'+
+            '<div class="kk-fab-item-label">Tìm phim</div>'+
+            '<div class="kk-fab-item-btn">'+
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+            '</div>'+
+        '</div>'+
+        '<div class="kk-fab-item selector" data-act="tmdb">'+
+            '<div class="kk-fab-item-label">TMDB</div>'+
+            '<div class="kk-fab-item-btn kk-fab-item-btn--tmdb">'+
+                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>'+
+            '</div>'+
+        '</div>'+
+        '<div class="kk-fab-item selector" data-act="home">'+
+            '<div class="kk-fab-item-label">Trang chủ</div>'+
+            '<div class="kk-fab-item-btn">'+
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'+
+            '</div>'+
+        '</div>'+
+    '</div>');
+
+    $('body').append(overlay).append(menu).append(fab);
+
+    var open=false;
+    function openFAB(){
+        open=true;
+        fab.addClass('kk-fab--open');
+        menu.addClass('kk-fab-menu--open');
+        overlay.addClass('kk-fab-overlay--show');
+    }
+    function closeFAB(){
+        open=false;
+        fab.removeClass('kk-fab--open');
+        menu.removeClass('kk-fab-menu--open');
+        overlay.removeClass('kk-fab-overlay--show');
+    }
+    function toggleFAB(){if(open)closeFAB();else openFAB();}
+
+    bE(fab,toggleFAB);
+    bE(overlay,closeFAB);
+
+    menu.find('.kk-fab-item').each(function(){
+        var it=$(this);
+        bE(it,function(){
+            closeFAB();
+            var act=it.attr('data-act');
+            setTimeout(function(){
+                if(act==='settings')Lampa.Activity.push({url:'',title:'Cài đặt',component:'kkphim_settings'});
+                else if(act==='search')oSearch();
+                else if(act==='tmdb')Lampa.Activity.push({url:'',title:'TMDB',component:'kkphim_tmdb_main',page:1});
+                else if(act==='home')Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});
+            },150);
+        });
+    });
 }
 
 function mkGrid(name,fetchFn,titleFn){
@@ -470,7 +543,7 @@ function fillE(c,eps,title){eps.forEach(function(sv){var sn2=sv.server_name||'Se
 
 /* ════ COMPONENTS ════ */
 function startPlugin(){
-    inCSS();addM();
+    inCSS();addM();addFAB();
 
     /* ── SETTINGS ── */
     Lampa.Component.add('kkphim_settings',function(){
@@ -485,7 +558,7 @@ function startPlugin(){
 
             var gCard=mg('🃏 Kiểu hiển thị phim');
             var cm=s.card_mode||'hgrid';
-            [{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang - cuộn ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full màn hình - kéo xuống xem tiếp'}].forEach(function(o){
+            [{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full màn hình'}].forEach(function(o){
                 gCard.append(mo(o.n,o.d,cm===o.k,function(){ss({card_mode:o.k});comp.create();}));
             });
             w.append(gCard);
@@ -503,65 +576,25 @@ function startPlugin(){
             gE.append(mo('AIOStreams','Tự host / public',ce==='aio',function(){ss({torrent_engine:'aio'});comp.create();}));
             w.append(gE);
 
-            /* TorrServer */
             var g1=mg('🖥️ TorrServer');
             g1.append(mi('Địa chỉ','192.168.1.100:8090',s.torrserver_host||'Chưa cài','Địa chỉ TS','torrserver_host',s));
             g1.append(mi('Mật khẩu','Để trống nếu không',s.torrserver_password?'••••':'Không','Mật khẩu','torrserver_password',s));
-
-            /* Test TorrServer button */
             var stTS=$('<div class="kk-stg-status" style="display:none"></div>');
-            var tTS=si2('🧪 Test TorrServer','Kiểm tra kết nối & xem thông tin','Test');
+            var tTS=si2('🧪 Test TorrServer','Kiểm tra kết nối','Test');
             bE(tTS,async function(){
                 var h=tsHost();
-                if(!h){
-                    stTS.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập địa chỉ TorrServer</span>');
-                    return;
-                }
+                if(!h){stTS.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập địa chỉ TorrServer</span>');return;}
                 stTS.show().attr('class','kk-stg-status kk-stg-status--loading').html('<span class="kk-dbg-loading">⏳ Đang kết nối...</span>');
                 try{
-                    /* Thử /echo trước */
-                    var echoUrl=tsU('/echo');
-                    var r=await fetch(echoUrl,{method:'GET',headers:tsH(),signal:AbortSignal.timeout(5000)});
+                    var r=await fetch(tsU('/echo'),{method:'GET',headers:tsH()});
                     if(r.ok){
                         var txt=await r.text();
-                        /* Thử lấy thêm stats từ /stat */
                         var statsHtml='';
-                        try{
-                            var r2=await fetch(tsU('/stat'),{method:'GET',headers:tsH(),signal:AbortSignal.timeout(3000)});
-                            if(r2.ok){
-                                var stat=await r2.json();
-                                var rows=[
-                                    ['Version',stat.version||'—'],
-                                    ['Platform',stat.platform||'—'],
-                                    ['Torrents',String(stat.torrents_count||0)],
-                                    ['Memory',stat.memory_used?(stat.memory_used/1048576).toFixed(1)+' MB':'—']
-                                ];
-                                statsHtml='<div class="kk-dbg-divider"></div><div class="kk-dbg-section">';
-                                rows.forEach(function(row){
-                                    statsHtml+='<div class="kk-dbg-row"><span class="kk-dbg-key">'+row[0]+':</span><span class="kk-dbg-val">'+E(String(row[1]))+'</span></div>';
-                                });
-                                statsHtml+='</div>';
-                            }
-                        }catch(e2){}
-                        stTS.attr('class','kk-stg-status kk-stg-status--ok').html(
-                            '<div class="kk-dbg-header">'+
-                                '<span class="kk-dbg-total">✅ Kết nối thành công!</span>'+
-                                '<span class="kk-dbg-keys">Host: <b>'+E(h)+'</b></span>'+
-                            '</div>'+
-                            (txt?'<div class="kk-dbg-section"><div class="kk-dbg-row"><span class="kk-dbg-key">Echo:</span><span class="kk-dbg-val">'+E(txt.substring(0,120))+'</span></div></div>':'')+
-                            statsHtml
-                        );
-                    } else if(r.status===401){
-                        stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP 401 - Sai mật khẩu</span>');
-                    } else {
-                        stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+' - Kiểm tra địa chỉ</span>');
-                    }
-                }catch(e){
-                    var msg=e.message||'Lỗi mạng';
-                    if(msg.indexOf('abort')>-1||msg.indexOf('timeout')>-1)msg='Timeout - TorrServer không phản hồi';
-                    else if(msg.indexOf('Failed to fetch')>-1||msg.indexOf('NetworkError')>-1)msg='Không kết nối được - kiểm tra địa chỉ/mạng';
-                    stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ '+E(msg)+'</span>');
-                }
+                        try{var r2=await fetch(tsU('/stat'),{method:'GET',headers:tsH()});if(r2.ok){var stat=await r2.json();statsHtml='<div class="kk-dbg-divider"></div><div class="kk-dbg-section">';[['Version',stat.version||'—'],['Platform',stat.platform||'—'],['Torrents',String(stat.torrents_count||0)],['Memory',stat.memory_used?(stat.memory_used/1048576).toFixed(1)+' MB':'—']].forEach(function(row){statsHtml+='<div class="kk-dbg-row"><span class="kk-dbg-key">'+row[0]+':</span><span class="kk-dbg-val">'+E(String(row[1]))+'</span></div>';});statsHtml+='</div>';}}catch(e2){}
+                        stTS.attr('class','kk-stg-status kk-stg-status--ok').html('<div class="kk-dbg-header"><span class="kk-dbg-total">✅ Kết nối thành công!</span><span class="kk-dbg-keys">Host: <b>'+E(h)+'</b></span></div>'+(txt?'<div class="kk-dbg-section"><div class="kk-dbg-row"><span class="kk-dbg-key">Echo:</span><span class="kk-dbg-val">'+E(txt.substring(0,120))+'</span></div></div>':'')+statsHtml);
+                    }else if(r.status===401){stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP 401 - Sai mật khẩu</span>');}
+                    else{stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+'</span>');}
+                }catch(e){stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ '+(e.message||'Lỗi mạng')+'</span>');}
             });
             g1.append(tTS).append(stTS);
             w.append(g1);
@@ -677,8 +710,7 @@ function startPlugin(){
                         var mr=$('<div class="kk-row-more selector">Xem thêm</div>');
                         bE(mr,function(){Lampa.Activity.push({url:'',title:cat.name,component:'kkphim_category',cat:cat,page_num:1,mode:'api'});});
                         row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(cat.name)+'</div>').append(mr));
-                        var cm=cardMode();
-                        var cnt=cm==='poster'?8:6;
+                        var cm=cardMode(),cnt=cm==='poster'?8:6;
                         row.append(mkRowList(list.slice(0,cnt),true));
                         scroll.append(row);
                     }
@@ -714,18 +746,15 @@ function startPlugin(){
             Object.keys(SOURCES).forEach(function(k){var s2=SOURCES[k];var btn=$('<div class="kk-srcbtn selector kk-srcbtn--off">'+E(s2.name)+'</div>');bE(btn,function(){ss({source:k});Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});});sb.append(btn);});
             sb.append('<div class="kk-srcbtn kk-srcbtn--on" style="background:rgba(1,180,228,.25);border-color:rgba(1,180,228,.5);color:#01b4e4">TMDB</div>');
             scroll.append(sb);
-            var rr=$('<div class="kk-row"></div>'),rm=$('<div class="kk-row-more selector">Thêm</div>'),randItems=[];
+            var rr=$('<div class="kk-row"></div>'),rm=$('<div class="kk-row-more selector">Thêm</div>');
             bE(rm,function(){Lampa.Activity.push({url:'',title:'🎲 Ngẫu nhiên',component:'kkphim_tmdb_list',listType:'trending',page_num:Math.floor(Math.random()*5)+2});});
             rr.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎲 Ngẫu nhiên</div>').append(rm));
-            var randContainer=$('<div></div>');
-            rr.append(randContainer);
-            scroll.append(rr);
+            var randContainer=$('<div></div>');rr.append(randContainer);scroll.append(rr);
             Promise.all([tRand('movie'),tRand('tv')]).then(function(res){
                 var items=[];
                 (res[0].results||[]).forEach(function(i){i.media_type='movie';items.push(i);});
                 (res[1].results||[]).forEach(function(i){i.media_type='tv';items.push(i);});
                 for(var si2=items.length-1;si2>0;si2--){var sj=Math.floor(Math.random()*(si2+1));var st=items[si2];items[si2]=items[sj];items[sj]=st;}
-                randItems=items;
                 var cm=cardMode(),cnt=cm==='poster'?8:6;
                 randContainer.replaceWith(mkRowList(items.slice(0,cnt),false));
             }).catch(function(){});
@@ -752,7 +781,6 @@ function startPlugin(){
     mkGrid('kkphim_tmdb_list',function(obj,page){var fn=TFN[obj.listType]||TFN.trending;return fn(page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});},function(obj){return obj.title||'TMDB';});
     mkGrid('kkphim_tmdb_search',function(obj,page){return tSearchM(obj.keyword||'',page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});},function(obj){return'🔍 '+(obj.keyword||'');});
 
-    /* ── TMDB GENRE ── */
     Lampa.Component.add('kkphim_tmdb_genre',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,cg=String(obj.genre_id||'');
         var grid=$('<div class="kk-grid"></div>'),ld=false,md=false,td=false,mp=1,tp=1,all=[],rs={};
@@ -787,7 +815,6 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
 
-    /* ── TMDB DETAIL ── */
     Lampa.Component.add('kkphim_tmdb_detail',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';
         this.create=function(){
@@ -857,7 +884,6 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
 
-    /* ── CATEGORY ── */
     Lampa.Component.add('kkphim_category',function(obj){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
         var page=obj.page_num||1,title=obj.title||(obj.cat&&obj.cat.name)||'',mode=obj.mode||'api',apiPath=obj.cat?obj.cat.api:null,catSlug=obj.category_slug||'';
@@ -868,7 +894,6 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){net.clear();scroll.destroy();};
     });
 
-    /* ── SEARCH ── */
     Lampa.Component.add('kkphim_search',function(obj){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
         var kw=obj.keyword||'',page=obj.page_num||1;
@@ -879,7 +904,6 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){net.clear();scroll.destroy();};
     });
 
-    /* ── KKPHIM DETAIL ── */
     Lampa.Component.add('kkphim_detail',function(obj){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),movie=nm(obj.movie),comp=this,rnd=false;
         this.create=function(){this.activity.loader(true);cScr(scroll);rnd=false;if(!movie||!movie.slug){this.activity.loader(false);comp.start();return;}net.silent(sApi()+'phim/'+movie.slug,function(res){if(rnd)return;ldAll(nm(res.movie||res||{}),res.episodes||[]);},function(){comp.activity.loader(false);});};
