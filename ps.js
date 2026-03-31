@@ -178,15 +178,12 @@ function pTorEp(season,imdb,title,poster){var items=[];for(var i=1;i<=(season.ep
 function mkC(item){
     var n=nm(item);if(!n)return $('<div></div>');
     var p=fImg(n.poster_url||n.thumb_url);
-    var h='<div class="kk-card selector">';
-    h+='<div class="kk-card-img">';
+    var h='<div class="kk-card selector"><div class="kk-card-img">';
     if(p)h+='<img src="'+p+'" loading="lazy">';
     else h+='<div class="kk-card-noposter"><span>No Poster</span></div>';
     if(n.quality)h+='<div class="kk-card-q">'+E(n.quality)+'</div>';
     if(n.episode_current)h+='<div class="kk-card-ep">'+E(n.episode_current)+'</div>';
-    h+='</div>';
-    h+='<div class="kk-card-body">';
-    h+='<div class="kk-card-name">'+E(n.name)+'</div>';
+    h+='</div><div class="kk-card-body"><div class="kk-card-name">'+E(n.name)+'</div>';
     if(n.origin_name&&n.origin_name!==n.name)h+='<div class="kk-card-origin">'+E(n.origin_name)+'</div>';
     h+='<div class="kk-card-meta">';
     if(n.year)h+='<span class="kk-card-year">'+E(n.year)+'</span>';
@@ -199,7 +196,6 @@ function mkC(item){
     bE(c,function(){if(n.slug)Lampa.Activity.push({url:'',title:n.name||'',component:'kkphim_detail',movie:n,page:1});});
     return c;
 }
-
 function mkTC(item){
     var d=tNorm(item);if(!d||!d.tmdb_id)return $('<div></div>');
     var img=d.poster_url?'<img src="'+d.poster_url+'" loading="lazy">':'<div class="kk-card-noposter"><span>No Poster</span></div>';
@@ -207,13 +203,10 @@ function mkTC(item){
     var lang=item.original_language?item.original_language.toUpperCase():'';
     var origName=item.original_title||item.original_name||'';
     var overview=item.overview?item.overview.substring(0,80)+'…':'';
-    var h='<div class="kk-card selector">';
-    h+='<div class="kk-card-img">'+img;
+    var h='<div class="kk-card selector"><div class="kk-card-img">'+img;
     if(d.vote)h+='<div class="kk-card-q">⭐ '+E(d.vote)+'</div>';
     h+='<div class="kk-card-ep kk-card-ep--type">'+typeLabel+'</div>';
-    h+='</div>';
-    h+='<div class="kk-card-body">';
-    h+='<div class="kk-card-name">'+E(d.name)+'</div>';
+    h+='</div><div class="kk-card-body"><div class="kk-card-name">'+E(d.name)+'</div>';
     if(origName&&origName!==d.name)h+='<div class="kk-card-origin">'+E(origName)+'</div>';
     h+='<div class="kk-card-meta">';
     if(d.year)h+='<span class="kk-card-year">'+E(d.year)+'</span>';
@@ -225,7 +218,6 @@ function mkTC(item){
     bE(c,function(){Lampa.Activity.push({url:'',title:d.name||'',component:'kkphim_tmdb_detail',tmdb_id:d.tmdb_id,media_type:d.media_type,page:1});});
     return c;
 }
-
 function mkTCH(item){
     var d=tNorm(item);if(!d||!d.tmdb_id)return $('<div></div>');
     var backdrop=item.backdrop_path?TMDB_W500+item.backdrop_path:(d.poster_url||'');
@@ -234,13 +226,10 @@ function mkTCH(item){
     var lang=item.original_language?item.original_language.toUpperCase():'';
     var origName=item.original_title||item.original_name||'';
     var overview=item.overview?item.overview.substring(0,60)+'…':'';
-    var h='<div class="kk-card-h selector">';
-    h+='<div class="kk-card-h-img">'+imgH;
+    var h='<div class="kk-card-h selector"><div class="kk-card-h-img">'+imgH;
     if(d.vote)h+='<div class="kk-card-q">⭐ '+E(d.vote)+'</div>';
     h+='<div class="kk-card-ep kk-card-ep--type">'+typeLabel+'</div>';
-    h+='</div>';
-    h+='<div class="kk-card-h-body">';
-    h+='<div class="kk-card-name">'+E(d.name)+'</div>';
+    h+='</div><div class="kk-card-h-body"><div class="kk-card-name">'+E(d.name)+'</div>';
     if(origName&&origName!==d.name)h+='<div class="kk-card-origin">'+E(origName)+'</div>';
     h+='<div class="kk-card-meta">';
     if(d.year)h+='<span class="kk-card-year">'+E(d.year)+'</span>';
@@ -252,19 +241,15 @@ function mkTCH(item){
     bE(c,function(){Lampa.Activity.push({url:'',title:d.name||'',component:'kkphim_tmdb_detail',tmdb_id:d.tmdb_id,media_type:d.media_type,page:1});});
     return c;
 }
-
 function mkCH(item){
     var n=nm(item);if(!n)return $('<div></div>');
     var p=fImg(n.thumb_url||n.poster_url);
-    var h='<div class="kk-card-h selector">';
-    h+='<div class="kk-card-h-img">';
+    var h='<div class="kk-card-h selector"><div class="kk-card-h-img">';
     if(p)h+='<img src="'+p+'" loading="lazy">';
     else h+='<div class="kk-card-h-noposter"><span>No Image</span></div>';
     if(n.quality)h+='<div class="kk-card-q">'+E(n.quality)+'</div>';
     if(n.episode_current)h+='<div class="kk-card-ep">'+E(n.episode_current)+'</div>';
-    h+='</div>';
-    h+='<div class="kk-card-h-body">';
-    h+='<div class="kk-card-name">'+E(n.name)+'</div>';
+    h+='</div><div class="kk-card-h-body"><div class="kk-card-name">'+E(n.name)+'</div>';
     if(n.origin_name&&n.origin_name!==n.name)h+='<div class="kk-card-origin">'+E(n.origin_name)+'</div>';
     h+='<div class="kk-card-meta">';
     if(n.year)h+='<span class="kk-card-year">'+E(n.year)+'</span>';
@@ -277,133 +262,59 @@ function mkCH(item){
     bE(c,function(){if(n.slug)Lampa.Activity.push({url:'',title:n.name||'',component:'kkphim_detail',movie:n,page:1});});
     return c;
 }
-
 function mkPFC(item){
     var n=nm(item);if(!n||!n.slug)return $('<div></div>');
-    var bk=fImg(n.thumb_url||n.poster_url);
-    var ps=fImg(n.poster_url||n.thumb_url);
+    var bk=fImg(n.thumb_url||n.poster_url),ps=fImg(n.poster_url||n.thumb_url);
     var typeLabel=n.type==='series'||n.type==='tvshows'?'Series':'Phim';
     var card=$('<div class="kk-pfc selector"></div>');
-    card.html(
-        '<div class="kk-pfc-bg">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-pfc-bg-empty"></div>')+'</div>'+
-        '<div class="kk-pfc-overlay"></div>'+
-        '<div class="kk-pfc-inner">'+
-            (ps?'<div class="kk-pfc-poster"><img src="'+ps+'" loading="lazy"></div>':'<div class="kk-pfc-poster kk-pfc-poster--empty"></div>')+
-            '<div class="kk-pfc-info">'+
-                '<div class="kk-pfc-badge">'+E(typeLabel)+'</div>'+
-                '<div class="kk-pfc-title">'+E(n.name)+'</div>'+
-                (n.origin_name&&n.origin_name!==n.name?'<div class="kk-pfc-origin">'+E(n.origin_name)+'</div>':'')+
-                '<div class="kk-pfc-meta">'+
-                    (n.year?'<span class="kk-pfc-year">'+E(n.year)+'</span>':'')+
-                    (n.quality?'<span class="kk-pfc-qual">'+E(n.quality)+'</span>':'')+
-                    (n.episode_current?'<span class="kk-pfc-eps">'+E(n.episode_current)+'</span>':'')+
-                '</div>'+
-                (n.content?'<div class="kk-pfc-desc">'+E(cDesc(n.content).substring(0,100))+'…</div>':'')+
-            '</div>'+
-        '</div>'
-    );
+    card.html('<div class="kk-pfc-bg">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-pfc-bg-empty"></div>')+'</div><div class="kk-pfc-overlay"></div><div class="kk-pfc-inner">'+(ps?'<div class="kk-pfc-poster"><img src="'+ps+'" loading="lazy"></div>':'<div class="kk-pfc-poster kk-pfc-poster--empty"></div>')+'<div class="kk-pfc-info"><div class="kk-pfc-badge">'+E(typeLabel)+'</div><div class="kk-pfc-title">'+E(n.name)+'</div>'+(n.origin_name&&n.origin_name!==n.name?'<div class="kk-pfc-origin">'+E(n.origin_name)+'</div>':'')+'<div class="kk-pfc-meta">'+(n.year?'<span class="kk-pfc-year">'+E(n.year)+'</span>':'')+(n.quality?'<span class="kk-pfc-qual">'+E(n.quality)+'</span>':'')+(n.episode_current?'<span class="kk-pfc-eps">'+E(n.episode_current)+'</span>':'')+'</div>'+(n.content?'<div class="kk-pfc-desc">'+E(cDesc(n.content).substring(0,100))+'…</div>':'')+'</div></div>');
     bE(card,function(){Lampa.Activity.push({url:'',title:n.name||'',component:'kkphim_detail',movie:n,page:1});});
     return card;
 }
-
 function mkTCPF(item){
     var d=tNorm(item);if(!d||!d.tmdb_id)return $('<div></div>');
-    var bk=item.backdrop_path?TMDB_W500+item.backdrop_path:(d.poster_url||'');
-    var ps=d.poster_url||'';
-    var vote=item.vote_average?Number(item.vote_average).toFixed(1):'';
-    var vNum=Number(vote);
+    var bk=item.backdrop_path?TMDB_W500+item.backdrop_path:(d.poster_url||''),ps=d.poster_url||'';
+    var vote=item.vote_average?Number(item.vote_average).toFixed(1):'',vNum=Number(vote);
     var vClass=vNum>=7?'high':vNum>=5?'mid':'low';
-    var origName=item.original_title||item.original_name||'';
-    var lang=item.original_language?item.original_language.toUpperCase():'';
-    var overview=item.overview?item.overview.substring(0,100)+'…':'';
-    var typeLabel=d.media_type==='tv'?'TV Series':'Film';
+    var origName=item.original_title||item.original_name||'',lang=item.original_language?item.original_language.toUpperCase():'';
+    var overview=item.overview?item.overview.substring(0,100)+'…':'',typeLabel=d.media_type==='tv'?'TV Series':'Film';
     var card=$('<div class="kk-pfc selector"></div>');
-    card.html(
-        '<div class="kk-pfc-bg">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-pfc-bg-empty"></div>')+'</div>'+
-        '<div class="kk-pfc-overlay"></div>'+
-        '<div class="kk-pfc-inner">'+
-            (ps?'<div class="kk-pfc-poster"><img src="'+ps+'" loading="lazy"></div>':'<div class="kk-pfc-poster kk-pfc-poster--empty"></div>')+
-            '<div class="kk-pfc-info">'+
-                '<div class="kk-pfc-badge">'+E(typeLabel)+'</div>'+
-                '<div class="kk-pfc-title">'+E(d.name)+'</div>'+
-                (origName&&origName!==d.name?'<div class="kk-pfc-origin">'+E(origName)+'</div>':'')+
-                '<div class="kk-pfc-meta">'+
-                    (d.year?'<span class="kk-pfc-year">'+E(d.year)+'</span>':'')+
-                    (lang?'<span class="kk-pfc-lang">'+lang+'</span>':'')+
-                    (vote?'<span class="kk-pfc-vote kk-pfc-vote--'+vClass+'">⭐ '+vote+'</span>':'')+
-                '</div>'+
-                (overview?'<div class="kk-pfc-desc">'+E(overview)+'</div>':'')+
-            '</div>'+
-        '</div>'
-    );
+    card.html('<div class="kk-pfc-bg">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-pfc-bg-empty"></div>')+'</div><div class="kk-pfc-overlay"></div><div class="kk-pfc-inner">'+(ps?'<div class="kk-pfc-poster"><img src="'+ps+'" loading="lazy"></div>':'<div class="kk-pfc-poster kk-pfc-poster--empty"></div>')+'<div class="kk-pfc-info"><div class="kk-pfc-badge">'+E(typeLabel)+'</div><div class="kk-pfc-title">'+E(d.name)+'</div>'+(origName&&origName!==d.name?'<div class="kk-pfc-origin">'+E(origName)+'</div>':'')+'<div class="kk-pfc-meta">'+(d.year?'<span class="kk-pfc-year">'+E(d.year)+'</span>':'')+(lang?'<span class="kk-pfc-lang">'+lang+'</span>':'')+(vote?'<span class="kk-pfc-vote kk-pfc-vote--'+vClass+'">⭐ '+vote+'</span>':'')+'</div>'+(overview?'<div class="kk-pfc-desc">'+E(overview)+'</div>':'')+'</div></div>');
     bE(card,function(){Lampa.Activity.push({url:'',title:d.name||'',component:'kkphim_tmdb_detail',tmdb_id:d.tmdb_id,media_type:d.media_type,page:1});});
     return card;
 }
-
 function mkRowList(items,isKK){
     var cm=cardMode();
-    if(cm==='poster'){
-        var rl=$('<div class="kk-row-list--poster"></div>');
-        items.forEach(function(i){rl.append(isKK?mkPFC(i):mkTCPF(i));});
-        return rl;
-    } else {
-        var rl2=$('<div class="kk-row-list kk-row-list--hgrid"></div>');
-        items.forEach(function(i){rl2.append(isKK?mkCH(i):mkTCH(i));});
-        return rl2;
-    }
+    if(cm==='poster'){var rl=$('<div class="kk-row-list--poster"></div>');items.forEach(function(i){rl.append(isKK?mkPFC(i):mkTCPF(i));});return rl;}
+    else{var rl2=$('<div class="kk-row-list kk-row-list--hgrid"></div>');items.forEach(function(i){rl2.append(isKK?mkCH(i):mkTCH(i));});return rl2;}
 }
-
 function mkCastList(castArr,hasTmdb){
     var list=$('<div class="kk-cast-list"></div>');
     castArr.forEach(function(c){
         var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'">':'<div class="kk-cast-empty"></div>';
         var card;
-        if(hasTmdb&&c.id){
-            card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
-            bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});
-        }else{
-            card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
-        }
+        if(hasTmdb&&c.id){card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});}
+        else{card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');}
         list.append(card);
     });
     return list;
 }
-
 function mkDirHtml(dirs,isTmdb){
     if(!dirs||!dirs.length)return'';
     var first=dirs[0],rest=dirs.slice(1);
-    var avatarH=first.profile_path
-        ?'<div class="kk-crew-avatar"><img src="'+TMDB_W500+first.profile_path+'" loading="lazy"></div>'
-        :'<div class="kk-crew-avatar"><div class="kk-crew-avatar-empty"></div></div>';
-    var nameH=(isTmdb&&first.id)
-        ?'<span class="kk-crew-name selector" data-pid="'+first.id+'">'+E(first.name||'')+'</span>'
-        :'<span class="kk-crew-name">'+E(first.name||'')+'</span>';
+    var avatarH=first.profile_path?'<div class="kk-crew-avatar"><img src="'+TMDB_W500+first.profile_path+'" loading="lazy"></div>':'<div class="kk-crew-avatar"><div class="kk-crew-avatar-empty"></div></div>';
+    var nameH=(isTmdb&&first.id)?'<span class="kk-crew-name selector" data-pid="'+first.id+'">'+E(first.name||'')+'</span>':'<span class="kk-crew-name">'+E(first.name||'')+'</span>';
     var restH='';
-    if(rest.length){
-        var restNames=rest.map(function(c){return(isTmdb&&c.id)?'<span class="kk-crew-rest-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>':'<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';});
-        restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';
-    }
+    if(rest.length){var restNames=rest.map(function(c){return(isTmdb&&c.id)?'<span class="kk-crew-rest-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>':'<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';});restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';}
     return'<div class="kk-crew">'+avatarH+'<div class="kk-crew-info"><span class="kk-crew-label">Đạo diễn</span>'+nameH+'<span class="kk-crew-role">'+E(first.job||'Director')+'</span>'+restH+'</div></div>';
 }
-function bindDirClicks(el){
-    el.find('.kk-crew-name[data-pid],.kk-crew-rest-name[data-pid]').each(function(){
-        var sp=$(this);
-        bE(sp,function(){var pid=sp.attr('data-pid');if(pid)Lampa.Activity.push({url:'',title:sp.text()||'',component:'kkphim_person',person_id:parseInt(pid),page:1});});
-    });
-}
-
+function bindDirClicks(el){el.find('.kk-crew-name[data-pid],.kk-crew-rest-name[data-pid]').each(function(){var sp=$(this);bE(sp,function(){var pid=sp.attr('data-pid');if(pid)Lampa.Activity.push({url:'',title:sp.text()||'',component:'kkphim_person',person_id:parseInt(pid),page:1});});});}
 function gHtml(genres,isTmdb){
     if(!genres||!genres.length)return'';
     var result='';
-    for(var i=0;i<genres.length;i++){
-        var g=genres[i];if(!g)continue;
-        var gname=E(g.name||'');
-        if(isTmdb){result+='<span class="kk-genre selector" data-gid="'+(g.id||'')+'" data-gname="'+gname+'">'+gname+'</span>';}
-        else{result+='<span class="kk-genre selector" data-slug="'+E(g.slug||'')+'" data-title="'+E(g.name||'')+'">'+gname+'</span>';}
-    }
+    for(var i=0;i<genres.length;i++){var g=genres[i];if(!g)continue;var gname=E(g.name||'');if(isTmdb)result+='<span class="kk-genre selector" data-gid="'+(g.id||'')+'" data-gname="'+gname+'">'+gname+'</span>';else result+='<span class="kk-genre selector" data-slug="'+E(g.slug||'')+'" data-title="'+E(g.name||'')+'">'+gname+'</span>';}
     return result;
 }
-
 function mkHero(bk,ps,logoH,tH,origin,extra){
     extra=extra||{};
     var posterH=ps?'<img src="'+ps+'" loading="lazy">':'';
@@ -415,29 +326,57 @@ function mkHero(bk,ps,logoH,tH,origin,extra){
                 (extra.year||extra.country?'<div class="kk-hm-yc">'+(extra.year?'<span class="kk-hm-year">'+E(extra.year)+'</span>':'')+(extra.country?'<span class="kk-hm-country">'+E(extra.country)+'</span>':'')+'</div>':'')+
                 (logoH||tH)+
                 (extra.tagline?'<div class="kk-hm-tagline">'+E(extra.tagline)+'</div>':'')+
-                '<div class="kk-hm-badges">'+
-                    (extra.vote?'<span class="kk-hm-vote">'+E(extra.vote)+' <small>TMDB</small></span>':'')+
-                    (extra.rated?'<span class="kk-hm-badge">'+E(extra.rated)+'</span>':'')+
-                    (extra.status?'<span class="kk-hm-badge">'+E(extra.status)+'</span>':'')+
-                '</div>'+
+                '<div class="kk-hm-badges">'+(extra.vote?'<span class="kk-hm-vote">'+E(extra.vote)+' <small>TMDB</small></span>':'')+(extra.rated?'<span class="kk-hm-badge">'+E(extra.rated)+'</span>':'')+(extra.status?'<span class="kk-hm-badge">'+E(extra.status)+'</span>':'')+'</div>'+
                 (extra.runtime||extra.genres?'<div class="kk-hm-rtg">'+(extra.runtime?'<span class="kk-hm-rt">'+E(extra.runtime)+'</span>':'')+(extra.runtime&&extra.genres?'<span class="kk-hm-dot">•</span>':'')+(extra.genres?'<span class="kk-hm-genres">'+E(extra.genres)+'</span>':'')+'</div>':'')+
             '</div>'+
         '</div>'+
     '</div>');
 }
-
 function mkBody(v,y,rt,extra,genreHtml,crewH,desc){
-    return $('<div class="kk-body">'+
-        '<div class="kk-body-genres">'+genreHtml+'</div>'+
-        crewH+
-        '<div class="kk-body-desc">'+
-            '<span class="kk-body-desc-label">Nội dung</span>'+
-            '<div class="kk-body-desc-text">'+fTxt(desc)+'</div>'+
-        '</div>'+
-    '</div>');
+    return $('<div class="kk-body"><div class="kk-body-genres">'+genreHtml+'</div>'+crewH+'<div class="kk-body-desc"><span class="kk-body-desc-label">Nội dung</span><div class="kk-body-desc-text">'+fTxt(desc)+'</div></div></div>');
 }
 
-function inCSS(){if($('#kk-css').length)return;var l=document.createElement('link');l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;document.head.appendChild(l);}
+/* ── CSS inject trực tiếp (override mọi thứ) ── */
+function inCSS(){
+    if($('#kk-css').length)return;
+    var l=document.createElement('link');l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;document.head.appendChild(l);
+}
+function inOverrideCSS(){
+    if($('#kk-override-css').length)return;
+    var s=document.createElement('style');
+    s.id='kk-override-css';
+    s.textContent=[
+        /* Backdrop full width - override tất cả */
+        '.kk-hero-backdrop{width:100%!important;margin:0!important;border-radius:0!important;aspect-ratio:16/9;overflow:hidden;position:relative;background:#222;}',
+        '.kk-hero-backdrop img{width:100%;height:100%;object-fit:cover;display:block;}',
+        '.kk-hero-backdrop::after{content:"";position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to bottom,transparent 0%,rgba(26,26,30,.6) 50%,#1a1a1e 100%);pointer-events:none;}',
+        /* Landscape */
+        '@media (orientation:landscape){.kk-hero-backdrop{aspect-ratio:21/9!important;}}',
+        /* FAB overlay */
+        '#kk-fab-overlay{position:fixed!important;inset:0!important;z-index:99997!important;background:rgba(0,0,0,0)!important;pointer-events:none!important;transition:background .25s!important;}',
+        '#kk-fab-overlay.kk-fab-overlay--show{background:rgba(0,0,0,.6)!important;pointer-events:all!important;backdrop-filter:blur(3px)!important;-webkit-backdrop-filter:blur(3px)!important;}',
+        /* FAB button */
+        '#kk-fab{position:fixed!important;bottom:5em!important;right:1em!important;z-index:99999!important;width:3em!important;height:3em!important;border-radius:50%!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;box-shadow:0 4px 18px rgba(99,102,241,.6),0 2px 8px rgba(0,0,0,.5)!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;transition:transform .3s,background .3s,box-shadow .3s!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;user-select:none!important;}',
+        '#kk-fab svg{width:1.3em!important;height:1.3em!important;color:#fff!important;transition:opacity .2s,transform .2s!important;position:absolute!important;}',
+        '#kk-fab .kk-fab-ico-menu{opacity:1!important;transform:scale(1) rotate(0deg)!important;}',
+        '#kk-fab .kk-fab-ico-close{opacity:0!important;transform:scale(0.5) rotate(-90deg)!important;}',
+        '#kk-fab.kk-fab--open{background:linear-gradient(135deg,#ef4444,#f87171)!important;transform:rotate(0deg)!important;}',
+        '#kk-fab.kk-fab--open .kk-fab-ico-menu{opacity:0!important;transform:scale(0.5) rotate(90deg)!important;}',
+        '#kk-fab.kk-fab--open .kk-fab-ico-close{opacity:1!important;transform:scale(1) rotate(0deg)!important;}',
+        /* FAB menu */
+        '#kk-fab-menu{position:fixed!important;bottom:9em!important;right:.8em!important;z-index:99998!important;display:flex!important;flex-direction:column!important;gap:.6em!important;align-items:flex-end!important;pointer-events:none!important;opacity:0!important;transform:translateY(.8em) scale(.95)!important;transform-origin:bottom right!important;transition:opacity .22s,transform .22s!important;}',
+        '#kk-fab-menu.kk-fab-menu--open{pointer-events:all!important;opacity:1!important;transform:translateY(0) scale(1)!important;}',
+        '.kk-fab-row{display:flex!important;align-items:center!important;gap:.6em!important;cursor:pointer!important;}',
+        '.kk-fab-lbl{background:rgba(15,15,25,.92)!important;color:#fff!important;font-size:.88em!important;font-weight:700!important;padding:.45em .85em!important;border-radius:.55em!important;white-space:nowrap!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:0 2px 10px rgba(0,0,0,.5)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;}',
+        '.kk-fab-row:active .kk-fab-lbl,.kk-fab-row.focus .kk-fab-lbl{background:rgba(99,102,241,.85)!important;}',
+        '.kk-fab-circle{width:2.7em!important;height:2.7em!important;border-radius:50%!important;background:rgba(20,20,35,.92)!important;border:1.5px solid rgba(255,255,255,.12)!important;display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:0 3px 12px rgba(0,0,0,.5)!important;flex-shrink:0!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;transition:transform .15s,background .15s!important;}',
+        '.kk-fab-circle svg{width:1.15em!important;height:1.15em!important;color:#e2e8f0!important;}',
+        '.kk-fab-row:active .kk-fab-circle,.kk-fab-row.focus .kk-fab-circle{background:rgba(99,102,241,.8)!important;transform:scale(1.1)!important;}',
+        '.kk-fab-circle--tmdb{background:rgba(1,80,140,.88)!important;border-color:rgba(1,180,228,.3)!important;}',
+        '.kk-fab-circle--tmdb svg{color:#38bdf8!important;}',
+    ].join('');
+    document.head.appendChild(s);
+}
 
 function addM(){
     function ins(){
@@ -450,74 +389,61 @@ function addM(){
     Lampa.Listener.follow('app',function(e){if(e.type==='ready')setTimeout(ins,500);});
 }
 
-/* ── Floating Action Button ── */
+/* ── FAB - Floating Action Button ── */
 function addFAB(){
-    if($('#kk-fab').length)return;
-    var fab=$('<div id="kk-fab" class="kk-fab selector">'+
-        '<div class="kk-fab-icon kk-fab-icon--main">'+
-            '<svg class="kk-fab-svg kk-fab-svg--menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>'+
-            '<svg class="kk-fab-svg kk-fab-svg--close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'+
-        '</div>'+
-    '</div>');
-    var overlay=$('<div id="kk-fab-overlay" class="kk-fab-overlay"></div>');
-    var menu=$('<div id="kk-fab-menu" class="kk-fab-menu">'+
-        '<div class="kk-fab-item selector" data-act="settings">'+
-            '<div class="kk-fab-item-label">Cài đặt</div>'+
-            '<div class="kk-fab-item-btn">'+
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'+
-            '</div>'+
-        '</div>'+
-        '<div class="kk-fab-item selector" data-act="search">'+
-            '<div class="kk-fab-item-label">Tìm phim</div>'+
-            '<div class="kk-fab-item-btn">'+
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
-            '</div>'+
-        '</div>'+
-        '<div class="kk-fab-item selector" data-act="tmdb">'+
-            '<div class="kk-fab-item-label">TMDB</div>'+
-            '<div class="kk-fab-item-btn kk-fab-item-btn--tmdb">'+
-                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>'+
-            '</div>'+
-        '</div>'+
-        '<div class="kk-fab-item selector" data-act="home">'+
-            '<div class="kk-fab-item-label">Trang chủ</div>'+
-            '<div class="kk-fab-item-btn">'+
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'+
-            '</div>'+
-        '</div>'+
-    '</div>');
+    // Remove cũ nếu có
+    $('#kk-fab,#kk-fab-menu,#kk-fab-overlay').remove();
 
-    $('body').append(overlay).append(menu).append(fab);
+    var SVG_MENU='<svg class="kk-fab-ico-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+    var SVG_CLOSE='<svg class="kk-fab-ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var SVG_SETTINGS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+    var SVG_SEARCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+    var SVG_HOME='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+    var SVG_TMDB='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>';
+
+    function mkRow(lbl,svgHtml,extraClass){
+        return $('<div class="kk-fab-row selector"><div class="kk-fab-lbl">'+lbl+'</div><div class="kk-fab-circle'+(extraClass?' '+extraClass:'')+'">'+svgHtml+'</div></div>');
+    }
+
+    var overlay=$('<div id="kk-fab-overlay"></div>');
+    var fab=$('<div id="kk-fab">'+SVG_MENU+SVG_CLOSE+'</div>');
+    var menu=$('<div id="kk-fab-menu"></div>');
+
+    var rows=[
+        {lbl:'Cài đặt',svg:SVG_SETTINGS,cls:'',act:'settings'},
+        {lbl:'Tìm phim',svg:SVG_SEARCH,cls:'',act:'search'},
+        {lbl:'TMDB',svg:SVG_TMDB,cls:'kk-fab-circle--tmdb',act:'tmdb'},
+        {lbl:'Trang chủ',svg:SVG_HOME,cls:'',act:'home'}
+    ];
+    rows.forEach(function(r){
+        var row=mkRow(r.lbl,r.svg,r.cls);
+        row.attr('data-act',r.act);
+        menu.append(row);
+    });
+
+    // Append vào document.body trực tiếp (không qua jQuery để tránh Lampa intercept)
+    document.body.appendChild(overlay[0]);
+    document.body.appendChild(menu[0]);
+    document.body.appendChild(fab[0]);
 
     var open=false;
-    function openFAB(){
-        open=true;
-        fab.addClass('kk-fab--open');
-        menu.addClass('kk-fab-menu--open');
-        overlay.addClass('kk-fab-overlay--show');
-    }
-    function closeFAB(){
-        open=false;
-        fab.removeClass('kk-fab--open');
-        menu.removeClass('kk-fab-menu--open');
-        overlay.removeClass('kk-fab-overlay--show');
-    }
-    function toggleFAB(){if(open)closeFAB();else openFAB();}
+    function openF(){open=true;fab.addClass('kk-fab--open');menu.addClass('kk-fab-menu--open');overlay.addClass('kk-fab-overlay--show');}
+    function closeF(){open=false;fab.removeClass('kk-fab--open');menu.removeClass('kk-fab-menu--open');overlay.removeClass('kk-fab-overlay--show');}
 
-    bE(fab,toggleFAB);
-    bE(overlay,closeFAB);
+    bE(fab,function(){if(open)closeF();else openF();});
+    bE(overlay,closeF);
 
-    menu.find('.kk-fab-item').each(function(){
-        var it=$(this);
-        bE(it,function(){
-            closeFAB();
-            var act=it.attr('data-act');
+    menu.find('.kk-fab-row').each(function(){
+        var row=$(this);
+        bE(row,function(){
+            closeF();
+            var act=row.attr('data-act');
             setTimeout(function(){
                 if(act==='settings')Lampa.Activity.push({url:'',title:'Cài đặt',component:'kkphim_settings'});
                 else if(act==='search')oSearch();
                 else if(act==='tmdb')Lampa.Activity.push({url:'',title:'TMDB',component:'kkphim_tmdb_main',page:1});
                 else if(act==='home')Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});
-            },150);
+            },200);
         });
     });
 }
@@ -543,7 +469,10 @@ function fillE(c,eps,title){eps.forEach(function(sv){var sn2=sv.server_name||'Se
 
 /* ════ COMPONENTS ════ */
 function startPlugin(){
-    inCSS();addM();addFAB();
+    inCSS();
+    inOverrideCSS(); // inject CSS override trực tiếp
+    addM();
+    addFAB();
 
     /* ── SETTINGS ── */
     Lampa.Component.add('kkphim_settings',function(){
@@ -551,71 +480,51 @@ function startPlugin(){
         this.create=function(){
             cScr(scroll);var s=ls(),w=$('<div class="kk-stg-wrap"></div>');
             w.append('<div class="kk-stg-title">⚙️ Cài đặt</div>');
-
             var g0=mg('📺 Nguồn phim');var cur=s.source||'ophim';
             Object.keys(SOURCES).forEach(function(k){var sc=SOURCES[k];g0.append(mo(sc.name,'API: '+sc.api,cur===k,function(){ss({source:k});Lampa.Noty.show(sc.name);comp.create();}));});
             w.append(g0);
-
-            var gCard=mg('🃏 Kiểu hiển thị phim');
-            var cm=s.card_mode||'hgrid';
-            [{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full màn hình'}].forEach(function(o){
-                gCard.append(mo(o.n,o.d,cm===o.k,function(){ss({card_mode:o.k});comp.create();}));
-            });
+            var gCard=mg('🃏 Kiểu hiển thị phim');var cm=s.card_mode||'hgrid';
+            [{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full màn hình'}].forEach(function(o){gCard.append(mo(o.n,o.d,cm===o.k,function(){ss({card_mode:o.k});comp.create();}));});
             w.append(gCard);
-
             var g5=mg('🎨 Số cột trang danh sách');var cg=s.card_style||'3';
             [{k:'2',n:'2 cột'},{k:'3',n:'3 cột'},{k:'4',n:'4 cột'}].forEach(function(o){g5.append(mo(o.n,'Số cột',cg===o.k,function(){ss({card_style:o.k});comp.create();}));});
             w.append(g5);
-
             var g6=mg('🌐 Ngôn ngữ TMDB');var cl2=s.tmdb_lang||'vi-VN';
             [{k:'vi-VN',n:'Tiếng Việt'},{k:'en-US',n:'English'},{k:'ja-JP',n:'日本語'},{k:'ko-KR',n:'한국어'},{k:'zh-CN',n:'中文'}].forEach(function(o){g6.append(mo(o.n,o.k,cl2===o.k,function(){ss({tmdb_lang:o.k});_gc={movie:null,tv:null};comp.create();}));});
             w.append(g6);
-
             var gE=mg('🎯 Nguồn Torrent');var ce=s.torrent_engine||'torrentio';
             gE.append(mo('Torrentio','torrentio.strem.fun',ce==='torrentio',function(){ss({torrent_engine:'torrentio'});comp.create();}));
             gE.append(mo('AIOStreams','Tự host / public',ce==='aio',function(){ss({torrent_engine:'aio'});comp.create();}));
             w.append(gE);
-
             var g1=mg('🖥️ TorrServer');
             g1.append(mi('Địa chỉ','192.168.1.100:8090',s.torrserver_host||'Chưa cài','Địa chỉ TS','torrserver_host',s));
             g1.append(mi('Mật khẩu','Để trống nếu không',s.torrserver_password?'••••':'Không','Mật khẩu','torrserver_password',s));
             var stTS=$('<div class="kk-stg-status" style="display:none"></div>');
             var tTS=si2('🧪 Test TorrServer','Kiểm tra kết nối','Test');
             bE(tTS,async function(){
-                var h=tsHost();
-                if(!h){stTS.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập địa chỉ TorrServer</span>');return;}
+                var h=tsHost();if(!h){stTS.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập địa chỉ</span>');return;}
                 stTS.show().attr('class','kk-stg-status kk-stg-status--loading').html('<span class="kk-dbg-loading">⏳ Đang kết nối...</span>');
                 try{
                     var r=await fetch(tsU('/echo'),{method:'GET',headers:tsH()});
-                    if(r.ok){
-                        var txt=await r.text();
-                        var statsHtml='';
-                        try{var r2=await fetch(tsU('/stat'),{method:'GET',headers:tsH()});if(r2.ok){var stat=await r2.json();statsHtml='<div class="kk-dbg-divider"></div><div class="kk-dbg-section">';[['Version',stat.version||'—'],['Platform',stat.platform||'—'],['Torrents',String(stat.torrents_count||0)],['Memory',stat.memory_used?(stat.memory_used/1048576).toFixed(1)+' MB':'—']].forEach(function(row){statsHtml+='<div class="kk-dbg-row"><span class="kk-dbg-key">'+row[0]+':</span><span class="kk-dbg-val">'+E(String(row[1]))+'</span></div>';});statsHtml+='</div>';}}catch(e2){}
-                        stTS.attr('class','kk-stg-status kk-stg-status--ok').html('<div class="kk-dbg-header"><span class="kk-dbg-total">✅ Kết nối thành công!</span><span class="kk-dbg-keys">Host: <b>'+E(h)+'</b></span></div>'+(txt?'<div class="kk-dbg-section"><div class="kk-dbg-row"><span class="kk-dbg-key">Echo:</span><span class="kk-dbg-val">'+E(txt.substring(0,120))+'</span></div></div>':'')+statsHtml);
-                    }else if(r.status===401){stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP 401 - Sai mật khẩu</span>');}
-                    else{stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+'</span>');}
+                    if(r.ok){var txt=await r.text();var statsHtml='';try{var r2=await fetch(tsU('/stat'),{method:'GET',headers:tsH()});if(r2.ok){var stat=await r2.json();statsHtml='<div class="kk-dbg-divider"></div><div class="kk-dbg-section">';[['Version',stat.version||'—'],['Platform',stat.platform||'—'],['Torrents',String(stat.torrents_count||0)],['Memory',stat.memory_used?(stat.memory_used/1048576).toFixed(1)+' MB':'—']].forEach(function(row){statsHtml+='<div class="kk-dbg-row"><span class="kk-dbg-key">'+row[0]+':</span><span class="kk-dbg-val">'+E(String(row[1]))+'</span></div>';});statsHtml+='</div>';}}catch(e2){}stTS.attr('class','kk-stg-status kk-stg-status--ok').html('<div class="kk-dbg-header"><span class="kk-dbg-total">✅ Kết nối thành công!</span><span class="kk-dbg-keys">Host: <b>'+E(h)+'</b></span></div>'+(txt?'<div class="kk-dbg-section"><div class="kk-dbg-row"><span class="kk-dbg-key">Echo:</span><span class="kk-dbg-val">'+E(txt.substring(0,120))+'</span></div></div>':'')+statsHtml);}
+                    else if(r.status===401)stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP 401 - Sai mật khẩu</span>');
+                    else stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+'</span>');
                 }catch(e){stTS.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ '+(e.message||'Lỗi mạng')+'</span>');}
             });
-            g1.append(tTS).append(stTS);
-            w.append(g1);
-
+            g1.append(tTS).append(stTS);w.append(g1);
             var g2=mg('🧲 Torrentio');
             g2.append(mi('Config','Dán link manifest',s.torrentio_config?'Có':'Mặc định','Config','torrentio_config',s));
             w.append(g2);
-
             var gA=mg('🌊 AIOStreams');
             gA.append(mi('URL manifest.json','Dán full URL',s.aio_url||'Chưa cài','AIO URL','aio_url',s));
             var stA=$('<div class="kk-stg-status" style="display:none"></div>');
             var tA=si2('🧪 Debug AIO Stream','Xem raw data của stream[0]','Nhấn');
             bE(tA,async function(){
-                var base=cAio(aioUrl());
-                if(!base){stA.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập URL AIOStreams</span>');return;}
+                var base=cAio(aioUrl());if(!base){stA.show().attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Chưa nhập URL</span>');return;}
                 stA.show().attr('class','kk-stg-status kk-stg-status--loading').html('<span class="kk-dbg-loading">⏳ Đang fetch...</span>');
                 try{
-                    var r=await fetch(base+'/stream/movie/tt1375666.json');
-                    if(!r.ok){stA.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+'</span>');return;}
-                    var data=await r.json();
-                    if(!data.streams||!data.streams.length){stA.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Không có stream</span>');return;}
+                    var r=await fetch(base+'/stream/movie/tt1375666.json');if(!r.ok){stA.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ HTTP '+r.status+'</span>');return;}
+                    var data=await r.json();if(!data.streams||!data.streams.length){stA.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ Không có stream</span>');return;}
                     var s0=data.streams[0],keys=Object.keys(s0),html='';
                     html+='<div class="kk-dbg-header"><span class="kk-dbg-total">Tổng: <b>'+data.streams.length+'</b> streams</span><span class="kk-dbg-keys">Keys: <b>['+keys.join(', ')+']</b></span></div>';
                     if(s0.behaviorHints){var bh=typeof s0.behaviorHints==='object'?JSON.stringify(s0.behaviorHints):String(s0.behaviorHints);html+='<div class="kk-dbg-section"><div class="kk-dbg-row"><span class="kk-dbg-key">behaviorHints:</span><span class="kk-dbg-val">'+bh.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span></div></div>';}
@@ -630,10 +539,8 @@ function startPlugin(){
                 }catch(e){stA.attr('class','kk-stg-status kk-stg-status--err').html('<span class="kk-dbg-err">❌ '+(e.message||'Lỗi')+'</span>');}
             });
             gA.append(tA).append(stA);w.append(gA);
-
             var g7=mg('🗃️ Cache');var cc=si2('Xóa cache genres','','Xóa');
             bE(cc,function(){_gc={movie:null,tv:null};Lampa.Noty.show('OK');});g7.append(cc);w.append(g7);
-
             var g4=$('<div class="kk-stg-group"></div>');var cl=si2('🗑️ Xóa toàn bộ','Khôi phục mặc định','Xóa');
             cl.find('.kk-stg-value').css('color','#f87171');
             bE(cl,function(){localStorage.removeItem(STG_KEY);_gc={movie:null,tv:null};Lampa.Activity.backward();});
@@ -670,7 +577,6 @@ function startPlugin(){
         };
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
-
     Lampa.Component.add('kkphim_person_films',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,pid=obj.person_id,ft=obj.film_type||'movie';
         var all=[],rd=0,pp=20,grid=$('<div class="kk-grid"></div>'),lm=$('<div class="kk-loadmore selector">Tải thêm</div>');
@@ -682,13 +588,7 @@ function startPlugin(){
     /* ── MAIN ── */
     Lampa.Component.add('kkphim_main',function(){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,_s='';
-        var cats=[
-            {name:'Phim Mới',api:'danh-sach/phim-moi-cap-nhat'},
-            {name:'Phim Bộ',api:'v1/api/danh-sach/phim-bo'},
-            {name:'Phim Lẻ',api:'v1/api/danh-sach/phim-le'},
-            {name:'Hoạt Hình',api:'v1/api/danh-sach/hoat-hinh'},
-            {name:'TV Shows',api:'v1/api/danh-sach/tv-shows'}
-        ];
+        var cats=[{name:'Phim Mới',api:'danh-sach/phim-moi-cap-nhat'},{name:'Phim Bộ',api:'v1/api/danh-sach/phim-bo'},{name:'Phim Lẻ',api:'v1/api/danh-sach/phim-le'},{name:'Hoạt Hình',api:'v1/api/danh-sach/hoat-hinh'},{name:'TV Shows',api:'v1/api/danh-sach/tv-shows'}];
         this.create=function(){
             net.clear();this.activity.loader(true);cScr(scroll);
             var sc=src();_s=sc.key;
@@ -706,8 +606,7 @@ function startPlugin(){
                 net.silent(sApi()+cat.api+'?page=1',function(res){
                     var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});
                     if(list.length){
-                        var row=$('<div class="kk-row"></div>');
-                        var mr=$('<div class="kk-row-more selector">Xem thêm</div>');
+                        var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Xem thêm</div>');
                         bE(mr,function(){Lampa.Activity.push({url:'',title:cat.name,component:'kkphim_category',cat:cat,page_num:1,mode:'api'});});
                         row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(cat.name)+'</div>').append(mr));
                         var cm=cardMode(),cnt=cm==='poster'?8:6;
@@ -725,17 +624,7 @@ function startPlugin(){
     /* ── TMDB MAIN ── */
     Lampa.Component.add('kkphim_tmdb_main',function(){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
-        var secs=[
-            {name:'🔥 Xu hướng hôm nay',lt:'trending_day'},
-            {name:'🌟 Xu hướng tuần',lt:'trending'},
-            {name:'🎬 Chiếu rạp',lt:'now_playing'},
-            {name:'📅 Sắp chiếu',lt:'upcoming'},
-            {name:'🌟 Phim lẻ phổ biến',lt:'popular_movies'},
-            {name:'📺 Phim bộ phổ biến',lt:'popular_tv'},
-            {name:'📺 Đang phát sóng',lt:'on_the_air'},
-            {name:'⭐ Top phim lẻ',lt:'top_movies'},
-            {name:'⭐ Top phim bộ',lt:'top_tv'}
-        ];
+        var secs=[{name:'🔥 Xu hướng hôm nay',lt:'trending_day'},{name:'🌟 Xu hướng tuần',lt:'trending'},{name:'🎬 Chiếu rạp',lt:'now_playing'},{name:'📅 Sắp chiếu',lt:'upcoming'},{name:'🌟 Phim lẻ phổ biến',lt:'popular_movies'},{name:'📺 Phim bộ phổ biến',lt:'popular_tv'},{name:'📺 Đang phát sóng',lt:'on_the_air'},{name:'⭐ Top phim lẻ',lt:'top_movies'},{name:'⭐ Top phim bộ',lt:'top_tv'}];
         this.create=function(){
             comp.activity.loader(true);cScr(scroll);
             var tb=$('<div class="kk-topbar"><div class="kk-topbar-title" style="color:#01b4e4">TMDB</div><div class="kk-topbar-btns"><div class="kk-btn selector">🔍</div><div class="kk-btn selector">⚙️</div></div></div>');
@@ -751,26 +640,16 @@ function startPlugin(){
             rr.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎲 Ngẫu nhiên</div>').append(rm));
             var randContainer=$('<div></div>');rr.append(randContainer);scroll.append(rr);
             Promise.all([tRand('movie'),tRand('tv')]).then(function(res){
-                var items=[];
-                (res[0].results||[]).forEach(function(i){i.media_type='movie';items.push(i);});
-                (res[1].results||[]).forEach(function(i){i.media_type='tv';items.push(i);});
+                var items=[];(res[0].results||[]).forEach(function(i){i.media_type='movie';items.push(i);});(res[1].results||[]).forEach(function(i){i.media_type='tv';items.push(i);});
                 for(var si2=items.length-1;si2>0;si2--){var sj=Math.floor(Math.random()*(si2+1));var st=items[si2];items[si2]=items[sj];items[sj]=st;}
-                var cm=cardMode(),cnt=cm==='poster'?8:6;
-                randContainer.replaceWith(mkRowList(items.slice(0,cnt),false));
+                var cm=cardMode(),cnt=cm==='poster'?8:6;randContainer.replaceWith(mkRowList(items.slice(0,cnt),false));
             }).catch(function(){});
             var ld2=0;
             secs.forEach(function(sec){
                 var fn=TFN[sec.lt];if(!fn){ld2++;return;}
                 fn(1).then(function(res){
                     var items=(res.results||[]).filter(function(i){return i.media_type!=='person';});
-                    if(items.length){
-                        var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Thêm</div>');
-                        bE(mr,function(){Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});});
-                        row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(sec.name)+'</div>').append(mr));
-                        var cm=cardMode(),cnt=cm==='poster'?8:6;
-                        row.append(mkRowList(items.slice(0,cnt),false));
-                        scroll.append(row);
-                    }
+                    if(items.length){var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Thêm</div>');bE(mr,function(){Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});});row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(sec.name)+'</div>').append(mr));var cm=cardMode(),cnt=cm==='poster'?8:6;row.append(mkRowList(items.slice(0,cnt),false));scroll.append(row);}
                     ld2++;if(ld2>=secs.length){comp.activity.loader(false);comp.start();}
                 }).catch(function(){ld2++;if(ld2>=secs.length){comp.activity.loader(false);comp.start();}});
             });
@@ -785,26 +664,16 @@ function startPlugin(){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,cg=String(obj.genre_id||'');
         var grid=$('<div class="kk-grid"></div>'),ld=false,md=false,td=false,mp=1,tp=1,all=[],rs={};
         this.create=function(){
-            comp.activity.loader(true);cScr(scroll);
-            grid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
-            var gb=$('<div class="kk-genre-bar"></div>');
-            scroll.append(gb);
+            comp.activity.loader(true);cScr(scroll);grid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
+            var gb=$('<div class="kk-genre-bar"></div>');scroll.append(gb);
             scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title" id="kk-gtitle">'+E(obj.title||'')+'</div>').append(grid));
             var sb2=scroll.render().find('.scroll__body');
             sb2.on('scroll',function(){if(ld||(md&&td))return;var el=sb2[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();});
             Promise.all([lGenres('movie'),lGenres('tv')]).then(function(res){
-                var mg2=[],sn={};
-                (res[0]||[]).concat(res[1]||[]).forEach(function(g){if(!sn[g.id]){sn[g.id]=true;mg2.push(g);}});
+                var mg2=[],sn={};(res[0]||[]).concat(res[1]||[]).forEach(function(g){if(!sn[g.id]){sn[g.id]=true;mg2.push(g);}});
                 mg2.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});
-                mg2.forEach(function(g){
-                    var on=String(g.id)===cg;
-                    var ch=$('<div class="kk-genre-chip selector '+(on?'kk-genre-chip--on':'kk-genre-chip--off')+'">'+E(g.name)+'</div>');
-                    bE(ch,function(){Lampa.Activity.push({url:'',title:g.name,component:'kkphim_tmdb_genre',genre_id:g.id,page_num:1});});
-                    gb.append(ch);
-                });
-                var cur=mg2.find(function(g){return String(g.id)===cg;});
-                if(cur)scroll.render().find('#kk-gtitle').text(cur.name);
-                doL();
+                mg2.forEach(function(g){var on=String(g.id)===cg;var ch=$('<div class="kk-genre-chip selector '+(on?'kk-genre-chip--on':'kk-genre-chip--off')+'">'+E(g.name)+'</div>');bE(ch,function(){Lampa.Activity.push({url:'',title:g.name,component:'kkphim_tmdb_genre',genre_id:g.id,page_num:1});});gb.append(ch);});
+                var cur=mg2.find(function(g){return String(g.id)===cg;});if(cur)scroll.render().find('#kk-gtitle').text(cur.name);doL();
             }).catch(function(){doL();});
         };
         function doL(){if(ld)return;ld=true;var ps=[];
@@ -818,67 +687,42 @@ function startPlugin(){
     Lampa.Component.add('kkphim_tmdb_detail',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';
         this.create=function(){
-            comp.activity.loader(true);cScr(scroll);
-            if(!tid){comp.activity.loader(false);comp.start();return;}
+            comp.activity.loader(true);cScr(scroll);if(!tid){comp.activity.loader(false);comp.start();return;}
             tDetFull(mt,tid).then(async function(tmdb){
                 var logos=null;try{logos=await tImgFull(mt,tid);}catch(e){}
                 var t=tmdb.title||tmdb.name||'',o=tmdb.original_title||tmdb.original_name||'',y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);
-                Lampa.Noty.show('Tìm nguồn...');
-                var slugs=await fSlugs(t,o,y);
-                bDet(tmdb,logos,slugs);
+                Lampa.Noty.show('Tìm nguồn...');var slugs=await fSlugs(t,o,y);bDet(tmdb,logos,slugs);
             }).catch(function(e){comp.activity.loader(false);Lampa.Noty.show('Lỗi: '+(e.message||''));});
         };
         async function bDet(tmdb,logos,slugs){
             cScr(scroll);
-            var bk=tmdb.backdrop_path?TMDB_IMG+tmdb.backdrop_path:'';
-            var ps=tmdb.poster_path?TMDB_W500+tmdb.poster_path:'';
+            var bk=tmdb.backdrop_path?TMDB_IMG+tmdb.backdrop_path:'',ps=tmdb.poster_path?TMDB_W500+tmdb.poster_path:'';
             var t=tmdb.title||tmdb.name||'',o2=tmdb.original_title||tmdb.original_name||'',d=tmdb.overview||'';
-            var v=tmdb.vote_average?Number(tmdb.vote_average).toFixed(1):'N/A';
-            var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);
-            var rt=tmdb.runtime?tmdb.runtime+' phút':'';
-            if(!rt&&tmdb.episode_run_time&&tmdb.episode_run_time.length)rt=tmdb.episode_run_time[0]+' phút/tập';
-            var epExtra='';
-            if(tmdb.number_of_episodes)epExtra=tmdb.number_of_episodes+' tập';
-            if(tmdb.number_of_seasons)epExtra+=(epExtra?' | ':'')+tmdb.number_of_seasons+' season';
-            var country='';
-            if(tmdb.production_countries&&tmdb.production_countries.length)country=tmdb.production_countries.map(function(c){return c.iso_3166_1;}).join(', ');
-            else if(tmdb.origin_country&&tmdb.origin_country.length)country=tmdb.origin_country[0];
+            var v=tmdb.vote_average?Number(tmdb.vote_average).toFixed(1):'N/A',y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);
+            var rt=tmdb.runtime?tmdb.runtime+' phút':'';if(!rt&&tmdb.episode_run_time&&tmdb.episode_run_time.length)rt=tmdb.episode_run_time[0]+' phút/tập';
+            var epExtra='';if(tmdb.number_of_episodes)epExtra=tmdb.number_of_episodes+' tập';if(tmdb.number_of_seasons)epExtra+=(epExtra?' | ':'')+tmdb.number_of_seasons+' season';
+            var country='';if(tmdb.production_countries&&tmdb.production_countries.length)country=tmdb.production_countries.map(function(c){return c.iso_3166_1;}).join(', ');else if(tmdb.origin_country&&tmdb.origin_country.length)country=tmdb.origin_country[0];
             var genreStr=(tmdb.genres||[]).slice(0,3).map(function(g){return g.name;}).join(' | ');
             var status=tmdb.status||'',rated='';
             try{if(tmdb.release_dates&&tmdb.release_dates.results){var usR=tmdb.release_dates.results.find(function(r){return r.iso_3166_1==='US';});if(usR&&usR.release_dates&&usR.release_dates.length)rated=usR.release_dates[0].certification||'';}}catch(e){}
-            var tagline=tmdb.tagline||'';
-            var logo=pLogo(logos||(tmdb.images||{})),logoH='';
-            if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
-            var gh=gHtml(tmdb.genres,true);
-            var dirsArr=[],castArr=[];
-            if(tmdb.credits){
-                castArr=(tmdb.credits.cast||[]).slice(0,15);
-                dirsArr=(tmdb.credits.crew||[]).filter(function(c){return c.job==='Director'||c.job==='Creator'||c.job==='Series Director';}).filter(function(p,i,a){return a.findIndex(function(x){return x.name===p.name;})===i;}).slice(0,8);
-            }
-            var crewH=mkDirHtml(dirsArr,true);
-            var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;
+            var logo=pLogo(logos||(tmdb.images||{})),logoH='';if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
+            var gh=gHtml(tmdb.genres,true),dirsArr=[],castArr=[];
+            if(tmdb.credits){castArr=(tmdb.credits.cast||[]).slice(0,15);dirsArr=(tmdb.credits.crew||[]).filter(function(c){return c.job==='Director'||c.job==='Creator'||c.job==='Series Director';}).filter(function(p,i,a){return a.findIndex(function(x){return x.name===p.name;})===i;}).slice(0,8);}
+            var crewH=mkDirHtml(dirsArr,true),imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;
             var tH=logoH?'':'<div class="kk-title">'+E(t)+'</div>';
-            var heroExtra={tagline:tagline,vote:v,year:y,runtime:rt+(epExtra?' · '+epExtra:''),country:country,genres:genreStr,status:status,rated:rated};
-            var hero=mkHero(bk,ps,logoH,tH,o2,heroExtra);
+            var hero=mkHero(bk,ps,logoH,tH,o2,{tagline:tmdb.tagline||'',vote:v,year:y,runtime:rt+(epExtra?' · '+epExtra:''),country:country,genres:genreStr,status:status,rated:rated});
             var body=mkBody(v,y,rt,epExtra,gh,crewH,d);
             body.find('.kk-genre[data-gid]').each(function(){var g=$(this);bE(g,function(){Lampa.Activity.push({url:'',title:g.attr('data-gname')||'',component:'kkphim_tmdb_genre',genre_id:g.attr('data-gid'),page_num:1});});});
             bindDirClicks(body);
             var act=$('<div class="kk-actions"></div>');
-            if(slugs.kkphim){if(mt==='movie')act.append(bMovExp('kkphim','KKPhim',slugs.kkphim,t,'kk-src-btn--kkphim'));else act.append(bTVExp('kkphim','KKPhim',slugs.kkphim,t,o2,'kk-src-btn--kkphim'));}
-            else{act.append('<div class="kk-src-btn kk-src-btn--no">KKPhim – N/A</div>');}
-            if(slugs.ophim){if(mt==='movie')act.append(bMovExp('ophim','OPhim',slugs.ophim,t,'kk-src-btn--ophim'));else act.append(bTVExp('ophim','OPhim',slugs.ophim,t,o2,'kk-src-btn--ophim'));}
-            else{act.append('<div class="kk-src-btn kk-src-btn--no">OPhim – N/A</div>');}
-            act.append(bTorBtn(mt,tid,t,ps,imdb));
-            body.append(act);
+            if(slugs.kkphim){if(mt==='movie')act.append(bMovExp('kkphim','KKPhim',slugs.kkphim,t,'kk-src-btn--kkphim'));else act.append(bTVExp('kkphim','KKPhim',slugs.kkphim,t,o2,'kk-src-btn--kkphim'));}else act.append('<div class="kk-src-btn kk-src-btn--no">KKPhim – N/A</div>');
+            if(slugs.ophim){if(mt==='movie')act.append(bMovExp('ophim','OPhim',slugs.ophim,t,'kk-src-btn--ophim'));else act.append(bTVExp('ophim','OPhim',slugs.ophim,t,o2,'kk-src-btn--ophim'));}else act.append('<div class="kk-src-btn kk-src-btn--no">OPhim – N/A</div>');
+            act.append(bTorBtn(mt,tid,t,ps,imdb));body.append(act);
             var dw=$('<div class="kk-detail-wrap"></div>').append(hero).append(body);
             if(castArr.length){var castSec=$('<div class="kk-section"><div class="kk-block-title">Diễn viên</div></div>');castSec.append(mkCastList(castArr,true));dw.append(castSec);}
             var simI=(tmdb.similar&&tmdb.similar.results)?tmdb.similar.results.slice(0,20):[];
             if(simI.length){var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim tương tự</div>');var sl=$('<div class="kk-similar-list"></div>');simI.forEach(function(i){if(!i.media_type)i.media_type=mt;sl.append(mkTC(i));});ss2.append(sl);dw.append(ss2);}
-            try{
-                var rd2=await tRec(mt,tid,1);var ri=(rd2.results||[]).slice(0,20);
-                if(ri.length){var rs2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎲 Gợi ý</div>');var rl2=$('<div class="kk-similar-list"></div>');ri.forEach(function(i){if(!i.media_type)i.media_type=mt;rl2.append(mkTC(i));});rs2.append(rl2);dw.append(rs2);}
-                else if(simI.length){dw.find('.kk-similar').last().addClass('kk-section--last');}
-            }catch(e){if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}
+            try{var rd2=await tRec(mt,tid,1);var ri=(rd2.results||[]).slice(0,20);if(ri.length){var rs2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎲 Gợi ý</div>');var rl2=$('<div class="kk-similar-list"></div>');ri.forEach(function(i){if(!i.media_type)i.media_type=mt;rl2.append(mkTC(i));});rs2.append(rl2);dw.append(rs2);}else if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}catch(e){if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}
             scroll.append(dw);comp.activity.loader(false);comp.start();
         }
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
@@ -909,11 +753,7 @@ function startPlugin(){
         this.create=function(){this.activity.loader(true);cScr(scroll);rnd=false;if(!movie||!movie.slug){this.activity.loader(false);comp.start();return;}net.silent(sApi()+'phim/'+movie.slug,function(res){if(rnd)return;ldAll(nm(res.movie||res||{}),res.episodes||[]);},function(){comp.activity.loader(false);});};
         async function ldAll(data,eps){
             if(!data||!data.slug)data=movie;
-            try{
-                var tid=gTid(data),tt=dType(data),tmdb=null,logos=null;
-                if(tid){try{tmdb=await tFetch('/'+tt+'/'+tid+'?language='+tmLang()+'&append_to_response=credits,images');}catch(e){}try{logos=await tFetch('/'+tt+'/'+tid+'/images');}catch(e){}}
-                if(!rnd){bld(data,eps,tmdb,logos,tt);rnd=true;}
-            }catch(e){if(!rnd){bld(data,eps,null,null,dType(data));rnd=true;}}
+            try{var tid=gTid(data),tt=dType(data),tmdb=null,logos=null;if(tid){try{tmdb=await tFetch('/'+tt+'/'+tid+'?language='+tmLang()+'&append_to_response=credits,images');}catch(e){}try{logos=await tFetch('/'+tt+'/'+tid+'/images');}catch(e){}}if(!rnd){bld(data,eps,tmdb,logos,tt);rnd=true;}}catch(e){if(!rnd){bld(data,eps,null,null,dType(data));rnd=true;}}
             comp.activity.loader(false);comp.start();
         }
         function bld(data,eps,tmdb,logos,tt){
@@ -923,51 +763,34 @@ function startPlugin(){
             var v=(data.tmdb&&data.tmdb.vote_average)||'N/A',y=data.year||'',rt=data.time||'',epCur=data.episode_current||'';
             var dirsArr=[],castArr=[],logoH='',country='',tagline='',status='',genreStr='';
             if(tmdb){
-                if(tmdb.backdrop_path)bk=TMDB_IMG+tmdb.backdrop_path;
-                if(tmdb.poster_path)ps=TMDB_IMG+tmdb.poster_path;
-                if(tmdb.title||tmdb.name)t=tmdb.title||tmdb.name;
-                if(tmdb.original_title||tmdb.original_name)o2=tmdb.original_title||tmdb.original_name;
-                if(tmdb.overview)d=tmdb.overview;
-                if(tmdb.vote_average)v=Number(tmdb.vote_average).toFixed(1);
-                if(tmdb.release_date)y=tmdb.release_date.slice(0,4);
-                if(tmdb.runtime)rt=tmdb.runtime+' phút';
-                tagline=tmdb.tagline||'';status=tmdb.status||'';
-                genreStr=(tmdb.genres||[]).slice(0,3).map(function(g){return g.name;}).join(' | ');
+                if(tmdb.backdrop_path)bk=TMDB_IMG+tmdb.backdrop_path;if(tmdb.poster_path)ps=TMDB_IMG+tmdb.poster_path;
+                if(tmdb.title||tmdb.name)t=tmdb.title||tmdb.name;if(tmdb.original_title||tmdb.original_name)o2=tmdb.original_title||tmdb.original_name;
+                if(tmdb.overview)d=tmdb.overview;if(tmdb.vote_average)v=Number(tmdb.vote_average).toFixed(1);if(tmdb.release_date)y=tmdb.release_date.slice(0,4);if(tmdb.runtime)rt=tmdb.runtime+' phút';
+                tagline=tmdb.tagline||'';status=tmdb.status||'';genreStr=(tmdb.genres||[]).slice(0,3).map(function(g){return g.name;}).join(' | ');
                 if(tmdb.production_countries&&tmdb.production_countries.length)country=tmdb.production_countries.map(function(c){return c.iso_3166_1;}).join(', ');
-                var logo=pLogo(logos||tmdb.images);
-                if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
+                var logo=pLogo(logos||tmdb.images);if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
                 if(tmdb.credits){castArr=(tmdb.credits.cast||[]).slice(0,15);dirsArr=(tmdb.credits.crew||[]).filter(function(c){return c.job==='Director'||c.job==='Creator';}).filter(function(p,i,a){return a.findIndex(function(x){return x.name===p.name;})===i;}).slice(0,8);}
             }
             if(!dirsArr.length&&data.director){var dn=Array.isArray(data.director)?data.director:[String(data.director)];dirsArr=dn.filter(Boolean).map(function(n){return{name:n,id:null};});}
             if(!genreStr&&data.category&&data.category.length)genreStr=data.category.slice(0,3).map(function(c){return c.name||'';}).join(' | ');
-            var hasTmdb=!!gTid(data);
-            var crewH=mkDirHtml(dirsArr,hasTmdb);
-            var gh=gHtml(data.category,false);
+            var hasTmdb=!!gTid(data),crewH=mkDirHtml(dirsArr,hasTmdb),gh=gHtml(data.category,false);
             var tH=logoH?'':'<div class="kk-title">'+E(t)+'</div>';
-            var heroExtra={tagline:tagline,vote:v,year:y,runtime:rt+(epCur?' · '+epCur:''),country:country,genres:genreStr,status:status,rated:''};
-            var hero=mkHero(bk,ps,logoH,tH,o2,heroExtra);
+            var hero=mkHero(bk,ps,logoH,tH,o2,{tagline:tagline,vote:v,year:y,runtime:rt+(epCur?' · '+epCur:''),country:country,genres:genreStr,status:status,rated:''});
             var body=mkBody(v,y,rt,epCur,gh,crewH,d);
             body.find('.kk-genre[data-slug]').each(function(){var g=$(this);bE(g,function(){var slug=g.attr('data-slug');if(slug)Lampa.Activity.push({url:'',title:g.attr('data-title')||'',component:'kkphim_category',mode:'category',category_slug:slug,page_num:1});});});
             bindDirClicks(body);
-            var act=$('<div class="kk-actions"></div>');
-            var cSrc=src(),sCss=cSrc.key==='kkphim'?'kk-src-btn--kkphim':'kk-src-btn--ophim';
-            if(eps&&eps.length)act.append(bDetExp(eps,data.name||t,cSrc.name,sCss));
-            else act.append('<div class="kk-src-btn kk-src-btn--no">⚠️ Không có tập</div>');
-            if(hasTmdb)act.append(bTorBtn(tt,gTid(data),data.name||t,ps,null));
-            body.append(act);
+            var act=$('<div class="kk-actions"></div>'),cSrc=src(),sCss=cSrc.key==='kkphim'?'kk-src-btn--kkphim':'kk-src-btn--ophim';
+            if(eps&&eps.length)act.append(bDetExp(eps,data.name||t,cSrc.name,sCss));else act.append('<div class="kk-src-btn kk-src-btn--no">⚠️ Không có tập</div>');
+            if(hasTmdb)act.append(bTorBtn(tt,gTid(data),data.name||t,ps,null));body.append(act);
             var dw=$('<div class="kk-detail-wrap"></div>').append(hero).append(body);
             if(castArr.length){var castSec=$('<div class="kk-section"><div class="kk-block-title">Diễn viên</div></div>');castSec.append(mkCastList(castArr,hasTmdb));dw.append(castSec);}
             var pCats=data.category||[];
             if(pCats.length&&pCats[0]&&pCats[0].slug){
-                var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim liên quan</div>');
-                var sl=$('<div class="kk-similar-list"><div class="kk-ep-ld">⏳</div></div>');
-                ss2.append(sl);dw.append(ss2);
+                var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim liên quan</div>');var sl=$('<div class="kk-similar-list"><div class="kk-ep-ld">⏳</div></div>');ss2.append(sl);dw.append(ss2);
                 fetch(sApi()+'v1/api/the-loai/'+pCats[0].slug+'?page=1').then(function(r){return r.json();}).then(function(res){var items=((res&&res.data&&res.data.items)||(res&&res.items)||[]).map(nm).filter(function(i){return i&&i.slug&&i.slug!==data.slug;});sl.empty();if(items.length)items.slice(0,20).forEach(function(i){sl.append(mkC(i));});else sl.html('<div class="kk-ep-ld">Không có</div>');}).catch(function(){sl.empty();});
             }
             if(hasTmdb){
-                var tid2=gTid(data);
-                var ts2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎬 TMDB liên quan</div>');
-                var tl=$('<div class="kk-similar-list"><div class="kk-ep-ld">⏳</div></div>');
+                var tid2=gTid(data),ts2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎬 TMDB liên quan</div>'),tl=$('<div class="kk-similar-list"><div class="kk-ep-ld">⏳</div></div>');
                 ts2.append(tl);dw.append(ts2);
                 tSimilar(tt,tid2,1).then(function(res){var items=(res.results||[]).slice(0,20);tl.empty();if(items.length)items.forEach(function(i){if(!i.media_type)i.media_type=tt;tl.append(mkTC(i));});else tl.html('<div class="kk-ep-ld">Không có</div>');}).catch(function(){tl.empty();});
             }
