@@ -284,10 +284,18 @@ function mkTCPF(item){
     bE(card,function(){Lampa.Activity.push({url:'',title:d.name||'',component:'kkphim_tmdb_detail',tmdb_id:d.tmdb_id,media_type:d.media_type,page:1});});
     return card;
 }
+
 function mkRowList(items,isKK){
     var cm=cardMode();
-    if(cm==='poster'){var rl=$('<div class="kk-row-list--poster"></div>');items.forEach(function(i){rl.append(isKK?mkPFC(i):mkTCPF(i));});return rl;}
-    else{var rl2=$('<div class="kk-row-list kk-row-list--hgrid"></div>');items.forEach(function(i){rl2.append(isKK?mkCH(i):mkTCH(i));});return rl2;}
+    if(cm==='poster'){
+        var rl=$('<div class="kk-row-list"></div>');
+        items.forEach(function(i){rl.append(isKK?mkPFC(i):mkTCPF(i));});
+        return rl;
+    } else {
+        var rl2=$('<div class="kk-row-list"></div>');
+        items.forEach(function(i){rl2.append(isKK?mkC(i):mkTC(i));});
+        return rl2;
+    }
 }
 function mkCatGrid(items,isKK){
     var cm=catMode();
