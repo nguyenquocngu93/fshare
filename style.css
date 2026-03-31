@@ -327,3 +327,24 @@
 @media (max-width:768px){
     .kk-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.75em}
 }
+
+/* ===== HERO - Backdrop full width, bo góc trên ===== */
+.kk-hero-backdrop{
+    width:100%;
+    margin:0;
+    aspect-ratio:16/9;
+    overflow:hidden;
+    position:relative;
+    background:#222;
+    border-radius:0;  /* bỏ bo góc portrait */
+}
+
+/* Landscape vẫn giữ bo góc đẹp */
+@media (orientation:landscape){
+    .kk-hero-backdrop{
+        width:100%;
+        margin:0;
+        aspect-ratio:21/9;
+        border-radius:0;
+    }
+}
