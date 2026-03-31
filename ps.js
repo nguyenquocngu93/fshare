@@ -1,4 +1,4 @@
-/* KKPhim Plugin v3.0 */
+/* KKPhim Plugin v3.0 - Fixed */
 (function(){
 'use strict';
 if(window.__kkphim_plugin_started)return;
@@ -289,11 +289,9 @@ function mkRowList(items,isKK){
     if(cm==='poster'){var rl=$('<div class="kk-row-list--poster"></div>');items.forEach(function(i){rl.append(isKK?mkPFC(i):mkTCPF(i));});return rl;}
     else{var rl2=$('<div class="kk-row-list kk-row-list--hgrid"></div>');items.forEach(function(i){rl2.append(isKK?mkCH(i):mkTCH(i));});return rl2;}
 }
-/* Category grid builder - respects catMode setting */
 function mkCatGrid(items,isKK){
     var cm=catMode();
     if(cm==='hgrid'){
-        /* 2 cột ngang */
         var grid=$('<div class="kk-grid kk-grid--cat-h"></div>');
         items.forEach(function(i){
             var card=isKK?mkCH(i):mkTCH(i);
@@ -302,7 +300,6 @@ function mkCatGrid(items,isKK){
         });
         return grid;
     } else {
-        /* 3 cột dọc (mặc định) */
         var grid2=$('<div class="kk-grid"></div>');
         grid2.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
         items.forEach(function(i){
@@ -316,7 +313,7 @@ function mkCatGrid(items,isKK){
 function mkCastList(castArr,hasTmdb){
     var list=$('<div class="kk-cast-list"></div>');
     castArr.forEach(function(c){
-        var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'">':'<div class="kk-cast-empty"></div>';
+        var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'" loading="lazy">':'<div class="kk-cast-empty"></div>';
         var card;
         if(hasTmdb&&c.id){card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});}
         else{card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');}
@@ -361,7 +358,6 @@ function mkBody(v,y,rt,extra,genreHtml,crewH,desc){
     return $('<div class="kk-body"><div class="kk-body-genres">'+genreHtml+'</div>'+crewH+'<div class="kk-body-desc"><span class="kk-body-desc-label">Nội dung</span><div class="kk-body-desc-text">'+fTxt(desc)+'</div></div></div>');
 }
 
-/* ── CSS inject ── */
 function inCSS(){
     if($('#kk-css').length)return;
     var l=document.createElement('link');l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;document.head.appendChild(l);
@@ -378,109 +374,75 @@ function addM(){
     Lampa.Listener.follow('app',function(e){if(e.type==='ready')setTimeout(ins,500);});
 }
 
-/* ── FAB - Floating Action Button ── */
-function addFAB(){
-    $('#kk-fab,#kk-fab-menu,#kk-fab-overlay').remove();
-
-    var SVG_MENU='<svg class="kk-fab-ico-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
-    var SVG_CLOSE='<svg class="kk-fab-ico-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-    var SVG_SETTINGS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-    var SVG_SEARCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-    var SVG_HOME='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
-    var SVG_TMDB='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>';
-
-    function mkRow(lbl,svgHtml,extraClass){
-        return $('<div class="kk-fab-row selector"><div class="kk-fab-lbl">'+lbl+'</div><div class="kk-fab-circle'+(extraClass?' '+extraClass:'')+'">'+svgHtml+'</div></div>');
-    }
-
-    var overlay=$('<div id="kk-fab-overlay"></div>');
-    var fab=$('<div id="kk-fab">'+SVG_MENU+SVG_CLOSE+'</div>');
-    var menu=$('<div id="kk-fab-menu"></div>');
-
-    var rows=[
-        {lbl:'Cài đặt',svg:SVG_SETTINGS,cls:'',act:'settings'},
-        {lbl:'Tìm TMDB',svg:SVG_SEARCH,cls:'kk-fab-circle--tmdb',act:'tmdb_search'},
-        {lbl:'TMDB',svg:SVG_TMDB,cls:'kk-fab-circle--tmdb',act:'tmdb'},
-        {lbl:'Trang chủ',svg:SVG_HOME,cls:'',act:'home'}
-    ];
-    rows.forEach(function(r){
-        var row=mkRow(r.lbl,r.svg,r.cls);
-        row.attr('data-act',r.act);
-        menu.append(row);
-    });
-
-    document.body.appendChild(overlay[0]);
-    document.body.appendChild(menu[0]);
-    document.body.appendChild(fab[0]);
-
-    var open=false;
-    function openF(){open=true;fab.addClass('kk-fab--open');menu.addClass('kk-fab-menu--open');overlay.addClass('kk-fab-overlay--show');}
-    function closeF(){open=false;fab.removeClass('kk-fab--open');menu.removeClass('kk-fab-menu--open');overlay.removeClass('kk-fab-overlay--show');}
-
-    bE(fab,function(){if(open)closeF();else openF();});
-    bE(overlay,closeF);
-
-    menu.find('.kk-fab-row').each(function(){
-        var row=$(this);
-        bE(row,function(){
-            closeF();
-            var act=row.attr('data-act');
-            setTimeout(function(){
-                if(act==='settings')Lampa.Activity.push({url:'',title:'Cài đặt',component:'kkphim_settings'});
-                else if(act==='tmdb_search')oTSearch();
-                else if(act==='tmdb')Lampa.Activity.push({url:'',title:'TMDB',component:'kkphim_tmdb_main',page:1});
-                else if(act==='home')Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});
-            },200);
-        });
-    });
-}
-
-function mkGrid(name,fetchFn,titleFn,useCatGrid){
+/* mkGrid với infinite scroll - dùng cho trang con (category, search, list) */
+function mkGridInfinite(name,fetchFn,titleFn,isKK){
     Lampa.Component.add(name,function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,page=obj.page_num||1;
         var wrap=$('<div class="kk-grid-wrap"></div>');
         var titleEl=$('<div class="kk-grid-title">'+E(titleFn(obj))+'</div>');
         var gridContainer=$('<div></div>');
-        var lm=$('<div class="kk-loadmore selector">Tải thêm</div>'),ld=false,hm=true;
+        var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+        var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Hết rồi</div>');
+        var ld=false,done=false;
         var curGrid=null;
         this.create=function(){
             comp.activity.loader(true);cScr(scroll);
-            wrap.append(titleEl).append(gridContainer).append(lm);
+            wrap.append(titleEl).append(gridContainer).append(spinner).append(endMsg);
             scroll.append(wrap);
-            bE(lm,function(){if(!ld&&hm)doL();});
             initGrid();
+            /* Scroll listener for infinite load */
+            var sb=scroll.render().find('.scroll__body');
+            sb.on('scroll',function(){
+                if(ld||done)return;
+                var el=sb[0];
+                if(el.scrollTop+el.clientHeight>=el.scrollHeight-400){
+                    doL();
+                }
+            });
             doL();
         };
         function initGrid(){
-            if(useCatGrid){
-                var cm=catMode();
-                if(cm==='hgrid'){
-                    curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
-                } else {
-                    curGrid=$('<div class="kk-grid"></div>');
-                    curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
-                }
+            var cm=catMode();
+            if(cm==='hgrid'){
+                curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
             } else {
                 curGrid=$('<div class="kk-grid"></div>');
                 curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
             }
             gridContainer.empty().append(curGrid);
         }
-        function doL(){ld=true;lm.text('Đang tải...');fetchFn(obj,page).then(function(items){if(!items.length){hm=false;lm.text(page<=1?'Không có':'Hết');}else{
-            if(useCatGrid){
-                var cm=catMode();
-                items.forEach(function(i){
-                    var card;
-                    if(cm==='hgrid') card=mkTCH(i);
-                    else card=mkTC(i);
-                    card.addClass('kk-card--grid');
-                    curGrid.append(card);
-                });
-            } else {
-                items.forEach(function(i){curGrid.append(mkTC(i).addClass('kk-card--grid'));});
-            }
-            page++;lm.text('Tải thêm');}ld=false;comp.activity.loader(false);comp.start();}).catch(function(){ld=false;lm.text('Lỗi');comp.activity.loader(false);});}
-        this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
+        function doL(){
+            ld=true;spinner.show();
+            fetchFn(obj,page).then(function(items){
+                spinner.hide();
+                if(!items.length){
+                    done=true;
+                    endMsg.show().text(page<=1?'Không có kết quả':'Đã hết');
+                }else{
+                    var cm=catMode();
+                    items.forEach(function(i){
+                        var card;
+                        if(cm==='hgrid') card=isKK?mkCH(i):mkTCH(i);
+                        else card=isKK?mkC(i):mkTC(i);
+                        card.addClass('kk-card--grid');
+                        curGrid.append(card);
+                    });
+                    page++;
+                }
+                ld=false;
+                comp.activity.loader(false);
+                comp.start();
+            }).catch(function(){
+                ld=false;spinner.hide();
+                endMsg.show().text('Lỗi tải');
+                comp.activity.loader(false);
+            });
+        }
+        this.start=function(){aCtrl(scroll);eScr(scroll);};
+        this.pause=function(){};
+        this.stop=function(){};
+        this.render=function(){return scroll.render();};
+        this.destroy=function(){scroll.destroy();};
     });
 }
 
@@ -497,7 +459,7 @@ function fillE(c,eps,title){eps.forEach(function(sv){var sn2=sv.server_name||'Se
 function startPlugin(){
     inCSS();
     addM();
-    addFAB();
+    // addFAB(); // FAB đã bỏ
 
     /* ── SETTINGS ── */
     Lampa.Component.add('kkphim_settings',function(){
@@ -592,28 +554,63 @@ function startPlugin(){
             Promise.all([tFetch('/person/'+pid+'?language='+tmLang()),tPersonC(pid)]).then(function(res){
                 var p=res[0],cr=res[1],w=$('<div class="kk-detail-wrap"></div>');
                 var av=p.profile_path?TMDB_W500+p.profile_path:'';
-                w.append('<div class="kk-person-header"><div class="kk-person-avatar">'+(av?'<img src="'+av+'">':'')+'</div><div class="kk-person-info"><div class="kk-person-name">'+E(p.name||'')+'</div>'+(p.birthday?'<div class="kk-person-meta">🎂 '+E(p.birthday)+'</div>':'')+(p.known_for_department?'<div class="kk-person-meta">🎬 '+E(p.known_for_department)+'</div>':'')+'</div></div>');
+                w.append('<div class="kk-person-header"><div class="kk-person-avatar">'+(av?'<img src="'+av+'">':'<div class="kk-crew-avatar-empty"></div>')+'</div><div class="kk-person-info"><div class="kk-person-name">'+E(p.name||'')+'</div>'+(p.birthday?'<div class="kk-person-meta">🎂 '+E(p.birthday)+'</div>':'')+(p.known_for_department?'<div class="kk-person-meta">🎬 '+E(p.known_for_department)+'</div>':'')+'</div></div>');
                 if(p.biography)w.append('<div class="kk-person-bio">'+fTxt((p.biography||'').substring(0,600))+'</div>');
                 if(cr&&cr.cast){
                     var mv=cr.cast.filter(function(c){return c.media_type==='movie';}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});
                     var tv=cr.cast.filter(function(c){return c.media_type==='tv';}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});
-                    if(mv.length){var r1=$('<div class="kk-row"></div>'),rl=$('<div class="kk-row-list"></div>'),mr=$('<div class="kk-row-more selector">Xem thêm ('+mv.length+')</div>');bE(mr,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim lẻ',component:'kkphim_person_films',person_id:pid,film_type:'movie'});});mv.slice(0,12).forEach(function(c){rl.append(mkTC(c));});r1.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎬 Phim lẻ</div>').append(mr)).append(rl);w.append(r1);}
-                    if(tv.length){var r2=$('<div class="kk-row"></div>'),rl2=$('<div class="kk-row-list"></div>'),mr2=$('<div class="kk-row-more selector">Xem thêm ('+tv.length+')</div>');bE(mr2,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim bộ',component:'kkphim_person_films',person_id:pid,film_type:'tv'});});tv.slice(0,12).forEach(function(c){rl2.append(mkTC(c));});r2.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">📺 Phim bộ</div>').append(mr2)).append(rl2);w.append(r2);}
+                    if(mv.length){var r1=$('<div class="kk-row"></div>'),rl=$('<div class="kk-row-list"></div>');mv.slice(0,12).forEach(function(c){rl.append(mkTC(c));});var mr=$('<div class="kk-row-more selector">Xem thêm ('+mv.length+')</div>');bE(mr,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim lẻ',component:'kkphim_person_films',person_id:pid,film_type:'movie'});});r1.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎬 Phim lẻ</div>').append(mr)).append(rl);w.append(r1);}
+                    if(tv.length){var r2=$('<div class="kk-row"></div>'),rl2=$('<div class="kk-row-list"></div>');tv.slice(0,12).forEach(function(c){rl2.append(mkTC(c));});var mr2=$('<div class="kk-row-more selector">Xem thêm ('+tv.length+')</div>');bE(mr2,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim bộ',component:'kkphim_person_films',person_id:pid,film_type:'tv'});});r2.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">📺 Phim bộ</div>').append(mr2)).append(rl2);w.append(r2);}
                 }
                 scroll.append(w);comp.activity.loader(false);comp.start();
             }).catch(function(){comp.activity.loader(false);});
         };
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
+
     Lampa.Component.add('kkphim_person_films',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,pid=obj.person_id,ft=obj.film_type||'movie';
-        var all=[],rd=0,pp=20,grid=$('<div class="kk-grid"></div>'),lm=$('<div class="kk-loadmore selector">Tải thêm</div>');
-        this.create=function(){comp.activity.loader(true);cScr(scroll);grid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(obj.title||'')+'</div>').append(grid).append(lm));bE(lm,function(){rMore();});tPersonC(pid).then(function(cr){if(cr&&cr.cast)all=cr.cast.filter(function(c){return c.media_type===ft;}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});rMore();comp.activity.loader(false);comp.start();}).catch(function(){comp.activity.loader(false);});};
-        function rMore(){var b=all.slice(rd,rd+pp);if(!b.length){lm.text('Hết');return;}b.forEach(function(c){grid.append(mkTC(c).addClass('kk-card--grid'));});rd+=b.length;lm.text(rd>=all.length?'Hết':'Tải thêm');}
+        var all=[],rd=0,pp=20,gridContainer=$('<div></div>'),curGrid=null;
+        var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+        var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Hết</div>');
+        this.create=function(){
+            comp.activity.loader(true);cScr(scroll);
+            initGrid();
+            scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(obj.title||'')+'</div>').append(gridContainer).append(spinner).append(endMsg));
+            var sb=scroll.render().find('.scroll__body');
+            sb.on('scroll',function(){
+                if(rd>=all.length)return;
+                var el=sb[0];
+                if(el.scrollTop+el.clientHeight>=el.scrollHeight-400){rMore();}
+            });
+            tPersonC(pid).then(function(cr){
+                if(cr&&cr.cast)all=cr.cast.filter(function(c){return c.media_type===ft;}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});
+                rMore();comp.activity.loader(false);comp.start();
+            }).catch(function(){comp.activity.loader(false);});
+        };
+        function initGrid(){
+            var cm=catMode();
+            if(cm==='hgrid'){curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');}
+            else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}
+            gridContainer.empty().append(curGrid);
+        }
+        function rMore(){
+            var b=all.slice(rd,rd+pp);
+            if(!b.length){endMsg.show();return;}
+            spinner.show();
+            var cm=catMode();
+            b.forEach(function(c){
+                var card=cm==='hgrid'?mkTCH(c):mkTC(c);
+                curGrid.append(card.addClass('kk-card--grid'));
+            });
+            rd+=b.length;
+            spinner.hide();
+            if(rd>=all.length)endMsg.show();
+        }
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
 
-    /* ── MAIN ── */
+    /* ── MAIN (row ngang + nút Xem thêm) ── */
     Lampa.Component.add('kkphim_main',function(){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,_s='';
         var cats=[{name:'Phim Mới',api:'danh-sach/phim-moi-cap-nhat'},{name:'Phim Bộ',api:'v1/api/danh-sach/phim-bo'},{name:'Phim Lẻ',api:'v1/api/danh-sach/phim-le'},{name:'Hoạt Hình',api:'v1/api/danh-sach/hoat-hinh'},{name:'TV Shows',api:'v1/api/danh-sach/tv-shows'}];
@@ -634,7 +631,8 @@ function startPlugin(){
                 net.silent(sApi()+cat.api+'?page=1',function(res){
                     var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});
                     if(list.length){
-                        var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Xem thêm</div>');
+                        var row=$('<div class="kk-row"></div>');
+                        var mr=$('<div class="kk-row-more selector">Xem thêm</div>');
                         bE(mr,function(){Lampa.Activity.push({url:'',title:cat.name,component:'kkphim_category',cat:cat,page_num:1,mode:'api'});});
                         row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(cat.name)+'</div>').append(mr));
                         var cm=cardMode(),cnt=cm==='poster'?8:6;
@@ -649,7 +647,7 @@ function startPlugin(){
         this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){net.clear();scroll.destroy();};
     });
 
-    /* ── TMDB MAIN ── */
+    /* ── TMDB MAIN (row ngang + nút Xem thêm) ── */
     Lampa.Component.add('kkphim_tmdb_main',function(){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
         var secs=[{name:'🔥 Xu hướng hôm nay',lt:'trending_day'},{name:'🌟 Xu hướng tuần',lt:'trending'},{name:'🎬 Chiếu rạp',lt:'now_playing'},{name:'📅 Sắp chiếu',lt:'upcoming'},{name:'🌟 Phim lẻ phổ biến',lt:'popular_movies'},{name:'📺 Phim bộ phổ biến',lt:'popular_tv'},{name:'📺 Đang phát sóng',lt:'on_the_air'},{name:'⭐ Top phim lẻ',lt:'top_movies'},{name:'⭐ Top phim bộ',lt:'top_tv'}];
@@ -663,6 +661,7 @@ function startPlugin(){
             Object.keys(SOURCES).forEach(function(k){var s2=SOURCES[k];var btn=$('<div class="kk-srcbtn selector kk-srcbtn--off">'+E(s2.name)+'</div>');bE(btn,function(){ss({source:k});Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});});sb.append(btn);});
             sb.append('<div class="kk-srcbtn kk-srcbtn--on" style="background:rgba(1,180,228,.25);border-color:rgba(1,180,228,.5);color:#01b4e4">TMDB</div>');
             scroll.append(sb);
+            /* Random row */
             var rr=$('<div class="kk-row"></div>'),rm=$('<div class="kk-row-more selector">Thêm</div>');
             bE(rm,function(){Lampa.Activity.push({url:'',title:'🎲 Ngẫu nhiên',component:'kkphim_tmdb_list',listType:'trending',page_num:Math.floor(Math.random()*5)+2});});
             rr.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎲 Ngẫu nhiên</div>').append(rm));
@@ -677,7 +676,14 @@ function startPlugin(){
                 var fn=TFN[sec.lt];if(!fn){ld2++;return;}
                 fn(1).then(function(res){
                     var items=(res.results||[]).filter(function(i){return i.media_type!=='person';});
-                    if(items.length){var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Thêm</div>');bE(mr,function(){Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});});row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(sec.name)+'</div>').append(mr));var cm=cardMode(),cnt=cm==='poster'?8:6;row.append(mkRowList(items.slice(0,cnt),false));scroll.append(row);}
+                    if(items.length){
+                        var row=$('<div class="kk-row"></div>'),mr=$('<div class="kk-row-more selector">Xem thêm</div>');
+                        bE(mr,function(){Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});});
+                        row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(sec.name)+'</div>').append(mr));
+                        var cm=cardMode(),cnt=cm==='poster'?8:6;
+                        row.append(mkRowList(items.slice(0,cnt),false));
+                        scroll.append(row);
+                    }
                     ld2++;if(ld2>=secs.length){comp.activity.loader(false);comp.start();}
                 }).catch(function(){ld2++;if(ld2>=secs.length){comp.activity.loader(false);comp.start();}});
             });
@@ -685,28 +691,35 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
 
-    mkGrid('kkphim_tmdb_list',function(obj,page){var fn=TFN[obj.listType]||TFN.trending;return fn(page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});},function(obj){return obj.title||'TMDB';},true);
-    mkGrid('kkphim_tmdb_search',function(obj,page){return tSearchM(obj.keyword||'',page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});},function(obj){return'🔍 '+(obj.keyword||'');},true);
+    /* Trang danh sách TMDB - infinite scroll */
+    mkGridInfinite('kkphim_tmdb_list',function(obj,page){
+        var fn=TFN[obj.listType]||TFN.trending;
+        return fn(page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});
+    },function(obj){return obj.title||'TMDB';},false);
 
+    /* Trang tìm kiếm TMDB - infinite scroll */
+    mkGridInfinite('kkphim_tmdb_search',function(obj,page){
+        return tSearchM(obj.keyword||'',page).then(function(r){return(r.results||[]).filter(function(i){return i.media_type!=='person';});});
+    },function(obj){return'🔍 '+(obj.keyword||'');},false);
+
+    /* TMDB Genre - infinite scroll */
     Lampa.Component.add('kkphim_tmdb_genre',function(obj){
         var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,cg=String(obj.genre_id||'');
         var gridContainer=$('<div></div>'),ld=false,md=false,td=false,mp=1,tp=1,all=[],rs={};
         var curGrid=null;
+        var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+        var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
         function initGrid(){
             var cm=catMode();
-            if(cm==='hgrid'){
-                curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
-            } else {
-                curGrid=$('<div class="kk-grid"></div>');
-                curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
-            }
+            if(cm==='hgrid'){curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');}
+            else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}
             gridContainer.empty().append(curGrid);
         }
         this.create=function(){
             comp.activity.loader(true);cScr(scroll);
             var gb=$('<div class="kk-genre-bar"></div>');scroll.append(gb);
             initGrid();
-            scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title" id="kk-gtitle">'+E(obj.title||'')+'</div>').append(gridContainer));
+            scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title" id="kk-gtitle">'+E(obj.title||'')+'</div>').append(gridContainer).append(spinner).append(endMsg));
             var sb2=scroll.render().find('.scroll__body');
             sb2.on('scroll',function(){if(ld||(md&&td))return;var el=sb2[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();});
             Promise.all([lGenres('movie'),lGenres('tv')]).then(function(res){
@@ -716,17 +729,19 @@ function startPlugin(){
                 var cur=mg2.find(function(g){return String(g.id)===cg;});if(cur)scroll.render().find('#kk-gtitle').text(cur.name);doL();
             }).catch(function(){doL();});
         };
-        function doL(){if(ld)return;ld=true;var ps=[];
+        function doL(){if(ld)return;ld=true;spinner.show();var ps=[];
             if(!md)ps.push(tDiscover('movie',cg,mp).then(function(r){var items=r.results||[];if(!items.length)md=true;else{items.forEach(function(i){i.media_type='movie';});all=all.concat(items);mp++;}}).catch(function(){md=true;}));
             if(!td)ps.push(tDiscover('tv',cg,tp).then(function(r){var items=r.results||[];if(!items.length)td=true;else{items.forEach(function(i){i.media_type='tv';});all=all.concat(items);tp++;}}).catch(function(){td=true;}));
             Promise.all(ps).then(function(){all.sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});
                 var cm=catMode();
                 for(var i=0;i<all.length;i++){var key=all[i].media_type+'_'+all[i].id;if(!rs[key]){rs[key]=true;
-                    var card;
-                    if(cm==='hgrid') card=mkTCH(all[i]);
-                    else card=mkTC(all[i]);
+                    var card=cm==='hgrid'?mkTCH(all[i]):mkTC(all[i]);
                     curGrid.append(card.addClass('kk-card--grid'));
-                }}ld=false;comp.activity.loader(false);comp.start();}).catch(function(){ld=false;comp.activity.loader(false);});
+                }}
+                spinner.hide();
+                if(md&&td)endMsg.show();
+                ld=false;comp.activity.loader(false);comp.start();
+            }).catch(function(){ld=false;spinner.hide();comp.activity.loader(false);});
         }
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
@@ -775,63 +790,86 @@ function startPlugin(){
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
     });
 
+    /* Category KKPhim/OPhim - infinite scroll */
     Lampa.Component.add('kkphim_category',function(obj){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
         var page=obj.page_num||1,title=obj.title||(obj.cat&&obj.cat.name)||'',mode=obj.mode||'api',apiPath=obj.cat?obj.cat.api:null,catSlug=obj.category_slug||'';
-        var gridContainer=$('<div></div>'),lm=$('<div class="kk-loadmore selector">Tải thêm</div>'),ld=false,hm=true;
+        var gridContainer=$('<div></div>'),ld=false,done=false;
         var curGrid=null;
+        var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+        var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
         function initGrid(){
             var cm=catMode();
-            if(cm==='hgrid'){
-                curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
-            } else {
-                curGrid=$('<div class="kk-grid"></div>');
-                curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
-            }
+            if(cm==='hgrid'){curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');}
+            else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}
             gridContainer.empty().append(curGrid);
         }
-        this.create=function(){this.activity.loader(true);cScr(scroll);initGrid();scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(title)+'</div>').append(gridContainer).append(lm));bE(lm,function(){if(!ld&&hm)doL();});doL();};
-        function hr(res){var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});if(!list.length){hm=false;lm.text('Hết');comp.activity.loader(false);ld=false;comp.start();return;}
+        this.create=function(){
+            this.activity.loader(true);cScr(scroll);initGrid();
+            scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(title)+'</div>').append(gridContainer).append(spinner).append(endMsg));
+            var sb=scroll.render().find('.scroll__body');
+            sb.on('scroll',function(){if(ld||done)return;var el=sb[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();});
+            doL();
+        };
+        function hr(res){
+            var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});
+            spinner.hide();
+            if(!list.length){done=true;endMsg.show().text(page<=1?'Không có':'Đã hết');comp.activity.loader(false);ld=false;comp.start();return;}
             var cm=catMode();
             list.forEach(function(i){
-                var card;
-                if(cm==='hgrid') card=mkCH(i);
-                else card=mkC(i);
+                var card=cm==='hgrid'?mkCH(i):mkC(i);
                 curGrid.append(card.addClass('kk-card--grid'));
             });
-            page++;ld=false;lm.text('Tải thêm');comp.activity.loader(false);comp.start();
+            page++;ld=false;comp.activity.loader(false);comp.start();
         }
-        function doL(){ld=true;lm.text('Đang tải...');var url=(mode==='category'&&catSlug)?sApi()+'v1/api/the-loai/'+catSlug+'?page='+page:sApi()+apiPath+'?page='+page;net.silent(url,hr,function(){ld=false;lm.text('Lỗi');comp.activity.loader(false);});}
+        function doL(){
+            ld=true;spinner.show();
+            var url=(mode==='category'&&catSlug)?sApi()+'v1/api/the-loai/'+catSlug+'?page='+page:sApi()+apiPath+'?page='+page;
+            net.silent(url,hr,function(){ld=false;spinner.hide();endMsg.show().text('Lỗi');comp.activity.loader(false);});
+        }
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){net.clear();scroll.destroy();};
     });
 
+    /* Search KKPhim/OPhim - infinite scroll */
     Lampa.Component.add('kkphim_search',function(obj){
         var net=new Lampa.Reguest(),scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
         var kw=obj.keyword||'',page=obj.page_num||1;
-        var gridContainer=$('<div></div>'),lm=$('<div class="kk-loadmore selector">Tải thêm</div>'),ld=false,hm=true;
+        var gridContainer=$('<div></div>'),ld=false,done=false;
         var curGrid=null;
+        var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+        var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
         function initGrid(){
             var cm=catMode();
-            if(cm==='hgrid'){
-                curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
-            } else {
-                curGrid=$('<div class="kk-grid"></div>');
-                curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
-            }
+            if(cm==='hgrid'){curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');}
+            else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}
             gridContainer.empty().append(curGrid);
         }
-        this.create=function(){this.activity.loader(true);cScr(scroll);initGrid();scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">🔍 '+E(kw)+'</div>').append(gridContainer).append(lm));bE(lm,function(){if(!ld&&hm)doL();});doL();};
-        function hr(res){var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});if(!list.length){hm=false;lm.text(page===1?'Không có':'Hết');comp.activity.loader(false);ld=false;comp.start();return;}
+        this.create=function(){
+            this.activity.loader(true);cScr(scroll);initGrid();
+            scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">🔍 '+E(kw)+'</div>').append(gridContainer).append(spinner).append(endMsg));
+            var sb=scroll.render().find('.scroll__body');
+            sb.on('scroll',function(){if(ld||done)return;var el=sb[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();});
+            doL();
+        };
+        function hr(res){
+            var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).map(nm).filter(function(i){return i&&i.slug;});
+            spinner.hide();
+            if(!list.length){done=true;endMsg.show().text(page===1?'Không có kết quả':'Đã hết');comp.activity.loader(false);ld=false;comp.start();return;}
             var cm=catMode();
             list.forEach(function(i){
-                var card;
-                if(cm==='hgrid') card=mkCH(i);
-                else card=mkC(i);
+                var card=cm==='hgrid'?mkCH(i):mkC(i);
                 curGrid.append(card.addClass('kk-card--grid'));
             });
-            page++;ld=false;lm.text('Tải thêm');comp.activity.loader(false);comp.start();
+            page++;ld=false;comp.activity.loader(false);comp.start();
         }
-        function doL(){ld=true;lm.text('Đang tải...');net.silent(sApi()+'v1/api/tim-kiem?keyword='+encodeURIComponent(kw)+'&page='+page,hr,function(){net.silent(sApi()+'tim-kiem?keyword='+encodeURIComponent(kw)+'&page='+page,hr,function(){ld=false;lm.text('Lỗi');comp.activity.loader(false);});});}
+        function doL(){
+            ld=true;spinner.show();
+            net.silent(sApi()+'v1/api/tim-kiem?keyword='+encodeURIComponent(kw)+'&page='+page,hr,function(){
+                net.silent(sApi()+'tim-kiem?keyword='+encodeURIComponent(kw)+'&page='+page,hr,function(){
+                    ld=false;spinner.hide();endMsg.show().text('Lỗi');comp.activity.loader(false);
+                });
+            });
+        }
         this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){net.clear();scroll.destroy();};
     });
 
