@@ -1932,3 +1932,111 @@
         border-radius: 1.4em 1.4em 0 0 !important;
     }
 }
+
+/* ===== PATCH FINAL COMPLETE ===== */
+
+/* Bo góc backdrop 2 góc trên */
+.kk-hero-backdrop {
+    border-radius: 1.2em 1.2em 0 0 !important;
+}
+
+/* Grid category 2 cột ngang */
+.kk-grid--cat-h {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .8em !important;
+}
+
+/* Row ngang cuộn */
+.kk-row-list {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: .9em !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 1.5em .2em !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+    width: 100% !important;
+}
+
+.kk-row-list::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* Card ngang trong row */
+.kk-row-list .kk-card-h {
+    flex: 0 0 auto !important;
+    width: 18em !important;
+}
+
+/* Poster lớn trong row */
+.kk-row-list .kk-pfc {
+    flex: 0 0 auto !important;
+    width: 85vw !important;
+    max-width: 450px !important;
+}
+
+/* Đảm bảo tất cả con trong row không bị co */
+.kk-row-list > * {
+    flex-shrink: 0 !important;
+}
+
+/* Landscape */
+@media (orientation: landscape) {
+    .kk-hero-backdrop {
+        border-radius: 1.4em 1.4em 0 0 !important;
+    }
+    
+    .kk-row-list .kk-card-h {
+        width: 20em !important;
+    }
+    
+    .kk-row-list .kk-pfc {
+        width: 45vw !important;
+        max-width: 600px !important;
+    }
+}
+
+/* Ảnh mặc định cast/crew */
+.kk-cast-empty,
+.kk-crew-avatar-empty {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+}
+
+.kk-cast-empty::after,
+.kk-crew-avatar-empty::after {
+    content: '' !important;
+    width: 45%;
+    height: 45%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+/* Spinner infinite scroll */
+.kk-row-loading {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1.5em 0 !important;
+    width: 100% !important;
+}
+
+.kk-row-spinner {
+    width: 2em !important;
+    height: 2em !important;
+    border: 3px solid rgba(255,255,255,.1) !important;
+    border-top-color: rgba(99,102,241,.8) !important;
+    border-radius: 50% !important;
+    animation: kk-spin .7s linear infinite !important;
+}
+
+@keyframes kk-spin {
+    to { transform: rotate(360deg); }
+}
