@@ -2216,20 +2216,18 @@
 .kk-country-tags {
     display: inline-flex;
     gap: 4px;
-    margin-left: 6px;
+    margin-left: 8px;
     vertical-align: middle;
 }
 .kk-country-tag {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75em;
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 0.85em;
     font-weight: 700;
     letter-spacing: 0.5px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #f0a030;
     text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
