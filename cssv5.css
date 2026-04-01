@@ -1,0 +1,1093 @@
+/* ═══════════════════════════════════════════════
+   KKPhim v5.0 - Modern UI + 120Hz Mobile
+   ═══════════════════════════════════════════════ */
+
+/* ── Reset & Performance ── */
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* ── GPU Acceleration Base ── */
+.kk-card-v,
+.kk-card-h,
+.kk-card-cw,
+.kk-row-list,
+.kk-grid,
+.kk-similar-list,
+.kk-cast-list,
+.scroll__body {
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.kk-row-list,
+.kk-similar-list,
+.kk-cast-list {
+  will-change: transform;
+  contain: layout paint;
+}
+
+.kk-card-v,
+.kk-card-h {
+  will-change: transform;
+  contain: layout style;
+}
+
+.kk-card-v img,
+.kk-card-h img {
+  transform: translate3d(0, 0, 0);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+}
+
+/* ── Scroll Body ── */
+.scroll__body {
+  transform: translate3d(0, 0, 0) !important;
+  will-change: transform !important;
+  contain: layout paint !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
+/* ═══════════════════════════════════
+   TOPBAR
+   ═══════════════════════════════════ */
+.kk-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1em 1.5em 0.6em;
+  gap: 1em;
+}
+
+.kk-topbar-title {
+  font-size: 1.6em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.kk-tmdb-title {
+  color: #01b4e4;
+}
+
+.kk-topbar-actions {
+  display: flex;
+  gap: 0.6em;
+}
+
+.kk-btn {
+  width: 2.4em;
+  height: 2.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.kk-btn.focus,
+.kk-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* ═══════════════════════════════════
+   ROW
+   ═══════════════════════════════════ */
+.kk-row {
+  margin-bottom: 0.4em;
+}
+
+.kk-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6em 1.5em 0.3em;
+}
+
+.kk-row-title {
+  font-size: 1.15em;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.kk-row-more {
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 0.3em 0.8em;
+  border-radius: 1em;
+  transition: all 0.15s;
+}
+
+.kk-row-more.focus,
+.kk-row-more:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.kk-row-list {
+  display: flex;
+  gap: 0.8em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 1.5em 0.8em;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.kk-row-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════
+   CARDS
+   ═══════════════════════════════════ */
+
+/* ── Vertical (poster) card ── */
+.kk-card-v {
+  flex: 0 0 9em;
+  width: 9em;
+  border-radius: 0.6em;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: start;
+}
+
+.kk-card-v .kk-card-poster {
+  position: relative;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.kk-card-v .kk-card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Horizontal (landscape) card ── */
+.kk-card-h {
+  flex: 0 0 16em;
+  width: 16em;
+  border-radius: 0.6em;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: start;
+}
+
+.kk-card-h .kk-card-poster {
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.kk-card-h .kk-card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Card hover/focus ── */
+.kk-card-v.focus,
+.kk-card-v:hover,
+.kk-card-h.focus,
+.kk-card-h:hover {
+  transform: translate3d(0, 0, 0) scale(1.05) !important;
+  z-index: 5;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Card info ── */
+.kk-card-info {
+  padding: 0.5em 0.6em 0.6em;
+}
+
+.kk-card-title {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kk-card-subtitle {
+  font-size: 0.72em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.15em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kk-card-meta {
+  font-size: 0.72em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 0.2em;
+}
+
+.kk-card-sub {
+  font-size: 0.68em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.15em;
+}
+
+/* ── No image placeholder ── */
+.kk-card-noimg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.8em;
+}
+
+/* ── Badges ── */
+.kk-card-badges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35em;
+  pointer-events: none;
+}
+
+.kk-badge {
+  padding: 0.15em 0.45em;
+  border-radius: 0.25em;
+  font-size: 0.65em;
+  font-weight: 700;
+  line-height: 1.3;
+  transform: translateZ(0);
+}
+
+.kk-badge-quality {
+  background: rgba(229, 9, 20, 0.9);
+  color: #fff;
+}
+
+.kk-badge-ep {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.kk-badge-vote {
+  background: rgba(245, 197, 24, 0.9);
+  color: #000;
+}
+
+.kk-badge-type {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* ── CW Progress ── */
+.kk-cw-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateZ(0);
+}
+
+.kk-cw-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #e50914, #ff6b6b);
+  transform: translateZ(0);
+  transition: width 0.3s;
+}
+
+/* ═══════════════════════════════════
+   GRID (for list/search pages)
+   ═══════════════════════════════════ */
+.kk-list-wrap {
+  padding: 0 1em;
+}
+
+.kk-list-title {
+  font-size: 1.3em;
+  font-weight: 700;
+  padding: 0.8em 0.5em 0.5em;
+  color: #e0e0e0;
+}
+
+.kk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9em, 1fr));
+  gap: 0.8em;
+  padding: 0 0.5em 2em;
+}
+
+.kk-grid-item {
+  flex: none;
+  width: auto;
+}
+
+.kk-grid .kk-card-v,
+.kk-grid .kk-card-h {
+  flex: none;
+  width: 100%;
+}
+
+.kk-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 2em;
+}
+
+.kk-spin {
+  width: 2em;
+  height: 2em;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #e50914;
+  border-radius: 50%;
+  animation: kkSpin 0.8s linear infinite;
+}
+
+@keyframes kkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.kk-end-msg {
+  text-align: center;
+  padding: 2em;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9em;
+}
+
+/* ═══════════════════════════════════
+   DETAIL PAGE
+   ═══════════════════════════════════ */
+.kk-detail {
+  padding-bottom: 4em;
+}
+
+/* ── Hero ── */
+.kk-hero {
+  position: relative;
+  min-height: 18em;
+  overflow: hidden;
+  margin-bottom: 0.5em;
+}
+
+.kk-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.kk-hero-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.5) saturate(1.1);
+}
+
+.kk-hero-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 30%,
+    rgba(0, 0, 0, 0.7) 70%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+}
+
+.kk-hero-bg-empty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0a1a, #1a1a3e);
+}
+
+.kk-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 1.2em;
+  padding: 3em 1.5em 1.5em;
+  align-items: flex-end;
+}
+
+.kk-hero-poster {
+  flex: 0 0 8em;
+  width: 8em;
+  border-radius: 0.5em;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.kk-hero-poster img {
+  width: 100%;
+  display: block;
+  border-radius: 0.5em;
+}
+
+.kk-hero-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.kk-hero-yc {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.3em;
+}
+
+.kk-hero-year {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.kk-hero-title {
+  font-size: 1.5em;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 0.3em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.kk-logo {
+  max-width: 14em;
+  margin-bottom: 0.5em;
+}
+
+.kk-logo img {
+  max-width: 100%;
+  max-height: 4em;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.kk-hero-badges {
+  display: flex;
+  gap: 0.5em;
+  margin-bottom: 0.3em;
+}
+
+.kk-hero-vote {
+  font-size: 0.9em;
+  font-weight: 700;
+  color: #ffc107;
+}
+
+.kk-hero-vote small {
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 0.75em;
+}
+
+.kk-hero-details {
+  display: flex;
+  gap: 0.8em;
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.kk-country-tags {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.kk-country-tag {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: #f0a030;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Description ── */
+.kk-desc {
+  padding: 0.8em 1.5em;
+}
+
+.kk-desc-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.3em;
+}
+
+.kk-desc-text {
+  font-size: 0.88em;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ═══════════════════════════════════
+   SOURCE BUTTONS & EPISODES
+   ═══════════════════════════════════ */
+.kk-actions {
+  padding: 0.5em 1.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.kk-source-block {
+  width: 100%;
+}
+
+.kk-source-btn {
+  padding: 0.8em 1em;
+  border-radius: 0.6em;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.kk-source-btn.focus,
+.kk-source-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.kk-source-btn-main {
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kk-source-btn-sub {
+  font-size: 0.75em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 0.15em;
+}
+
+.kk-arrow {
+  transition: transform 0.2s;
+  font-size: 0.8em;
+}
+
+.kk-source-btn.kk-open .kk-arrow {
+  transform: rotate(180deg);
+}
+
+/* Source colors */
+.kk-source-kkphim {
+  border-left: 3px solid #e50914;
+}
+.kk-source-ophim {
+  border-left: 3px solid #4ade80;
+}
+.kk-source-torrent {
+  border-left: 3px solid #60a5fa;
+}
+.kk-source-aio {
+  border-left: 3px solid #a78bfa;
+}
+.kk-source-na {
+  opacity: 0.4;
+  border-left: 3px solid rgba(255, 255, 255, 0.1);
+  padding: 0.6em 1em;
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.4);
+  border-radius: 0.6em;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Episode box ── */
+.kk-ep-box {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding: 0 0.5em;
+}
+
+.kk-ep-box.kk-show {
+  max-height: 60em;
+  padding: 0.5em;
+  overflow-y: auto;
+}
+
+.kk-ep-server {
+  font-size: 0.82em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.5em 0 0.3em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 0.3em;
+}
+
+.kk-ep-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-bottom: 0.8em;
+}
+
+.kk-ep-chip {
+  position: relative;
+  padding: 0.45em 0.9em;
+  border-radius: 0.4em;
+  font-size: 0.8em;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.12s;
+}
+
+.kk-ep-chip.focus,
+.kk-ep-chip:hover {
+  background: rgba(229, 9, 20, 0.7);
+  transform: scale(1.05);
+}
+
+.kk-ep-chip.disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.kk-ep-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.kk-ep-bar {
+  height: 100%;
+  background: #e50914;
+}
+
+.kk-season-item {
+  padding: 0.6em 0.8em;
+  border-radius: 0.4em;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.3em;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: #e0e0e0;
+  transition: background 0.12s;
+}
+
+.kk-season-item.focus,
+.kk-season-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.kk-back-btn {
+  padding: 0.5em 0.8em;
+  font-size: 0.82em;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  margin-bottom: 0.5em;
+  transition: color 0.12s;
+}
+
+.kk-back-btn.focus,
+.kk-back-btn:hover {
+  color: #fff;
+}
+
+.kk-loading {
+  text-align: center;
+  padding: 1.5em;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85em;
+}
+
+.kk-error {
+  text-align: center;
+  padding: 1em;
+  color: #f87171;
+  font-size: 0.85em;
+}
+
+/* ═══════════════════════════════════
+   SECTIONS (Cast, Similar)
+   ═══════════════════════════════════ */
+.kk-section {
+  padding: 0.5em 1.5em;
+}
+
+.kk-section-title {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 0.5em;
+}
+
+/* ── Cast ── */
+.kk-cast-list {
+  display: flex;
+  gap: 0.8em;
+  overflow-x: auto;
+  padding-bottom: 0.5em;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kk-cast-list::-webkit-scrollbar {
+  display: none;
+}
+
+.kk-cast-card {
+  flex: 0 0 5em;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.kk-cast-card.focus,
+.kk-cast-card:hover {
+  transform: scale(1.08);
+}
+
+.kk-cast-avatar {
+  width: 4em;
+  height: 4em;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 0.3em;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kk-cast-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kk-cast-noimg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+.kk-cast-name {
+  font-size: 0.7em;
+  font-weight: 600;
+  color: #e0e0e0;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kk-cast-role {
+  font-size: 0.6em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Similar list ── */
+.kk-similar-list {
+  display: flex;
+  gap: 0.8em;
+  overflow-x: auto;
+  padding-bottom: 0.8em;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kk-similar-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════
+   PERSON PAGE
+   ═══════════════════════════════════ */
+.kk-person-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+  padding: 1.5em;
+}
+
+.kk-person-avatar {
+  width: 6em;
+  height: 6em;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kk-person-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kk-person-name {
+  font-size: 1.4em;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════
+   SETTINGS
+   ═══════════════════════════════════ */
+.kk-settings {
+  padding: 1em 1.5em 4em;
+}
+
+.kk-settings-header {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kk-settings-group {
+  margin-bottom: 1em;
+}
+
+.kk-settings-group-title {
+  font-size: 0.88em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0.5em 0 0.3em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kk-settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7em 0.8em;
+  border-radius: 0.5em;
+  cursor: pointer;
+  transition: background 0.12s;
+  margin-bottom: 2px;
+}
+
+.kk-settings-item.focus,
+.kk-settings-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.kk-settings-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.kk-settings-name {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.kk-settings-desc {
+  font-size: 0.72em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.1em;
+}
+
+.kk-settings-value {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 0.5em;
+  white-space: nowrap;
+}
+
+/* ── Status messages ── */
+.kk-status {
+  margin: 0.4em 0;
+  padding: 0.6em 0.8em;
+  border-radius: 0.4em;
+  font-size: 0.8em;
+  transform: translateZ(0);
+}
+
+.kk-status-loading {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.kk-status-ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.kk-status-err {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+}
+
+/* ═══════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════ */
+@media (max-width: 600px) {
+  .kk-hero-content {
+    padding: 2em 1em 1em;
+    gap: 0.8em;
+  }
+
+  .kk-hero-poster {
+    flex: 0 0 5.5em;
+    width: 5.5em;
+  }
+
+  .kk-hero-title {
+    font-size: 1.2em;
+  }
+
+  .kk-card-h {
+    flex: 0 0 13em;
+    width: 13em;
+  }
+
+  .kk-card-v {
+    flex: 0 0 7.5em;
+    width: 7.5em;
+  }
+
+  .kk-grid {
+    grid-template-columns: repeat(auto-fill, minmax(7.5em, 1fr));
+    gap: 0.5em;
+  }
+
+  .kk-topbar {
+    padding: 0.8em 1em 0.4em;
+  }
+
+  .kk-row-head {
+    padding: 0.5em 1em 0.2em;
+  }
+
+  .kk-row-list {
+    padding: 0.4em 1em 0.6em;
+    gap: 0.6em;
+  }
+
+  .kk-actions {
+    padding: 0.5em 1em;
+  }
+
+  .kk-section {
+    padding: 0.5em 1em;
+  }
+}
+
+@media (min-width: 1200px) {
+  .kk-card-h {
+    flex: 0 0 18em;
+    width: 18em;
+  }
+
+  .kk-card-v {
+    flex: 0 0 11em;
+    width: 11em;
+  }
+
+  .kk-hero-content {
+    padding: 4em 3em 2em;
+  }
+
+  .kk-hero-poster {
+    flex: 0 0 12em;
+    width: 12em;
+  }
+
+  .kk-hero-title {
+    font-size: 2em;
+  }
+
+  .kk-grid {
+    grid-template-columns: repeat(auto-fill, minmax(11em, 1fr));
+  }
+}
+
+/* ═══════════════════════════════════
+   120Hz OPTIMIZATIONS
+   ═══════════════════════════════════ */
+
+/* Faster transitions for high-refresh displays */
+@media (update: fast) {
+  .kk-card-v,
+  .kk-card-h,
+  .kk-ep-chip,
+  .kk-btn,
+  .kk-source-btn {
+    transition-duration: 0.08s !important;
+  }
+
+  .kk-card-v.focus,
+  .kk-card-h.focus {
+    transition-duration: 0.06s !important;
+  }
+}
+
+/* Disable smooth scroll on touch for 120Hz */
+@media (pointer: coarse) {
+  .scroll__body,
+  .kk-row-list,
+  .kk-similar-list,
+  .kk-cast-list {
+    scroll-behavior: auto !important;
+  }
+
+  .kk-card-v,
+  .kk-card-h {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
