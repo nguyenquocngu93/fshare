@@ -87,7 +87,12 @@ function setProgress(obj){try{localStorage.setItem(PROG_KEY,JSON.stringify(obj))
 
 function normalizeUrl(url){
     if(!url)return'';
-    try{return url.trim().replace(/[?#].*$/,'').replace(/\/+$/,'');}catch(e){return url.trim();}
+    try{
+        var u=url.trim();
+        // TorrServer URL: giữ nguyên hash + index để phân biệt
+        if(u.indexOf('/stream/')>-1&&u.indexOf('link=')>-1)return u.replace(/&play\s*$/i,'').replace(/\/+$/,'');
+        return u.replace(/[?#].*$/,'').replace(/\/+$/,'');
+    }catch(e){return url.trim();}
 }
 
 function progressKey(url){
