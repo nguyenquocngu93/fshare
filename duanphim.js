@@ -108,7 +108,7 @@
 
     function reguest(url, onOk, onFail) {
         var net = new Lampa.Reguest();
-        net.timeout(12000);
+        net.timeout(15000);
         net.silent(url,
             function (data) { onOk(data); },
             function (a, b) {
@@ -133,15 +133,159 @@
         if (episode) { obj.season = episode.season; obj.episode = episode.episode; }
 
         Lampa.Player.play(obj);
-
         try { if (Lampa.Timeline && Lampa.Timeline.update) Lampa.Timeline.update(card, { percent: 0 }); } catch(e) {}
         try { if (Lampa.Favorite && Lampa.Favorite.add) Lampa.Favorite.add('history', Object.assign({}, card)); } catch(e) {}
     }
 
     /* ============================================================
+       TORRSERVER - Add torrent & lấy file list
+    ============================================================ */
+    function tsHeaders() {
+        var h = { 'Content-Type': 'application/json' };
+        var p = getTsPass();
+        if (p) h['Authorization'] = 'Basic ' + btoa('admin:' + p);
+        return h;
+    }
+
+    // Thêm torrent vào TorrServer, trả về hash
+    function tsAdd(magnet, title, onDone, onFail) {
+        var tsUrl = getTsUrl();
+        if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
+
+        $.ajax({
+            url: tsUrl + '/torrents',
+            type: 'POST',
+            headers: tsHeaders(),
+            data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
+            dataType: 'json',
+            timeout: 15000,
+            success: function (data) { onDone((data && data.hash) || ''); },
+            error:   function ()     { onFail && onFail(); }
+        });
+    }
+
+    // Lấy file list từ TorrServer
+    function tsGetFiles(hash, onDone) {
+        var tsUrl = getTsUrl();
+        $.ajax({
+            url: tsUrl + '/torrents',
+            type: 'POST',
+            headers: tsHeaders(),
+            data: JSON.stringify({ action: 'get', hash: hash }),
+            dataType: 'json',
+            timeout: 15000,
+            success: function (data) {
+                var files = ((data && data.file_stats) || [])
+                    .filter(function (f) {
+                        return (f.path || '').toLowerCase().match(/\.(mp4|mkv|avi|mov|webm|ts|m2ts|wmv|flv)$/);
+                    })
+                    .sort(function (a, b) {
+                        // Sort theo tên file tự nhiên (tập 1, 2, 3...)
+                        return (a.path || '').localeCompare(b.path || '', undefined, { numeric: true });
+                    });
+                onDone(files, data);
+            },
+            error: function () { onDone([], null); }
+        });
+    }
+
+    // Phát file từ TorrServer theo index
+    function tsPlayFile(hash, fileId, title, card) {
+        var tsUrl = getTsUrl();
+        var name  = encodeURIComponent(title || 'video');
+        var url   = tsUrl + '/stream/' + name + '?link=' + hash + '&index=' + fileId + '&play';
+        doPlay({ url: url, title: title, card: card });
+    }
+
+    // Flow: add torrent → đợi → get files → show file list
+    function tsAddAndPickFile(magnet, hash, torrentTitle, playTitle, card) {
+        var tsUrl = getTsUrl();
+        if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
+
+        Lampa.Noty.show('Đang thêm vào TorrServer...');
+
+        tsAdd(magnet, torrentTitle, function (returnedHash) {
+            var h = returnedHash || hash;
+            if (!h) {
+                Lampa.Noty.show('Không lấy được hash từ TorrServer');
+                return;
+            }
+
+            Lampa.Noty.show('Đang tải danh sách file...');
+
+            // Đợi TorrServer parse torrent (tối đa 10 giây, thử mỗi 2 giây)
+            var tries = 0;
+            var maxTries = 5;
+
+            function tryGetFiles() {
+                tries++;
+                tsGetFiles(h, function (files) {
+                    if (!files.length && tries < maxTries) {
+                        // Chưa có file, thử lại
+                        setTimeout(tryGetFiles, 2000);
+                        return;
+                    }
+
+                    if (!files.length) {
+                        // Không lấy được file list → phát file đầu tiên
+                        Lampa.Noty.show('Phát file đầu tiên...');
+                        tsPlayFile(h, 0, playTitle, card);
+                        return;
+                    }
+
+                    if (files.length === 1) {
+                        // Chỉ 1 file → phát luôn
+                        tsPlayFile(h, files[0].id || 0, playTitle, card);
+                        return;
+                    }
+
+                    // Nhiều file → hiện list để chọn
+                    showFileList(files, h, playTitle, card);
+                });
+            }
+
+            // Đợi 2 giây trước khi lấy file list
+            setTimeout(tryGetFiles, 2000);
+
+        }, function () {
+            // Add thất bại → thử phát trực tiếp
+            Lampa.Noty.show('TorrServer lỗi, thử phát trực tiếp...');
+            if (hash) tsPlayFile(hash, 0, playTitle, card);
+        });
+    }
+
+    // Hiển thị danh sách file để chọn
+    function showFileList(files, hash, playTitle, card) {
+        Lampa.Select.show({
+            title: '📂 Chọn file — ' + playTitle,
+            items: files.map(function (f) {
+                // Lấy tên file từ path
+                var parts    = (f.path || '').split('/');
+                var filename = parts[parts.length - 1] || f.path || 'File';
+                var size     = f.length ? ' — ' + fmtBytes(f.length) : '';
+
+                // Detect episode number từ tên file
+                var epMatch  = filename.match(/[Ee](\d+)|[Сс](\d+)|[Ее]пизод\s*(\d+)|\b(\d{2,3})\b/);
+                var epLabel  = epMatch ? ' [Ep ' + (epMatch[1] || epMatch[2] || epMatch[3] || epMatch[4]) + ']' : '';
+
+                return {
+                    title:    filename + epLabel,
+                    subtitle: size.trim(),
+                    file:     f
+                };
+            }),
+            onSelect: function (item) {
+                var f       = item.file;
+                var fTitle  = playTitle + ' — ' + (f.path || '').split('/').pop();
+                tsPlayFile(hash, f.id || 0, fTitle, card);
+            },
+            onBack: function () { Lampa.Controller.toggle('full'); }
+        });
+    }
+
+    /* ============================================================
        KKPHIM / OPHIM
-       Flow bắt buộc: Server(phiên bản) → Tập
-       Không auto skip bất kỳ bước nào
+       Flow: Chọn phiên bản → Chọn tập → Phát
     ============================================================ */
     function searchSource(source, keyword, cb) {
         reguest(
@@ -188,45 +332,24 @@
         return scored.length ? scored[0].item : null;
     }
 
-    /* 
-     * Bước 1: Chọn Server (phiên bản: Vietsub, Thuyết minh...)
-     * Bước 2: Chọn Tập
-     * LUÔN hiện cả 2 bước, không auto skip
-     */
+    function cleanName(name) {
+        return (name || '').replace(/^#+\s*/, '').trim();
+    }
+
+    // Bước 1: Chọn phiên bản/server - LUÔN hiện
     function playEpisode(card, episodes) {
         var title = card.title || card.name || '';
-
         var servers = (episodes || []).filter(function (srv) {
             return srv.server_data && srv.server_data.length > 0;
         });
+        if (!servers.length) { Lampa.Noty.show('Không có tập phim'); return; }
 
-        if (!servers.length) {
-            Lampa.Noty.show('Không có tập phim');
-            return;
-        }
-
-        // Bước 1: LUÔN hiện menu chọn server
-        showServerMenu(title, servers, card);
-    }
-
-    function cleanName(name) {
-        return (name || '')
-            .replace(/^#+\s*/, '')   // bỏ #
-            .trim();
-    }
-
-    // Bước 1: Chọn server/phiên bản
-    function showServerMenu(title, servers, card) {
         Lampa.Select.show({
             title: title + ' — Chọn phiên bản',
             items: servers.map(function (srv, idx) {
-                var name = cleanName(srv.server_name) || ('Phiên bản ' + (idx + 1));
+                var name  = cleanName(srv.server_name) || ('Phiên bản ' + (idx + 1));
                 var count = (srv.server_data || []).length;
-                return {
-                    title:    name,
-                    subtitle: count + ' tập',
-                    srv:      srv
-                };
+                return { title: name, subtitle: count + ' tập', srv: srv };
             }),
             onSelect: function (item) {
                 // Bước 2: Chọn tập
@@ -238,8 +361,8 @@
 
     // Bước 2: Chọn tập
     function showEpisodeMenu(title, serverData, card) {
-        var eps  = serverData.server_data || [];
-        var srvName = cleanName(serverData.server_name);
+        var eps      = serverData.server_data || [];
+        var srvName  = cleanName(serverData.server_name);
         var menuTitle = title + (srvName ? ' · ' + srvName : '');
 
         if (!eps.length) { Lampa.Noty.show('Không có tập'); return; }
@@ -261,8 +384,7 @@
                 return {
                     title:    ep.name || ('Tập ' + (idx + 1)),
                     subtitle: !link ? '⚠ Không có link' : '',
-                    ep:       ep,
-                    idx:      idx
+                    ep: ep, idx: idx
                 };
             }),
             onSelect: function (item) {
@@ -341,7 +463,7 @@
     }
 
     /* ============================================================
-       JACKETT
+       JACKETT - Sau khi chọn torrent → TorrServer → file list
     ============================================================ */
     function fetchJackett(query, cb) {
         var url = getJackettUrl(), key = getJackettKey();
@@ -386,21 +508,19 @@
         fetchJackett(query, function (r) {
             if (!r.length && orig && orig !== title) {
                 fetchJackett(title + (year ? ' ' + year : ''), function (r2) {
-                    showTorrentMenu(r2, title, 'Jackett', card, null, null);
+                    showPackMenu(r2, title, 'Jackett', card);
                 });
             } else {
-                showTorrentMenu(r, title, 'Jackett', card, null, null);
+                showPackMenu(r, title, 'Jackett', card);
             }
         });
     }
 
     /* ============================================================
-       KNABEN - Fix: thử nhiều field name vì API có thể thay đổi
+       KNABEN
     ============================================================ */
     function fetchKnaben(query, isTV, cb) {
         var cat = isTV ? '300000' : '200000';
-
-        // Thử endpoint v1 trước
         var url = 'https://knaben.eu/api/v1/' +
             '?search=' + encodeURIComponent(query) +
             '&categories[]=' + cat +
@@ -409,44 +529,27 @@
         reguest(url,
             function (data) {
                 var d = typeof data === 'string' ? JSON.parse(data) : data;
-
-                // Knaben có thể trả về nhiều format khác nhau
-                // Thử: d.hits, d.data, d.results, d (nếu là array)
                 var raw = [];
-                if (Array.isArray(d)) raw = d;
-                else if (d && Array.isArray(d.hits))    raw = d.hits;
-                else if (d && Array.isArray(d.data))    raw = d.data;
-                else if (d && Array.isArray(d.results)) raw = d.results;
-                else if (d && d.hits && Array.isArray(d.hits.hits)) raw = d.hits.hits; // elasticsearch format
-
-                console.log('[Knaben] raw count:', raw.length, 'sample:', raw[0]);
+                if (Array.isArray(d))                           raw = d;
+                else if (d && Array.isArray(d.hits))            raw = d.hits;
+                else if (d && d.hits && Array.isArray(d.hits.hits)) raw = d.hits.hits;
+                else if (d && Array.isArray(d.data))            raw = d.data;
+                else if (d && Array.isArray(d.results))         raw = d.results;
 
                 var results = raw.map(function (r) {
-                    // Thử nhiều field name
-                    var hash   = (r.infoHash || r.info_hash || r.infohash || r.hash || r._id || '').toLowerCase();
-                    var title2 = r.title || r.name || r.Title || r._source && r._source.title || '';
-                    var seeds  = parseInt(r.seeders || r.seeds || r.Seeders || 0);
-                    var peers  = parseInt(r.leechers || r.peers || r.Leechers || 0);
-                    var size   = parseInt(r.size || r.contentLength || r.Size || r.bytes || 0);
-                    var tracker= r.indexer || r.tracker || r.Tracker || r.source || 'Knaben';
+                    var src    = r._source || r;
+                    var hash   = (src.infoHash || src.info_hash || src.hash || '').toLowerCase();
+                    var title2 = src.title || src.name || '';
+                    var seeds  = parseInt(src.seeders || src.seeds || 0);
+                    var peers  = parseInt(src.leechers || src.peers || 0);
+                    var size   = parseInt(src.size || src.contentLength || src.bytes || 0);
+                    var tracker= src.indexer || src.tracker || src.source || 'Knaben';
+                    var magnet = src.magnetUrl || src.magnet || '';
 
-                    // Elasticsearch _source wrapper
-                    if (r._source) {
-                        var s = r._source;
-                        hash    = hash    || (s.infoHash || s.info_hash || s.hash || '').toLowerCase();
-                        title2  = title2  || s.title || s.name || '';
-                        seeds   = seeds   || parseInt(s.seeders || s.seeds || 0);
-                        peers   = peers   || parseInt(s.leechers || s.peers || 0);
-                        size    = size    || parseInt(s.size || s.contentLength || 0);
-                        tracker = tracker || s.indexer || s.tracker || 'Knaben';
-                    }
-
-                    var magnet = r.magnetUrl || r.magnet || r.MagnetUrl || '';
                     if (!magnet && hash) magnet = makeMagnet(hash, title2);
-                    if (!magnet && !hash) return null;
+                    if (!magnet) return null;
 
-                    var qm = (title2 || '').match(/\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i);
-
+                    var qm = title2.match(/\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i);
                     return {
                         title:   title2,
                         seeds:   seeds,
@@ -462,38 +565,7 @@
 
                 cb(results);
             },
-            function (e) {
-                console.log('[Knaben] lỗi v1:', e);
-                // Thử endpoint v2
-                var url2 = 'https://knaben.eu/api/v2/search?q=' + encodeURIComponent(query) +
-                    '&category=' + cat + '&limit=30';
-                reguest(url2,
-                    function (data2) {
-                        var d2 = typeof data2 === 'string' ? JSON.parse(data2) : data2;
-                        var raw2 = Array.isArray(d2) ? d2 : (d2 && d2.data) || [];
-                        console.log('[Knaben] v2 count:', raw2.length);
-                        var r2 = raw2.map(function (r) {
-                            var hash = (r.infoHash || r.hash || '').toLowerCase();
-                            var t    = r.title || r.name || '';
-                            var mag  = r.magnetUrl || r.magnet || (hash ? makeMagnet(hash, t) : '');
-                            if (!mag) return null;
-                            return {
-                                title:   t,
-                                seeds:   parseInt(r.seeders || 0),
-                                peers:   parseInt(r.leechers || 0),
-                                size:    fmtBytes(parseInt(r.size || 0)),
-                                sizeNum: parseInt(r.size || 0),
-                                tracker: r.indexer || r.tracker || 'Knaben',
-                                quality: '',
-                                hash:    hash,
-                                magnet:  mag
-                            };
-                        }).filter(Boolean);
-                        cb(r2);
-                    },
-                    function () { Lampa.Noty.show('Knaben lỗi: ' + e); cb([]); }
-                );
-            }
+            function (e) { Lampa.Noty.show('Knaben lỗi: ' + e); cb([]); }
         );
     }
 
@@ -506,30 +578,29 @@
         var q2    = (orig && orig !== title) ? title + (year ? ' ' + year : '') : '';
 
         Lampa.Noty.show('Knaben: đang tìm...');
-
         fetchKnaben(q1, isTV, function (r) {
             if (!r.length && q2) {
-                fetchKnaben(q2, isTV, function (r2) {
-                    showTorrentMenu(r2, title, 'Knaben', card, null, null);
-                });
+                fetchKnaben(q2, isTV, function (r2) { showPackMenu(r2, title, 'Knaben', card); });
             } else {
-                showTorrentMenu(r, title, 'Knaben', card, null, null);
+                showPackMenu(r, title, 'Knaben', card);
             }
         });
     }
 
     /* ============================================================
-       TORRENT MENU CHUNG
+       PACK MENU - Dùng cho Jackett & Knaben
+       Chọn torrent → TorrServer add → Hiện file list
     ============================================================ */
-    function showTorrentMenu(results, movieTitle, label, card, season, episode) {
+    function showPackMenu(results, movieTitle, label, card) {
         if (!results || !results.length) {
             Lampa.Noty.show(label + ': Không tìm thấy');
             return;
         }
+
         var tsUrl = getTsUrl();
 
         Lampa.Select.show({
-            title: '🧲 ' + label + ': ' + movieTitle + ' (' + results.length + ')' + (tsUrl ? ' →TS' : ''),
+            title: '🧲 ' + label + ': ' + movieTitle + ' (' + results.length + ')',
             items: results.map(function (r) {
                 var line1 = '[' + (r.tracker || label) + ']' + (r.quality ? ' ' + r.quality : '');
                 var line2 = r.title.length > 55 ? r.title.slice(0, 52) + '...' : r.title;
@@ -541,17 +612,28 @@
             }),
             onSelect: function (item) {
                 var r = item.r;
-                if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
-                if (!r.magnet && !r.hash) { Lampa.Noty.show('Không có magnet link'); return; }
-                var mag = r.magnet || makeMagnet(r.hash, r.title);
-                tsPlay(mag, r.hash, 0, movieTitle, card, season, episode);
+
+                if (!tsUrl) {
+                    Lampa.Noty.show('Chưa cấu hình TorrServer! Vào KKPhim Parser để cài.');
+                    return;
+                }
+
+                if (!r.magnet && !r.hash) {
+                    Lampa.Noty.show('Không có magnet link');
+                    return;
+                }
+
+                var magnet = r.magnet || makeMagnet(r.hash, r.title);
+
+                // Add vào TorrServer rồi show file list
+                tsAddAndPickFile(magnet, r.hash, r.title, movieTitle, card);
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
 
     /* ============================================================
-       TORRENTIO / AIO
+       TORRENTIO / AIO - Dùng fileIdx trực tiếp từ API
     ============================================================ */
     function buildStreamUrl(type, imdbId, season, episode) {
         var engine = getTorrentEngine();
@@ -615,7 +697,17 @@
             onSelect: function (item) {
                 var s = item.s;
                 if (tsUrl && s.hash) {
-                    tsPlay(s.magnet, s.hash, s.fileIdx, movieTitle, card, season, episode);
+                    // Torrentio biết fileIdx cụ thể → không cần list file
+                    var name = encodeURIComponent(movieTitle);
+                    tsAdd(s.magnet, movieTitle, function (hash) {
+                        var h = hash || s.hash;
+                        var url = tsUrl + '/stream/' + name + '?link=' + h + '&index=' + s.fileIdx + '&play';
+                        doPlay({ url: url, title: movieTitle, card: card,
+                            episode: (season && episode) ? { season: season, episode: episode } : null });
+                    }, function () {
+                        var url = tsUrl + '/stream/' + name + '?link=' + s.hash + '&index=' + s.fileIdx + '&play';
+                        doPlay({ url: url, title: movieTitle, card: card });
+                    });
                 } else if (s.url) {
                     doPlay({ url: s.url, title: movieTitle, card: card,
                         episode: (season && episode) ? { season: season, episode: episode } : null });
@@ -624,35 +716,6 @@
                 }
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    function tsPlay(magnet, hash, fileIdx, title, card, season, episode) {
-        var tsUrl = getTsUrl();
-        if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
-
-        Lampa.Noty.show('Gửi TorrServer...');
-        var headers = { 'Content-Type': 'application/json' };
-        var pass = getTsPass();
-        if (pass) headers['Authorization'] = 'Basic ' + btoa('admin:' + pass);
-        var name = encodeURIComponent(title || 'video');
-        var idx  = fileIdx || 0;
-
-        $.ajax({
-            url: tsUrl + '/torrents', type: 'POST', headers: headers,
-            data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
-            dataType: 'json', timeout: 10000,
-            success: function (data) {
-                var h = (data && data.hash) || hash;
-                doPlay({ url: tsUrl + '/stream/' + name + '?link=' + h + '&index=' + idx + '&play',
-                    title: title, card: card || {},
-                    episode: (season && episode) ? { season: season, episode: episode } : null });
-            },
-            error: function () {
-                doPlay({ url: tsUrl + '/stream/' + name + '?link=' + (hash || encodeURIComponent(magnet)) + '&index=' + idx + '&play',
-                    title: title, card: card || {},
-                    episode: (season && episode) ? { season: season, episode: episode } : null });
-            }
         });
     }
 
@@ -720,7 +783,7 @@
     }
 
     /* ============================================================
-       SETTINGS - Fix cuộn: dùng settings-param native thay Scroll
+       SETTINGS
     ============================================================ */
     Lampa.Component.add('kkparser_settings', function () {
         var html = $('<div class="settings-list"></div>');
@@ -731,7 +794,6 @@
         this.build = function () {
             html.empty();
 
-            // Header
             html.append(
                 '<div class="settings-param" style="padding:1.5em 1.8em 1em;display:flex;align-items:center;gap:1em;border-bottom:1px solid rgba(255,255,255,.07)">' +
                 '<svg viewBox="0 0 24 24" fill="none" width="36" height="36"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
@@ -762,15 +824,15 @@
                 Lampa.Select.show({
                     title: 'Chọn Engine',
                     items: [
-                        { title: (eng === 'torrentio' ? '✅  ' : '　　') + 'Torrentio', value: 'torrentio' },
-                        { title: (eng === 'aio'       ? '✅  ' : '　　') + 'AIOStreams', value: 'aio' }
+                        { title: (eng === 'torrentio' ? '✅  ' : '　') + 'Torrentio', value: 'torrentio' },
+                        { title: (eng === 'aio'       ? '✅  ' : '　') + 'AIOStreams', value: 'aio' }
                     ],
-                    onSelect: function (s) { setSetting('torrent_engine', s.value); Lampa.Noty.show('✅ Đã chọn: ' + s.title.trim()); self.build(); },
+                    onSelect: function (s) { setSetting('torrent_engine', s.value); Lampa.Noty.show('✅ Đã chọn'); self.build(); },
                     onBack: function () { Lampa.Controller.toggle('content'); }
                 });
             });
             var tc = getSetting('torrentio_config');
-            inp('torrentio_config', '🔗', 'Torrentio Config', 'Dán link manifest (để trống = mặc định)', tc || 'Mặc định');
+            inp('torrentio_config', '🔗', 'Torrentio Config', 'Dán link manifest (trống = mặc định)', tc || 'Mặc định');
             var au = getSetting('aio_url');
             inp('aio_url', '🔗', 'AIOStreams URL', 'Dán full URL manifest', au || 'Chưa cài');
 
@@ -779,7 +841,7 @@
             var ju = getSetting('jackett_url');
             var jk = getSetting('jackett_key');
             inp('jackett_url', '🌐', 'Jackett Server', 'jac.red hoặc jac.maxvol.pro', ju || 'Chưa cài');
-            inp('jackett_key', '🔑', 'Jackett API Key', 'Key từ tài khoản (maxvol = 1)', jk || 'Chưa nhập');
+            inp('jackett_key', '🔑', 'Jackett API Key', 'Key tài khoản (maxvol.pro = 1)', jk || 'Chưa nhập');
             act('▶', 'Test Jackett', ju || 'Chưa nhập server', function () {
                 var url = getJackettUrl(), key = getJackettKey();
                 if (!url) { Lampa.Noty.show('Chưa nhập URL!'); return; }
@@ -793,40 +855,32 @@
 
             sep();
             sec('🌐  Knaben');
-            lbl('🌍', 'knaben.eu', 'Tìm theo tên + năm — không cần cấu hình');
+            lbl('🌍', 'knaben.eu', 'Không cần cấu hình — tìm theo tên + năm');
+            lbl('📂', 'File list', 'Sau khi chọn torrent sẽ hiện danh sách file để chọn tập');
 
             sep();
             sec('🎬  Nguồn phim Việt');
-            lbl('▶', 'KKPhim', 'phimapi.com — tìm + chọn phiên bản + tập');
-            lbl('▶', 'OPhim',  'ophim1.com — tìm + chọn phiên bản + tập');
+            lbl('▶', 'KKPhim', 'phimapi.com — chọn phiên bản → chọn tập');
+            lbl('▶', 'OPhim',  'ophim1.com — chọn phiên bản → chọn tập');
 
-            html.append('<div class="settings-param-title" style="opacity:.2;text-align:center;padding:1.2em">KKPhim Parser v1.5</div>');
+            html.append('<div class="settings-param-title" style="opacity:.2;text-align:center;padding:1.2em">v1.6</div>');
         };
 
-        // Builders dùng class native của Lampa
-        function sec(t) {
-            html.append('<div class="settings-param-title">' + t + '</div>');
-        }
-
-        function sep() {
-            html.append('<div style="height:1px;background:rgba(255,255,255,.06);margin:.3em 1.5em"></div>');
-        }
+        function sec(t) { html.append('<div class="settings-param-title">' + t + '</div>'); }
+        function sep() { html.append('<div style="height:1px;background:rgba(255,255,255,.06);margin:.3em 1.5em"></div>'); }
 
         function inp(key, icon, name, placeholder, currentVal) {
             var $el = $('<div class="settings-param selector">' +
                 '<div class="settings-param__left">' +
                 '<span style="margin-right:.6em;font-size:1.1em">' + icon + '</span>' +
-                '<div>' +
-                '<div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
-                '<div class="settings-param__descr" style="font-size:.85em">' + placeholder + '</div>' +
-                '</div></div>' +
-                '<div class="settings-param__value" style="font-size:.9em">' + (currentVal || '') + '</div>' +
+                '<div><div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
+                '<div class="settings-param__descr">' + placeholder + '</div></div></div>' +
+                '<div class="settings-param__value">' + (currentVal || '') + '</div>' +
                 '</div>');
             $el.on('hover:enter', function () {
-                var cur = getSetting(key) || '';
-                Lampa.Input.edit({ title: name, value: cur, free: true, nosave: true }, function (v) {
+                Lampa.Input.edit({ title: name, value: getSetting(key) || '', free: true, nosave: true }, function (v) {
                     setSetting(key, v.trim());
-                    Lampa.Noty.show('✅ Đã lưu: ' + name);
+                    Lampa.Noty.show('✅ Đã lưu');
                     self.build();
                 });
             });
@@ -837,11 +891,9 @@
             var $el = $('<div class="settings-param selector">' +
                 '<div class="settings-param__left">' +
                 '<span style="margin-right:.6em;font-size:1.1em">' + icon + '</span>' +
-                '<div>' +
-                '<div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
-                '<div class="settings-param__descr" style="font-size:.85em">' + desc + '</div>' +
-                '</div></div>' +
-                '<div class="settings-param__value" style="font-size:.9em">›</div>' +
+                '<div><div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
+                '<div class="settings-param__descr">' + desc + '</div></div></div>' +
+                '<div class="settings-param__value">›</div>' +
                 '</div>');
             $el.on('hover:enter', fn);
             html.append($el);
@@ -851,10 +903,8 @@
             html.append('<div class="settings-param">' +
                 '<div class="settings-param__left">' +
                 '<span style="margin-right:.6em;font-size:1.1em">' + icon + '</span>' +
-                '<div>' +
-                '<div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
-                '<div class="settings-param__descr" style="font-size:.85em">' + desc + '</div>' +
-                '</div></div>' +
+                '<div><div class="settings-param__name" style="font-size:1.05em;font-weight:600">' + name + '</div>' +
+                '<div class="settings-param__descr">' + desc + '</div></div></div>' +
                 '</div>');
         }
 
@@ -940,7 +990,7 @@
 
     function start() {
         addMenu();
-        console.log('[KKPhim Parser] v1.5 ✅');
+        console.log('[KKPhim Parser] v1.6 ✅');
     }
 
     if (window.appready) start();
