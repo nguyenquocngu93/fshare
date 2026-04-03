@@ -138,7 +138,7 @@
     }
 
     /* ============================================================
-       TORRSERVER - Add torrent & lấy file list
+       TORRSERVER
     ============================================================ */
     function tsHeaders() {
         var h = { 'Content-Type': 'application/json' };
@@ -269,17 +269,8 @@
 
     /* ============================================================
        KKPHIM / OPHIM - SEASON DETECTION
-       Mỗi season = 1 bài viết riêng (slug riêng)
-       VD: "loki", "loki-season-2", "loki-mua-3"
     ============================================================ */
 
-    /**
-     * Trích xuất số season từ tên hoặc slug
-     * "Loki (Season 2)" → 2
-     * "loki-season-2" → 2
-     * "Loki (Phần 3)" → 3
-     * "Loki" → 1
-     */
     function extractSeasonNumber(name, slug) {
         var text = (name || '') + ' ' + (slug || '');
         var patterns = [
@@ -296,12 +287,6 @@
         return 1;
     }
 
-    /**
-     * Lấy base slug (bỏ phần season)
-     * "loki-season-2" → "loki"
-     * "thanh-guom-diet-quy-phan-3" → "thanh-guom-diet-quy"
-     * "loki" → "loki"
-     */
     function getBaseSlug(slug) {
         if (!slug) return '';
         var clean = slug
@@ -314,11 +299,6 @@
         return clean;
     }
 
-    /**
-     * Lấy base name (bỏ phần season trong tên hiển thị)
-     * "Loki (Season 2)" → "Loki"
-     * "Thanh Gươm Diệt Quỷ Phần 3" → "Thanh Gươm Diệt Quỷ"
-     */
     function getBaseName(name) {
         if (!name) return '';
         return name
@@ -329,9 +309,6 @@
             .trim();
     }
 
-    /**
-     * Tìm kiếm trên 1 source
-     */
     function searchSource(source, keyword, cb) {
         reguest(
             source.api + 'v1/api/tim-kiem?keyword=' + encodeURIComponent(keyword) + '&limit=30',
@@ -350,12 +327,7 @@
         );
     }
 
-    /**
-     * Lấy chi tiết 1 bài viết (1 season)
-     * Thử cả 2 format API response
-     */
     function fetchDetail(source, slug, cb) {
-        // Thử v1 API trước
         reguest(
             source.api + 'v1/api/phim/' + slug,
             function (data) {
@@ -364,7 +336,6 @@
                     var episodes = data.data.episodes || item.episodes || [];
                     cb({ movie: item, episodes: episodes });
                 } else {
-                    // Fallback sang API cũ
                     reguest(
                         source.api + 'phim/' + slug,
                         function (data2) {
@@ -378,7 +349,6 @@
                 }
             },
             function () {
-                // Fallback sang API cũ
                 reguest(
                     source.api + 'phim/' + slug,
                     function (data2) {
@@ -393,28 +363,21 @@
         );
     }
 
-    /**
-     * Tính điểm khớp giữa item search và phim cần tìm
-     */
     function matchScore(item, title, orig, year) {
         var score = 0;
         var nT = normalizeStr(title), nO = normalizeStr(orig);
         var n1 = normalizeStr(item.name || '');
         var n2 = normalizeStr(item.origin_name || '');
 
-        // So sánh base name (bỏ season)
         var nT_base = normalizeStr(getBaseName(title));
         var nO_base = normalizeStr(getBaseName(orig));
         var n1_base = normalizeStr(getBaseName(item.name || ''));
         var n2_base = normalizeStr(getBaseName(item.origin_name || ''));
 
-        // Exact match (bao gồm cả season text)
         if (nT && (n1 === nT || n2 === nT)) score += 100;
         else if (nO && (n1 === nO || n2 === nO)) score += 100;
-        // Exact match base name (bỏ season)
         else if (nT_base && (n1_base === nT_base || n2_base === nT_base)) score += 90;
         else if (nO_base && (n1_base === nO_base || n2_base === nO_base)) score += 90;
-        // Partial match
         else if (nT && (n1.indexOf(nT) > -1 || nT.indexOf(n1) > -1)) score += 50;
         else if (nO && (n2.indexOf(nO) > -1 || nO.indexOf(n2) > -1)) score += 50;
         else if (nT_base && (n1_base.indexOf(nT_base) > -1 || nT_base.indexOf(n1_base) > -1)) score += 40;
@@ -428,36 +391,15 @@
         return score;
     }
 
-    /**
-     * ★ CORE: Tìm tất cả season của 1 phim từ search results
-     *
-     * Logic:
-     * 1. Search keyword (thử nhiều terms)
-     * 2. Nhóm results theo base_slug (bỏ phần "-season-X")
-     * 3. Chọn group khớp nhất với keyword
-     * 4. Mỗi item trong group = 1 season
-     * 5. Sort theo season number
-     *
-     * Trả về: {
-     *   movie_name: "Loki",
-     *   seasons: [
-     *     { season_num: 1, slug: "loki", name: "Loki", year: "2021", ... },
-     *     { season_num: 2, slug: "loki-season-2", name: "Loki Season 2", year: "2023", ... }
-     *   ]
-     * }
-     */
     function findAllSeasons(source, keyword, title, orig, year, cb) {
-        // Tạo nhiều search terms để tìm đủ season
         var baseKeyword = getBaseName(keyword);
         var baseTitle = getBaseName(title);
         var baseOrig = getBaseName(orig);
 
         var terms = [];
-        // Ưu tiên tên gốc (tiếng Anh) vì slug thường dựa trên tên gốc
         if (baseOrig) terms.push(baseOrig);
         if (baseTitle && terms.indexOf(baseTitle) === -1) terms.push(baseTitle);
         if (baseKeyword && terms.indexOf(baseKeyword) === -1) terms.push(baseKeyword);
-        // Thêm tên đầy đủ (có thể chứa "season X")
         if (orig && terms.indexOf(orig) === -1) terms.push(orig);
         if (title && terms.indexOf(title) === -1) terms.push(title);
 
@@ -468,7 +410,6 @@
 
         function doSearch() {
             if (searchIdx >= terms.length) {
-                // Đã search hết tất cả terms → xử lý kết quả
                 processResults(allResults);
                 return;
             }
@@ -477,7 +418,6 @@
             searchIdx++;
 
             searchSource(source, term, function (items) {
-                // Gộp kết quả, loại trùng slug
                 for (var i = 0; i < items.length; i++) {
                     var exists = false;
                     for (var j = 0; j < allResults.length; j++) {
@@ -499,7 +439,6 @@
                 return;
             }
 
-            // Nhóm theo base_slug
             var groups = {};
             for (var i = 0; i < results.length; i++) {
                 var item = results[i];
@@ -508,7 +447,6 @@
 
                 if (!groups[base]) groups[base] = [];
 
-                // Kiểm tra trùng season number trong cùng group
                 var duplicate = false;
                 for (var d = 0; d < groups[base].length; d++) {
                     if (groups[base][d].season_num === seasonNum &&
@@ -531,7 +469,6 @@
                 }
             }
 
-            // Tìm group khớp nhất với keyword
             var targetSlug = getBaseSlug(
                 normalizeStr(orig || title || keyword)
                     .replace(/[^\w\s]/g, '')
@@ -547,14 +484,11 @@
                 var score = 0;
                 var seasons = groups[base];
 
-                // Tính điểm cho group này
-                // So sánh base slug
                 if (base === targetSlug) {
                     score = 100;
                 } else if (base.indexOf(targetSlug) > -1 || targetSlug.indexOf(base) > -1) {
                     score = 70;
                 } else {
-                    // So sánh từng từ
                     var baseWords = base.split('-').filter(Boolean);
                     var targetWords = targetSlug.split('-').filter(Boolean);
                     var common = 0;
@@ -566,16 +500,13 @@
                     }
                 }
 
-                // Cũng so sánh bằng matchScore trên mỗi item
                 for (var s = 0; s < seasons.length; s++) {
                     var ms = matchScore(seasons[s], title, orig, year);
                     if (ms > 0) score = Math.max(score, ms);
                 }
 
-                // Bonus: group có nhiều season → nhiều khả năng đúng phim
                 if (seasons.length > 1) score += 5;
 
-                // Bonus: year match
                 if (year) {
                     for (var y = 0; y < seasons.length; y++) {
                         if (String(seasons[y].year) === String(year)) {
@@ -592,7 +523,6 @@
             }
 
             if (!bestGroup || bestScore < 10) {
-                // Fallback: dùng kết quả đầu tiên
                 var first = results[0];
                 cb({
                     movie_name: getBaseName(first.origin_name || first.name || ''),
@@ -608,12 +538,10 @@
                 return;
             }
 
-            // Sort seasons theo season_num
             bestGroup.seasons.sort(function (a, b) {
                 return a.season_num - b.season_num;
             });
 
-            // Loại trùng season_num (giữ item đầu tiên)
             var unique = [];
             var seenNums = {};
             for (var u = 0; u < bestGroup.seasons.length; u++) {
@@ -624,7 +552,6 @@
                 }
             }
 
-            // Tên phim gốc
             var movieName = '';
             if (unique.length > 0) {
                 movieName = getBaseName(unique[0].origin_name || unique[0].name || '');
@@ -637,7 +564,6 @@
             });
         }
 
-        // Bắt đầu search
         doSearch();
     }
 
@@ -646,21 +572,9 @@
     }
 
     /* ============================================================
-       KKPHIM/OPHIM FLOW (ĐÃ FIX SEASON)
-       
-       Flow mới:
-       1. Search → findAllSeasons → nhóm theo base slug
-       2. Nếu 1 season → skip menu season
-       3. Nếu nhiều season → Menu chọn Season
-       4. Chọn season → fetchDetail(slug) → lấy episodes
-       5. Menu chọn Server (phiên bản)
-       6. Menu chọn Tập
-       7. Phát
+       KKPHIM/OPHIM FLOW
     ============================================================ */
 
-    /**
-     * Entry point: Tìm và phát phim từ KKPhim/OPhim
-     */
     function searchAndPlay(sourceKey, card) {
         var source = SOURCES[sourceKey];
         if (!source) return;
@@ -673,7 +587,6 @@
 
         findAllSeasons(source, title, title, orig, year, function (result) {
             if (!result || !result.seasons || !result.seasons.length) {
-                // Không tìm tự động được → hiện manual search
                 Lampa.Noty.show(source.name + ': thử tìm thủ công...');
                 var searchTerm = orig || title;
                 searchSource(source, searchTerm, function (items) {
@@ -688,27 +601,21 @@
                 return;
             }
 
-            // Tìm thấy seasons
             showSeasonMenu(source, result, card);
         });
     }
 
-    /**
-     * Bước 2: Menu chọn Season
-     */
     function showSeasonMenu(source, result, card) {
         var seasons = result.seasons;
         var movieName = result.movie_name;
         var title = card.title || card.name || movieName;
 
         if (seasons.length === 1) {
-            // Chỉ 1 season → vào thẳng danh sách server/tập
             Lampa.Noty.show('Đang tải ' + seasons[0].name + '...');
             loadSeasonEpisodes(source, seasons[0], card, title);
             return;
         }
 
-        // Nhiều season → hiện menu chọn
         Lampa.Select.show({
             title: '📺 ' + movieName + ' — ' + seasons.length + ' Season',
             items: seasons.map(function (s, idx) {
@@ -732,9 +639,6 @@
         });
     }
 
-    /**
-     * Bước 3: Tải episodes của 1 season (1 slug)
-     */
     function loadSeasonEpisodes(source, season, card, movieTitle) {
         fetchDetail(source, season.slug, function (data) {
             var eps = data.episodes || [];
@@ -743,14 +647,10 @@
                 return;
             }
 
-            // Đưa season_num vào để dùng khi phát
             playEpisode(card, eps, season.season_num, movieTitle, season.name);
         });
     }
 
-    /**
-     * Bước 4: Chọn Server/Phiên bản
-     */
     function playEpisode(card, episodes, seasonNum, movieTitle, seasonName) {
         var displayTitle = movieTitle || card.title || card.name || '';
         if (seasonName) displayTitle = seasonName;
@@ -764,7 +664,6 @@
             return;
         }
 
-        // Nếu chỉ có 1 server → skip menu server, vào thẳng tập
         if (servers.length === 1) {
             showEpisodeMenu(displayTitle, servers[0], card, seasonNum);
             return;
@@ -784,9 +683,6 @@
         });
     }
 
-    /**
-     * Bước 5: Chọn Tập
-     */
     function showEpisodeMenu(title, serverData, card, seasonNum) {
         var eps      = serverData.server_data || [];
         var srvName  = cleanName(serverData.server_name);
@@ -795,7 +691,6 @@
 
         if (!eps.length) { Lampa.Noty.show('Không có tập'); return; }
 
-        // Tạo playlist cho player
         var playlist = eps.map(function (ep, idx) {
             return {
                 title:   menuTitle + ' — ' + (ep.name || ('Tập ' + (idx + 1))),
@@ -832,9 +727,6 @@
         });
     }
 
-    /**
-     * Manual select (fallback khi auto không tìm được)
-     */
     function showManualSelect(source, items, card) {
         if (!items || !items.length) {
             Lampa.Noty.show('Không tìm thấy trên ' + source.name);
@@ -1189,198 +1081,292 @@
         });
     }
 
-       /* ============================================================
-   SETTINGS - FIX ANDROID TOUCH + FONT TO
-   ============================================================ */
-    Lampa.Component.add('kkparser_settings', function () {
-        var container = $('<div class="settings-container" style="height:100%;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>');
-        var html      = $('<div class="settings-list" style="padding:0 20px 40px"></div>');
-        var self      = this;
-
-        this.create = function () {
-            container.append(html);
-            setTimeout(function() { 
-                // Không cần update scroll, để CSS overflow handle
-            }, 50);
-        };
-
-        this.build = function () {
-            html.empty();
-
-            // Header
-            html.append(
-                '<div style="padding:16px 0;border-bottom:2px solid rgba(255,255,255,.1);margin-bottom:20px">' +
-                    '<div style="display:flex;align-items:center;gap:12px">' +
-                        '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
-                        '<div>' +
-                            '<div style="font-size:20px;font-weight:700;line-height:1.2">KKPhim Parser</div>' +
-                            '<div style="font-size:14px;opacity:0.6;margin-top:4px">v1.8 — Cài đặt nguồn phim & torrent</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>'
-            );
-
-            // TorrServer
-            sectionLabel('TORRSERVER');
-
-            inputField('torrserver_url', 'Địa chỉ TorrServer', 'VD: 192.168.1.100:8090', getSetting('torrserver_url') || '');
-            inputField('torrserver_pass', 'Mật khẩu TorrServer', 'Để trống nếu không có', getSetting('torrserver_pass') ? '••••••' : '');
-            actionButton('Test TorrServer', getSetting('torrserver_url') || '', function() {
-                var url = getTsUrl();
-                if (!url) { Lampa.Noty.show('Chưa nhập địa chỉ!'); return; }
-                Lampa.Noty.show('Đang test...');
-                $.ajax({
-                    url: url + '/echo', type: 'GET', timeout: 5000,
-                    success: function () { Lampa.Noty.show('✅ TorrServer OK!'); },
-                    error: function (xhr) { Lampa.Noty.show(xhr.status === 200 ? '✅ OK!' : '❌ HTTP ' + (xhr.status || 'timeout')); }
+    /* ============================================================
+       SETTINGS - TÍCH HỢP VÀO MENU SETTINGS CỦA LAMPA
+    ============================================================ */
+    
+    function buildSettings() {
+        // TorrServer
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'torrserver_url',
+                type: 'input',
+                default: '',
+                placeholder: '192.168.1.100:8090',
+                values: ''
+            },
+            field: {
+                name: 'Địa chỉ TorrServer',
+                description: 'VD: 192.168.1.100:8090 hoặc để trống'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'Địa chỉ TorrServer',
+                        value: getSetting('torrserver_url'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('torrserver_url', new_value);
+                        item.find('.settings-param__value').text(new_value || 'Không');
+                        Lampa.Storage.set('kkparser_torrserver_url', new_value);
+                    });
                 });
-            });
+            }
+        });
 
-            // Torrent
-            sectionLabel('NGUỒN TORRENT');
-
-            var eng = getTorrentEngine();
-            actionButton('Engine: ' + (eng === 'aio' ? 'AIOStreams' : 'Torrentio'), 'Nhấn để đổi engine', function() {
-                Lampa.Select.show({
-                    title: 'Chọn Engine',
-                    items: [
-                        { title: (eng === 'torrentio' ? '✓ ' : '  ') + 'Torrentio', value: 'torrentio' },
-                        { title: (eng === 'aio'       ? '✓ ' : '  ') + 'AIOStreams', value: 'aio' }
-                    ],
-                    onSelect: function (s) {
-                        setSetting('torrent_engine', s.value);
-                        Lampa.Noty.show('✅ Đã chọn');
-                        self.build();
-                    },
-                    onBack: function () { Lampa.Controller.toggle('content'); }
-                });
-            });
-
-            inputField('torrentio_config', 'Torrentio Config', 'Dán link manifest hoặc để trống = mặc định', getSetting('torrentio_config') || 'Mặc định');
-            inputField('aio_url', 'AIOStreams URL', 'Dán full URL manifest', getSetting('aio_url') || '');
-
-            // Jackett
-            sectionLabel('JACKETT');
-
-            inputField('jackett_url', 'Jackett Server', 'VD: jac.red hoặc jac.maxvol.pro', getSetting('jackett_url') || '');
-            inputField('jackett_key', 'Jackett API Key', 'Key tài khoản', getSetting('jackett_key') || '');
-            actionButton('Test Jackett', getSetting('jackett_url') || '', function() {
-                var url = getJackettUrl(), key = getJackettKey();
-                if (!url) { Lampa.Noty.show('Chưa nhập URL!'); return; }
-                if (!key) { Lampa.Noty.show('Chưa nhập Key!'); return; }
-                Lampa.Noty.show('Đang test...');
-                reguest(
-                    url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
-                    function () { Lampa.Noty.show('✅ Jackett OK!'); },
-                    function (e) { Lampa.Noty.show('❌ ' + e); }
-                );
-            });
-
-            // Knaben
-            sectionLabel('KNABEN');
-            textOnly('knaben.eu — Không cần cấu hình, tìm theo tên + năm');
-            textOnly('Chọn torrent → file list → phát');
-
-            // Phim Việt
-            sectionLabel('NGUỒN PHIM VIỆT');
-            textOnly('KKPhim (phimapi.com) - Tự động tìm season → chọn tập');
-            textOnly('OPhim (ophim1.com) - Tự động tìm season → chọn tập');
-
-            // Spacer
-            html.append('<div style="height:40px"></div>');
-
-            // Focus vào element đầu tiên
-            setTimeout(function() {
-                $('.settings-param').first().addClass('selected');
-            }, 100);
-        };
-
-        // ── UI Helpers ──
-
-        function sectionLabel(title) {
-            html.append(
-                '<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;padding:20px 0 12px;border-bottom:1px solid rgba(255,255,255,.05)">' +
-                    title +
-                '</div>'
-            );
-        }
-
-        function inputField(key, label, placeholder, value) {
-            var isPass = key === 'torrserver_pass' && value === '••••••';
-            var displayVal = value;
-            
-            html.append(
-                '<div class="settings-param selector" data-key="' + key + '" style="background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:12px;padding:16px;">' +
-                    '<div style="font-size:16px;font-weight:600;margin-bottom:6px">' + label + '</div>' +
-                    '<div style="font-size:14px;opacity:0.5;margin-bottom:8px">' + placeholder + '</div>' +
-                    '<div style="font-size:15px;color:#fff;' + (isPass ? 'letter-spacing:2px;' : '') + '">' + (displayVal || '') + '</div>' +
-                '</div>'
-            );
-
-            $('[data-key="' + key + '"]').on('click tap hover:enter', function() {
-                Lampa.Input.edit({
-                    title: label,
-                    value: getSetting(key) || '',
-                    free: true,
-                    nosave: true
-                }, function(v) {
-                    setSetting(key, v.trim());
-                    Lampa.Noty.show('✅ Đã lưu');
-                    self.build();
-                    // Re-focus element
-                    setTimeout(function() {
-                        $('[data-key="' + key + '"]').addClass('selected');
-                    }, 100);
-                });
-            });
-        }
-
-        function actionButton(label, subtitle, onClick) {
-            html.append(
-                '<div class="settings-param selector" style="background:rgba(255,255,255,.05);border-left:4px solid #4CAF50;border-radius:4px;margin-bottom:12px;padding:16px;">' +
-                    '<div style="font-size:16px;font-weight:600;margin-bottom:4px">' + label + '</div>' +
-                    '<div style="font-size:14px;opacity:0.4">' + (subtitle || '') + '</div>' +
-                '</div>'
-            );
-
-            html.find('.selector:last-of-type').on('click tap hover:enter', onClick);
-        }
-
-        function textOnly(text) {
-            html.append(
-                '<div style="font-size:14px;opacity:0.6;margin:8px 0;padding:8px 0;border-top:1px dashed rgba(255,255,255,.1)">' + text + '</div>'
-            );
-        }
-
-        // ── Lifecycle ──
-
-        this.start = function () {
-            Lampa.Controller.add('content', {
-                toggle: function () {
-                    // Cho phép cuộn bằng D-pad lên/xuống
-                    Lampa.Controller.collectionSet(container);
-                    Lampa.Controller.collectionFocus(false, container);
-                },
-                up: function () {
-                    // Cuộn lên nhẹ
-                    container.scrollTop(container.scrollTop() - 50);
-                    Navigator.move('up');
-                },
-                down: function () {
-                    // Cuộn xuống nhẹ
-                    container.scrollTop(container.scrollTop() + 50);
-                    Navigator.move('down');
-                },
-                back: function () {
-                    Lampa.Activity.backward();
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'torrserver_pass',
+                type: 'input',
+                default: '',
+                placeholder: 'Mật khẩu (nếu có)',
+                values: ''
+            },
+            field: {
+                name: 'Mật khẩu TorrServer',
+                description: 'Để trống nếu không có mật khẩu'
+            },
+            onRender: function (item) {
+                var currentPass = getSetting('torrserver_pass');
+                if (currentPass) {
+                    item.find('.settings-param__value').text('••••••');
                 }
-            });
-            Lampa.Controller.toggle('content');
-        };
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'Mật khẩu TorrServer',
+                        value: getSetting('torrserver_pass'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('torrserver_pass', new_value);
+                        item.find('.settings-param__value').text(new_value ? '••••••' : 'Không');
+                        Lampa.Storage.set('kkparser_torrserver_pass', new_value);
+                    });
+                });
+            }
+        });
 
-        this.render = function () { return container; };
-        this.destroy = function () {};
-    });
+        // Test TorrServer
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'test_torrserver',
+                type: 'button',
+                default: ''
+            },
+            field: {
+                name: '🧪 Test TorrServer',
+                description: 'Kiểm tra kết nối TorrServer'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    var url = getTsUrl();
+                    if (!url) {
+                        Lampa.Noty.show('Chưa nhập địa chỉ TorrServer!');
+                        return;
+                    }
+                    Lampa.Noty.show('Đang test TorrServer...');
+                    $.ajax({
+                        url: url + '/echo',
+                        type: 'GET',
+                        timeout: 5000,
+                        success: function () {
+                            Lampa.Noty.show('✅ TorrServer hoạt động OK!');
+                        },
+                        error: function (xhr) {
+                            if (xhr.status === 200) {
+                                Lampa.Noty.show('✅ TorrServer OK!');
+                            } else {
+                                Lampa.Noty.show('❌ Lỗi: HTTP ' + (xhr.status || 'timeout'));
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        // Torrent Engine
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'torrent_engine',
+                type: 'select',
+                default: 'torrentio',
+                values: {
+                    'torrentio': 'Torrentio',
+                    'aio': 'AIOStreams'
+                }
+            },
+            field: {
+                name: 'Engine Torrent',
+                description: 'Chọn nguồn torrent stream'
+            },
+            onRender: function (item) {
+                var current = getTorrentEngine();
+                item.find('.settings-param__value').text(current === 'aio' ? 'AIOStreams' : 'Torrentio');
+            }
+        });
+
+        // Torrentio Config
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'torrentio_config',
+                type: 'input',
+                default: '',
+                placeholder: 'Config string hoặc URL manifest',
+                values: ''
+            },
+            field: {
+                name: 'Torrentio Config',
+                description: 'Dán link manifest.json hoặc để trống = mặc định'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'Torrentio Config',
+                        value: getSetting('torrentio_config'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('torrentio_config', new_value);
+                        item.find('.settings-param__value').text(new_value || 'Mặc định');
+                        Lampa.Storage.set('kkparser_torrentio_config', new_value);
+                    });
+                });
+            }
+        });
+
+        // AIO URL
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'aio_url',
+                type: 'input',
+                default: '',
+                placeholder: 'https://...../manifest.json',
+                values: ''
+            },
+            field: {
+                name: 'AIOStreams URL',
+                description: 'URL đầy đủ của AIO manifest'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'AIOStreams URL',
+                        value: getSetting('aio_url'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('aio_url', new_value);
+                        item.find('.settings-param__value').text(new_value || 'Không');
+                        Lampa.Storage.set('kkparser_aio_url', new_value);
+                    });
+                });
+            }
+        });
+
+        // Jackett
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'jackett_url',
+                type: 'input',
+                default: '',
+                placeholder: 'jac.red hoặc jac.maxvol.pro',
+                values: ''
+            },
+            field: {
+                name: 'Jackett Server',
+                description: 'Địa chỉ Jackett server'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'Jackett Server',
+                        value: getSetting('jackett_url'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('jackett_url', new_value);
+                        item.find('.settings-param__value').text(new_value || 'Không');
+                        Lampa.Storage.set('kkparser_jackett_url', new_value);
+                    });
+                });
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'jackett_key',
+                type: 'input',
+                default: '',
+                placeholder: 'API Key',
+                values: ''
+            },
+            field: {
+                name: 'Jackett API Key',
+                description: 'Key từ tài khoản Jackett'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    Lampa.Input.edit({
+                        title: 'Jackett API Key',
+                        value: getSetting('jackett_key'),
+                        free: true,
+                        nosave: true
+                    }, function (new_value) {
+                        setSetting('jackett_key', new_value);
+                        item.find('.settings-param__value').text(new_value ? '••••••' : 'Không');
+                        Lampa.Storage.set('kkparser_jackett_key', new_value);
+                    });
+                });
+            }
+        });
+
+        // Test Jackett
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: {
+                name: 'test_jackett',
+                type: 'button',
+                default: ''
+            },
+            field: {
+                name: '🧪 Test Jackett',
+                description: 'Kiểm tra kết nối Jackett'
+            },
+            onRender: function (item) {
+                item.on('hover:enter', function () {
+                    var url = getJackettUrl();
+                    var key = getJackettKey();
+                    if (!url) {
+                        Lampa.Noty.show('Chưa nhập URL Jackett!');
+                        return;
+                    }
+                    if (!key) {
+                        Lampa.Noty.show('Chưa nhập API Key!');
+                        return;
+                    }
+                    Lampa.Noty.show('Đang test Jackett...');
+                    reguest(
+                        url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
+                        function () {
+                            Lampa.Noty.show('✅ Jackett hoạt động OK!');
+                        },
+                        function (e) {
+                            Lampa.Noty.show('❌ Jackett lỗi: ' + e);
+                        }
+                    );
+                });
+            }
+        });
+    }
 
     /* ============================================================
        HOOK + MENU + START
@@ -1432,20 +1418,17 @@
         }
     });
 
-    function addMenu() {
-        if ($('.menu__item[data-action="kkparser"]').length) return;
-        var $item = $('<li class="menu__item selector" data-action="kkparser">' +
-            '<div class="menu__ico"><svg viewBox="0 0 24 24" fill="none" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg></div>' +
-            '<div class="menu__text">KKPhim Parser</div></li>');
-        $item.on('hover:enter', function () {
-            Lampa.Activity.push({ url: '', title: 'KKPhim Parser', component: 'kkparser_settings', page: 1 });
-        });
-        $('.menu .menu__list').eq(0).append($item);
-    }
-
     function start() {
-        addMenu();
-        console.log('[KKPhim Parser] v1.7 — Season detection ✅');
+        // Thêm vào Settings menu của Lampa
+        Lampa.SettingsApi.addComponent({
+            component: 'kkparser',
+            name: 'KKPhim Parser',
+            icon: '<svg viewBox="0 0 24 24" fill="none" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>'
+        });
+
+        buildSettings();
+
+        console.log('[KKPhim Parser] v1.8 — Settings tích hợp vào Lampa ✅');
     }
 
     if (window.appready) start();
