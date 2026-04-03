@@ -4,15 +4,9 @@
     if (window.plugin_kkphim_parser_ready) return;
     window.plugin_kkphim_parser_ready = true;
 
-    /* ============================================================
-       KKPhim + OPhim + Torrentio Parser for Lampa v1.0
-       Thêm 3 nút vào card info: KKPhim, OPhim, Torrentio
-       Cài đặt TorrServer/Torrentio/AIO trong menu trái
-    ============================================================ */
-
     var SOURCES = {
-        kkphim: { name: 'KKPhim',  api: 'https://phimapi.com/' },
-        ophim:  { name: 'OPhim',   api: 'https://ophim1.com/' }
+        kkphim: { name: 'KKPhim', api: 'https://phimapi.com/' },
+        ophim:  { name: 'OPhim',  api: 'https://ophim1.com/' }
     };
 
     var TORRENTIO_BASE = 'https://torrentio.strem.fun';
@@ -20,8 +14,12 @@
     var STG_PREFIX     = 'kkparser_';
 
     /* ---- STORAGE ---- */
-    function getSetting(key)      { return Lampa.Storage.get(STG_PREFIX + key, ''); }
-    function setSetting(key, val) { Lampa.Storage.set(STG_PREFIX + key, val); }
+    function getSetting(key) {
+        return Lampa.Storage.get(STG_PREFIX + key, '');
+    }
+    function setSetting(key, val) {
+        Lampa.Storage.set(STG_PREFIX + key, val);
+    }
 
     function getTsUrl() {
         var url = getSetting('torrserver_url') || '';
@@ -30,11 +28,10 @@
         if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
         return url;
     }
-
-    function getTsPass()       { return getSetting('torrserver_pass') || ''; }
-    function getTioConfig()    { return parseTioConfig(getSetting('torrentio_config') || ''); }
-    function getAioUrl()       { return (getSetting('aio_url') || '').replace(/\/manifest\.json\s*$/i, '').replace(/\/+$/, ''); }
-    function getTorrentEngine(){ return getSetting('torrent_engine') || 'torrentio'; }
+    function getTsPass()        { return getSetting('torrserver_pass') || ''; }
+    function getTioConfig()     { return parseTioConfig(getSetting('torrentio_config') || ''); }
+    function getAioUrl()        { return (getSetting('aio_url') || '').replace(/\/manifest\.json\s*$/i, '').replace(/\/+$/, ''); }
+    function getTorrentEngine() { return getSetting('torrent_engine') || 'torrentio'; }
 
     function parseTioConfig(raw) {
         if (!raw) return '';
@@ -59,7 +56,6 @@
             .replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g, '')
             .replace(/\s+/g, ' ');
     }
-
     function padZero(n) { return (n < 10 ? '0' : '') + n; }
 
     function makeMagnet(hash) {
@@ -97,7 +93,6 @@
         return id || null;
     }
 
-    // Lampa.Reguest wrapper
     function reguest(url, onOk, onFail) {
         var net = new Lampa.Reguest();
         net.timeout(12000);
@@ -105,13 +100,13 @@
             function (data) { onOk(data); },
             function (a, b) {
                 var code = (a && a.status) ? a.status : 0;
-                (onFail || function(){})(code ? 'HTTP ' + code : (b || 'Error'));
+                (onFail || function () {})(code ? 'HTTP ' + code : (b || 'Error'));
             }
         );
     }
 
     /* ============================================================
-       KKPHIM / OPHIM - Tìm và phát
+       KKPHIM / OPHIM
     ============================================================ */
     function searchSource(source, keyword, cb) {
         reguest(
@@ -128,10 +123,7 @@
         reguest(
             source.api + 'phim/' + slug,
             function (data) {
-                cb({
-                    movie: data.movie || data || {},
-                    episodes: data.episodes || []
-                });
+                cb({ movie: data.movie || data || {}, episodes: data.episodes || [] });
             },
             function () { cb({ movie: {}, episodes: [] }); }
         );
@@ -165,47 +157,32 @@
         return scored.length ? scored[0].item : null;
     }
 
-    // Phát episodes
     function playEpisode(card, episodes) {
         var title = card.title || card.name || '';
-
-        if (!episodes || !episodes.length) {
-            Lampa.Noty.show('Không có tập phim');
-            return;
-        }
+        if (!episodes || !episodes.length) { Lampa.Noty.show('Không có tập phim'); return; }
 
         var totalEps = 0;
         episodes.forEach(function (srv) { totalEps += (srv.server_data || []).length; });
+        if (totalEps === 0) { Lampa.Noty.show('Không có tập phim'); return; }
 
-        if (totalEps === 0) {
-            Lampa.Noty.show('Không có tập phim');
-            return;
-        }
-
-        // 1 tập → phát luôn
         if (totalEps === 1) {
             for (var i = 0; i < episodes.length; i++) {
                 if (episodes[i].server_data && episodes[i].server_data.length) {
                     var ep = episodes[i].server_data[0];
                     var link = ep.link_m3u8 || ep.link_embed || '';
-                    if (link) {
-                        Lampa.Player.play({ title: title, url: link });
-                    } else {
-                        Lampa.Noty.show('Không có link phát');
-                    }
+                    if (link) Lampa.Player.play({ title: title, url: link });
+                    else Lampa.Noty.show('Không có link phát');
                     return;
                 }
             }
             return;
         }
 
-        // 1 server → list tập
         if (episodes.length === 1 && episodes[0].server_data) {
             showEpisodeList(title, episodes[0]);
             return;
         }
 
-        // Nhiều server → chọn server
         Lampa.Select.show({
             title: 'Chọn Server - ' + title,
             items: episodes.map(function (srv, idx) {
@@ -225,10 +202,7 @@
         if (!eps.length) { Lampa.Noty.show('Không có tập'); return; }
 
         var playlist = eps.map(function (ep) {
-            return {
-                title: title + ' - ' + (ep.name || ''),
-                url: ep.link_m3u8 || ep.link_embed || ''
-            };
+            return { title: title + ' - ' + (ep.name || ''), url: ep.link_m3u8 || ep.link_embed || '' };
         });
 
         Lampa.Select.show({
@@ -237,25 +211,19 @@
                 var link = ep.link_m3u8 || ep.link_embed || '';
                 return {
                     title: (ep.name || 'Tập ' + (idx + 1)) + (!link ? ' [N/A]' : ''),
-                    ep: ep,
-                    idx: idx
+                    ep: ep, idx: idx
                 };
             }),
             onSelect: function (item) {
                 var link = item.ep.link_m3u8 || item.ep.link_embed || '';
                 if (!link) { Lampa.Noty.show('Không có link phát'); return; }
-
-                Lampa.Player.play({
-                    title: title + ' - ' + (item.ep.name || ''),
-                    url: link
-                });
+                Lampa.Player.play({ title: title + ' - ' + (item.ep.name || ''), url: link });
                 Lampa.Player.playlist(playlist, item.idx);
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
 
-    // Tìm phim trên source và phát
     function searchAndPlay(sourceKey, card) {
         var source = SOURCES[sourceKey];
         if (!source) return;
@@ -268,12 +236,10 @@
 
         var terms = [orig || title];
         if (orig && title !== orig) terms.push(title);
-
         var tried = 0;
 
         function tryNext() {
             if (tried >= terms.length) {
-                // Không match tự động → hiện kết quả để user chọn
                 searchSource(source, title, function (allItems) {
                     if (!allItems.length && orig) {
                         searchSource(source, orig, function (items2) {
@@ -285,7 +251,6 @@
                 });
                 return;
             }
-
             searchSource(source, terms[tried], function (items) {
                 var best = findBestMatch(items, title, orig, year);
                 if (best && best.slug) {
@@ -296,7 +261,6 @@
                 }
             });
         }
-
         tryNext();
     }
 
@@ -305,7 +269,6 @@
             Lampa.Noty.show('Không tìm thấy trên ' + source.name);
             return;
         }
-
         Lampa.Select.show({
             title: source.name + ' - Kết quả tìm kiếm',
             items: items.map(function (it) {
@@ -327,16 +290,13 @@
         Lampa.Noty.show('Đang tải phim...');
         fetchDetail(source, slug, function (data) {
             var episodes = data.episodes || [];
-            if (!episodes.length) {
-                Lampa.Noty.show('Không có tập phim');
-                return;
-            }
+            if (!episodes.length) { Lampa.Noty.show('Không có tập phim'); return; }
             playEpisode(card, episodes);
         });
     }
 
     /* ============================================================
-       TORRENTIO / AIO - Tìm torrent bằng IMDB ID
+       TORRENTIO / AIO
     ============================================================ */
     function buildStreamUrl(type, imdbId, season, episode) {
         var engine = getTorrentEngine();
@@ -345,13 +305,11 @@
         if (type === 'series' && season && episode) {
             id = imdbId + ':' + season + ':' + episode;
         }
-
         if (engine === 'aio') {
             var base = getAioUrl();
             if (!base) return null;
             return base + '/stream/' + streamType + '/' + id + '.json';
         }
-
         var config = getTioConfig();
         var base2 = TORRENTIO_BASE + (config ? '/' + config : '');
         return base2 + '/stream/' + streamType + '/' + id + '.json';
@@ -360,10 +318,7 @@
     function fetchStreams(url, cb) {
         reguest(url,
             function (data) { cb((data && data.streams) || []); },
-            function (e) {
-                Lampa.Noty.show('Lỗi tải torrent: ' + e);
-                cb([]);
-            }
+            function (e) { Lampa.Noty.show('Lỗi tải torrent: ' + e); cb([]); }
         );
     }
 
@@ -371,7 +326,6 @@
         var rawName  = String(st.name || '');
         var rawTitle = String(st.title || '');
         var rawAll   = rawName + '\n' + rawTitle;
-
         var name = rawName.split('\n')[0].trim() || rawTitle.split('\n')[0].trim() || '?';
 
         var qual = '';
@@ -392,24 +346,16 @@
         if (sr) src = sr[1];
 
         return {
-            name: name,
-            hash: (st.infoHash || '').toLowerCase(),
+            name: name, hash: (st.infoHash || '').toLowerCase(),
             fileIdx: typeof st.fileIdx === 'number' ? st.fileIdx : null,
-            url: st.url || '',
-            size: size,
-            sizeNum: parseSize(size),
-            seeds: seeds ? parseInt(seeds) : 0,
-            quality: qual,
-            source: src,
+            url: st.url || '', size: size, sizeNum: parseSize(size),
+            seeds: seeds ? parseInt(seeds) : 0, quality: qual, source: src,
             magnet: st.infoHash ? makeMagnet(st.infoHash) : ''
         };
     }
 
     function showStreamsMenu(streams, title) {
-        if (!streams || !streams.length) {
-            Lampa.Noty.show('Không tìm thấy torrent');
-            return;
-        }
+        if (!streams || !streams.length) { Lampa.Noty.show('Không tìm thấy torrent'); return; }
 
         var tsUrl = getTsUrl();
         var engineLabel = getTorrentEngine() === 'aio' ? 'AIO' : 'Torrentio';
@@ -417,8 +363,7 @@
             .sort(function (a, b) { return b.sizeNum - a.sizeNum; });
 
         Lampa.Select.show({
-            title: '🧲 ' + engineLabel + ': ' + title + ' (' + parsed.length + ')' +
-                   (tsUrl ? ' → TS' : ''),
+            title: '🧲 ' + engineLabel + ': ' + title + ' (' + parsed.length + ')' + (tsUrl ? ' → TS' : ''),
             items: parsed.map(function (s) {
                 var line = s.name;
                 if (s.quality && line.toUpperCase().indexOf(s.quality) === -1) line += ' [' + s.quality + ']';
@@ -426,14 +371,10 @@
                 if (s.size) meta.push('💾 ' + s.size);
                 if (s.seeds) meta.push('👤 ' + s.seeds);
                 if (s.source) meta.push('⚙️ ' + s.source);
-                return {
-                    title: line + (meta.length ? '\n' + meta.join('  ') : ''),
-                    stream: s
-                };
+                return { title: line + (meta.length ? '\n' + meta.join('  ') : ''), stream: s };
             }),
             onSelect: function (item) {
                 var s = item.stream;
-
                 if (tsUrl && s.hash) {
                     tsPlay(s.magnet || makeMagnet(s.hash), s.hash, s.fileIdx, title);
                 } else if (s.url) {
@@ -446,13 +387,10 @@
         });
     }
 
-    /* ---- TORRSERVER PLAY ---- */
+    /* ---- TORRSERVER ---- */
     function tsPlay(magnet, hash, fileIdx, title) {
         var tsUrl = getTsUrl();
-        if (!tsUrl) {
-            Lampa.Noty.show('Chưa cấu hình TorrServer!');
-            return;
-        }
+        if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
 
         Lampa.Noty.show('Gửi lên TorrServer...');
 
@@ -460,54 +398,29 @@
         var pass = getTsPass();
         if (pass) headers['Authorization'] = 'Basic ' + btoa('admin:' + pass);
 
-        // Add torrent
-        var net = new Lampa.Reguest();
-        net.timeout(15000);
-
         try {
             $.ajax({
-                url: tsUrl + '/torrents',
-                type: 'POST',
-                headers: headers,
-                data: JSON.stringify({
-                    action: 'add',
-                    link: magnet,
-                    title: title || '',
-                    save_to_db: false
-                }),
+                url: tsUrl + '/torrents', type: 'POST', headers: headers,
+                data: JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
                 dataType: 'json',
                 success: function (data) {
                     var h = (data && data.hash) || hash;
-                    // Đợi parse
                     setTimeout(function () {
-                        // Get info
                         $.ajax({
-                            url: tsUrl + '/torrents',
-                            type: 'POST',
-                            headers: headers,
+                            url: tsUrl + '/torrents', type: 'POST', headers: headers,
                             data: JSON.stringify({ action: 'get', hash: h }),
                             dataType: 'json',
-                            success: function (info) {
-                                tsPickFile(tsUrl, h, info, fileIdx, title);
-                            },
+                            success: function (info) { tsPickFile(tsUrl, h, info, fileIdx, title); },
                             error: function () {
-                                // Fallback: phát file đầu tiên
                                 var idx = (fileIdx !== null && fileIdx >= 0) ? fileIdx : 0;
-                                Lampa.Player.play({
-                                    title: title,
-                                    url: tsUrl + '/stream/fname?link=' + h + '&index=' + idx + '&play'
-                                });
+                                Lampa.Player.play({ title: title, url: tsUrl + '/stream/fname?link=' + h + '&index=' + idx + '&play' });
                             }
                         });
                     }, 2000);
                 },
-                error: function (xhr) {
-                    Lampa.Noty.show('TorrServer lỗi: ' + (xhr.status || 'N/A'));
-                }
+                error: function (xhr) { Lampa.Noty.show('TorrServer lỗi: ' + (xhr.status || 'N/A')); }
             });
-        } catch (e) {
-            Lampa.Noty.show('TorrServer lỗi: ' + e.message);
-        }
+        } catch (e) { Lampa.Noty.show('TorrServer lỗi: ' + e.message); }
     }
 
     function tsPickFile(tsUrl, hash, info, fileIdx, title) {
@@ -517,22 +430,15 @@
                 return (f.path || '').toLowerCase().match(/\.(mp4|mkv|avi|mov|webm|ts|m2ts)$/);
             }).sort(function (a, b) { return (a.id || 0) - (b.id || 0); });
         }
-
         var playFile = function (idx) {
-            Lampa.Player.play({
-                title: title,
-                url: tsUrl + '/stream/fname?link=' + hash + '&index=' + idx + '&play'
-            });
+            Lampa.Player.play({ title: title, url: tsUrl + '/stream/fname?link=' + hash + '&index=' + idx + '&play' });
         };
-
         if (!files.length) { playFile(0); return; }
         if (files.length === 1) { playFile(files[0].id || 0); return; }
         if (fileIdx !== null && fileIdx >= 0) {
             playFile(files[fileIdx] ? files[fileIdx].id : fileIdx);
             return;
         }
-
-        // Nhiều file → chọn
         Lampa.Select.show({
             title: 'Chọn file',
             items: files.map(function (f) {
@@ -545,7 +451,6 @@
         });
     }
 
-    /* ---- TORRENT: Movie ---- */
     function searchTorrent(card, season, episode) {
         var title  = card.title || card.name || '';
         var type   = getMediaType(card);
@@ -568,7 +473,6 @@
 
         if (imdbId) { run(imdbId); return; }
 
-        // Lấy IMDB ID từ TMDB
         var tmdbType = type === 'series' ? 'tv' : 'movie';
         reguest(
             'https://api.themoviedb.org/3/' + tmdbType + '/' + card.id +
@@ -582,7 +486,6 @@
         );
     }
 
-    /* ---- TORRENT: TV - chọn season/episode ---- */
     function getSeasonEpCount(card, season) {
         if (card.seasons) {
             var s = card.seasons.filter(function (x) { return x.season_number === season; })[0];
@@ -601,8 +504,7 @@
                 ee.push({ title: 'S' + padZero(s) + 'E' + padZero(e), s: s, e: e });
             }
             Lampa.Select.show({
-                title: 'Season ' + s + ' — Chọn tập',
-                items: ee,
+                title: 'Season ' + s + ' — Chọn tập', items: ee,
                 onSelect: function (item) { searchTorrent(card, item.s, item.e); },
                 onBack: function () { Lampa.Controller.toggle('full'); }
             });
@@ -616,101 +518,169 @@
             ss.push({ title: 'Season ' + s + ' (' + ep + ' tập)', s: s });
         }
         Lampa.Select.show({
-            title: 'Chọn Season',
-            items: ss,
+            title: 'Chọn Season', items: ss,
             onSelect: function (item) { pickEpisode(item.s); },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
 
     /* ============================================================
-       SETTINGS - Menu cài đặt trong sidebar trái
+       SETTINGS - Component thủ công, không dùng SettingsApi
     ============================================================ */
-    function createSettings() {
-        Lampa.SettingsApi.addParam({
-            component: 'kkparser',
-            param: {
-                name: STG_PREFIX + 'torrserver_url',
-                type: 'input',
-                default: ''
-            },
-            field: {
-                title: 'TorrServer URL',
-                description: 'Ví dụ: 192.168.1.100:8090'
-            }
-        });
+    Lampa.Component.add('kkparser_settings', function () {
+        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var html   = $('<div class="settings-list"></div>');
+        var self   = this;
 
-        Lampa.SettingsApi.addParam({
-            component: 'kkparser',
-            param: {
-                name: STG_PREFIX + 'torrserver_pass',
-                type: 'input',
-                default: ''
-            },
-            field: {
-                title: 'TorrServer Password',
-                description: 'Để trống nếu không có'
-            }
-        });
+        this.create = function () {
+            html.empty();
 
-        Lampa.SettingsApi.addParam({
-            component: 'kkparser',
-            param: {
-                name: STG_PREFIX + 'torrentio_config',
-                type: 'input',
-                default: ''
-            },
-            field: {
-                title: 'Torrentio Config',
-                description: 'Dán link manifest hoặc config string từ torrentio.strem.fun'
-            }
-        });
+            // Title
+            html.append('<div class="settings-param-title"><span>⚙️ KKPhim Parser</span></div>');
 
-        Lampa.SettingsApi.addParam({
-            component: 'kkparser',
-            param: {
-                name: STG_PREFIX + 'aio_url',
-                type: 'input',
-                default: ''
-            },
-            field: {
-                title: 'AIOStreams URL',
-                description: 'Dán full URL manifest của AIOStreams'
-            }
-        });
+            // TorrServer URL
+            addInput('TorrServer URL', 'Ví dụ: 192.168.1.100:8090', 'torrserver_url');
 
-        Lampa.SettingsApi.addParam({
-            component: 'kkparser',
-            param: {
-                name: STG_PREFIX + 'torrent_engine',
-                type: 'select',
-                values: {
-                    torrentio: 'Torrentio',
-                    aio: 'AIOStreams'
-                },
-                default: 'torrentio'
-            },
-            field: {
-                title: 'Nguồn Torrent',
-                description: 'Chọn nguồn torrent mặc định'
-            }
-        });
-    }
+            // TorrServer Password
+            addInput('TorrServer Password', 'Để trống nếu không có', 'torrserver_pass');
 
-    function addSettingsMenu() {
-        if (Lampa.SettingsApi && Lampa.SettingsApi.addComponent) {
-            Lampa.SettingsApi.addComponent({
-                component: 'kkparser',
-                name: 'KKPhim Parser',
-                icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>'
+            // Torrentio Config
+            addInput('Torrentio Config', 'Dán link manifest hoặc config', 'torrentio_config');
+
+            // AIO URL
+            addInput('AIOStreams URL', 'Dán full URL manifest', 'aio_url');
+
+            // Torrent Engine
+            addSelect('Nguồn Torrent', 'torrent_engine', [
+                { title: 'Torrentio', value: 'torrentio' },
+                { title: 'AIOStreams', value: 'aio' }
+            ]);
+
+            // Test TorrServer
+            var testBtn = $('<div class="settings-param selector"><div class="settings-param__name">🧪 Test TorrServer</div><div class="settings-param__value">▶</div></div>');
+            testBtn.on('hover:enter', function () {
+                var url = getTsUrl();
+                if (!url) { Lampa.Noty.show('Chưa nhập TorrServer URL'); return; }
+                Lampa.Noty.show('Đang kiểm tra...');
+                reguest(url + '/echo',
+                    function () { Lampa.Noty.show('✅ Kết nối thành công!'); },
+                    function (e) { Lampa.Noty.show('❌ Lỗi: ' + e); }
+                );
+            });
+            html.append(testBtn);
+
+            // Version
+            html.append('<div class="settings-param-title" style="opacity:0.4"><span>KKPhim Parser v1.0</span></div>');
+
+            scroll.append(html);
+        };
+
+        function addInput(label, placeholder, key) {
+            var current = getSetting(key) || '';
+            var displayVal = current || placeholder;
+            if (key.indexOf('pass') > -1 && current) displayVal = '••••••';
+
+            var item = $('<div class="settings-param selector">' +
+                '<div class="settings-param__name">' + label + '</div>' +
+                '<div class="settings-param__value">' + displayVal + '</div>' +
+                '</div>');
+
+            item.on('hover:enter', function () {
+                Lampa.Input.edit({
+                    title: label,
+                    value: current,
+                    free: true,
+                    nosave: true
+                }, function (newVal) {
+                    setSetting(key, newVal);
+                    Lampa.Noty.show('Đã lưu: ' + label);
+                    self.create(); // refresh
+                });
             });
 
-            createSettings();
+            html.append(item);
         }
+
+        function addSelect(label, key, options) {
+            var current = getSetting(key) || options[0].value;
+            var currentLabel = current;
+            options.forEach(function (o) { if (o.value === current) currentLabel = o.title; });
+
+            var item = $('<div class="settings-param selector">' +
+                '<div class="settings-param__name">' + label + '</div>' +
+                '<div class="settings-param__value">' + currentLabel + '</div>' +
+                '</div>');
+
+            item.on('hover:enter', function () {
+                Lampa.Select.show({
+                    title: label,
+                    items: options.map(function (o) {
+                        return { title: (o.value === current ? '✅ ' : '') + o.title, value: o.value };
+                    }),
+                    onSelect: function (sel) {
+                        setSetting(key, sel.value);
+                        Lampa.Noty.show('Đã chọn: ' + sel.title.replace('✅ ', ''));
+                        self.create(); // refresh
+                    },
+                    onBack: function () { Lampa.Controller.toggle('content'); }
+                });
+            });
+
+            html.append(item);
+        }
+
+        this.start = function () {
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(false, scroll.render());
+                },
+                up: function () {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function () { Navigator.move('down'); },
+                back: function () { Lampa.Activity.backward(); }
+            });
+            Lampa.Controller.toggle('content');
+        };
+
+        this.pause  = function () {};
+        this.stop   = function () {};
+        this.render = function () { return scroll.render(); };
+        this.destroy = function () { scroll.destroy(); };
+    });
+
+    /* ============================================================
+       MENU SIDEBAR
+    ============================================================ */
+    function addMenu() {
+        // Tránh duplicate
+        if ($('.menu__item[data-action="kkparser_settings"]').length) return;
+
+        var icon = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>';
+
+        var menuItem = $('<li class="menu__item selector" data-action="kkparser_settings">' +
+            '<div class="menu__ico">' + icon + '</div>' +
+            '<div class="menu__text">KKPhim Parser</div>' +
+            '</li>');
+
+        menuItem.on('hover:enter', function () {
+            Lampa.Activity.push({
+                url: '',
+                title: 'KKPhim Parser',
+                component: 'kkparser_settings',
+                page: 1
+            });
+        });
+
+        // Chèn vào cuối menu chính
+        var menuList = $('.menu .menu__list').eq(0);
+        if (menuList.length) menuList.append(menuItem);
     }
 
     /* ============================================================
-       INJECT CSS
+       CSS
     ============================================================ */
     function injectCSS() {
         if (document.getElementById('kkparser-css')) return;
@@ -734,7 +704,7 @@
     }
 
     /* ============================================================
-       HOOK: Đăng ký 3 nút vào card info
+       HOOK: 3 nút vào card info
     ============================================================ */
     Lampa.Listener.follow('full', function (e) {
         if (e.type !== 'complite') return;
@@ -748,71 +718,59 @@
             ? e.object.activity.render()
             : (e.object && e.object.render ? e.object.render() : $('body'));
 
-        // Tránh duplicate
         if ($ctx.find('.view--kkphim-parser').length) return;
 
         var isSeries = getMediaType(card) === 'series';
 
-        // ===== Nút 1: KKPhim =====
+        // Nút KKPhim
         var $btnKK = $(
             '<div class="full-start__button selector view--kkphim-parser">' +
-            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22"' +
-            ' xmlns="http://www.w3.org/2000/svg">' +
+            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22">' +
             '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>' +
-            '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/>' +
-            '</svg>' +
+            '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
             '<span>KKPhim</span></div>'
         );
-        $btnKK.on('hover:enter', function () {
-            searchAndPlay('kkphim', card);
-        });
+        $btnKK.on('hover:enter', function () { searchAndPlay('kkphim', card); });
 
-        // ===== Nút 2: OPhim =====
+        // Nút OPhim
         var $btnOP = $(
             '<div class="full-start__button selector view--ophim-parser">' +
-            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22"' +
-            ' xmlns="http://www.w3.org/2000/svg">' +
+            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22">' +
             '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>' +
-            '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/>' +
-            '</svg>' +
+            '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
             '<span>OPhim</span></div>'
         );
-        $btnOP.on('hover:enter', function () {
-            searchAndPlay('ophim', card);
-        });
+        $btnOP.on('hover:enter', function () { searchAndPlay('ophim', card); });
 
-        // ===== Nút 3: Torrent =====
+        // Nút Torrent
         var engineLabel = getTorrentEngine() === 'aio' ? 'AIO' : 'Torrentio';
-        var $btnTorrent = $(
+        var $btnT = $(
             '<div class="full-start__button selector view--torrent-parser">' +
             '<svg viewBox="0 0 24 24" fill="none" width="22" height="22"' +
             ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
-            '<circle cx="12" cy="12" r="10"/>' +
-            '<polyline points="8 12 12 16 16 12"/>' +
-            '<line x1="12" y1="8" x2="12" y2="16"/>' +
-            '</svg>' +
+            '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/>' +
+            '<line x1="12" y1="8" x2="12" y2="16"/></svg>' +
             '<span>' + engineLabel + '</span></div>'
         );
-        $btnTorrent.on('hover:enter', function () {
+        $btnT.on('hover:enter', function () {
             if (isSeries) askTorrentTV(card);
             else searchTorrent(card, null, null);
         });
 
-        // Insert vào buttons container
         var $buttons = $ctx.find('.full-start__buttons');
         if ($buttons.length) {
             $buttons.append($btnKK);
             $buttons.append($btnOP);
-            $buttons.append($btnTorrent);
+            $buttons.append($btnT);
         }
     });
 
     /* ============================================================
-       KHỞI ĐỘNG
+       START
     ============================================================ */
     function start() {
         injectCSS();
-        addSettingsMenu();
+        addMenu();
         console.log('[KKPhim Parser] v1.0 loaded ✅');
     }
 
