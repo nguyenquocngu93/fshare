@@ -916,7 +916,7 @@
                 var r = item.r;
 
                 if (!tsUrl) {
-                    Lampa.Noty.show('Chưa cấu hình TorrServer! Vào KKPhim Parser để cài.');
+                    Lampa.Noty.show('Chưa cấu hình TorrServer! Vào Settings → KKPhim Parser để cài.');
                     return;
                 }
 
@@ -1082,17 +1082,35 @@
     }
 
     /* ============================================================
-       SETTINGS - TÍCH HỢP VÀO MENU SETTINGS CỦA LAMPA (FIX LỖI NHÂN ĐÔI)
+       SETTINGS - FIX: ĐĂNG KÝ COMPONENT TRƯỚC KHI ADD PARAMS
     ============================================================ */
     
+    function initSettings() {
+        // BƯỚC 1: Đăng ký component trước
+        if (Lampa.SettingsApi && Lampa.SettingsApi.addComponent) {
+            Lampa.SettingsApi.addComponent({
+                component: 'kkparser',
+                name: 'KKPhim Parser',
+                icon: '<svg viewBox="0 0 24 24" fill="none" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>'
+            });
+
+            // BƯỚC 2: Thêm params sau khi component đã được đăng ký
+            setTimeout(function() {
+                buildSettings();
+            }, 100);
+        }
+    }
+
     function buildSettings() {
+        if (!Lampa.SettingsApi) return;
+
         // TorrServer URL
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: {
                 name: 'torrserver_url',
                 type: 'input',
-                default: ''
+                default: getSetting('torrserver_url')
             },
             field: {
                 name: 'Địa chỉ TorrServer',
@@ -1109,7 +1127,7 @@
             param: {
                 name: 'torrserver_pass',
                 type: 'input',
-                default: ''
+                default: getSetting('torrserver_pass')
             },
             field: {
                 name: 'Mật khẩu TorrServer',
@@ -1159,7 +1177,7 @@
             param: {
                 name: 'torrent_engine',
                 type: 'select',
-                default: 'torrentio',
+                default: getTorrentEngine(),
                 values: {
                     'torrentio': 'Torrentio',
                     'aio': 'AIOStreams'
@@ -1180,7 +1198,7 @@
             param: {
                 name: 'torrentio_config',
                 type: 'input',
-                default: ''
+                default: getSetting('torrentio_config')
             },
             field: {
                 name: 'Torrentio Config',
@@ -1197,7 +1215,7 @@
             param: {
                 name: 'aio_url',
                 type: 'input',
-                default: ''
+                default: getSetting('aio_url')
             },
             field: {
                 name: 'AIOStreams URL',
@@ -1214,7 +1232,7 @@
             param: {
                 name: 'jackett_url',
                 type: 'input',
-                default: ''
+                default: getSetting('jackett_url')
             },
             field: {
                 name: 'Jackett Server',
@@ -1231,7 +1249,7 @@
             param: {
                 name: 'jackett_key',
                 type: 'input',
-                default: ''
+                default: getSetting('jackett_key')
             },
             field: {
                 name: 'Jackett API Key',
@@ -1330,16 +1348,8 @@
     });
 
     function start() {
-        // Thêm vào Settings menu
-        Lampa.SettingsApi.addComponent({
-            component: 'kkparser',
-            name: 'KKPhim Parser',
-            icon: '<svg viewBox="0 0 24 24" fill="none" width="24" height="24"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>'
-        });
-
-        buildSettings();
-
-        console.log('[KKPhim Parser] v1.8.1 — Settings fix nhân đôi ✅');
+        initSettings();
+        console.log('[KKPhim Parser] v1.8.2 — Settings fix component registration ✅');
     }
 
     if (window.appready) start();
