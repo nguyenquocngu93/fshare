@@ -1082,70 +1082,41 @@
     }
 
     /* ============================================================
-       SETTINGS - TÍCH HỢP VÀO MENU SETTINGS CỦA LAMPA
+       SETTINGS - TÍCH HỢP VÀO MENU SETTINGS CỦA LAMPA (FIX LỖI NHÂN ĐÔI)
     ============================================================ */
     
     function buildSettings() {
-        // TorrServer
+        // TorrServer URL
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: {
                 name: 'torrserver_url',
                 type: 'input',
-                default: '',
-                placeholder: '192.168.1.100:8090',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'Địa chỉ TorrServer',
-                description: 'VD: 192.168.1.100:8090 hoặc để trống'
+                description: 'VD: 192.168.1.100:8090'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'Địa chỉ TorrServer',
-                        value: getSetting('torrserver_url'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('torrserver_url', new_value);
-                        item.find('.settings-param__value').text(new_value || 'Không');
-                        Lampa.Storage.set('kkparser_torrserver_url', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('torrserver_url', value);
             }
         });
 
+        // TorrServer Password
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: {
                 name: 'torrserver_pass',
                 type: 'input',
-                default: '',
-                placeholder: 'Mật khẩu (nếu có)',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'Mật khẩu TorrServer',
-                description: 'Để trống nếu không có mật khẩu'
+                description: 'Để trống nếu không có'
             },
-            onRender: function (item) {
-                var currentPass = getSetting('torrserver_pass');
-                if (currentPass) {
-                    item.find('.settings-param__value').text('••••••');
-                }
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'Mật khẩu TorrServer',
-                        value: getSetting('torrserver_pass'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('torrserver_pass', new_value);
-                        item.find('.settings-param__value').text(new_value ? '••••••' : 'Không');
-                        Lampa.Storage.set('kkparser_torrserver_pass', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('torrserver_pass', value);
             }
         });
 
@@ -1159,31 +1130,25 @@
             },
             field: {
                 name: '🧪 Test TorrServer',
-                description: 'Kiểm tra kết nối TorrServer'
+                description: 'Kiểm tra kết nối'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    var url = getTsUrl();
-                    if (!url) {
-                        Lampa.Noty.show('Chưa nhập địa chỉ TorrServer!');
-                        return;
+            onChange: function () {
+                var url = getTsUrl();
+                if (!url) {
+                    Lampa.Noty.show('Chưa nhập địa chỉ TorrServer!');
+                    return;
+                }
+                Lampa.Noty.show('Đang test...');
+                $.ajax({
+                    url: url + '/echo',
+                    type: 'GET',
+                    timeout: 5000,
+                    success: function () {
+                        Lampa.Noty.show('✅ TorrServer OK!');
+                    },
+                    error: function (xhr) {
+                        Lampa.Noty.show(xhr.status === 200 ? '✅ OK!' : '❌ HTTP ' + (xhr.status || 'timeout'));
                     }
-                    Lampa.Noty.show('Đang test TorrServer...');
-                    $.ajax({
-                        url: url + '/echo',
-                        type: 'GET',
-                        timeout: 5000,
-                        success: function () {
-                            Lampa.Noty.show('✅ TorrServer hoạt động OK!');
-                        },
-                        error: function (xhr) {
-                            if (xhr.status === 200) {
-                                Lampa.Noty.show('✅ TorrServer OK!');
-                            } else {
-                                Lampa.Noty.show('❌ Lỗi: HTTP ' + (xhr.status || 'timeout'));
-                            }
-                        }
-                    });
                 });
             }
         });
@@ -1202,11 +1167,10 @@
             },
             field: {
                 name: 'Engine Torrent',
-                description: 'Chọn nguồn torrent stream'
+                description: 'Chọn nguồn torrent'
             },
-            onRender: function (item) {
-                var current = getTorrentEngine();
-                item.find('.settings-param__value').text(current === 'aio' ? 'AIOStreams' : 'Torrentio');
+            onChange: function (value) {
+                setSetting('torrent_engine', value);
             }
         });
 
@@ -1216,27 +1180,14 @@
             param: {
                 name: 'torrentio_config',
                 type: 'input',
-                default: '',
-                placeholder: 'Config string hoặc URL manifest',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'Torrentio Config',
-                description: 'Dán link manifest.json hoặc để trống = mặc định'
+                description: 'Link manifest hoặc để trống'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'Torrentio Config',
-                        value: getSetting('torrentio_config'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('torrentio_config', new_value);
-                        item.find('.settings-param__value').text(new_value || 'Mặc định');
-                        Lampa.Storage.set('kkparser_torrentio_config', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('torrentio_config', value);
             }
         });
 
@@ -1246,86 +1197,48 @@
             param: {
                 name: 'aio_url',
                 type: 'input',
-                default: '',
-                placeholder: 'https://...../manifest.json',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'AIOStreams URL',
-                description: 'URL đầy đủ của AIO manifest'
+                description: 'URL manifest AIO'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'AIOStreams URL',
-                        value: getSetting('aio_url'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('aio_url', new_value);
-                        item.find('.settings-param__value').text(new_value || 'Không');
-                        Lampa.Storage.set('kkparser_aio_url', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('aio_url', value);
             }
         });
 
-        // Jackett
+        // Jackett URL
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: {
                 name: 'jackett_url',
                 type: 'input',
-                default: '',
-                placeholder: 'jac.red hoặc jac.maxvol.pro',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'Jackett Server',
-                description: 'Địa chỉ Jackett server'
+                description: 'VD: jac.red'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'Jackett Server',
-                        value: getSetting('jackett_url'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('jackett_url', new_value);
-                        item.find('.settings-param__value').text(new_value || 'Không');
-                        Lampa.Storage.set('kkparser_jackett_url', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('jackett_url', value);
             }
         });
 
+        // Jackett Key
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: {
                 name: 'jackett_key',
                 type: 'input',
-                default: '',
-                placeholder: 'API Key',
-                values: ''
+                default: ''
             },
             field: {
                 name: 'Jackett API Key',
-                description: 'Key từ tài khoản Jackett'
+                description: 'API Key từ tài khoản'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Input.edit({
-                        title: 'Jackett API Key',
-                        value: getSetting('jackett_key'),
-                        free: true,
-                        nosave: true
-                    }, function (new_value) {
-                        setSetting('jackett_key', new_value);
-                        item.find('.settings-param__value').text(new_value ? '••••••' : 'Không');
-                        Lampa.Storage.set('kkparser_jackett_key', new_value);
-                    });
-                });
+            onChange: function (value) {
+                setSetting('jackett_key', value);
             }
         });
 
@@ -1339,31 +1252,29 @@
             },
             field: {
                 name: '🧪 Test Jackett',
-                description: 'Kiểm tra kết nối Jackett'
+                description: 'Kiểm tra kết nối'
             },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    var url = getJackettUrl();
-                    var key = getJackettKey();
-                    if (!url) {
-                        Lampa.Noty.show('Chưa nhập URL Jackett!');
-                        return;
+            onChange: function () {
+                var url = getJackettUrl();
+                var key = getJackettKey();
+                if (!url) {
+                    Lampa.Noty.show('Chưa nhập URL!');
+                    return;
+                }
+                if (!key) {
+                    Lampa.Noty.show('Chưa nhập Key!');
+                    return;
+                }
+                Lampa.Noty.show('Đang test...');
+                reguest(
+                    url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
+                    function () {
+                        Lampa.Noty.show('✅ Jackett OK!');
+                    },
+                    function (e) {
+                        Lampa.Noty.show('❌ Lỗi: ' + e);
                     }
-                    if (!key) {
-                        Lampa.Noty.show('Chưa nhập API Key!');
-                        return;
-                    }
-                    Lampa.Noty.show('Đang test Jackett...');
-                    reguest(
-                        url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
-                        function () {
-                            Lampa.Noty.show('✅ Jackett hoạt động OK!');
-                        },
-                        function (e) {
-                            Lampa.Noty.show('❌ Jackett lỗi: ' + e);
-                        }
-                    );
-                });
+                );
             }
         });
     }
@@ -1419,7 +1330,7 @@
     });
 
     function start() {
-        // Thêm vào Settings menu của Lampa
+        // Thêm vào Settings menu
         Lampa.SettingsApi.addComponent({
             component: 'kkparser',
             name: 'KKPhim Parser',
@@ -1428,7 +1339,7 @@
 
         buildSettings();
 
-        console.log('[KKPhim Parser] v1.8 — Settings tích hợp vào Lampa ✅');
+        console.log('[KKPhim Parser] v1.8.1 — Settings fix nhân đôi ✅');
     }
 
     if (window.appready) start();
