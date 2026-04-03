@@ -119,47 +119,39 @@
     }
 
     /* ============================================================
-       PLAY HELPER - Trung tâm gọi player, luôn truyền movie card
-       để Lampa ghi history và đánh dấu đã xem
+       PLAY HELPER - truyền movie card để Lampa ghi history
     ============================================================ */
     function doPlay(params) {
-        // params = { url, title, card, episode }
-        var card    = params.card || {};
-        var url     = params.url  || '';
-        var title   = params.title || card.title || card.name || '';
-        var episode = params.episode || null; // { season, episode, name }
+        var card    = params.card    || {};
+        var url     = params.url     || '';
+        var title   = params.title   || card.title || card.name || '';
+        var episode = params.episode || null;
 
         if (!url) { Lampa.Noty.show('Không có link phát'); return; }
 
-        // Build player object đầy đủ để Lampa ghi history
         var playerObj = {
             title:  title,
             url:    url,
             poster: card.poster || card.img || '',
-            movie:  card   // ← Lampa dùng cái này để ghi timeline/history
+            movie:  card
         };
 
-        // Nếu là episode của series → thêm thông tin tập
         if (episode) {
             playerObj.season  = episode.season;
             playerObj.episode = episode.episode;
-            playerObj.title   = title;
         }
 
         Lampa.Player.play(playerObj);
 
-        // Đánh dấu đã xem thủ công (backup)
         try {
             if (Lampa.Timeline && Lampa.Timeline.update) {
                 Lampa.Timeline.update(card, { percent: 0 });
             }
         } catch(e) {}
 
-        // Ghi vào history
         try {
             if (Lampa.Favorite && Lampa.Favorite.add) {
-                var historyCard = Object.assign({}, card, { viewed: true });
-                Lampa.Favorite.add('history', historyCard);
+                Lampa.Favorite.add('history', Object.assign({}, card));
             }
         } catch(e) {}
     }
@@ -226,8 +218,7 @@
             for (var i = 0; i < episodes.length; i++) {
                 if (episodes[i].server_data && episodes[i].server_data.length) {
                     var ep = episodes[i].server_data[0];
-                    var link = ep.link_m3u8 || ep.link_embed || '';
-                    doPlay({ url: link, title: title, card: card });
+                    doPlay({ url: ep.link_m3u8 || ep.link_embed || '', title: title, card: card });
                     return;
                 }
             }
@@ -261,7 +252,7 @@
             return {
                 title:   title + ' - ' + (ep.name || ('Tập ' + (idx + 1))),
                 url:     ep.link_m3u8 || ep.link_embed || '',
-                movie:   card,   // ← truyền card vào playlist item
+                movie:   card,
                 season:  1,
                 episode: idx + 1
             };
@@ -284,7 +275,6 @@
                     card:    card,
                     episode: { season: 1, episode: item.idx + 1 }
                 });
-                // Set playlist sau khi play
                 try { Lampa.Player.playlist(playlist, item.idx); } catch(e) {}
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
@@ -309,9 +299,7 @@
             if (tried >= terms.length) {
                 searchSource(source, title, function (allItems) {
                     if (!allItems.length && orig) {
-                        searchSource(source, orig, function (items2) {
-                            showManualSelect(source, items2, card);
-                        });
+                        searchSource(source, orig, function (items2) { showManualSelect(source, items2, card); });
                     } else {
                         showManualSelect(source, allItems, card);
                     }
@@ -320,22 +308,15 @@
             }
             searchSource(source, terms[tried], function (items) {
                 var best = findBestMatch(items, title, orig, year);
-                if (best && best.slug) {
-                    loadAndPlay(source, best.slug, card);
-                } else {
-                    tried++;
-                    tryNext();
-                }
+                if (best && best.slug) { loadAndPlay(source, best.slug, card); }
+                else { tried++; tryNext(); }
             });
         }
         tryNext();
     }
 
     function showManualSelect(source, items, card) {
-        if (!items || !items.length) {
-            Lampa.Noty.show('Không tìm thấy trên ' + source.name);
-            return;
-        }
+        if (!items || !items.length) { Lampa.Noty.show('Không tìm thấy trên ' + source.name); return; }
         Lampa.Select.show({
             title: source.name + ' - Kết quả',
             items: items.map(function (it) {
@@ -346,9 +327,7 @@
                     slug: it.slug
                 };
             }),
-            onSelect: function (item) {
-                if (item.slug) loadAndPlay(source, item.slug, card);
-            },
+            onSelect: function (item) { if (item.slug) loadAndPlay(source, item.slug, card); },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
@@ -377,7 +356,6 @@
             var qm = (r.Title || '').match(/\b(2160p|4K|1080p|720p|480p|BluRay|WEB-?DL|HDRip)\b/i);
             if (qm) quality = qm[1];
         }
-        var codec = info.codec_name ? info.codec_name.toUpperCase() : '';
         return {
             title:   r.Title || '',
             seeds:   parseInt(r.Seeders)  || 0,
@@ -386,7 +364,7 @@
             sizeNum: parseInt(r.Size) || 0,
             tracker: r.Tracker || '',
             quality: quality,
-            codec:   codec,
+            codec:   info.codec_name ? info.codec_name.toUpperCase() : '',
             hash:    hash,
             fileIdx: 0,
             magnet:  link
@@ -421,9 +399,7 @@
         Lampa.Noty.show('Jackett: đang tìm...');
         fetchJackett(query, function (results) {
             if (!results.length && orig && orig !== title) {
-                fetchJackett(title + (year ? ' ' + year : ''), function (r2) {
-                    showJackettMenu(r2, title, card);
-                });
+                fetchJackett(title + (year ? ' ' + year : ''), function (r2) { showJackettMenu(r2, title, card); });
             } else {
                 showJackettMenu(results, title, card);
             }
@@ -434,14 +410,14 @@
         if (!results || !results.length) { Lampa.Noty.show('Jackett: Không tìm thấy'); return; }
         var tsUrl = getTsUrl();
         Lampa.Select.show({
-            title: '🔍 Jackett: ' + movieTitle + ' (' + results.length + ')' + (tsUrl ? ' → TS' : ''),
+            title: '🔍 Jackett: ' + movieTitle + ' (' + results.length + ')',
             items: results.map(function (r) {
-                var line1 = '[' + r.tracker + ']';
-                if (r.quality) line1 += ' ' + r.quality;
-                if (r.codec)   line1 += ' ' + r.codec;
-                var line2 = r.title.length > 60 ? r.title.slice(0, 57) + '...' : r.title;
+                var info = '[' + r.tracker + ']';
+                if (r.quality) info += ' ' + r.quality;
+                if (r.codec)   info += ' ' + r.codec;
+                var t = r.title.length > 55 ? r.title.slice(0, 52) + '...' : r.title;
                 return {
-                    title:    line1 + '\n' + line2,
+                    title:    info + ' — ' + t,
                     subtitle: '👤 ' + r.seeds + '/' + r.peers + '  💾 ' + r.size,
                     result:   r
                 };
@@ -510,7 +486,7 @@
             .sort(function (a, b) { return b.sizeNum - a.sizeNum; });
 
         Lampa.Select.show({
-            title: '🧲 ' + label + ': ' + movieTitle + ' (' + parsed.length + ')' + (tsUrl ? ' → TS' : ''),
+            title: '🧲 ' + label + ': ' + movieTitle + ' (' + parsed.length + ')',
             items: parsed.map(function (s) {
                 return {
                     title:    '[' + s.tracker + '] ' + s.title,
@@ -533,7 +509,6 @@
         });
     }
 
-    /* ---- TORRSERVER PLAY ---- */
     function tsPlay(magnet, hash, fileIdx, title, card, season, episode) {
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
@@ -553,18 +528,16 @@
             dataType: 'json', timeout: 10000,
             success: function (data) {
                 var h = (data && data.hash) || hash;
-                var playUrl = tsUrl + '/stream/' + name + '?link=' + h + '&index=' + idx + '&play';
                 doPlay({
-                    url:     playUrl,
+                    url:     tsUrl + '/stream/' + name + '?link=' + h + '&index=' + idx + '&play',
                     title:   title,
                     card:    card || {},
                     episode: (season && episode) ? { season: season, episode: episode } : null
                 });
             },
             error: function () {
-                var playUrl = tsUrl + '/stream/' + name + '?link=' + (hash || encodeURIComponent(magnet)) + '&index=' + idx + '&play';
                 doPlay({
-                    url:     playUrl,
+                    url:     tsUrl + '/stream/' + name + '?link=' + (hash || encodeURIComponent(magnet)) + '&index=' + idx + '&play',
                     title:   title,
                     card:    card || {},
                     episode: (season && episode) ? { season: season, episode: episode } : null
@@ -573,7 +546,6 @@
         });
     }
 
-    /* ---- TORRENT SEARCH ---- */
     function searchTorrent(card, season, episode) {
         var title  = card.title || card.name || '';
         var type   = getMediaType(card);
@@ -583,10 +555,7 @@
 
         function run(id) {
             var url = buildStreamUrl(type, id, season, episode);
-            if (!url) {
-                Lampa.Noty.show(getTorrentEngine() === 'aio' ? 'Chưa cấu hình AIO!' : 'Lỗi config');
-                return;
-            }
+            if (!url) { Lampa.Noty.show(getTorrentEngine() === 'aio' ? 'Chưa cấu hình AIO!' : 'Lỗi config'); return; }
             fetchStreams(url, function (streams) {
                 var epLabel = (season && episode) ? ' S' + padZero(season) + 'E' + padZero(episode) : '';
                 showStreamsMenu(streams, title + epLabel, card, season, episode);
@@ -658,31 +627,6 @@
         this.build = function () {
             html.empty();
 
-            var css = '<style id="kkp-css">' + [
-                '.kkp-section{margin:.8em 1.8em .3em;color:rgba(255,255,255,.38);font-size:.78em;letter-spacing:.12em;text-transform:uppercase;font-weight:600}',
-                '.kkp-item{display:flex;align-items:center;padding:.85em 1.8em;transition:background .12s;border-radius:.5em;margin:0 .4em}',
-                '.kkp-item.selector:focus,.kkp-item.selector.focus{background:rgba(255,255,255,.09)}',
-                '.kkp-ico{width:2em;height:2em;margin-right:1em;opacity:.65;flex-shrink:0}',
-                '.kkp-ico svg{width:100%;height:100%}',
-                '.kkp-body{flex:1;min-width:0}',
-                '.kkp-name{font-size:.97em;font-weight:500;display:flex;align-items:center;gap:.5em}',
-                '.kkp-desc{font-size:.78em;opacity:.38;margin-top:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-                '.kkp-val{font-size:.82em;opacity:.55;margin-left:1em;flex-shrink:0;max-width:11em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}',
-                '.kkp-tag{font-size:.72em;padding:.1em .45em;border-radius:.25em;font-weight:600;letter-spacing:.03em}',
-                '.kkp-tag-g{background:rgba(72,199,142,.2);color:#48c78e}',
-                '.kkp-tag-b{background:rgba(100,160,255,.2);color:#64a0ff}',
-                '.kkp-tag-o{background:rgba(255,171,64,.2);color:#ffab40}',
-                '.kkp-tag-r{background:rgba(255,100,100,.2);color:#ff6464}',
-                '.kkp-head{padding:1.6em 1.8em 1.2em;display:flex;align-items:center;gap:1.1em;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:.5em}',
-                '.kkp-head-ico{width:3.2em;height:3.2em;background:rgba(255,255,255,.07);border-radius:.7em;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
-                '.kkp-head-ico svg{width:1.9em;height:1.9em}',
-                '.kkp-head-t{font-size:1.25em;font-weight:700;margin-bottom:.18em}',
-                '.kkp-head-s{font-size:.78em;opacity:.35}',
-                '.kkp-sep{height:1px;background:rgba(255,255,255,.055);margin:.4em 1.8em}',
-                '.kkp-foot{padding:1.2em;text-align:center;opacity:.22;font-size:.75em}'
-            ].join('') + '</style>';
-            html.append(css);
-
             html.append(
                 '<div class="kkp-head">' +
                 '<div class="kkp-head-ico"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg></div>' +
@@ -746,7 +690,7 @@
             info(icoPlay(), 'KKPhim', 'phimapi.com — tự động tìm theo tên', 'g', 'Bật');
             info(icoPlay(), 'OPhim',  'ophim1.com — tự động tìm theo tên',  'g', 'Bật');
 
-            html.append('<div class="kkp-foot">KKPhim Parser v1.3</div>');
+            html.append('<div class="kkp-foot">KKPhim Parser v1.4</div>');
         };
 
         function sec(t) { html.append('<div class="kkp-section">' + t + '</div>'); }
@@ -821,7 +765,7 @@
         this.pause   = function () {};
         this.stop    = function () {};
         this.render  = function () { return scroll.render(); };
-        this.destroy = function () { $('#kkp-css').remove(); scroll.destroy(); };
+        this.destroy = function () { scroll.destroy(); };
     });
 
     /* ============================================================
@@ -877,7 +821,41 @@
     });
 
     /* ============================================================
-       MENU + CSS + START
+       CSS - CHỈ cho settings, KHÔNG override selectbox global
+    ============================================================ */
+    function injectCSS() {
+        if (document.getElementById('kkparser-css')) return;
+        var s = document.createElement('style');
+        s.id = 'kkparser-css';
+        // BỎ HOÀN TOÀN .selectbox override - đó là nguyên nhân lỗi
+        s.textContent = [
+            '.kkp-section{margin:.8em 1.8em .3em;color:rgba(255,255,255,.38);font-size:.78em;letter-spacing:.12em;text-transform:uppercase;font-weight:600}',
+            '.kkp-item{display:flex;align-items:center;padding:.85em 1.8em;transition:background .12s;border-radius:.5em;margin:0 .4em}',
+            '.kkp-item.selector:focus,.kkp-item.selector.focus{background:rgba(255,255,255,.09)}',
+            '.kkp-ico{width:2em;height:2em;margin-right:1em;opacity:.65;flex-shrink:0}',
+            '.kkp-ico svg{width:100%;height:100%}',
+            '.kkp-body{flex:1;min-width:0}',
+            '.kkp-name{font-size:.97em;font-weight:500;display:flex;align-items:center;gap:.5em}',
+            '.kkp-desc{font-size:.78em;opacity:.38;margin-top:.12em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+            '.kkp-val{font-size:.82em;opacity:.55;margin-left:1em;flex-shrink:0;max-width:11em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}',
+            '.kkp-tag{font-size:.72em;padding:.1em .45em;border-radius:.25em;font-weight:600}',
+            '.kkp-tag-g{background:rgba(72,199,142,.2);color:#48c78e}',
+            '.kkp-tag-b{background:rgba(100,160,255,.2);color:#64a0ff}',
+            '.kkp-tag-o{background:rgba(255,171,64,.2);color:#ffab40}',
+            '.kkp-tag-r{background:rgba(255,100,100,.2);color:#ff6464}',
+            '.kkp-head{padding:1.6em 1.8em 1.2em;display:flex;align-items:center;gap:1.1em;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:.5em}',
+            '.kkp-head-ico{width:3.2em;height:3.2em;background:rgba(255,255,255,.07);border-radius:.7em;display:flex;align-items:center;justify-content:center;flex-shrink:0}',
+            '.kkp-head-ico svg{width:1.9em;height:1.9em}',
+            '.kkp-head-t{font-size:1.25em;font-weight:700;margin-bottom:.18em}',
+            '.kkp-head-s{font-size:.78em;opacity:.35}',
+            '.kkp-sep{height:1px;background:rgba(255,255,255,.055);margin:.4em 1.8em}',
+            '.kkp-foot{padding:1.2em;text-align:center;opacity:.22;font-size:.75em}'
+        ].join('\n');
+        document.head.appendChild(s);
+    }
+
+    /* ============================================================
+       MENU + START
     ============================================================ */
     function addMenu() {
         if ($('.menu__item[data-action="kkparser"]').length) return;
@@ -892,20 +870,10 @@
         $('.menu .menu__list').eq(0).append($item);
     }
 
-    function injectCSS() {
-        if (document.getElementById('kkparser-css')) return;
-        var s = document.createElement('style');
-        s.id = 'kkparser-css';
-        s.textContent =
-            '.selectbox .selectbox-item__title{white-space:pre-wrap!important;overflow:visible!important;text-overflow:unset!important;-webkit-line-clamp:unset!important;display:block!important}' +
-            '.selectbox .selectbox-item{height:auto!important;max-height:none!important;padding:.8em 1.5em!important}';
-        document.head.appendChild(s);
-    }
-
     function start() {
         injectCSS();
         addMenu();
-        console.log('[KKPhim Parser] v1.3 ✅');
+        console.log('[KKPhim Parser] v1.4 ✅');
     }
 
     if (window.appready) start();
