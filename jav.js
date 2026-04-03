@@ -47,10 +47,8 @@ function applyFontScale(){
     var fs=fontScale();
     var r=fs/100;
     var css=''
-    // Cards
     +'.kk-card,.kk-card-h,.kk-pfc{font-size:'+fs+'%!important;}'
     +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+(0.95*r)+'em!important;}'
-    // Hero
     +'.kk-hm-year{font-size:'+(1.15*r)+'em!important;}'
     +'.kk-hm-country{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-hm-origin{font-size:'+(1.1*r)+'em!important;}'
@@ -60,20 +58,15 @@ function applyFontScale(){
     +'.kk-hm-badge{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-hm-rt,.kk-hm-genres{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-hm-dot{font-size:'+(1.1*r)+'em!important;}'
-    // Body genres
     +'.kk-body-genres .kk-genre{font-size:'+(1.15*r)+'em!important;}'
-    // Crew
     +'.kk-crew-label{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-crew-name{font-size:'+(1.5*r)+'em!important;}'
     +'.kk-crew-role{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-crew-rest-name{font-size:'+(1.1*r)+'em!important;}'
-    // Description
     +'.kk-body-desc-label{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-body-desc-text{font-size:'+(1.25*r)+'em!important;line-height:1.8!important;}'
-    // Source buttons
     +'.kk-src-btn .kk-sb-main{font-size:'+(1.5*r)+'em!important;}'
     +'.kk-src-btn .kk-sb-sub{font-size:'+(1.1*r)+'em!important;}'
-    // Episode panel
     +'.kk-sv-hd{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-ep-c{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-ep-bk{font-size:'+(1.0*r)+'em!important;}'
@@ -81,52 +74,50 @@ function applyFontScale(){
     +'.kk-sn-it{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-sn-nm{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-sn-bd{font-size:'+(0.88*r)+'em!important;}'
-    // Cast
     +'.kk-cast-name{font-size:'+(1.3*r)+'em!important;}'
     +'.kk-cast-role{font-size:'+(1.1*r)+'em!important;}'
-    // Person
     +'.kk-person-name{font-size:'+(1.6*r)+'em!important;}'
     +'.kk-person-meta{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-person-bio{font-size:'+(1.15*r)+'em!important;line-height:1.7!important;}'
-    // Settings
     +'.kk-stg-group-title{font-size:'+(1.3*r)+'em!important;}'
     +'.kk-stg-label-name{font-size:'+(1.08*r)+'em!important;}'
     +'.kk-stg-label-desc{font-size:'+(0.92*r)+'em!important;}'
     +'.kk-stg-value{font-size:'+(0.98*r)+'em!important;}'
     +'.kk-stg-ver{font-size:'+(0.85*r)+'em!important;}'
-    // Season detail header
     +'.kk-sd-title{font-size:'+(1.6*r)+'em!important;}'
     +'.kk-sd-meta{font-size:'+(1.2*r)+'em!important;}'
     +'.kk-sd-overview{font-size:'+(1.1*r)+'em!important;line-height:1.5!important;}'
-    // Netflix episodes
     +'.kk-netflix-ep-title{font-size:'+(1.3*r)+'em!important;font-weight:700!important;}'
     +'.kk-netflix-ep-date,.kk-netflix-ep-vote{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-netflix-ep-desc{font-size:'+(1.0*r)+'em!important;line-height:1.5!important;}'
     +'.kk-netflix-ep-num{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-netflix-ep-runtime{font-size:'+(1.0*r)+'em!important;}'
-    // Season cards
     +'.kk-season-name{font-size:'+(1.0*r)+'em!important;font-weight:700!important;}'
     +'.kk-season-meta{font-size:'+(0.9*r)+'em!important;}'
-    // Collection
     +'.kk-coll-label{font-size:'+(0.95*r)+'em!important;}'
     +'.kk-coll-name{font-size:'+(1.2*r)+'em!important;font-weight:700!important;}'
     +'.kk-coll-header-label{font-size:'+(0.95*r)+'em!important;}'
     +'.kk-coll-header-name{font-size:'+(1.4*r)+'em!important;font-weight:800!important;}'
     +'.kk-coll-header-count{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-coll-overview{font-size:'+(1.2*r)+'em!important;line-height:1.6!important;}'
-    // Production
     +'.kk-prod-name{font-size:'+(1.0*r)+'em!important;font-weight:700!important;}'
     +'.kk-prod-country{font-size:'+(0.9*r)+'em!important;}'
-    // Tags
     +'.kk-tag-chip{font-size:'+(1.0*r)+'em!important;}'
-    // Block titles
     +'.kk-block-title{font-size:1.2em!important;}'
-    // Pages
     +'.kk-page-header-name{font-size:'+(1.15*r)+'em!important;}'
     +'.kk-page-header-meta{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-type-tab{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-genre-chip{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-keyword-header-badge{font-size:'+(1.05*r)+'em!important;}'
+    // Season detail landscape
+    +'.kk-sdl-title{font-size:'+(1.4*r)+'em!important;}'
+    +'.kk-sdl-genres{font-size:'+(0.85*r)+'em!important;}'
+    +'.kk-sdl-desc{font-size:'+(0.82*r)+'em!important;}'
+    +'.kk-sdl-year{font-size:'+(0.9*r)+'em!important;}'
+    +'.kk-sdl-vote{font-size:'+(1.4*r)+'em!important;}'
+    +'.kk-sdl-cert{font-size:'+(0.8*r)+'em!important;}'
+    +'.kk-sdl-sname{font-size:'+(1.3*r)+'em!important;}'
+    +'.kk-sdl-smeta{font-size:'+(0.85*r)+'em!important;}'
     ;
     $('head').append('<style id="'+id+'">'+css+'</style>');
 }
@@ -166,7 +157,7 @@ async function tSeasonDetail(tvId,seasonNum){try{return await tFetch('/tv/'+tvId
 
 var TFN={trending:function(p){return tFetch('/trending/all/week?language='+tmLang()+'&page='+p);},trending_day:function(p){return tFetch('/trending/all/day?language='+tmLang()+'&page='+p);},popular_movies:function(p){return tFetch('/movie/popular?language='+tmLang()+'&page='+p);},popular_tv:function(p){return tFetch('/tv/popular?language='+tmLang()+'&page='+p);},top_movies:function(p){return tFetch('/movie/top_rated?language='+tmLang()+'&page='+p);},top_tv:function(p){return tFetch('/tv/top_rated?language='+tmLang()+'&page='+p);},now_playing:function(p){return tFetch('/movie/now_playing?language='+tmLang()+'&page='+p);},upcoming:function(p){return tFetch('/movie/upcoming?language='+tmLang()+'&page='+p);},airing_today:function(p){return tFetch('/tv/airing_today?language='+tmLang()+'&page='+p);},on_the_air:function(p){return tFetch('/tv/on_the_air?language='+tmLang()+'&page='+p);}};
 async function tSearchM(q,p){return await tFetch('/search/multi?language='+tmLang()+'&query='+encodeURIComponent(q)+'&page='+(p||1));}
-async function tDetFull(type,id){return await tFetch('/'+type+'/'+id+'?language='+tmLang()+'&append_to_response=credits,images,similar,external_ids');}
+async function tDetFull(type,id){return await tFetch('/'+type+'/'+id+'?language='+tmLang()+'&append_to_response=credits,images,similar,external_ids,content_ratings,release_dates');}
 async function tImgFull(type,id){return await tFetch('/'+type+'/'+id+'/images');}
 async function tDiscover(type,gid,p){return await tFetch('/discover/'+type+'?language='+tmLang()+'&sort_by=popularity.desc&with_genres='+gid+'&page='+(p||1));}
 async function tRec(type,id,p){return await tFetch('/'+type+'/'+id+'/recommendations?language='+tmLang()+'&page='+(p||1));}
@@ -236,7 +227,6 @@ function mkTagsSection(keywords){if(!keywords||!keywords.length)return $('<div><
 
 function mkCollectionSection(collection){
     if(!collection||!collection.id)return $('<div></div>');
-    // Không dùng kk-section để tránh border-top
     var sec=$('<div style="padding:2.5em 1.5em 0;background:#1a1a1e;"></div>');
     var bk=collection.backdrop_path?TMDB_W500+collection.backdrop_path:'';
     var ps=collection.poster_path?TMDB_W200+collection.poster_path:'';
@@ -249,8 +239,29 @@ function mkCollectionSection(collection){
 
 function mkSeasonsSection(seasons,tvId,tvTitle){if(!seasons||!seasons.length)return $('<div></div>');var sec=$('<div class="kk-section"></div>');sec.append('<div class="kk-block-title">Seasons</div>');var list=$('<div class="kk-seasons-list"></div>');seasons.forEach(function(s){var ps=s.poster_path?TMDB_W200+s.poster_path:'';var card=$('<div class="kk-season-card selector"></div>');card.html('<div class="kk-season-poster">'+(ps?'<img src="'+ps+'" loading="lazy">':'<div class="kk-season-poster-empty">S'+s.season_number+'</div>')+'</div><div class="kk-season-info"><div class="kk-season-name">'+E(s.name||'Season '+s.season_number)+'</div>'+(s.episode_count||s.air_date?'<div class="kk-season-meta">'+E([(s.air_date||'').slice(0,4),s.episode_count?s.episode_count+' tập':''].filter(Boolean).join(' · '))+'</div>':'')+'</div>');bE(card,function(){Lampa.Activity.push({url:'',title:tvTitle+' - '+s.name,component:'kkphim_season_detail',tv_id:tvId,season_number:s.season_number,tv_title:tvTitle,page:1});});list.append(card);});sec.append(list);return sec;}
 
+function getCertification(tmdb, type) {
+    if (type === 'tv') {
+        var cr = tmdb.content_ratings;
+        if (cr && cr.results) {
+            var us = cr.results.find(function(r) { return r.iso_3166_1 === 'US'; });
+            if (us) return us.rating || '';
+            if (cr.results.length) return cr.results[0].rating || '';
+        }
+    } else {
+        var rd = tmdb.release_dates;
+        if (rd && rd.results) {
+            var us2 = rd.results.find(function(r) { return r.iso_3166_1 === 'US'; });
+            if (us2 && us2.release_dates && us2.release_dates.length) {
+                var cert = us2.release_dates.find(function(d) { return d.certification; });
+                if (cert) return cert.certification;
+            }
+        }
+    }
+    return '';
+}
+
 function injectExtraCSS(){
-    var id='kk-extra-css-v453';if($('#'+id).length)return;
+    var id='kk-extra-css-v454';if($('#'+id).length)return;
     $('head').append('<style id="'+id+'">'+
         '.kk-hm-origin{font-size:0.78em;color:rgba(255,255,255,0.45);margin-top:0.15em;font-style:italic;}'
         +'.kk-prod-list{display:flex;overflow-x:auto;gap:1.2em;padding:0.5em 0 0.6em;-webkit-overflow-scrolling:touch;scrollbar-width:none;}.kk-prod-list::-webkit-scrollbar{display:none;}'
@@ -260,16 +271,15 @@ function injectExtraCSS(){
         +'.kk-prod-name{font-size:0.75em;font-weight:600;color:rgba(255,255,255,0.85);text-align:center;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:100%;}.kk-prod-country{font-size:0.65em;color:rgba(255,255,255,0.35);}'
         +'.kk-tags-list{display:flex;flex-wrap:wrap;gap:0.4em;padding:0.4em 0 0.5em;}'
         +'.kk-tag-chip{display:inline-flex;align-items:center;padding:0.3em 0.8em;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:2em;font-size:0.8em;color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.2s;white-space:nowrap;}.kk-tag-chip:hover,.kk-tag-chip.focus,.kk-tag-chip.selected{background:rgba(1,180,228,0.18);border-color:rgba(1,180,228,0.5);color:#fff;transform:scale(1.04);}'
-        // Collection card - backdrop to hơn, không có border-top
         +'.kk-coll-card{position:relative;border-radius:0.8em;overflow:hidden;cursor:pointer;height:9em;transition:all 0.25s;}.kk-coll-card:hover,.kk-coll-card.focus,.kk-coll-card.selected{transform:scale(1.02);box-shadow:0 4px 20px rgba(1,180,228,0.2);}'
         +'.kk-coll-bg{position:absolute;inset:0;}.kk-coll-bg img{width:100%;height:100%;object-fit:cover;}.kk-coll-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.4) 60%,rgba(0,0,0,0.15) 100%);}'
         +'.kk-coll-inner{position:relative;z-index:1;display:flex;align-items:center;gap:0.8em;padding:0.8em;height:100%;}.kk-coll-poster{width:3.5em;height:5.2em;flex-shrink:0;border-radius:0.3em;overflow:hidden;}.kk-coll-poster img{width:100%;height:100%;object-fit:cover;}.kk-coll-info{flex:1;min-width:0;}'
         +'.kk-coll-label{font-size:0.7em;text-transform:uppercase;letter-spacing:0.06em;color:rgba(1,180,228,0.8);font-weight:600;margin-bottom:0.15em;}.kk-coll-name{font-size:0.95em;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}'
-        // Seasons list - ảnh to hơn
         +'.kk-seasons-list{display:flex;overflow-x:auto;gap:0.7em;padding:0.4em 0 0.6em;-webkit-overflow-scrolling:touch;scrollbar-width:none;}.kk-seasons-list::-webkit-scrollbar{display:none;}'
         +'.kk-season-card{flex:0 0 auto;width:10em;cursor:pointer;transition:all 0.25s;border-radius:0.5em;overflow:hidden;background:rgba(255,255,255,0.04);}.kk-season-card:hover,.kk-season-card.focus,.kk-season-card.selected{background:rgba(255,255,255,0.1);transform:translateY(-2px);}'
         +'.kk-season-poster{width:100%;aspect-ratio:2/3;overflow:hidden;background:rgba(255,255,255,0.05);}.kk-season-poster img{width:100%;height:100%;object-fit:cover;}.kk-season-poster-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5em;font-weight:700;color:rgba(255,255,255,0.12);}'
         +'.kk-season-info{padding:0.4em 0.4em 0.5em;}.kk-season-name{font-size:0.75em;font-weight:600;color:rgba(255,255,255,0.88);}.kk-season-meta{font-size:0.65em;color:rgba(255,255,255,0.4);margin-top:0.1em;}'
+        // Season detail - portrait (default)
         +'.kk-sd-header{padding:1.5em 1.5em 0.8em;display:flex;gap:1em;align-items:flex-start;}.kk-sd-poster{width:6.5em;flex-shrink:0;border-radius:0.5em;overflow:hidden;aspect-ratio:2/3;background:rgba(255,255,255,0.05);}.kk-sd-poster img{width:100%;height:100%;object-fit:cover;}.kk-sd-poster-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8em;color:rgba(255,255,255,0.12);}'
         +'.kk-sd-info{flex:1;min-width:0;}.kk-sd-title{font-size:1.1em;font-weight:700;color:#fff;margin-bottom:0.15em;}.kk-sd-meta{font-size:0.82em;color:rgba(255,255,255,0.45);margin-bottom:0.25em;}.kk-sd-overview{font-size:0.82em;color:rgba(255,255,255,0.55);line-height:1.35;}'
         // Netflix episodes
@@ -291,6 +301,30 @@ function injectExtraCSS(){
         +'.kk-type-tabs{display:flex;gap:0.5em;padding:0.3em 1.5em 0.6em;}.kk-type-tab{padding:0.4em 1em;border-radius:2em;font-size:0.84em;cursor:pointer;transition:all 0.2s;border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04);}.kk-type-tab--active{background:rgba(1,180,228,0.18);border-color:rgba(1,180,228,0.5);color:#01b4e4;font-weight:600;}.kk-type-tab:hover,.kk-type-tab.focus,.kk-type-tab.selected{background:rgba(1,180,228,0.25);border-color:rgba(1,180,228,0.6);color:#fff;}'
         +'.kk-coll-header{position:relative;border-radius:1em;overflow:hidden;margin:0.8em 1.5em;height:14em;}.kk-coll-header-bg{position:absolute;inset:0;}.kk-coll-header-bg img{width:100%;height:100%;object-fit:cover;}.kk-coll-header-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.3) 100%);}.kk-coll-header-inner{position:relative;z-index:1;display:flex;align-items:flex-end;gap:1em;padding:1em;height:100%;}.kk-coll-header-poster{width:4em;height:6em;flex-shrink:0;border-radius:0.4em;overflow:hidden;}.kk-coll-header-poster img{width:100%;height:100%;object-fit:cover;}.kk-coll-header-info{flex:1;}.kk-coll-header-label{font-size:0.7em;text-transform:uppercase;letter-spacing:0.08em;color:rgba(1,180,228,0.8);font-weight:600;}.kk-coll-header-name{font-size:1.2em;font-weight:700;color:#fff;}.kk-coll-header-count{font-size:0.8em;color:rgba(255,255,255,0.5);margin-top:0.2em;}.kk-coll-overview{padding:0.6em 1.5em;font-size:0.88em;color:rgba(255,255,255,0.6);line-height:1.5;}'
         +'.kk-ep-chips{display:flex;flex-wrap:wrap;gap:0.4em;padding:0.4em 0 0.6em;}.kk-sv-hd{font-size:0.85em;font-weight:600;color:rgba(255,255,255,0.7);padding:0.5em 0 0.2em;}.kk-ep-c{font-size:0.88em;padding:0.35em 0.75em;background:rgba(255,255,255,0.07);border-radius:0.4em;cursor:pointer;color:rgba(255,255,255,0.85);transition:all 0.15s;}.kk-ep-c:hover,.kk-ep-c.focus,.kk-ep-c.selected{background:rgba(1,180,228,0.25);color:#fff;}.kk-ep-c.off{opacity:0.35;cursor:default;}.kk-ep-bk{font-size:0.85em;padding:0.4em 0.8em;margin-bottom:0.5em;cursor:pointer;color:rgba(1,180,228,0.8);}.kk-ep-ld,.kk-ep-er{font-size:0.88em;padding:0.6em 0;color:rgba(255,255,255,0.5);}.kk-sn-it{display:flex;justify-content:space-between;align-items:center;padding:0.5em 0.8em;border-radius:0.4em;cursor:pointer;font-size:0.9em;background:rgba(255,255,255,0.04);margin-bottom:0.3em;transition:background 0.15s;}.kk-sn-it:hover,.kk-sn-it.focus,.kk-sn-it.selected{background:rgba(255,255,255,0.1);}.kk-sn-nm{color:rgba(255,255,255,0.85);font-size:0.88em;}.kk-sn-bd{font-size:0.78em;color:rgba(255,255,255,0.4);}.kk-sn-notfound{opacity:0.4;cursor:default;}'
+        // ===== Season detail LANDSCAPE layout =====
+        +'.kk-sdl-wrap{display:block;}'
+        +'.kk-sdl-left{padding:1.2em 1.5em;}'
+        +'.kk-sdl-left-top{display:flex;gap:1em;align-items:flex-start;margin-bottom:0.8em;}'
+        +'.kk-sdl-poster{width:8em;flex-shrink:0;border-radius:0.5em;overflow:hidden;aspect-ratio:2/3;background:rgba(255,255,255,0.05);}.kk-sdl-poster img{width:100%;height:100%;object-fit:cover;}'
+        +'.kk-sdl-poster-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.8em;color:rgba(255,255,255,0.12);}'
+        +'.kk-sdl-meta-col{flex:1;min-width:0;}'
+        +'.kk-sdl-year{font-size:0.85em;color:rgba(255,255,255,0.5);margin-bottom:0.15em;}'
+        +'.kk-sdl-vote{font-size:1.4em;font-weight:700;color:#fff;margin-bottom:0.1em;}.kk-sdl-vote small{font-size:0.5em;color:rgba(255,255,255,0.4);}'
+        +'.kk-sdl-cert{display:inline-block;padding:0.15em 0.5em;border:1px solid rgba(255,255,255,0.3);border-radius:0.2em;font-size:0.75em;color:rgba(255,255,255,0.7);margin-top:0.3em;}'
+        +'.kk-sdl-title{font-size:1.3em;font-weight:800;color:#fff;margin-bottom:0.15em;line-height:1.2;}'
+        +'.kk-sdl-genres{font-size:0.82em;color:rgba(255,255,255,0.5);margin-bottom:0.4em;}'
+        +'.kk-sdl-desc{font-size:0.8em;color:rgba(255,255,255,0.5);line-height:1.45;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;}'
+        +'.kk-sdl-right{}'
+        +'.kk-sdl-season-header{padding:0.8em 1.5em;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06);}'
+        +'.kk-sdl-sname{font-size:1.15em;font-weight:700;color:#fff;margin-bottom:0.1em;}'
+        +'.kk-sdl-smeta{font-size:0.8em;color:rgba(255,255,255,0.45);}'
+        +'.kk-sdl-episodes{padding:0.5em 1.5em 1.5em;}'
+        // Landscape media query
+        +'@media(orientation:landscape){.kk-sdl-wrap{display:flex!important;height:100%;}.kk-sdl-left{width:30em;min-width:30em;max-width:30em;overflow-y:auto;-webkit-overflow-scrolling:touch;border-right:1px solid rgba(255,255,255,0.06);padding:1.2em 1.5em;box-sizing:border-box;}'
+        +'.kk-sdl-right{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}'
+        +'.kk-sdl-poster{width:9em;}'
+        +'.kk-sdl-desc{-webkit-line-clamp:8;}'
+        +'}'
     +'</style>');
 }
 
@@ -312,7 +346,7 @@ function bTorBtn(mt,tid,title,poster,imdb){var eng=tEngine(),label=eng==='aio'?'
 function shSn(c,sMap,sNums,title){c.empty();sNums.forEach(function(sn){var entries=sMap[sn],isNotFound=entries.length===1&&entries[0].notFound;var item=$('<div class="kk-sn-it selector'+(isNotFound?' kk-sn-notfound':'')+'"><span class="kk-sn-nm">📺 Season '+sn+'</span><span class="kk-sn-bd">'+(isNotFound?'N/A':entries.length)+'</span></div>');if(!isNotFound)bE(item,function(){ldSn(c,entries,title,sn,function(){shSn(c,sMap,sNums,title);});});c.append(item);});}
 async function ldSn(c,entries,title,sNum,backFn){c.html('<div class="kk-ep-ld">⏳ Tải S'+sNum+'...</div>');for(var i=0;i<entries.length;i++){if(entries[i].notFound)continue;try{var det=await fDet(entries[i].source,entries[i].slug);if(det&&det.episodes&&det.episodes.length){c.empty();if(backFn){var bk=$('<div class="kk-ep-bk selector">← Quay lại</div>');bE(bk,backFn);c.append(bk);}fillE(c,det.episodes,title+' S'+pd(sNum),sNum);return;}}catch(e){}}c.html('<div class="kk-ep-er">❌ Không có tập</div>');}
 
-Lampa.Component.add('kkphim_settings',function(){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;this.create=function(){cScr(scroll);var s=ls(),w=$('<div class="kk-stg-wrap"></div>');w.append('<div class="kk-stg-title">⚙️ Cài đặt</div>');var gSrc=mg('📺 Bật/Tắt nguồn phim');Object.keys(SOURCES).forEach(function(k){var sc=SOURCES[k],enabled=isSourceEnabled(k);gSrc.append(mo(sc.name,'API: '+sc.api,enabled,function(){ss({['source_'+k+'_enabled']:!enabled});Lampa.Noty.show(sc.name+': '+(enabled?'Đã tắt':'Đã bật'));comp.create();}));});w.append(gSrc);var gFont=mg('🔠 Cỡ font');var fs=String(s.font_scale||'100');[{k:'85',n:'Nhỏ'},{k:'100',n:'Mặc định'},{k:'115',n:'Lớn'},{k:'130',n:'Rất lớn'}].forEach(function(o){gFont.append(mo(o.n,'Cỡ chữ toàn plugin',fs===o.k,function(){ss({font_scale:o.k});applyFontScale();comp.create();}));});w.append(gFont);var gCard=mg('🃏 Trang chủ - Kiểu card');var cm=s.card_mode||'hgrid';[{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full'}].forEach(function(o){gCard.append(mo(o.n,o.d,cm===o.k,function(){ss({card_mode:o.k});comp.create();}));});w.append(gCard);var gRow=mg('📊 Số phim trong row');var rc=s.row_count||'20';[{k:'10',n:'10'},{k:'15',n:'15'},{k:'20',n:'20'},{k:'30',n:'30'},{k:'50',n:'50'}].forEach(function(o){gRow.append(mo(o.n+' phim','',rc===o.k,function(){ss({row_count:o.k});comp.create();}));});w.append(gRow);var gCat=mg('📋 Danh sách - Kiểu card');var ctm=s.cat_mode||'hgrid';[{k:'hgrid',n:'📐 Ngang (x2)'},{k:'vgrid',n:'🖼️ Dọc (tùy chỉnh)'}].forEach(function(o){gCat.append(mo(o.n,'',ctm===o.k,function(){ss({cat_mode:o.k});comp.create();}));});w.append(gCat);var g5=mg('🎨 Số cột poster dọc');var cg=s.card_style||'3';[{k:'2',n:'2 cột'},{k:'3',n:'3 cột'},{k:'4',n:'4 cột'}].forEach(function(o){g5.append(mo(o.n,'',cg===o.k,function(){ss({card_style:o.k});comp.create();}));});w.append(g5);var g6=mg('🌐 Ngôn ngữ TMDB');var cl2=s.tmdb_lang||'vi-VN';[{k:'vi-VN',n:'Tiếng Việt'},{k:'en-US',n:'English'},{k:'ja-JP',n:'日本語'},{k:'ko-KR',n:'한국어'},{k:'zh-CN',n:'中文'}].forEach(function(o){g6.append(mo(o.n,o.k,cl2===o.k,function(){ss({tmdb_lang:o.k});_gc={movie:null,tv:null};comp.create();}));});w.append(g6);var gE=mg('🎯 Nguồn Torrent');var ce=s.torrent_engine||'torrentio';gE.append(mo('Torrentio','',ce==='torrentio',function(){ss({torrent_engine:'torrentio'});comp.create();}));gE.append(mo('AIOStreams','',ce==='aio',function(){ss({torrent_engine:'aio'});comp.create();}));w.append(gE);var g1=mg('🖥️ TorrServer');g1.append(mi('Địa chỉ','192.168.1.100:8090',s.torrserver_host||'Chưa cài','Địa chỉ','torrserver_host',s));g1.append(mi('Mật khẩu','',s.torrserver_password?'••••':'Không','Mật khẩu','torrserver_password',s));var stTS=$('<div class="kk-stg-status" style="display:none"></div>');var tTS=si2('🧪 Test','','Test');bE(tTS,async function(){var h=tsHost();if(!h){stTS.show().html('<span style="color:#f87171">❌ Chưa nhập</span>');return;}stTS.show().html('<span style="color:#fbbf24">⏳...</span>');try{var r=await fetch(tsU('/echo'),{method:'GET',headers:tsH()});stTS.html(r.ok?'<span style="color:#4ade80">✅ OK</span>':'<span style="color:#f87171">❌ '+r.status+'</span>');}catch(e){stTS.html('<span style="color:#f87171">❌ '+(e.message||'Lỗi')+'</span>');}});g1.append(tTS).append(stTS);w.append(g1);var g2=mg('🧲 Torrentio');g2.append(mi('Config','Dán link manifest',s.torrentio_config?'Có':'Mặc định','Config','torrentio_config',s));w.append(g2);var gA=mg('🌊 AIOStreams');gA.append(mi('URL','Dán full URL',s.aio_url||'Chưa cài','AIO URL','aio_url',s));w.append(gA);var gHist=mg('🕘 Dữ liệu');var clearHist=si2('Xóa lịch sử','','Xóa');bE(clearHist,function(){localStorage.removeItem(HIST_KEY);Lampa.Noty.show('OK');});gHist.append(clearHist);w.append(gHist);var g4=$('<div class="kk-stg-group"></div>');var cl=si2('🗑️ Reset','Khôi phục mặc định','Xóa');cl.find('.kk-stg-value').css('color','#f87171');bE(cl,function(){localStorage.removeItem(STG_KEY);localStorage.removeItem(HIST_KEY);_gc={movie:null,tv:null};applyFontScale();Lampa.Activity.backward();});g4.append(cl);w.append(g4);w.append('<div class="kk-stg-ver">KKPhim v4.5.3</div>');scroll.append(w);comp.start();};function mg(t){return $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">'+t+'</div>');}function si2(n,d,v){return $('<div class="kk-stg-item selector"><div class="kk-stg-label"><div class="kk-stg-label-name">'+E(n)+'</div>'+(d?'<div class="kk-stg-label-desc">'+E(d)+'</div>':'')+'</div><div class="kk-stg-value">'+E(v)+'</div></div>');}function mo(n,d,on,cb){var it=si2(n,d,on?'✅':'○');if(on)it.find('.kk-stg-value').css('color','#4ade80');bE(it,cb);return it;}function mi(n,d,val,prompt,key,s){var it=si2(n,d,val);bE(it,function(){try{if(Lampa.Input&&Lampa.Input.edit){Lampa.Input.edit({title:prompt,value:s[key]||'',free:true,nosave:true},function(v){v=(v||'').trim();var o={};o[key]=v;ss(o);s[key]=v;it.find('.kk-stg-value').text(v||val);});return;}}catch(e){}var v=window.prompt(prompt,s[key]||'');if(v!==null){v=v.trim();var o={};o[key]=v;ss(o);s[key]=v;it.find('.kk-stg-value').text(v||val);}});return it;}this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
+Lampa.Component.add('kkphim_settings',function(){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;this.create=function(){cScr(scroll);var s=ls(),w=$('<div class="kk-stg-wrap"></div>');w.append('<div class="kk-stg-title">⚙️ Cài đặt</div>');var gSrc=mg('📺 Bật/Tắt nguồn phim');Object.keys(SOURCES).forEach(function(k){var sc=SOURCES[k],enabled=isSourceEnabled(k);gSrc.append(mo(sc.name,'API: '+sc.api,enabled,function(){ss({['source_'+k+'_enabled']:!enabled});Lampa.Noty.show(sc.name+': '+(enabled?'Đã tắt':'Đã bật'));comp.create();}));});w.append(gSrc);var gFont=mg('🔠 Cỡ font');var fs=String(s.font_scale||'100');[{k:'85',n:'Nhỏ'},{k:'100',n:'Mặc định'},{k:'115',n:'Lớn'},{k:'130',n:'Rất lớn'}].forEach(function(o){gFont.append(mo(o.n,'Cỡ chữ toàn plugin',fs===o.k,function(){ss({font_scale:o.k});applyFontScale();comp.create();}));});w.append(gFont);var gCard=mg('🃏 Trang chủ - Kiểu card');var cm=s.card_mode||'hgrid';[{k:'hgrid',n:'📐 Lưới ngang',d:'2 cột, backdrop ngang'},{k:'poster',n:'🖼️ Poster lớn',d:'1 card full'}].forEach(function(o){gCard.append(mo(o.n,o.d,cm===o.k,function(){ss({card_mode:o.k});comp.create();}));});w.append(gCard);var gRow=mg('📊 Số phim trong row');var rc=s.row_count||'20';[{k:'10',n:'10'},{k:'15',n:'15'},{k:'20',n:'20'},{k:'30',n:'30'},{k:'50',n:'50'}].forEach(function(o){gRow.append(mo(o.n+' phim','',rc===o.k,function(){ss({row_count:o.k});comp.create();}));});w.append(gRow);var gCat=mg('📋 Danh sách - Kiểu card');var ctm=s.cat_mode||'hgrid';[{k:'hgrid',n:'📐 Ngang (x2)'},{k:'vgrid',n:'🖼️ Dọc (tùy chỉnh)'}].forEach(function(o){gCat.append(mo(o.n,'',ctm===o.k,function(){ss({cat_mode:o.k});comp.create();}));});w.append(gCat);var g5=mg('🎨 Số cột poster dọc');var cg=s.card_style||'3';[{k:'2',n:'2 cột'},{k:'3',n:'3 cột'},{k:'4',n:'4 cột'}].forEach(function(o){g5.append(mo(o.n,'',cg===o.k,function(){ss({card_style:o.k});comp.create();}));});w.append(g5);var g6=mg('🌐 Ngôn ngữ TMDB');var cl2=s.tmdb_lang||'vi-VN';[{k:'vi-VN',n:'Tiếng Việt'},{k:'en-US',n:'English'},{k:'ja-JP',n:'日本語'},{k:'ko-KR',n:'한국어'},{k:'zh-CN',n:'中文'}].forEach(function(o){g6.append(mo(o.n,o.k,cl2===o.k,function(){ss({tmdb_lang:o.k});_gc={movie:null,tv:null};comp.create();}));});w.append(g6);var gE=mg('🎯 Nguồn Torrent');var ce=s.torrent_engine||'torrentio';gE.append(mo('Torrentio','',ce==='torrentio',function(){ss({torrent_engine:'torrentio'});comp.create();}));gE.append(mo('AIOStreams','',ce==='aio',function(){ss({torrent_engine:'aio'});comp.create();}));w.append(gE);var g1=mg('🖥️ TorrServer');g1.append(mi('Địa chỉ','192.168.1.100:8090',s.torrserver_host||'Chưa cài','Địa chỉ','torrserver_host',s));g1.append(mi('Mật khẩu','',s.torrserver_password?'••••':'Không','Mật khẩu','torrserver_password',s));var stTS=$('<div class="kk-stg-status" style="display:none"></div>');var tTS=si2('🧪 Test','','Test');bE(tTS,async function(){var h=tsHost();if(!h){stTS.show().html('<span style="color:#f87171">❌ Chưa nhập</span>');return;}stTS.show().html('<span style="color:#fbbf24">⏳...</span>');try{var r=await fetch(tsU('/echo'),{method:'GET',headers:tsH()});stTS.html(r.ok?'<span style="color:#4ade80">✅ OK</span>':'<span style="color:#f87171">❌ '+r.status+'</span>');}catch(e){stTS.html('<span style="color:#f87171">❌ '+(e.message||'Lỗi')+'</span>');}});g1.append(tTS).append(stTS);w.append(g1);var g2=mg('🧲 Torrentio');g2.append(mi('Config','Dán link manifest',s.torrentio_config?'Có':'Mặc định','Config','torrentio_config',s));w.append(g2);var gA=mg('🌊 AIOStreams');gA.append(mi('URL','Dán full URL',s.aio_url||'Chưa cài','AIO URL','aio_url',s));w.append(gA);var gHist=mg('🕘 Dữ liệu');var clearHist=si2('Xóa lịch sử','','Xóa');bE(clearHist,function(){localStorage.removeItem(HIST_KEY);Lampa.Noty.show('OK');});gHist.append(clearHist);w.append(gHist);var g4=$('<div class="kk-stg-group"></div>');var cl=si2('🗑️ Reset','Khôi phục mặc định','Xóa');cl.find('.kk-stg-value').css('color','#f87171');bE(cl,function(){localStorage.removeItem(STG_KEY);localStorage.removeItem(HIST_KEY);_gc={movie:null,tv:null};applyFontScale();Lampa.Activity.backward();});g4.append(cl);w.append(g4);w.append('<div class="kk-stg-ver">KKPhim v4.5.4</div>');scroll.append(w);comp.start();};function mg(t){return $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">'+t+'</div>');}function si2(n,d,v){return $('<div class="kk-stg-item selector"><div class="kk-stg-label"><div class="kk-stg-label-name">'+E(n)+'</div>'+(d?'<div class="kk-stg-label-desc">'+E(d)+'</div>':'')+'</div><div class="kk-stg-value">'+E(v)+'</div></div>');}function mo(n,d,on,cb){var it=si2(n,d,on?'✅':'○');if(on)it.find('.kk-stg-value').css('color','#4ade80');bE(it,cb);return it;}function mi(n,d,val,prompt,key,s){var it=si2(n,d,val);bE(it,function(){try{if(Lampa.Input&&Lampa.Input.edit){Lampa.Input.edit({title:prompt,value:s[key]||'',free:true,nosave:true},function(v){v=(v||'').trim();var o={};o[key]=v;ss(o);s[key]=v;it.find('.kk-stg-value').text(v||val);});return;}}catch(e){}var v=window.prompt(prompt,s[key]||'');if(v!==null){v=v.trim();var o={};o[key]=v;ss(o);s[key]=v;it.find('.kk-stg-value').text(v||val);}});return it;}this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
 
 Lampa.Component.add('kkphim_person',function(obj){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,pid=obj.person_id;this.create=function(){comp.activity.loader(true);cScr(scroll);if(!pid){comp.activity.loader(false);comp.start();return;}Promise.all([tFetch('/person/'+pid+'?language='+tmLang()),tPersonC(pid)]).then(function(res){var p=res[0],cr=res[1],w=$('<div class="kk-detail-wrap"></div>');var av=p.profile_path?TMDB_W500+p.profile_path:'';w.append('<div class="kk-person-header"><div class="kk-person-avatar">'+(av?'<img src="'+av+'">':'<div class="kk-crew-avatar-empty"></div>')+'</div><div class="kk-person-info"><div class="kk-person-name">'+E(p.name||'')+'</div>'+(p.birthday?'<div class="kk-person-meta">🎂 '+E(p.birthday)+'</div>':'')+(p.known_for_department?'<div class="kk-person-meta">🎬 '+E(p.known_for_department)+'</div>':'')+'</div></div>');if(p.biography)w.append('<div class="kk-person-bio">'+fTxt((p.biography||'').substring(0,600))+'</div>');if(cr&&cr.cast){var mv=cr.cast.filter(function(c){return c.media_type==='movie';}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});var tv=cr.cast.filter(function(c){return c.media_type==='tv';}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});var rCnt=rowCount();if(mv.length){var r1=$('<div class="kk-row"></div>'),rl=$('<div class="kk-row-list"></div>');mv.slice(0,rCnt).forEach(function(c){rl.append(mkTC(c));});var mr=$('<div class="kk-row-more selector">Xem thêm ('+mv.length+')</div>');bE(mr,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim lẻ',component:'kkphim_person_films',person_id:pid,film_type:'movie'});});r1.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎬 Phim lẻ</div>').append(mr)).append(rl);w.append(r1);}if(tv.length){var r2=$('<div class="kk-row"></div>'),rl2=$('<div class="kk-row-list"></div>');tv.slice(0,rCnt).forEach(function(c){rl2.append(mkTC(c));});var mr2=$('<div class="kk-row-more selector">Xem thêm ('+tv.length+')</div>');bE(mr2,function(){Lampa.Activity.push({url:'',title:(p.name||'')+' - Phim bộ',component:'kkphim_person_films',person_id:pid,film_type:'tv'});});r2.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">📺 Phim bộ</div>').append(mr2)).append(rl2);w.append(r2);}}scroll.append(w);comp.activity.loader(false);comp.start();}).catch(function(){comp.activity.loader(false);});};this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
 Lampa.Component.add('kkphim_person_films',function(obj){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,pid=obj.person_id,ft=obj.film_type||'movie';var all=[],rd=0,pp=20,gridContainer=$('<div></div>'),curGrid=null;var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Hết</div>');this.create=function(){comp.activity.loader(true);cScr(scroll);initGrid();scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(obj.title||'')+'</div>').append(gridContainer).append(spinner).append(endMsg));var sb=scroll.render().find('.scroll__body');sb.on('scroll',function(){if(rd>=all.length)return;var el=sb[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)rMore();});tPersonC(pid).then(function(cr){if(cr&&cr.cast)all=cr.cast.filter(function(c){return c.media_type===ft;}).sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});rMore();comp.activity.loader(false);comp.start();}).catch(function(){comp.activity.loader(false);});};function initGrid(){var cm=catMode();if(cm==='hgrid')curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}gridContainer.empty().append(curGrid);}function rMore(){var b=all.slice(rd,rd+pp);if(!b.length){endMsg.show();return;}var cm=catMode();b.forEach(function(c){curGrid.append((cm==='hgrid'?mkTCH(c):mkTC(c)).addClass('kk-card--grid'));});rd+=b.length;if(rd>=all.length)endMsg.show();}this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
@@ -342,29 +376,127 @@ Lampa.Component.add('kkphim_season_detail',function(obj){
     var imdbId=null;
     this.create=function(){
         comp.activity.loader(true);cScr(scroll);
-        Promise.all([tSeasonDetail(tvId,seasonNum),gImdb('tv',tvId)]).then(function(res){
-            var season=res[0];imdbId=res[1];
+        Promise.all([
+            tSeasonDetail(tvId,seasonNum),
+            gImdb('tv',tvId),
+            tDetFull('tv',tvId)
+        ]).then(function(res){
+            var season=res[0];imdbId=res[1];var tvDetail=res[2];
             if(!season){comp.activity.loader(false);return;}
-            var ps=season.poster_path?TMDB_W300+season.poster_path:'';
-            var header=$('<div class="kk-sd-header"></div>');
-            header.html('<div class="kk-sd-poster">'+(ps?'<img src="'+ps+'">':'<div class="kk-sd-poster-empty">S'+seasonNum+'</div>')+'</div><div class="kk-sd-info"><div class="kk-sd-title">'+E(season.name||'Season '+seasonNum)+'</div><div class="kk-sd-meta">'+E(tvTitle+' · '+(season.air_date||'')+' · '+(season.episodes||[]).length+' tập')+'</div>'+(season.overview?'<div class="kk-sd-overview">'+E(season.overview.substring(0,250))+'</div>':'')+'</div>');
-            scroll.append(header);
-            var epList=$('<div class="kk-netflix-eps"></div>');
+
+            var tvName=tvDetail?(tvDetail.name||tvDetail.title||tvTitle):tvTitle;
+            var tvOrigName=tvDetail?(tvDetail.original_name||tvDetail.original_title||''):'';
+            var tvYear=(tvDetail?(tvDetail.first_air_date||''):'').slice(0,4);
+            var tvCountry='';
+            if(tvDetail&&tvDetail.origin_country&&tvDetail.origin_country.length)tvCountry=tvDetail.origin_country[0];
+            else if(tvDetail&&tvDetail.production_countries&&tvDetail.production_countries.length)tvCountry=tvDetail.production_countries[0].iso_3166_1||'';
+            var tvVote=tvDetail&&tvDetail.vote_average?Number(tvDetail.vote_average).toFixed(1):'';
+            var tvGenres=(tvDetail&&tvDetail.genres||[]).map(function(g){return g.name;}).join(', ');
+            var tvOverview=tvDetail?tvDetail.overview||'':'';
+            var tvPoster=tvDetail&&tvDetail.poster_path?TMDB_W300+tvDetail.poster_path:'';
+            var certification=tvDetail?getCertification(tvDetail,'tv'):'';
+
+            var seasonVote=season.vote_average?Number(season.vote_average).toFixed(1):'';
+            var seasonAirDate=season.air_date||'';
+            var seasonEpCount=(season.episodes||[]).length;
+
+            // Build landscape-ready layout
+            var wrap=$('<div class="kk-sdl-wrap"></div>');
+
+            // LEFT panel - TV show info
+            var left=$('<div class="kk-sdl-left"></div>');
+            var leftTop=$('<div class="kk-sdl-left-top"></div>');
+            var posterHtml=tvPoster?'<img src="'+tvPoster+'" loading="lazy">':'<div class="kk-sdl-poster-empty">TV</div>';
+            leftTop.append('<div class="kk-sdl-poster">'+posterHtml+'</div>');
+            var metaCol=$('<div class="kk-sdl-meta-col"></div>');
+            if(tvYear||tvCountry)metaCol.append('<div class="kk-sdl-year">'+E([tvYear,tvCountry].filter(Boolean).join(' - '))+'</div>');
+            if(tvVote)metaCol.append('<div class="kk-sdl-vote">★ '+E(tvVote)+' <small>TMDB</small></div>');
+            if(certification)metaCol.append('<div class="kk-sdl-cert">'+E(certification)+'</div>');
+            leftTop.append(metaCol);
+            left.append(leftTop);
+            left.append('<div class="kk-sdl-title">'+E(tvName)+'</div>');
+            if(tvGenres)left.append('<div class="kk-sdl-genres">'+E(tvGenres)+'</div>');
+            if(tvOverview)left.append('<div class="kk-sdl-desc">'+E(tvOverview)+'</div>');
+
+            // RIGHT panel - Season header + episodes
+            var right=$('<div class="kk-sdl-right"></div>');
+
+            // Season header
+            var seasonHeader=$('<div class="kk-sdl-season-header"></div>');
+            seasonHeader.append('<div class="kk-sdl-sname">'+E(season.name||'Season '+seasonNum)+'</div>');
+            var smetaParts=[];
+            if(seasonVote)smetaParts.push('Rating: '+seasonVote);
+            if(seasonAirDate)smetaParts.push('date of release: '+seasonAirDate.replace(/(\d{4})-(\d{2})-(\d{2})/,function(m,y,mo,d){return parseInt(d)+' '+['','January','February','March','April','May','June','July','August','September','October','November','December'][parseInt(mo)];}));
+            smetaParts.push('Episodes: '+seasonEpCount);
+            seasonHeader.append('<div class="kk-sdl-smeta">'+E(smetaParts.join('  ●  '))+'</div>');
+            right.append(seasonHeader);
+
+            // Episodes
+            var epList=$('<div class="kk-sdl-episodes"></div>');
             (season.episodes||[]).forEach(function(ep){
                 var still=ep.still_path?TMDB_W500+ep.still_path:'';
                 var item=$('<div class="kk-netflix-ep selector"></div>');
-                item.html('<div class="kk-netflix-ep-still">'+(still?'<img src="'+still+'" loading="lazy">':'<div class="kk-netflix-ep-still-empty">'+ep.episode_number+'</div>')+'<div class="kk-netflix-ep-num">'+ep.episode_number+'</div>'+(ep.runtime?'<div class="kk-netflix-ep-runtime">'+ep.runtime+' phút</div>':'')+'<div class="kk-netflix-ep-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div><div class="kk-netflix-ep-body"><div class="kk-netflix-ep-title">'+E(ep.name||'Episode '+ep.episode_number)+'</div><div class="kk-netflix-ep-meta">'+(ep.air_date?'<span class="kk-netflix-ep-date">'+E(ep.air_date)+'</span>':'')+(ep.vote_average?'<span class="kk-netflix-ep-vote">⭐ '+Number(ep.vote_average).toFixed(1)+'</span>':'')+'</div>'+(ep.overview?'<div class="kk-netflix-ep-desc">'+E(ep.overview)+'</div>':'')+'</div>');
+                item.html(
+                    '<div class="kk-netflix-ep-still">'
+                    +(still?'<img src="'+still+'" loading="lazy">':'<div class="kk-netflix-ep-still-empty">'+ep.episode_number+'</div>')
+                    +'<div class="kk-netflix-ep-num">'+pd(ep.episode_number)+'</div>'
+                    +(ep.runtime?'<div class="kk-netflix-ep-runtime">'+ep.runtime+' phút</div>':'')
+                    +'<div class="kk-netflix-ep-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>'
+                    +'</div>'
+                    +'<div class="kk-netflix-ep-body">'
+                    +'<div class="kk-netflix-ep-title">'+E(ep.name||'Episode '+ep.episode_number)+'</div>'
+                    +'<div class="kk-netflix-ep-meta">'
+                    +(ep.vote_average?'<span class="kk-netflix-ep-vote">★ '+Number(ep.vote_average).toFixed(1)+'</span>':'')
+                    +(ep.air_date?'<span class="kk-netflix-ep-date">'+E(ep.air_date.replace(/(\d{4})-(\d{2})-(\d{2})/,function(m,y,mo,d){return parseInt(d)+' '+['','January','February','March','April','May','June','July','August','September','October','November','December'][parseInt(mo)];}))+'</span>':'')
+                    +'</div>'
+                    +(ep.overview?'<div class="kk-netflix-ep-desc">'+E(ep.overview)+'</div>':'')
+                    +'</div>'
+                );
                 bE(item,function(){
-                    if(imdbId)playEpTorrent(imdbId,seasonNum,ep.episode_number,tvTitle,ps||'');
+                    if(imdbId)playEpTorrent(imdbId,seasonNum,ep.episode_number,tvTitle,tvPoster||'');
                     else Lampa.Activity.push({url:'',title:tvTitle,component:'kkphim_tmdb_detail',tmdb_id:tvId,media_type:'tv',page:1});
                 });
                 epList.append(item);
             });
-            scroll.append(epList);
+            right.append(epList);
+
+            wrap.append(left).append(right);
+            scroll.append(wrap);
+
             comp.activity.loader(false);comp.start();
-        }).catch(function(){comp.activity.loader(false);});
+        }).catch(function(e){
+            comp.activity.loader(false);
+        });
     };
-    this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
+    this.start=function(){
+        // Custom scroll for landscape: disable default scroll behavior, let each panel scroll independently
+        var el=scroll.render();
+        el.css({overflow:'hidden',position:'relative',height:'100%'});
+        var b=el.find('.scroll__body');
+        var p2={'transform':'none','overflow-y':'auto','overflow-x':'hidden','-webkit-overflow-scrolling':'touch',height:'100%','padding-bottom':'4em','touch-action':'pan-y'};
+        b.css($.extend({position:'relative'},p2));
+        if(b[0])Object.keys(p2).forEach(function(k){b[0].style.setProperty(k,p2[k],'important');});
+
+        // In landscape, we want the scroll__body to NOT scroll; instead each panel scrolls independently
+        // Check orientation
+        var isLandscape=window.matchMedia&&window.matchMedia('(orientation:landscape)').matches;
+        if(isLandscape){
+            // Make scroll body fill height, no overflow
+            b.css({'overflow':'hidden','padding-bottom':'0'});
+            if(b[0]){
+                b[0].style.setProperty('overflow','hidden','important');
+                b[0].style.setProperty('padding-bottom','0','important');
+            }
+            // The wrap itself is flex, each side scrolls
+            var sdlWrap=b.find('.kk-sdl-wrap');
+            if(sdlWrap.length){
+                sdlWrap.css('height','100%');
+            }
+        }
+
+        aCtrl(scroll);
+    };
+    this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};
 });
 
 Lampa.Component.add('kkphim_tmdb_detail',function(obj){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';this.create=function(){comp.activity.loader(true);cScr(scroll);if(!tid){comp.activity.loader(false);comp.start();return;}tDetFull(mt,tid).then(async function(tmdb){var logos=null;try{logos=await tImgFull(mt,tid);}catch(e){}var t=tmdb.title||tmdb.name||'',o=tmdb.original_title||tmdb.original_name||'';var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);saveHistory({tmdb_id:tid,media_type:mt,name:t,poster_url:tmdb.poster_path?TMDB_W500+tmdb.poster_path:'',year:y,origin_name:o});Lampa.Noty.show('Tìm nguồn...');var keywordsPromise=tKeywords(mt,tid);var slugs=await fSlugs(t,o,y);var tmdbSeasons=null;if(mt==='tv'){try{tmdbSeasons=await gSeasons(tid);}catch(e){}}var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;if(!imdb)try{imdb=await gImdb(mt,tid);}catch(e){}_detCtx={imdbId:imdb};var keywords=[];try{keywords=await keywordsPromise;}catch(e){}bDet(tmdb,logos,slugs,tmdbSeasons,keywords);}).catch(function(e){comp.activity.loader(false);Lampa.Noty.show('Lỗi: '+(e.message||''));});};
