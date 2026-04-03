@@ -1,4 +1,3 @@
-
 /* KKPhim Plugin v4.5.3 - Netflix Episodes + Font Scale + Origin Name */
 (function(){
 'use strict';
@@ -47,40 +46,43 @@ function applyFontScale(){
     var id='kkphim-font-scale';$('#'+id).remove();
     var fs=fontScale();
     var r=fs/100;
-    
+
     var css=''
-    // Container scale cho cards - giữ nguyên như cũ
+    // Cards - scale container
     +'.kk-card,.kk-card-h,.kk-pfc{font-size:'+fs+'%!important;}'
-    
-    // ===== HERO - scale theo ratio =====
+
+    // Card origin name
+    +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+(0.95*r)+'em!important;}'
+
+    // Hero
     +'.kk-hm-year{font-size:'+(1.15*r)+'em!important;}'
     +'.kk-hm-country{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-hm-origin{font-size:'+(1.0*r)+'em!important;}'
+    +'.kk-hm-origin{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-hm-tagline{font-size:'+(1.2*r)+'em!important;}'
     +'.kk-hm-vote{font-size:'+(1.8*r)+'em!important;}'
     +'.kk-hm-vote small{font-size:'+(0.5*r)+'em!important;}'
     +'.kk-hm-badge{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-hm-rt,.kk-hm-genres{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-hm-dot{font-size:'+(1.1*r)+'em!important;}'
-    
-    // ===== BODY GENRES =====
+
+    // Body genres
     +'.kk-body-genres .kk-genre{font-size:'+(1.15*r)+'em!important;}'
-    
-    // ===== CREW - scale =====
+
+    // Crew
     +'.kk-crew-label{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-crew-name{font-size:'+(1.5*r)+'em!important;}'
     +'.kk-crew-role{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-crew-rest-name{font-size:'+(1.1*r)+'em!important;}'
-    
-    // ===== DESCRIPTION - scale =====
+
+    // Description
     +'.kk-body-desc-label{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-body-desc-text{font-size:'+(1.25*r)+'em!important;line-height:1.8!important;}'
-    
-    // ===== SOURCE BUTTONS =====
+
+    // Source buttons
     +'.kk-src-btn .kk-sb-main{font-size:'+(1.5*r)+'em!important;}'
     +'.kk-src-btn .kk-sb-sub{font-size:'+(1.1*r)+'em!important;}'
-    
-    // ===== EPISODE PANEL =====
+
+    // Episode panel (KKPhim/OPhim)
     +'.kk-sv-hd{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-ep-c{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-ep-bk{font-size:'+(1.0*r)+'em!important;}'
@@ -88,63 +90,63 @@ function applyFontScale(){
     +'.kk-sn-it{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-sn-nm{font-size:'+(1.1*r)+'em!important;}'
     +'.kk-sn-bd{font-size:'+(0.88*r)+'em!important;}'
-    
-    // ===== CAST =====
-    +'.kk-cast-name{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-cast-role{font-size:'+(0.95*r)+'em!important;}'
-    
-    // ===== PERSON =====
+
+    // Cast
+    +'.kk-cast-name{font-size:'+(1.3*r)+'em!important;}'
+    +'.kk-cast-role{font-size:'+(1.1*r)+'em!important;}'
+
+    // Person
     +'.kk-person-name{font-size:'+(1.6*r)+'em!important;}'
     +'.kk-person-meta{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-person-bio{font-size:'+(1.15*r)+'em!important;line-height:1.7!important;}'
-    
-    // ===== SETTINGS =====
+
+    // Settings
     +'.kk-stg-group-title{font-size:'+(1.3*r)+'em!important;}'
     +'.kk-stg-label-name{font-size:'+(1.08*r)+'em!important;}'
     +'.kk-stg-label-desc{font-size:'+(0.92*r)+'em!important;}'
     +'.kk-stg-value{font-size:'+(0.98*r)+'em!important;}'
     +'.kk-stg-ver{font-size:'+(0.85*r)+'em!important;}'
-    
-    // ===== SEASON DETAIL HEADER =====
-    +'.kk-sd-title{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-sd-meta{font-size:'+(0.82*r)+'em!important;}'
-    +'.kk-sd-overview{font-size:'+(0.82*r)+'em!important;line-height:1.4!important;}'
-    
-    // ===== NETFLIX EPISODES =====
-    +'.kk-netflix-ep-title{font-size:'+(0.88*r)+'em!important;}'
-    +'.kk-netflix-ep-date,.kk-netflix-ep-vote{font-size:'+(0.72*r)+'em!important;}'
-    +'.kk-netflix-ep-desc{font-size:'+(0.75*r)+'em!important;line-height:1.5!important;}'
-    +'.kk-netflix-ep-num{font-size:'+(0.72*r)+'em!important;}'
-    +'.kk-netflix-ep-runtime{font-size:'+(0.65*r)+'em!important;}'
-    
-    // ===== SEASON CARDS =====
-    +'.kk-season-name{font-size:'+(0.75*r)+'em!important;}'
-    +'.kk-season-meta{font-size:'+(0.65*r)+'em!important;}'
-    
-    // ===== COLLECTION =====
-    +'.kk-coll-label{font-size:'+(0.7*r)+'em!important;}'
-    +'.kk-coll-name{font-size:'+(0.95*r)+'em!important;}'
-    +'.kk-coll-header-label{font-size:'+(0.7*r)+'em!important;}'
-    +'.kk-coll-header-name{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-coll-header-count{font-size:'+(0.8*r)+'em!important;}'
-    +'.kk-coll-overview{font-size:'+(0.88*r)+'em!important;line-height:1.6!important;}'
-    
-    // ===== PRODUCTION =====
-    +'.kk-prod-name{font-size:'+(0.75*r)+'em!important;}'
-    +'.kk-prod-country{font-size:'+(0.65*r)+'em!important;}'
-    
-    // ===== TAGS =====
-    +'.kk-tag-chip{font-size:'+(0.8*r)+'em!important;}'
-    
-    // ===== PAGES =====
+
+    // Season detail header - x2
+    +'.kk-sd-title{font-size:'+(2.8*r)+'em!important;}'
+    +'.kk-sd-meta{font-size:'+(2.2*r)+'em!important;}'
+    +'.kk-sd-overview{font-size:'+(2.2*r)+'em!important;line-height:1.5!important;}'
+
+    // Netflix episodes - x2
+    +'.kk-netflix-ep-title{font-size:'+(2.2*r)+'em!important;font-weight:700!important;}'
+    +'.kk-netflix-ep-date,.kk-netflix-ep-vote{font-size:'+(2.0*r)+'em!important;}'
+    +'.kk-netflix-ep-desc{font-size:'+(1.9*r)+'em!important;line-height:1.5!important;}'
+    +'.kk-netflix-ep-num{font-size:'+(2.0*r)+'em!important;}'
+    +'.kk-netflix-ep-runtime{font-size:'+(1.9*r)+'em!important;}'
+
+    // Season cards
+    +'.kk-season-name{font-size:'+(1.0*r)+'em!important;font-weight:700!important;}'
+    +'.kk-season-meta{font-size:'+(0.9*r)+'em!important;}'
+
+    // Collection
+    +'.kk-coll-label{font-size:'+(0.95*r)+'em!important;}'
+    +'.kk-coll-name{font-size:'+(1.2*r)+'em!important;font-weight:700!important;}'
+    +'.kk-coll-header-label{font-size:'+(0.95*r)+'em!important;}'
+    +'.kk-coll-header-name{font-size:'+(1.4*r)+'em!important;font-weight:800!important;}'
+    +'.kk-coll-header-count{font-size:'+(1.0*r)+'em!important;}'
+    +'.kk-coll-overview{font-size:'+(2.2*r)+'em!important;line-height:1.6!important;}'
+
+    // Production
+    +'.kk-prod-name{font-size:'+(1.0*r)+'em!important;font-weight:700!important;}'
+    +'.kk-prod-country{font-size:'+(0.9*r)+'em!important;}'
+
+    // Tags
+    +'.kk-tag-chip{font-size:'+(1.0*r)+'em!important;}'
+
+    // Block titles - giữ ổn định
+    +'.kk-block-title{font-size:1.2em!important;}'
+
+    // Pages
     +'.kk-page-header-name{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-page-header-meta{font-size:'+(0.84*r)+'em!important;}'
-    +'.kk-type-tab{font-size:'+(0.84*r)+'em!important;}'
+    +'.kk-page-header-meta{font-size:'+(1.0*r)+'em!important;}'
+    +'.kk-type-tab{font-size:'+(1.0*r)+'em!important;}'
     +'.kk-genre-chip{font-size:'+(1.05*r)+'em!important;}'
     +'.kk-keyword-header-badge{font-size:'+(1.05*r)+'em!important;}'
-    
-    // ===== BLOCK TITLE - giữ ổn định =====
-    +'.kk-block-title{font-size:'+(1.2)+'em!important;}'
     ;
     $('head').append('<style id="'+id+'">'+css+'</style>');
 }
