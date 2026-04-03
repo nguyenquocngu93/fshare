@@ -1190,214 +1190,165 @@
     }
 
        /* ============================================================
-       SETTINGS - FIX UI + SCROLL
-    ============================================================ */
+   SETTINGS - FIX ANDROID TOUCH + FONT TO
+   ============================================================ */
     Lampa.Component.add('kkparser_settings', function () {
-        // Wrapper có scroll
-        var scroll = new Lampa.Scroll({ mask: true, over: true });
-        var html   = $('<div class="settings-list"></div>');
-        var self   = this;
+        var container = $('<div class="settings-container" style="height:100%;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>');
+        var html      = $('<div class="settings-list" style="padding:0 20px 40px"></div>');
+        var self      = this;
 
         this.create = function () {
-            self.build();
-            scroll.render().addClass('layer--width');
-            // Append settings list vào scroll container
-            scroll.append(html);
+            container.append(html);
+            setTimeout(function() { 
+                // Không cần update scroll, để CSS overflow handle
+            }, 50);
         };
 
         this.build = function () {
             html.empty();
 
-            // ── Header nhỏ gọn ──
+            // Header
             html.append(
-                '<div class="settings-param" style="padding:1em 1.5em;border-bottom:1px solid rgba(255,255,255,.08)">' +
-                    '<div style="display:flex;align-items:center;gap:0.8em">' +
-                        '<div style="width:2.2em;height:2.2em;background:rgba(255,255,255,.08);border-radius:0.5em;display:flex;align-items:center;justify-content:center">' +
-                            '<svg viewBox="0 0 24 24" fill="none" width="22" height="22">' +
-                                '<rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/>' +
-                                '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/>' +
-                            '</svg>' +
-                        '</div>' +
+                '<div style="padding:16px 0;border-bottom:2px solid rgba(255,255,255,.1);margin-bottom:20px">' +
+                    '<div style="display:flex;align-items:center;gap:12px">' +
+                        '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/><path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor"/></svg>' +
                         '<div>' +
-                            '<div style="font-size:1.15em;font-weight:700">KKPhim Parser</div>' +
-                            '<div style="font-size:0.75em;opacity:0.35">v1.7 — Cài đặt nguồn phim & torrent</div>' +
+                            '<div style="font-size:20px;font-weight:700;line-height:1.2">KKPhim Parser</div>' +
+                            '<div style="font-size:14px;opacity:0.6;margin-top:4px">v1.8 — Cài đặt nguồn phim & torrent</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>'
             );
 
-            // ── TorrServer ──
-            sec('TorrServer');
+            // TorrServer
+            sectionLabel('TORRSERVER');
 
-            var tsv = getSetting('torrserver_url');
-            var tsp = getSetting('torrserver_pass');
+            inputField('torrserver_url', 'Địa chỉ TorrServer', 'VD: 192.168.1.100:8090', getSetting('torrserver_url') || '');
+            inputField('torrserver_pass', 'Mật khẩu TorrServer', 'Để trống nếu không có', getSetting('torrserver_pass') ? '••••••' : '');
+            actionButton('Test TorrServer', getSetting('torrserver_url') || '', function() {
+                var url = getTsUrl();
+                if (!url) { Lampa.Noty.show('Chưa nhập địa chỉ!'); return; }
+                Lampa.Noty.show('Đang test...');
+                $.ajax({
+                    url: url + '/echo', type: 'GET', timeout: 5000,
+                    success: function () { Lampa.Noty.show('✅ TorrServer OK!'); },
+                    error: function (xhr) { Lampa.Noty.show(xhr.status === 200 ? '✅ OK!' : '❌ HTTP ' + (xhr.status || 'timeout')); }
+                });
+            });
 
-            inp('torrserver_url',
-                'Địa chỉ TorrServer',
-                'VD: 192.168.1.100:8090',
-                tsv || 'Chưa cài đặt'
-            );
-
-            inp('torrserver_pass',
-                'Mật khẩu TorrServer',
-                'Để trống nếu không có',
-                tsp ? '••••••' : 'Không có'
-            );
-
-            act('Test kết nối TorrServer',
-                tsv || 'Chưa nhập địa chỉ',
-                function () {
-                    var url = getTsUrl();
-                    if (!url) { Lampa.Noty.show('Chưa nhập địa chỉ!'); return; }
-                    Lampa.Noty.show('Đang test...');
-                    $.ajax({
-                        url: url + '/echo', type: 'GET', timeout: 5000,
-                        success: function () { Lampa.Noty.show('✅ TorrServer OK!'); },
-                        error: function (xhr) {
-                            Lampa.Noty.show(xhr.status === 200 ? '✅ OK!' : '❌ HTTP ' + (xhr.status || 'timeout'));
-                        }
-                    });
-                }
-            );
-
-            // ── Nguồn Torrent ──
-            sec('Nguồn Torrent');
+            // Torrent
+            sectionLabel('NGUỒN TORRENT');
 
             var eng = getTorrentEngine();
-            act('Engine hiện tại: ' + (eng === 'aio' ? 'AIOStreams' : 'Torrentio'),
-                'Nhấn để đổi engine',
-                function () {
-                    Lampa.Select.show({
-                        title: 'Chọn Engine',
-                        items: [
-                            { title: (eng === 'torrentio' ? '✓ ' : '  ') + 'Torrentio', value: 'torrentio' },
-                            { title: (eng === 'aio'       ? '✓ ' : '  ') + 'AIOStreams', value: 'aio' }
-                        ],
-                        onSelect: function (s) {
-                            setSetting('torrent_engine', s.value);
-                            Lampa.Noty.show('✅ Đã chọn ' + (s.value === 'aio' ? 'AIOStreams' : 'Torrentio'));
-                            self.build();
-                            scroll.update();
-                        },
-                        onBack: function () { Lampa.Controller.toggle('content'); }
-                    });
-                }
-            );
+            actionButton('Engine: ' + (eng === 'aio' ? 'AIOStreams' : 'Torrentio'), 'Nhấn để đổi engine', function() {
+                Lampa.Select.show({
+                    title: 'Chọn Engine',
+                    items: [
+                        { title: (eng === 'torrentio' ? '✓ ' : '  ') + 'Torrentio', value: 'torrentio' },
+                        { title: (eng === 'aio'       ? '✓ ' : '  ') + 'AIOStreams', value: 'aio' }
+                    ],
+                    onSelect: function (s) {
+                        setSetting('torrent_engine', s.value);
+                        Lampa.Noty.show('✅ Đã chọn');
+                        self.build();
+                    },
+                    onBack: function () { Lampa.Controller.toggle('content'); }
+                });
+            });
 
-            var tc = getSetting('torrentio_config');
-            inp('torrentio_config',
-                'Torrentio Config',
-                'Dán link manifest hoặc để trống = mặc định',
-                tc || 'Mặc định'
-            );
+            inputField('torrentio_config', 'Torrentio Config', 'Dán link manifest hoặc để trống = mặc định', getSetting('torrentio_config') || 'Mặc định');
+            inputField('aio_url', 'AIOStreams URL', 'Dán full URL manifest', getSetting('aio_url') || '');
 
-            var au = getSetting('aio_url');
-            inp('aio_url',
-                'AIOStreams URL',
-                'Dán full URL manifest',
-                au || 'Chưa cài đặt'
-            );
+            // Jackett
+            sectionLabel('JACKETT');
 
-            // ── Jackett ──
-            sec('Jackett');
+            inputField('jackett_url', 'Jackett Server', 'VD: jac.red hoặc jac.maxvol.pro', getSetting('jackett_url') || '');
+            inputField('jackett_key', 'Jackett API Key', 'Key tài khoản', getSetting('jackett_key') || '');
+            actionButton('Test Jackett', getSetting('jackett_url') || '', function() {
+                var url = getJackettUrl(), key = getJackettKey();
+                if (!url) { Lampa.Noty.show('Chưa nhập URL!'); return; }
+                if (!key) { Lampa.Noty.show('Chưa nhập Key!'); return; }
+                Lampa.Noty.show('Đang test...');
+                reguest(
+                    url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
+                    function () { Lampa.Noty.show('✅ Jackett OK!'); },
+                    function (e) { Lampa.Noty.show('❌ ' + e); }
+                );
+            });
 
-            var ju = getSetting('jackett_url');
-            var jk = getSetting('jackett_key');
+            // Knaben
+            sectionLabel('KNABEN');
+            textOnly('knaben.eu — Không cần cấu hình, tìm theo tên + năm');
+            textOnly('Chọn torrent → file list → phát');
 
-            inp('jackett_url',
-                'Jackett Server',
-                'VD: jac.red hoặc jac.maxvol.pro',
-                ju || 'Chưa cài đặt'
-            );
+            // Phim Việt
+            sectionLabel('NGUỒN PHIM VIỆT');
+            textOnly('KKPhim (phimapi.com) - Tự động tìm season → chọn tập');
+            textOnly('OPhim (ophim1.com) - Tự động tìm season → chọn tập');
 
-            inp('jackett_key',
-                'Jackett API Key',
-                'Key tài khoản (maxvol.pro dùng key = 1)',
-                jk || 'Chưa nhập'
-            );
+            // Spacer
+            html.append('<div style="height:40px"></div>');
 
-            act('Test kết nối Jackett',
-                ju || 'Chưa nhập server',
-                function () {
-                    var url = getJackettUrl(), key = getJackettKey();
-                    if (!url) { Lampa.Noty.show('Chưa nhập URL!'); return; }
-                    if (!key) { Lampa.Noty.show('Chưa nhập Key!'); return; }
-                    Lampa.Noty.show('Đang test...');
-                    reguest(
-                        url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=test&Category[]=2000',
-                        function () { Lampa.Noty.show('✅ Jackett OK!'); },
-                        function (e) { Lampa.Noty.show('❌ ' + e); }
-                    );
-                }
-            );
-
-            // ── Knaben ──
-            sec('Knaben');
-
-            info('knaben.eu — Không cần cấu hình');
-            info('Tìm theo tên + năm, chọn torrent → file list');
-
-            // ── Nguồn phim Việt ──
-            sec('Nguồn phim Việt');
-
-            info('KKPhim — phimapi.com');
-            info('OPhim — ophim1.com');
-            info('Tự động tìm season → chọn tập → phát');
-
-            // Update scroll sau khi build xong
-            setTimeout(function () { scroll.update(); }, 100);
+            // Focus vào element đầu tiên
+            setTimeout(function() {
+                $('.settings-param').first().addClass('selected');
+            }, 100);
         };
 
-        // ── UI Builders ──
+        // ── UI Helpers ──
 
-        function sec(title) {
+        function sectionLabel(title) {
             html.append(
-                '<div class="settings-param-title" style="padding:1.2em 1.5em 0.4em;font-size:0.85em;font-weight:600;opacity:0.5;text-transform:uppercase;letter-spacing:0.05em">' +
+                '<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;padding:20px 0 12px;border-bottom:1px solid rgba(255,255,255,.05)">' +
                     title +
                 '</div>'
             );
         }
 
-        function inp(key, name, placeholder, currentVal) {
-            var $el = $(
-                '<div class="settings-param selector" style="padding:0.8em 1.5em">' +
-                    '<div class="settings-param__name">' + name + '</div>' +
-                    '<div class="settings-param__descr" style="opacity:0.4;font-size:0.85em">' + placeholder + '</div>' +
-                    '<div class="settings-param__value" style="opacity:0.6;font-size:0.85em;margin-top:0.2em">' + (currentVal || '') + '</div>' +
+        function inputField(key, label, placeholder, value) {
+            var isPass = key === 'torrserver_pass' && value === '••••••';
+            var displayVal = value;
+            
+            html.append(
+                '<div class="settings-param selector" data-key="' + key + '" style="background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:12px;padding:16px;">' +
+                    '<div style="font-size:16px;font-weight:600;margin-bottom:6px">' + label + '</div>' +
+                    '<div style="font-size:14px;opacity:0.5;margin-bottom:8px">' + placeholder + '</div>' +
+                    '<div style="font-size:15px;color:#fff;' + (isPass ? 'letter-spacing:2px;' : '') + '">' + (displayVal || '') + '</div>' +
                 '</div>'
             );
-            $el.on('hover:enter', function () {
+
+            $('[data-key="' + key + '"]').on('click tap hover:enter', function() {
                 Lampa.Input.edit({
-                    title: name,
+                    title: label,
                     value: getSetting(key) || '',
                     free: true,
                     nosave: true
-                }, function (v) {
+                }, function(v) {
                     setSetting(key, v.trim());
                     Lampa.Noty.show('✅ Đã lưu');
                     self.build();
-                    scroll.update();
+                    // Re-focus element
+                    setTimeout(function() {
+                        $('[data-key="' + key + '"]').addClass('selected');
+                    }, 100);
                 });
             });
-            html.append($el);
         }
 
-        function act(name, desc, fn) {
-            var $el = $(
-                '<div class="settings-param selector" style="padding:0.8em 1.5em">' +
-                    '<div class="settings-param__name">' + name + '</div>' +
-                    '<div class="settings-param__descr" style="opacity:0.4;font-size:0.85em">' + desc + '</div>' +
+        function actionButton(label, subtitle, onClick) {
+            html.append(
+                '<div class="settings-param selector" style="background:rgba(255,255,255,.05);border-left:4px solid #4CAF50;border-radius:4px;margin-bottom:12px;padding:16px;">' +
+                    '<div style="font-size:16px;font-weight:600;margin-bottom:4px">' + label + '</div>' +
+                    '<div style="font-size:14px;opacity:0.4">' + (subtitle || '') + '</div>' +
                 '</div>'
             );
-            $el.on('hover:enter', fn);
-            html.append($el);
+
+            html.find('.selector:last-of-type').on('click tap hover:enter', onClick);
         }
 
-        function info(text) {
+        function textOnly(text) {
             html.append(
-                '<div class="settings-param" style="padding:0.5em 1.5em">' +
-                    '<div class="settings-param__descr" style="opacity:0.3;font-size:0.85em">' + text + '</div>' +
-                '</div>'
+                '<div style="font-size:14px;opacity:0.6;margin:8px 0;padding:8px 0;border-top:1px dashed rgba(255,255,255,.1)">' + text + '</div>'
             );
         }
 
@@ -1406,22 +1357,19 @@
         this.start = function () {
             Lampa.Controller.add('content', {
                 toggle: function () {
-                    Lampa.Controller.collectionSet(scroll.render());
-                    Lampa.Controller.collectionFocus(false, scroll.render());
+                    // Cho phép cuộn bằng D-pad lên/xuống
+                    Lampa.Controller.collectionSet(container);
+                    Lampa.Controller.collectionFocus(false, container);
                 },
                 up: function () {
-                    if (Navigator.canmove('up')) Navigator.move('up');
-                    else Lampa.Controller.toggle('head');
+                    // Cuộn lên nhẹ
+                    container.scrollTop(container.scrollTop() - 50);
+                    Navigator.move('up');
                 },
                 down: function () {
+                    // Cuộn xuống nhẹ
+                    container.scrollTop(container.scrollTop() + 50);
                     Navigator.move('down');
-                },
-                right: function () {
-                    // cho phép di chuyển phải nếu cần
-                },
-                left: function () {
-                    if (Navigator.canmove('left')) Navigator.move('left');
-                    else Lampa.Controller.toggle('menu');
                 },
                 back: function () {
                     Lampa.Activity.backward();
@@ -1430,10 +1378,8 @@
             Lampa.Controller.toggle('content');
         };
 
-        this.pause   = function () {};
-        this.stop    = function () {};
-        this.render  = function () { return scroll.render(); };
-        this.destroy = function () { scroll.destroy(); };
+        this.render = function () { return container; };
+        this.destroy = function () {};
     });
 
     /* ============================================================
