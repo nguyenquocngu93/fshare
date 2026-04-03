@@ -1,4 +1,4 @@
-/* KKPhim Plugin v4.3.1 - Clean copy line + Torrent menu fix */
+/* KKPhim Plugin v4.3.2 - Full cast + Logo copy + Production/Tag/Genre fields */
 (function(){
 'use strict';
 if(window.__kkphim_plugin_started)return;
@@ -165,7 +165,7 @@ var TFN={
     on_the_air:function(p){return tFetch('/tv/on_the_air?language='+tmLang()+'&page='+p);}
 };
 async function tSearchM(q,p){return await tFetch('/search/multi?language='+tmLang()+'&query='+encodeURIComponent(q)+'&page='+(p||1));}
-async function tDetFull(type,id){return await tFetch('/'+type+'/'+id+'?language='+tmLang()+'&append_to_response=credits,images,similar,external_ids');}
+async function tDetFull(type,id){return await tFetch('/'+type+'/'+id+'?language='+tmLang()+'&append_to_response=credits,images,similar,external_ids,keywords');}
 async function tImgFull(type,id){return await tFetch('/'+type+'/'+id+'/images');}
 async function tDiscover(type,gid,p){return await tFetch('/discover/'+type+'?language='+tmLang()+'&sort_by=popularity.desc&with_genres='+gid+'&page='+(p||1));}
 async function tRec(type,id,p){return await tFetch('/'+type+'/'+id+'/recommendations?language='+tmLang()+'&page='+(p||1));}
@@ -249,7 +249,7 @@ function aioU(type,imdb,s,e){var base=cAio(aioUrl());if(!base)return'';var t=typ
 async function fStreams(type,imdb,s,e){var eng=tEngine(),url;if(eng==='aio'){url=aioU(type,imdb,s,e);if(!url)throw new Error('Chưa cấu hình AIO');}else{url=tioU(type,imdb,s,e);}var r=await fetch(url);if(!r.ok)throw new Error(eng+' '+r.status);var d=await r.json();return(d.streams||[]).map(pStream);}
 
 // ══════════════════════════════════════════════════════════════
-// TORRENT MENU - only fix: allow full text, no other style changes
+// TORRENT MENU CSS
 // ══════════════════════════════════════════════════════════════
 function injectTorrentMenuCSS(){
     var id='kk-torrent-menu-css';
@@ -308,46 +308,109 @@ function mkSourceCardH(item,source){var p=fImg(item.thumb_url||item.poster_url,s
 
 function mkRowList(items,isTmdb,source){var cm=cardMode(),rl=$('<div class="kk-row-list"></div>');if(cm==='poster')items.forEach(function(i){rl.append(isTmdb?mkTCPF(i):mkSourceCard(i,source));});else items.forEach(function(i){rl.append(isTmdb?mkTCH(i):mkSourceCardH(i,source));});return rl;}
 
-function mkCastList(castArr,hasTmdb){var list=$('<div class="kk-cast-list"></div>');castArr.forEach(function(c){var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'" loading="lazy">':'<div class="kk-cast-empty"></div>';var card;if(hasTmdb&&c.id){card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});}else card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');list.append(card);});return list;}
+// ══════════════════════════════════════════════════════════════
+// CAST LIST - Full, no limit
+// ══════════════════════════════════════════════════════════════
+function mkCastList(castArr,hasTmdb){
+    var list=$('<div class="kk-cast-list"></div>');
+    // Hiển thị toàn bộ diễn viên, không giới hạn
+    castArr.forEach(function(c){
+        var av=c.profile_path?'<img src="'+TMDB_W500+c.profile_path+'" loading="lazy">':'<div class="kk-cast-empty"></div>';
+        var card;
+        if(hasTmdb&&c.id){
+            card=$('<div class="kk-cast-card selector" data-pid="'+c.id+'"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
+            bE(card,function(){Lampa.Activity.push({url:'',title:c.name||'',component:'kkphim_person',person_id:c.id,page:1});});
+        }else{
+            card=$('<div class="kk-cast-card"><div class="kk-cast-img">'+av+'</div><div class="kk-cast-info"><div class="kk-cast-name">'+E(c.name||'')+'</div><div class="kk-cast-role">'+E(c.character||'')+'</div></div></div>');
+        }
+        list.append(card);
+    });
+    return list;
+}
 
 function mkDirHtml(dirs,isTmdb){if(!dirs||!dirs.length)return'';var first=dirs[0],rest=dirs.slice(1);var avatarH=first.profile_path?'<div class="kk-crew-avatar"><img src="'+TMDB_W500+first.profile_path+'" loading="lazy"></div>':'<div class="kk-crew-avatar"><div class="kk-crew-avatar-empty"></div></div>';var nameH=(isTmdb&&first.id)?'<span class="kk-crew-name selector" data-pid="'+first.id+'">'+E(first.name||'')+'</span>':'<span class="kk-crew-name">'+E(first.name||'')+'</span>';var restH='';if(rest.length){var restNames=rest.map(function(c){return(isTmdb&&c.id)?'<span class="kk-crew-rest-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>':'<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';});restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';}return'<div class="kk-crew">'+avatarH+'<div class="kk-crew-info"><span class="kk-crew-label">Đạo diễn</span>'+nameH+'<span class="kk-crew-role">'+E(first.job||'Director')+'</span>'+restH+'</div></div>';}
 
 function bindDirClicks(el){el.find('.kk-crew-name[data-pid],.kk-crew-rest-name[data-pid]').each(function(){var sp=$(this);bE(sp,function(){var pid=sp.attr('data-pid');if(pid)Lampa.Activity.push({url:'',title:sp.text()||'',component:'kkphim_person',person_id:parseInt(pid),page:1});});});}
 
-function gHtml(genres,isTmdb){if(!genres||!genres.length)return'';var result='';for(var i=0;i<genres.length;i++){var g=genres[i];if(!g)continue;var gname=E(g.name||'');if(isTmdb)result+='<span class="kk-genre selector" data-gid="'+(g.id||'')+'" data-gname="'+gname+'">'+gname+'</span>';else result+='<span class="kk-genre">'+gname+'</span>';}return result;}
+// ══════════════════════════════════════════════════════════════
+// GENRE - clickable (dùng thay thế category cũ)
+// ══════════════════════════════════════════════════════════════
+function gHtml(genres,isTmdb){
+    if(!genres||!genres.length)return'';
+    var result='';
+    for(var i=0;i<genres.length;i++){
+        var g=genres[i];if(!g)continue;
+        var gname=E(g.name||'');
+        if(isTmdb)result+='<span class="kk-genre selector" data-gid="'+(g.id||'')+'" data-gname="'+gname+'">'+gname+'</span>';
+        else result+='<span class="kk-genre">'+gname+'</span>';
+    }
+    return result;
+}
 
 function mkHero(bk,ps,logoH,tH,origin,extra){extra=extra||{};var posterH=ps?'<img src="'+ps+'" loading="lazy">':'';return $('<div class="kk-hero"><div class="kk-hero-backdrop">'+(bk?'<img src="'+bk+'" loading="lazy">':'<div class="kk-hero-backdrop-empty"></div>')+'</div><div class="kk-hero-card"><div class="kk-hero-poster-wrap"><div class="kk-hero-poster">'+posterH+'</div></div><div class="kk-hero-meta">'+(extra.year||extra.country?'<div class="kk-hm-yc">'+(extra.year?'<span class="kk-hm-year">'+E(extra.year)+'</span>':'')+(extra.country?'<span class="kk-hm-country">'+E(extra.country)+'</span>':'')+'</div>':'')+(logoH||tH)+(extra.tagline?'<div class="kk-hm-tagline">'+E(extra.tagline)+'</div>':'')+'<div class="kk-hm-badges">'+(extra.vote?'<span class="kk-hm-vote">'+E(extra.vote)+' <small>TMDB</small></span>':'')+(extra.status?'<span class="kk-hm-badge">'+E(extra.status)+'</span>':'')+'</div>'+(extra.runtime||extra.genres?'<div class="kk-hm-rtg">'+(extra.runtime?'<span class="kk-hm-rt">'+E(extra.runtime)+'</span>':'')+(extra.runtime&&extra.genres?'<span class="kk-hm-dot">•</span>':'')+(extra.genres?'<span class="kk-hm-genres">'+E(extra.genres)+'</span>':'')+'</div>':'')+'</div></div></div>');}
 
 // ══════════════════════════════════════════════════════════════
-// COPY LINE - simple centered text with copy icon
+// LOGO COPY - bấm vào logo/title để copy tên gốc
 // ══════════════════════════════════════════════════════════════
-function mkCopyLine(originName,year){
-    var text=String(originName||'').trim();
-    if(!text)return $('<div></div>');
-    if(year)text+=' '+year;
-    var line=$('<div class="kk-copy-line selector"></div>');
-    line.html('<span class="kk-copy-text">'+E(text)+'</span> <span class="kk-copy-icon">📋</span>');
-    bE(line,function(){
-        var ok=copyToClipboard(text);
+function mkLogoCopyWrap(logoFilePath,titleText,copyText){
+    // copyText = tên gốc + năm để copy
+    var wrap=$('<div class="kk-logo-copy-wrap selector"></div>');
+    var inner='';
+    if(logoFilePath){
+        inner='<div class="kk-logo"><img src="'+TMDB_W500+logoFilePath+'"><div class="kk-logo-copy-hint">📋</div></div>';
+    }else if(titleText){
+        inner='<div class="kk-title kk-title--copyable">'+E(titleText)+' <span class="kk-copy-icon">📋</span></div>';
+    }
+    wrap.html(inner);
+    var copied=false;
+    bE(wrap,function(){
+        if(copied)return;
+        var ok=copyToClipboard(copyText);
         if(ok){
-            Lampa.Noty.show('✅ Đã copy: "'+text+'"');
-            line.find('.kk-copy-icon').text('✅');
-            setTimeout(function(){line.find('.kk-copy-icon').text('📋');},2000);
+            copied=true;
+            Lampa.Noty.show('✅ Đã copy: "'+copyText+'"');
+            wrap.find('.kk-logo-copy-hint,.kk-copy-icon').text('✅');
+            setTimeout(function(){
+                wrap.find('.kk-logo-copy-hint').text('📋');
+                wrap.find('.kk-copy-icon').text('📋');
+                copied=false;
+            },2000);
         }else{
             Lampa.Noty.show('⚠️ Copy thất bại');
         }
     });
-    return line;
+    return wrap;
 }
 
-function mkBody(v,y,rt,extra,genreHtml,crewH,desc,originName){
-    var copyLineHtml='';
-    var copyText=String(originName||'').trim();
-    if(copyText){
-        if(y)copyText+=' '+y;
-        copyLineHtml='<div class="kk-copy-line-wrap" id="kk-copy-line-placeholder"></div>';
+// ══════════════════════════════════════════════════════════════
+// BODY - với production, tag, genre
+// ══════════════════════════════════════════════════════════════
+function mkBody(v,y,rt,extra,genreHtml,crewH,desc,originName,extraFields){
+    extraFields=extraFields||{};
+    var productionHtml='',tagHtml='';
+
+    // Production companies
+    if(extraFields.production&&extraFields.production.length){
+        var prodNames=extraFields.production.map(function(p){return E(p.name||'');}).filter(Boolean).join(' · ');
+        if(prodNames)productionHtml='<div class="kk-body-row"><span class="kk-body-label">🏢 Sản xuất</span><span class="kk-body-value">'+prodNames+'</span></div>';
     }
-    return $('<div class="kk-body"><div class="kk-body-genres">'+genreHtml+'</div>'+crewH+copyLineHtml+'<div class="kk-body-desc"><span class="kk-body-desc-label">Nội dung</span><div class="kk-body-desc-text">'+fTxt(desc)+'</div></div></div>');
+
+    // Keywords / Tags
+    if(extraFields.tags&&extraFields.tags.length){
+        var tagItems=extraFields.tags.slice(0,12).map(function(k){
+            return '<span class="kk-tag">'+E(k.name||'')+'</span>';
+        }).join('');
+        if(tagItems)tagHtml='<div class="kk-body-tags"><span class="kk-body-label">🏷️ Tag</span><div class="kk-tags-wrap">'+tagItems+'</div></div>';
+    }
+
+    return $('<div class="kk-body">'+
+        // Genre thay thế category cũ - hiển thị đầu tiên, có thể bấm
+        '<div class="kk-body-genres">'+genreHtml+'</div>'+
+        crewH+
+        productionHtml+
+        tagHtml+
+        '<div class="kk-body-desc"><span class="kk-body-desc-label">Nội dung</span><div class="kk-body-desc-text">'+fTxt(desc)+'</div></div>'+
+    '</div>');
 }
 
 function inCSS(){
@@ -360,28 +423,24 @@ function inCSS(){
             '@media(orientation:landscape){.kk-grid--cat-h{grid-template-columns:repeat('+hgridCols()+',minmax(0,1fr))!important;}}'+
         '</style>');
     }
-    // Copy line style
-    var copyId='kk-copy-line-css';
-    if(!$('#'+copyId).length){
-        $('head').append('<style id="'+copyId+'">'+
-            '.kk-copy-line{'+
-                'text-align:center;'+
-                'padding:0.6em 1em;'+
-                'margin:0.3em 0;'+
-                'cursor:pointer;'+
-                'opacity:0.75;'+
-                'transition:opacity 0.2s;'+
-            '}'+
-            '.kk-copy-line:hover,.kk-copy-line.focus,.kk-copy-line.selected{opacity:1;}'+
-            '.kk-copy-text{'+
-                'color:rgba(255,255,255,0.85);'+
-                'font-size:0.95em;'+
-            '}'+
-            '.kk-copy-icon{'+
-                'font-size:1em;'+
-                'margin-left:0.4em;'+
-                'vertical-align:middle;'+
-            '}'+
+    // Extra styles: logo copy, body fields, tags
+    var extraId='kk-extra-css';
+    if(!$('#'+extraId).length){
+        $('head').append('<style id="'+extraId+'">'+
+            // Logo copy wrap
+            '.kk-logo-copy-wrap{cursor:pointer;position:relative;display:inline-block;opacity:0.9;transition:opacity 0.15s;}'+
+            '.kk-logo-copy-wrap:hover,.kk-logo-copy-wrap.focus,.kk-logo-copy-wrap.selected{opacity:1;}'+
+            '.kk-logo-copy-hint{position:absolute;bottom:4px;right:4px;font-size:1em;opacity:0.75;pointer-events:none;}'+
+            '.kk-title--copyable{cursor:pointer;display:inline-flex;align-items:center;gap:0.4em;}'+
+            '.kk-copy-icon{font-size:0.85em;opacity:0.7;}'+
+            // Body rows (production)
+            '.kk-body-row{display:flex;align-items:flex-start;gap:0.6em;padding:0.35em 0;font-size:0.9em;opacity:0.85;flex-wrap:wrap;}'+
+            '.kk-body-label{color:rgba(255,255,255,0.55);white-space:nowrap;flex-shrink:0;}'+
+            '.kk-body-value{color:rgba(255,255,255,0.9);}'+
+            // Tags
+            '.kk-body-tags{display:flex;align-items:flex-start;gap:0.6em;padding:0.4em 0;flex-wrap:wrap;}'+
+            '.kk-tags-wrap{display:flex;flex-wrap:wrap;gap:0.35em;}'+
+            '.kk-tag{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:0.15em 0.7em;font-size:0.78em;color:rgba(255,255,255,0.8);}'+
         '</style>');
     }
 }
@@ -482,7 +541,7 @@ Lampa.Component.add('kkphim_settings',function(){
         var gHist=mg('🕘 Dữ liệu');var clearHist=si2('Xóa lịch sử xem','Xóa gợi ý đã xem','Xóa');bE(clearHist,function(){localStorage.removeItem(HIST_KEY);Lampa.Noty.show('Đã xóa');});gHist.append(clearHist);w.append(gHist);
         var g7=mg('🗃️ Cache');var cc=si2('Xóa cache genres','','Xóa');bE(cc,function(){_gc={movie:null,tv:null};Lampa.Noty.show('OK');});g7.append(cc);w.append(g7);
         var g4=$('<div class="kk-stg-group"></div>');var cl=si2('🗑️ Xóa toàn bộ','Khôi phục mặc định','Xóa');cl.find('.kk-stg-value').css('color','#f87171');bE(cl,function(){localStorage.removeItem(STG_KEY);localStorage.removeItem(HIST_KEY);_gc={movie:null,tv:null};applyFontScale();Lampa.Activity.backward();});g4.append(cl);w.append(g4);
-        w.append('<div class="kk-stg-ver">KKPhim v4.3.1</div>');
+        w.append('<div class="kk-stg-ver">KKPhim v4.3.2</div>');
         scroll.append(w);comp.start();
     };
     function mg(t){return $('<div class="kk-stg-group"></div>').append('<div class="kk-stg-group-title">'+t+'</div>');}
@@ -510,22 +569,167 @@ mkGridInfinite('kkphim_tmdb_search',function(obj,page){return tSearchM(obj.keywo
 Lampa.Component.add('kkphim_tmdb_genre',function(obj){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,cg=String(obj.genre_id||'');var gridContainer=$('<div></div>'),ld=false,md=false,td=false,mp=1,tp=1,all=[],rs={},curGrid=null;var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');function initGrid(){var cm=catMode();if(cm==='hgrid')curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');else{curGrid=$('<div class="kk-grid"></div>');curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');}gridContainer.empty().append(curGrid);}this.create=function(){comp.activity.loader(true);cScr(scroll);var gb=$('<div class="kk-genre-bar"></div>');scroll.append(gb);initGrid();scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title" id="kk-gtitle">'+E(obj.title||'')+'</div>').append(gridContainer).append(spinner).append(endMsg));var sb2=scroll.render().find('.scroll__body');sb2.on('scroll',function(){if(ld||(md&&td))return;var el=sb2[0];if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();});Promise.all([lGenres('movie'),lGenres('tv')]).then(function(res){var mg2=[],sn={};(res[0]||[]).concat(res[1]||[]).forEach(function(g){if(!sn[g.id]){sn[g.id]=true;mg2.push(g);}});mg2.sort(function(a,b){return(a.name||'').localeCompare(b.name||'');});mg2.forEach(function(g){var on=String(g.id)===cg;var ch=$('<div class="kk-genre-chip selector '+(on?'kk-genre-chip--on':'kk-genre-chip--off')+'">'+E(g.name)+'</div>');bE(ch,function(){Lampa.Activity.push({url:'',title:g.name,component:'kkphim_tmdb_genre',genre_id:g.id,page_num:1});});gb.append(ch);});var cur=mg2.find(function(g){return String(g.id)===cg;});if(cur)scroll.render().find('#kk-gtitle').text(cur.name);doL();}).catch(function(){doL();});};function doL(){if(ld)return;ld=true;spinner.show();var ps=[];if(!md)ps.push(tDiscover('movie',cg,mp).then(function(r){var items=r.results||[];if(!items.length)md=true;else{items.forEach(function(i){i.media_type='movie';});all=all.concat(items);mp++;}}).catch(function(){md=true;}));if(!td)ps.push(tDiscover('tv',cg,tp).then(function(r){var items=r.results||[];if(!items.length)td=true;else{items.forEach(function(i){i.media_type='tv';});all=all.concat(items);tp++;}}).catch(function(){td=true;}));Promise.all(ps).then(function(){all.sort(function(a,b){return(b.popularity||0)-(a.popularity||0);});var cm=catMode();for(var i=0;i<all.length;i++){var key=all[i].media_type+'_'+all[i].id;if(!rs[key]){rs[key]=true;var card=cm==='hgrid'?mkTCH(all[i]):mkTC(all[i]);curGrid.append(card.addClass('kk-card--grid'));}}spinner.hide();if(md&&td)endMsg.show();ld=false;comp.activity.loader(false);comp.start();}).catch(function(){ld=false;spinner.hide();comp.activity.loader(false);});}this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
 
 // ══════════════════════════════════════════════════════════════
-// DETAIL
+// DETAIL - v4.3.2: logo copy, full cast, production/tag/genre
 // ══════════════════════════════════════════════════════════════
-Lampa.Component.add('kkphim_tmdb_detail',function(obj){var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';this.create=function(){comp.activity.loader(true);cScr(scroll);if(!tid){comp.activity.loader(false);comp.start();return;}tDetFull(mt,tid).then(async function(tmdb){var logos=null;try{logos=await tImgFull(mt,tid);}catch(e){}var t=tmdb.title||tmdb.name||'',o=tmdb.original_title||tmdb.original_name||'';var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);saveHistory({tmdb_id:tid,media_type:mt,name:t,poster_url:tmdb.poster_path?TMDB_W500+tmdb.poster_path:'',year:y,origin_name:o});Lampa.Noty.show('Tìm nguồn...');var slugs=await fSlugs(t,o,y);var tmdbSeasons=null;if(mt==='tv'){try{tmdbSeasons=await gSeasons(tid);}catch(e){}}var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;if(!imdb)try{imdb=await gImdb(mt,tid);}catch(e){}_detCtx={imdbId:imdb,mediaType:mt,tmdbId:tid,originName:o,year:y,title:t};bDet(tmdb,logos,slugs,tmdbSeasons);}).catch(function(e){comp.activity.loader(false);Lampa.Noty.show('Lỗi: '+(e.message||''));});};
-async function bDet(tmdb,logos,slugs,tmdbSeasons){cScr(scroll);var bk=tmdb.backdrop_path?TMDB_IMG+tmdb.backdrop_path:'',ps=tmdb.poster_path?TMDB_W500+tmdb.poster_path:'';var t=tmdb.title||tmdb.name||'',o2=tmdb.original_title||tmdb.original_name||'';var d=tmdb.overview||'Không có mô tả',v=tmdb.vote_average?Number(tmdb.vote_average).toFixed(1):'N/A';var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);var rt=tmdb.runtime?tmdb.runtime+' phút':'';if(!rt&&tmdb.episode_run_time&&tmdb.episode_run_time.length)rt=tmdb.episode_run_time[0]+' phút/tập';var epExtra='';if(tmdb.number_of_episodes)epExtra=tmdb.number_of_episodes+' tập';if(tmdb.number_of_seasons)epExtra+=(epExtra?' | ':'')+tmdb.number_of_seasons+' season';var country='';if(tmdb.production_countries&&tmdb.production_countries.length)country=tmdb.production_countries.map(function(c){return c.iso_3166_1;}).join(', ');else if(tmdb.origin_country&&tmdb.origin_country.length)country=tmdb.origin_country[0];var genreStr=(tmdb.genres||[]).slice(0,3).map(function(g){return g.name;}).join(' | ');var status=tmdb.status||'';var logo=pLogo(logos||(tmdb.images||{})),logoH='';if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';var gh=gHtml(tmdb.genres,true),dirsArr=[],castArr=[];if(tmdb.credits){castArr=(tmdb.credits.cast||[]).slice(0,15);dirsArr=(tmdb.credits.crew||[]).filter(function(c){return c.job==='Director'||c.job==='Creator'||c.job==='Series Director';}).filter(function(p,i,a){return a.findIndex(function(x){return x.name===p.name;})===i;}).slice(0,8);}var crewH=mkDirHtml(dirsArr,true);var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||_detCtx.imdbId||null;var tH=logoH?'':'<div class="kk-title">'+E(t)+'</div>';var hero=mkHero(bk,ps,logoH,tH,o2,{tagline:tmdb.tagline||'',vote:v,year:y,runtime:rt+(epExtra?' · '+epExtra:''),country:country,genres:genreStr,status:status});var body=mkBody(v,y,rt,epExtra,gh,crewH,d,o2);
+Lampa.Component.add('kkphim_tmdb_detail',function(obj){
+    var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';
+    this.create=function(){
+        comp.activity.loader(true);cScr(scroll);
+        if(!tid){comp.activity.loader(false);comp.start();return;}
+        // append_to_response bao gồm keywords để lấy tags
+        tDetFull(mt,tid).then(async function(tmdb){
+            var logos=null;
+            try{logos=await tImgFull(mt,tid);}catch(e){}
+            var t=tmdb.title||tmdb.name||'',o=tmdb.original_title||tmdb.original_name||'';
+            var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);
+            saveHistory({tmdb_id:tid,media_type:mt,name:t,poster_url:tmdb.poster_path?TMDB_W500+tmdb.poster_path:'',year:y,origin_name:o});
+            Lampa.Noty.show('Tìm nguồn...');
+            var slugs=await fSlugs(t,o,y);
+            var tmdbSeasons=null;
+            if(mt==='tv'){try{tmdbSeasons=await gSeasons(tid);}catch(e){}}
+            var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;
+            if(!imdb)try{imdb=await gImdb(mt,tid);}catch(e){}
+            _detCtx={imdbId:imdb,mediaType:mt,tmdbId:tid,originName:o,year:y,title:t};
+            bDet(tmdb,logos,slugs,tmdbSeasons);
+        }).catch(function(e){comp.activity.loader(false);Lampa.Noty.show('Lỗi: '+(e.message||''));});
+    };
 
-// Insert copy line
-var placeholder=body.find('#kk-copy-line-placeholder');
-if(placeholder.length&&o2){
-    var copyLine=mkCopyLine(o2,y);
-    placeholder.replaceWith(copyLine);
-}
+    async function bDet(tmdb,logos,slugs,tmdbSeasons){
+        cScr(scroll);
+        var bk=tmdb.backdrop_path?TMDB_IMG+tmdb.backdrop_path:'';
+        var ps=tmdb.poster_path?TMDB_W500+tmdb.poster_path:'';
+        var t=tmdb.title||tmdb.name||'',o2=tmdb.original_title||tmdb.original_name||'';
+        var d=tmdb.overview||'Không có mô tả';
+        var v=tmdb.vote_average?Number(tmdb.vote_average).toFixed(1):'N/A';
+        var y=(tmdb.release_date||tmdb.first_air_date||'').slice(0,4);
+        var rt=tmdb.runtime?tmdb.runtime+' phút':'';
+        if(!rt&&tmdb.episode_run_time&&tmdb.episode_run_time.length)rt=tmdb.episode_run_time[0]+' phút/tập';
+        var epExtra='';
+        if(tmdb.number_of_episodes)epExtra=tmdb.number_of_episodes+' tập';
+        if(tmdb.number_of_seasons)epExtra+=(epExtra?' | ':'')+tmdb.number_of_seasons+' season';
+        var country='';
+        if(tmdb.production_countries&&tmdb.production_countries.length)country=tmdb.production_countries.map(function(c){return c.iso_3166_1;}).join(', ');
+        else if(tmdb.origin_country&&tmdb.origin_country.length)country=tmdb.origin_country[0];
+        var genreStr=(tmdb.genres||[]).slice(0,3).map(function(g){return g.name;}).join(' | ');
+        var status=tmdb.status||'';
 
-body.find('.kk-genre[data-gid]').each(function(){var g=$(this);bE(g,function(){Lampa.Activity.push({url:'',title:g.attr('data-gname')||'',component:'kkphim_tmdb_genre',genre_id:g.attr('data-gid'),page_num:1});});});bindDirClicks(body);var act=$('<div class="kk-actions"></div>');
+        // ── Logo / title copy setup ──
+        var logo=pLogo(logos||(tmdb.images||{}));
+        var logoFilePath=logo&&logo.file_path?logo.file_path:null;
 
-var enabledSources=getEnabledSources();Object.keys(enabledSources).forEach(function(sk){var sn=enabledSources[sk].name,css=sk==='kkphim'?'kk-src-btn--kkphim':'kk-src-btn--ophim';if(slugs[sk]){if(mt==='movie')act.append(bMovExp(sk,sn,slugs[sk],t,css));else act.append(bTVExp(sk,sn,slugs[sk],t,o2,css,tmdbSeasons));}else{var naBtn=$('<div class="kk-src-btn kk-src-btn--no selector" style="width:100%"><div class="kk-sb-main">'+E(sn)+' – Không tìm thấy</div><div class="kk-sb-sub">Bấm để thử lại</div></div>');var naWrap=$('<div style="width:100%"></div>').append(naBtn);bE(naBtn,async function(){Lampa.Noty.show('Đang tìm lại...');var source=enabledSources[sk];var terms=[t,o2];if(y){terms.push(t+' '+y);terms.push(o2+' '+y);}var cleanT=t.replace(/[:\-–—]/g,' ').replace(/\s+/g,' ').trim();if(cleanT!==t)terms.push(cleanT);for(var i=0;i<terms.length;i++){if(!terms[i])continue;var items=await sSrc(source,terms[i]);var best=mBest(items,t,o2,y);if(best&&best.slug){slugs[sk]=best.slug;Lampa.Noty.show('Tìm thấy!');bDet(tmdb,logos||(tmdb.images||{}),slugs,tmdbSeasons);return;}}Lampa.Noty.show('Vẫn không tìm thấy');});act.append(naWrap);}});act.append(bTorBtn(mt,tid,t,ps,imdb));body.append(act);var dw=$('<div class="kk-detail-wrap"></div>').append(hero).append(body);if(castArr.length){var castSec=$('<div class="kk-section"><div class="kk-block-title">Diễn viên</div></div>');castSec.append(mkCastList(castArr,true));dw.append(castSec);}var simI=(tmdb.similar&&tmdb.similar.results)?tmdb.similar.results.slice(0,20):[];if(simI.length){var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim tương tự</div>');var sl=$('<div class="kk-similar-list"></div>');simI.forEach(function(i){if(!i.media_type)i.media_type=mt;sl.append(mkTC(i));});ss2.append(sl);dw.append(ss2);}try{var rd2=await tRec(mt,tid,1);var ri=(rd2.results||[]).slice(0,20);if(ri.length){var rs2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎲 Gợi ý</div>');var rl2=$('<div class="kk-similar-list"></div>');ri.forEach(function(i){if(!i.media_type)i.media_type=mt;rl2.append(mkTC(i));});rs2.append(rl2);dw.append(rs2);}else if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}catch(e){if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}scroll.append(dw);comp.activity.loader(false);comp.start();}
-this.start=function(){aCtrl(scroll);eScr(scroll);};this.pause=function(){};this.stop=function(){};this.render=function(){return scroll.render();};this.destroy=function(){scroll.destroy();};});
+        // copyText = tên gốc + năm (dùng cho logo và title click)
+        var copyText=o2||t;
+        if(y)copyText+=' '+y;
+
+        // mkHero: truyền logoH/tH rỗng vì sẽ dùng wrap copy riêng
+        var tH='<div class="kk-title">'+E(t)+'</div>';
+        var logoH='';
+        var hero=mkHero(bk,ps,logoH,tH,o2,{tagline:tmdb.tagline||'',vote:v,year:y,runtime:rt+(epExtra?' · '+epExtra:''),country:country,genres:genreStr,status:status});
+
+        // Chèn logo/title copy wrap vào hero meta
+        var logoCopyEl=mkLogoCopyWrap(logoFilePath,logoFilePath?null:t,copyText);
+        hero.find('.kk-hm-badges').before(logoCopyEl);
+
+        // Genre (thay thế category cũ) + Production + Tags
+        var gh=gHtml(tmdb.genres,true);
+        var dirsArr=[],castArr=[];
+        if(tmdb.credits){
+            // Lấy TẤT CẢ diễn viên, không giới hạn
+            castArr=tmdb.credits.cast||[];
+            dirsArr=(tmdb.credits.crew||[]).filter(function(c){return c.job==='Director'||c.job==='Creator'||c.job==='Series Director';}).filter(function(p,i,a){return a.findIndex(function(x){return x.name===p.name;})===i;}).slice(0,8);
+        }
+        var crewH=mkDirHtml(dirsArr,true);
+
+        // Production companies
+        var production=tmdb.production_companies||[];
+
+        // Keywords / Tags: tmdb trả về keywords.results (movie) hoặc results (tv)
+        var tagsData=tmdb.keywords;
+        var tags=[];
+        if(tagsData){
+            if(tagsData.results)tags=tagsData.results;
+            else if(tagsData.keywords)tags=tagsData.keywords;
+        }
+
+        var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||_detCtx.imdbId||null;
+        var body=mkBody(v,y,rt,epExtra,gh,crewH,d,o2,{production:production,tags:tags});
+
+        // Bind genre clicks
+        body.find('.kk-genre[data-gid]').each(function(){
+            var g=$(this);
+            bE(g,function(){Lampa.Activity.push({url:'',title:g.attr('data-gname')||'',component:'kkphim_tmdb_genre',genre_id:g.attr('data-gid'),page_num:1});});
+        });
+        bindDirClicks(body);
+
+        var act=$('<div class="kk-actions"></div>');
+        var enabledSources=getEnabledSources();
+        Object.keys(enabledSources).forEach(function(sk){
+            var sn=enabledSources[sk].name,css=sk==='kkphim'?'kk-src-btn--kkphim':'kk-src-btn--ophim';
+            if(slugs[sk]){
+                if(mt==='movie')act.append(bMovExp(sk,sn,slugs[sk],t,css));
+                else act.append(bTVExp(sk,sn,slugs[sk],t,o2,css,tmdbSeasons));
+            }else{
+                var naBtn=$('<div class="kk-src-btn kk-src-btn--no selector" style="width:100%"><div class="kk-sb-main">'+E(sn)+' – Không tìm thấy</div><div class="kk-sb-sub">Bấm để thử lại</div></div>');
+                var naWrap=$('<div style="width:100%"></div>').append(naBtn);
+                bE(naBtn,async function(){
+                    Lampa.Noty.show('Đang tìm lại...');
+                    var source=enabledSources[sk];
+                    var terms=[t,o2];
+                    if(y){terms.push(t+' '+y);terms.push(o2+' '+y);}
+                    var cleanT=t.replace(/[:\-–—]/g,' ').replace(/\s+/g,' ').trim();
+                    if(cleanT!==t)terms.push(cleanT);
+                    for(var i=0;i<terms.length;i++){
+                        if(!terms[i])continue;
+                        var items=await sSrc(source,terms[i]);
+                        var best=mBest(items,t,o2,y);
+                        if(best&&best.slug){slugs[sk]=best.slug;Lampa.Noty.show('Tìm thấy!');bDet(tmdb,logos||(tmdb.images||{}),slugs,tmdbSeasons);return;}
+                    }
+                    Lampa.Noty.show('Vẫn không tìm thấy');
+                });
+                act.append(naWrap);
+            }
+        });
+        act.append(bTorBtn(mt,tid,t,ps,imdb));
+        body.append(act);
+
+        var dw=$('<div class="kk-detail-wrap"></div>').append(hero).append(body);
+
+        // Diễn viên - toàn bộ, không giới hạn
+        if(castArr.length){
+            var castSec=$('<div class="kk-section"><div class="kk-block-title">Diễn viên ('+castArr.length+')</div></div>');
+            castSec.append(mkCastList(castArr,true));
+            dw.append(castSec);
+        }
+
+        var simI=(tmdb.similar&&tmdb.similar.results)?tmdb.similar.results.slice(0,20):[];
+        if(simI.length){
+            var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim tương tự</div>');
+            var sl=$('<div class="kk-similar-list"></div>');
+            simI.forEach(function(i){if(!i.media_type)i.media_type=mt;sl.append(mkTC(i));});
+            ss2.append(sl);dw.append(ss2);
+        }
+        try{
+            var rd2=await tRec(mt,tid,1);
+            var ri=(rd2.results||[]).slice(0,20);
+            if(ri.length){
+                var rs2=$('<div class="kk-section kk-similar kk-section--last"></div>').append('<div class="kk-block-title">🎲 Gợi ý</div>');
+                var rl2=$('<div class="kk-similar-list"></div>');
+                ri.forEach(function(i){if(!i.media_type)i.media_type=mt;rl2.append(mkTC(i));});
+                rs2.append(rl2);dw.append(rs2);
+            }else if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');
+        }catch(e){if(simI.length)dw.find('.kk-similar').last().addClass('kk-section--last');}
+
+        scroll.append(dw);
+        comp.activity.loader(false);
+        comp.start();
+    }
+
+    this.start=function(){aCtrl(scroll);eScr(scroll);};
+    this.pause=function(){};
+    this.stop=function(){};
+    this.render=function(){return scroll.render();};
+    this.destroy=function(){scroll.destroy();};
+});
 
 // Start
 function startPlugin(){inCSS();applyFontScale();addM();injectTorrentMenuCSS();}
