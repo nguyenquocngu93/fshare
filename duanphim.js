@@ -519,7 +519,7 @@
     function cleanName(name) { return (name || '').replace(/^#+\s*/, '').trim(); }
 
     /* ════════════════════════════════════════════════════════════
-       ANIME ROMAJI SUPPORT (LATIN CHARACTERS)
+       ANIME ROMAJI SUPPORT + TRIM LAST 2 CHARS
     ════════════════════════════════════════════════════════════ */
     
     function getAnimeRomaji(card, callback) {
@@ -545,25 +545,23 @@
     }
 
     function extractRomaji(tmdbData) {
-        // 1. Tìm alternative titles với ISO JP
+        // 1. Alternative titles (JP Latin)
         if (tmdbData.alternative_titles) {
             var titles = tmdbData.alternative_titles.titles || tmdbData.alternative_titles.results || [];
             for (var i = 0; i < titles.length; i++) {
                 var t = titles[i];
-                // Tìm title JP mà KHÔNG có ký tự Nhật (= romaji)
                 if (t.iso_3166_1 === 'JP' && t.title && isLatin(t.title)) {
                     return t.title;
                 }
             }
         }
 
-        // 2. Tìm trong translations với iso_639_1 = 'ja'
+        // 2. Translations (ja)
         if (tmdbData.translations && tmdbData.translations.translations) {
             var trans = tmdbData.translations.translations;
             for (var i = 0; i < trans.length; i++) {
                 if (trans[i].iso_639_1 === 'ja' && trans[i].data) {
                     var jaTitle = trans[i].data.title || trans[i].data.name;
-                    // Chỉ lấy nếu là chữ Latin (romaji)
                     if (jaTitle && isLatin(jaTitle)) {
                         return jaTitle;
                     }
@@ -571,7 +569,7 @@
             }
         }
 
-        // 3. Nếu original_title là Latin và card có genre Anime/Animation
+        // 3. Original title if Latin + Animation
         var orig = tmdbData.original_title || tmdbData.original_name || '';
         if (orig && isLatin(orig) && isAnime(tmdbData)) {
             return orig;
@@ -581,7 +579,6 @@
     }
 
     function isLatin(str) {
-        // Kiểm tra có CHỨA chữ Latin nhưng KHÔNG có Hiragana/Katakana/Kanji
         if (!str) return false;
         var hasLatin = /[a-zA-Z]/.test(str);
         var hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(str);
@@ -589,7 +586,6 @@
     }
 
     function isAnime(tmdbData) {
-        // Kiểm tra có phải anime không (qua genre hoặc origin_country)
         var genres = tmdbData.genres || [];
         for (var i = 0; i < genres.length; i++) {
             if (genres[i].name === 'Animation' || genres[i].id === 16) {
@@ -605,6 +601,14 @@
             }
         }
         return false;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 🎯 CÔNG THỨC KỲ DỊ: BỎ 2 KÝ TỰ CUỐI
+    // ═══════════════════════════════════════════════════════════
+    function trimLast2Chars(str) {
+        if (!str || str.length <= 2) return str;
+        return str.slice(0, -2);
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -736,7 +740,7 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Jackett (WITH ROMAJI LATIN)
+       BUTTON ACTIONS - Jackett (WITH TRIM LAST 2 CHARS)
     ════════════════════════════════════════════════════════════ */
     
     function searchJackett(card) {
@@ -755,24 +759,30 @@
 
             var searchTerms = [];
             
-            // Ưu tiên romaji (chữ Latin phiên âm)
+            // 🎯 Ưu tiên #1: Romaji bỏ 2 ký tự cuối
             if (romaji) {
-                searchTerms.push(romaji + (year ? ' ' + year : ''));
-                console.log('[Jackett] 🎌 Tìm bằng romaji: ' + romaji);
+                var trimmedRomaji = trimLast2Chars(romaji);
+                searchTerms.push(trimmedRomaji + (year ? ' ' + year : ''));
+                console.log('[Jackett] 🎌 Tìm bằng romaji trimmed: "' + trimmedRomaji + '"');
             }
             
-            // Original title (có thể là tiếng Nhật hoặc Latin)
-            if (orig && orig !== romaji) {
-                searchTerms.push(orig + (year ? ' ' + year : ''));
+            // 🎯 Ưu tiên #2: Tiếng Anh bỏ 2 ký tự cuối
+            if (title) {
+                var trimmedTitle = trimLast2Chars(title);
+                if (trimmedTitle !== (romaji ? trimLast2Chars(romaji) : '')) {
+                    searchTerms.push(trimmedTitle + (year ? ' ' + year : ''));
+                    console.log('[Jackett] 📝 Tìm bằng title trimmed: "' + trimmedTitle + '"');
+                }
             }
             
-            // Tiếng Anh
-            if (title && title !== orig && title !== romaji) {
-                searchTerms.push(title + (year ? ' ' + year : ''));
+            // Backup: Original title bỏ 2 ký tự cuối
+            if (orig && orig !== title && orig !== romaji) {
+                var trimmedOrig = trimLast2Chars(orig);
+                searchTerms.push(trimmedOrig + (year ? ' ' + year : ''));
             }
 
             if (!searchTerms.length) {
-                searchTerms.push((orig || title) + (year ? ' ' + year : ''));
+                searchTerms.push(trimLast2Chars(title || orig) + (year ? ' ' + year : ''));
             }
 
             searchJackettMultipleTerms(searchTerms, 0, [], card, function (allResults) {
@@ -1270,7 +1280,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 3.4.0', description: '🎌 Romaji (Latin) Support' }
+            field: { name: '📦 Version 3.4.1', description: '🎯 Trim Last 2 Chars Mode' }
         });
     }
 
@@ -1280,7 +1290,7 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v3.4.0 — 🎌 Romaji (Latin) Support ✅');
+        console.log('[KKPhim Parser] v3.4.1 — 🎯 Trim Last 2 Chars Mode ✅');
     }
 
     if (window.appready) start();
