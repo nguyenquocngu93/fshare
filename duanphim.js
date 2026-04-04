@@ -31,7 +31,12 @@
     }
     function getTsPass()        { return getSetting('torrserver_pass') || ''; }
     function getTorrentEngine() { return getSetting('torrent_engine') || 'torrentio'; }
-    function getAioUrl()        { return (getSetting('aio_url') || '').replace(/\/manifest\.json\s*$/i, '').replace(/\/+$/, ''); }
+    function getAioUrl() {
+        var url = getSetting('aio_url') || '';
+        url = url.replace(/\/manifest\.json\s*$/i, '');
+        url = url.replace(/\/+$/, '');
+        return url;
+    }
     function getTioConfigUrl()  { return getSetting('torrentio_config') || ''; }
     function getJackettUrl() {
         var url = getSetting('jackett_url') || '';
@@ -545,7 +550,6 @@
     }
 
     function extractRomaji(tmdbData) {
-        // 1. Alternative titles (JP Latin)
         if (tmdbData.alternative_titles) {
             var titles = tmdbData.alternative_titles.titles || tmdbData.alternative_titles.results || [];
             for (var i = 0; i < titles.length; i++) {
@@ -556,7 +560,6 @@
             }
         }
 
-        // 2. Translations (ja)
         if (tmdbData.translations && tmdbData.translations.translations) {
             var trans = tmdbData.translations.translations;
             for (var i = 0; i < trans.length; i++) {
@@ -569,7 +572,6 @@
             }
         }
 
-        // 3. Original title if Latin + Animation
         var orig = tmdbData.original_title || tmdbData.original_name || '';
         if (orig && isLatin(orig) && isAnime(tmdbData)) {
             return orig;
@@ -603,9 +605,6 @@
         return false;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // 🎯 CÔNG THỨC KỲ DỊ: BỎ 2 KÝ TỰ CUỐI
-    // ═══════════════════════════════════════════════════════════
     function trimLast2Chars(str) {
         if (!str || str.length <= 2) return str;
         return str.slice(0, -2);
@@ -740,7 +739,7 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Jackett (WITH TRIM LAST 2 CHARS)
+       BUTTON ACTIONS - Jackett
     ════════════════════════════════════════════════════════════ */
     
     function searchJackett(card) {
@@ -759,23 +758,20 @@
 
             var searchTerms = [];
             
-            // 🎯 Ưu tiên #1: Romaji bỏ 2 ký tự cuối
             if (romaji) {
                 var trimmedRomaji = trimLast2Chars(romaji);
                 searchTerms.push(trimmedRomaji + (year ? ' ' + year : ''));
-                console.log('[Jackett] 🎌 Tìm bằng romaji trimmed: "' + trimmedRomaji + '"');
+                console.log('[Jackett] 🎌 Romaji trimmed: "' + trimmedRomaji + '"');
             }
             
-            // 🎯 Ưu tiên #2: Tiếng Anh bỏ 2 ký tự cuối
             if (title) {
                 var trimmedTitle = trimLast2Chars(title);
                 if (trimmedTitle !== (romaji ? trimLast2Chars(romaji) : '')) {
                     searchTerms.push(trimmedTitle + (year ? ' ' + year : ''));
-                    console.log('[Jackett] 📝 Tìm bằng title trimmed: "' + trimmedTitle + '"');
+                    console.log('[Jackett] 📝 Title trimmed: "' + trimmedTitle + '"');
                 }
             }
             
-            // Backup: Original title bỏ 2 ký tự cuối
             if (orig && orig !== title && orig !== romaji) {
                 var trimmedOrig = trimLast2Chars(orig);
                 searchTerms.push(trimmedOrig + (year ? ' ' + year : ''));
@@ -909,7 +905,7 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Torrentio/AIO
+       BUTTON ACTIONS - Torrentio/AIO (WITH DEBUG)
     ════════════════════════════════════════════════════════════ */
     
     function searchTorrent(card, season, episode) {
@@ -1017,6 +1013,10 @@
         });
     }
 
+    /* ════════════════════════════════════════════════════════════
+       🔥 AIO/TORRENTIO WITH FULL DEBUG
+    ════════════════════════════════════════════════════════════ */
+    
     function fetchTorrentioResults(card, callback) {
         var engine = getTorrentEngine();
         var type   = getMediaType(card);
@@ -1024,66 +1024,49 @@
 
         function run(id) {
             var sType = type === 'series' ? 'series' : 'movie';
-            var url;
             
             if (engine === 'aio') {
                 var base = getAioUrl();
                 if (!base) {
-                    callback([]);
+                    console.warn('[AIO] ⚠️ Chưa cấu hình URL');
+                    fetchFromTorrentio(sType, id, callback);
                     return;
                 }
-                url = base + '/stream/' + sType + '/' + id + '.json';
+                
+                var url = base + '/stream/' + sType + '/' + id + '.json';
+                console.log('[AIO] 🔍 Request URL:', url);
+                
+                reguest(url,
+                    function (data) {
+                        console.log('[AIO] 📦 Raw Response:', JSON.stringify(data).substring(0, 500));
+                        console.log('[AIO] 📊 Type:', typeof data);
+                        console.log('[AIO] 🗂️ Keys:', Object.keys(data || {}));
+                        
+                        var streams = extractStreams(data);
+                        console.log('[AIO] ✅ Extracted streams:', streams.length);
+                        
+                        if (streams.length > 0) {
+                            console.log('[AIO] 🎬 Sample stream:', JSON.stringify(streams[0]));
+                        }
+                        
+                        if (!streams.length) {
+                            console.warn('[AIO] ❌ No streams, fallback Torrentio');
+                            Lampa.Noty.show('⚠️ AIO không có kết quả, chuyển Torrentio...');
+                            fetchFromTorrentio(sType, id, callback);
+                            return;
+                        }
+                        
+                        callback(parseStreams(streams, 'AIO'));
+                    },
+                    function (err) {
+                        console.error('[AIO] ❌ Error:', err);
+                        Lampa.Noty.show('⚠️ AIO lỗi: ' + err);
+                        fetchFromTorrentio(sType, id, callback);
+                    }
+                );
             } else {
-                var cfg = parseTioConfig(getTioConfigUrl());
-                var base2 = TORRENTIO_BASE + (cfg ? '/' + cfg : '');
-                url = base2 + '/stream/' + sType + '/' + id + '.json';
+                fetchFromTorrentio(sType, id, callback);
             }
-
-            reguest(url,
-                function (data) {
-                    var streams = (data && data.streams) || [];
-                    var results = streams.map(function (st) {
-                        var rawTitle = st.title || st.name || '';
-                        var lines = rawTitle.split('\n');
-                        var name  = lines[0] || '?';
-                        var info  = lines[1] || '';
-                        
-                        var seedM = info.match(/👤\s*(\d+)/);
-                        var seeds = seedM ? parseInt(seedM[1]) : 0;
-                        
-                        var sizeM = info.match(/💾\s*([\d.,]+\s*[TGMK]?B)/i);
-                        var sz = sizeM ? sizeM[1].trim() : '';
-                        
-                        var srcM = info.match(/⚙️\s*([^\s]+)/);
-                        var tracker = srcM ? srcM[1] : (engine === 'aio' ? 'AIO' : 'Torrentio');
-                        
-                        var qualityM = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
-                        var quality = qualityM ? qualityM[1] : '';
-                        
-                        var hash = (st.infoHash || '').toLowerCase();
-                        if (!hash) return null;
-                        
-                        return {
-                            title: name,
-                            quality: quality,
-                            info: (seeds ? '👤 ' + seeds + '  ' : '') + (sz ? '💾 ' + sz : ''),
-                            size: parseSize(sz),
-                            seeds: seeds,
-                            hash: hash,
-                            fileIdx: typeof st.fileIdx === 'number' ? st.fileIdx : 0,
-                            tracker: tracker
-                        };
-                    }).filter(Boolean);
-
-                    results.sort(function (a, b) {
-                        if (b.seeds !== a.seeds) return b.seeds - a.seeds;
-                        return b.size - a.size;
-                    });
-
-                    callback(results);
-                },
-                function () { callback([]); }
-            );
         }
 
         if (imdbId) {
@@ -1093,10 +1076,9 @@
                 'https://api.themoviedb.org/3/' + (type === 'series' ? 'tv' : 'movie') + '/' + card.id +
                 '/external_ids?api_key=' + TMDB_API_KEY,
                 function (d) {
-                    var id = d && d.imdb_id;
-                    if (id) {
-                        card.imdb_id = id;
-                        run(id);
+                    if (d && d.imdb_id) {
+                        card.imdb_id = d.imdb_id;
+                        run(d.imdb_id);
                     } else {
                         callback([]);
                     }
@@ -1104,6 +1086,140 @@
                 function () { callback([]); }
             );
         }
+    }
+
+    function fetchFromTorrentio(sType, id, callback) {
+        var cfg = parseTioConfig(getTioConfigUrl());
+        var base = TORRENTIO_BASE + (cfg ? '/' + cfg : '');
+        var url = base + '/stream/' + sType + '/' + id + '.json';
+        
+        console.log('[Torrentio] 🔍 Request URL:', url);
+        
+        reguest(url,
+            function (data) {
+                console.log('[Torrentio] 📦 Response:', JSON.stringify(data).substring(0, 300));
+                var streams = (data && data.streams) || [];
+                console.log('[Torrentio] ✅ Streams:', streams.length);
+                callback(parseStreams(streams, 'Torrentio'));
+            },
+            function (err) {
+                console.error('[Torrentio] ❌ Error:', err);
+                callback([]);
+            }
+        );
+    }
+
+    function extractStreams(data) {
+        if (!data) return [];
+        
+        if (Array.isArray(data.streams)) return data.streams;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data.results)) return data.results;
+        if (Array.isArray(data.torrents)) return data.torrents;
+        
+        console.warn('[Extract] ⚠️ Unknown structure, keys:', Object.keys(data));
+        return [];
+    }
+
+    function parseStreams(streams, source) {
+        if (!Array.isArray(streams)) {
+            console.error('[Parse] ⚠️ Not array:', typeof streams);
+            return [];
+        }
+        
+        return streams.map(function (st) {
+            var rawTitle = st.title || st.name || st.description || '';
+            var lines = rawTitle.split('\n');
+            var name  = lines[0] || '?';
+            var info  = lines[1] || '';
+            
+            var seedM = info.match(/👤\s*(\d+)|Seeds?:\s*(\d+)|S:\s*(\d+)/i);
+            var seeds = seedM ? parseInt(seedM[1] || seedM[2] || seedM[3]) : 0;
+            
+            var sizeM = info.match(/💾\s*([\d.,]+\s*[TGMK]?B)|Size:\s*([\d.,]+\s*[TGMK]?B)/i);
+            var sz = sizeM ? (sizeM[1] || sizeM[2]).trim() : '';
+            
+            var srcM = info.match(/⚙️\s*([^\s]+)|Tracker:\s*([^\s]+)/i);
+            var tracker = srcM ? (srcM[1] || srcM[2]) : source;
+            
+            var qualityM = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
+            var quality = qualityM ? qualityM[1] : '';
+            
+            var hash = (st.infoHash || st.infohash || st.hash || '').toLowerCase();
+            
+            if (!hash && st.url) {
+                var urlMatch = st.url.match(/btih:([a-f0-9]{40})/i);
+                if (urlMatch) hash = urlMatch[1].toLowerCase();
+            }
+            
+            if (!hash) return null;
+            
+            return {
+                title: name,
+                quality: quality,
+                info: (seeds ? '👤 ' + seeds + '  ' : '') + (sz ? '💾 ' + sz : ''),
+                size: parseSize(sz),
+                seeds: seeds,
+                hash: hash,
+                fileIdx: st.fileIdx || st.file_idx || 0,
+                tracker: tracker
+            };
+        })
+        .filter(Boolean)
+        .sort(function (a, b) {
+            if (b.seeds !== a.seeds) return b.seeds - a.seeds;
+            return b.size - a.size;
+        });
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       🧪 AIO DEBUG TEST FUNCTION
+    ════════════════════════════════════════════════════════════ */
+    
+    function testAioConnection() {
+        var base = getAioUrl();
+        if (!base) {
+            Lampa.Noty.show('❌ Chưa cấu hình AIO URL!');
+            return;
+        }
+
+        console.log('═══════════════════════════════════════');
+        console.log('[AIO Test] 🧪 Starting test...');
+        console.log('[AIO Test] 📍 Base URL:', base);
+        
+        var testImdb = 'tt5311514'; // Your Name
+        var url = base + '/stream/movie/' + testImdb + '.json';
+        
+        console.log('[AIO Test] 🔗 Test URL:', url);
+        Lampa.Noty.show('🧪 Testing AIO...\n' + url);
+
+        reguest(url,
+            function (data) {
+                console.log('[AIO Test] ✅ SUCCESS!');
+                console.log('[AIO Test] 📦 Full Response:', JSON.stringify(data, null, 2));
+                console.log('[AIO Test] 📊 Type:', typeof data);
+                console.log('[AIO Test] 🗂️ Keys:', Object.keys(data || {}));
+                
+                var streams = extractStreams(data);
+                console.log('[AIO Test] 🎬 Streams found:', streams.length);
+                
+                if (streams.length > 0) {
+                    console.log('[AIO Test] 📝 First stream:', JSON.stringify(streams[0], null, 2));
+                    Lampa.Noty.show('✅ AIO OK!\nTìm được ' + streams.length + ' streams\nXem Console (F12)');
+                } else {
+                    console.warn('[AIO Test] ⚠️ No streams extracted');
+                    Lampa.Noty.show('⚠️ AIO response OK nhưng không có streams\nXem Console (F12)');
+                }
+                
+                console.log('═══════════════════════════════════════');
+            },
+            function (err) {
+                console.error('[AIO Test] ❌ FAILED!');
+                console.error('[AIO Test] 📛 Error:', err);
+                console.log('═══════════════════════════════════════');
+                Lampa.Noty.show('❌ AIO Error: ' + err + '\nXem Console (F12)');
+            }
+        );
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -1253,8 +1369,16 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'aio_url', type: 'input', values: '', default: '' },
-            field: { name: '🔗 AIOStreams URL' },
+            field: { name: '🔗 AIOStreams URL', description: 'VD: https://aio.../stremio/USER_ID/TOKEN' },
             onChange: function (v) { setSetting('aio_url', v); }
+        });
+
+        // 🔥 BUTTON TEST AIO
+        Lampa.SettingsApi.addParam({
+            component: 'kkparser',
+            param: { name: STG_PREFIX + 'test_aio', type: 'button', default: '' },
+            field: { name: '🧪 Test AIO & Console Debug', description: 'Xem Console (F12) để debug' },
+            onChange: testAioConnection
         });
 
         Lampa.SettingsApi.addParam({
@@ -1280,7 +1404,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 3.4.1', description: '🎯 Trim Last 2 Chars Mode' }
+            field: { name: '📦 Version 3.6.0', description: '🧪 AIO Console Debug' }
         });
     }
 
@@ -1290,7 +1414,8 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v3.4.1 — 🎯 Trim Last 2 Chars Mode ✅');
+        console.log('[KKPhim Parser] v3.6.0 — 🧪 AIO Debug Mode ✅');
+        console.log('[KKPhim Parser] 💡 Test AIO: Settings → Test AIO & Console Debug');
     }
 
     if (window.appready) start();
