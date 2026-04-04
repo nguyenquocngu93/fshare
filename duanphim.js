@@ -14,6 +14,8 @@
         ophim:  { name: 'OPhim',  api: 'https://ophim1.com/' }
     };
 
+    var romajiCache = {};
+
     /* ════════════════════════════════════════════════════════════
        STORAGE
     ════════════════════════════════════════════════════════════ */
@@ -517,7 +519,96 @@
     function cleanName(name) { return (name || '').replace(/^#+\s*/, '').trim(); }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - KKPhim/OPhim (giữ code cũ)
+       ANIME ROMAJI SUPPORT (LATIN CHARACTERS)
+    ════════════════════════════════════════════════════════════ */
+    
+    function getAnimeRomaji(card, callback) {
+        var cacheKey = 'romaji_' + card.id;
+        if (romajiCache[cacheKey]) {
+            callback(romajiCache[cacheKey]);
+            return;
+        }
+
+        var type = getMediaType(card);
+        var endpoint = type === 'series' ? 'tv' : 'movie';
+
+        reguest(
+            'https://api.themoviedb.org/3/' + endpoint + '/' + card.id +
+            '?api_key=' + TMDB_API_KEY + '&append_to_response=alternative_titles,translations',
+            function (data) {
+                var romaji = extractRomaji(data);
+                romajiCache[cacheKey] = romaji;
+                callback(romaji);
+            },
+            function () { callback(null); }
+        );
+    }
+
+    function extractRomaji(tmdbData) {
+        // 1. Tìm alternative titles với ISO JP
+        if (tmdbData.alternative_titles) {
+            var titles = tmdbData.alternative_titles.titles || tmdbData.alternative_titles.results || [];
+            for (var i = 0; i < titles.length; i++) {
+                var t = titles[i];
+                // Tìm title JP mà KHÔNG có ký tự Nhật (= romaji)
+                if (t.iso_3166_1 === 'JP' && t.title && isLatin(t.title)) {
+                    return t.title;
+                }
+            }
+        }
+
+        // 2. Tìm trong translations với iso_639_1 = 'ja'
+        if (tmdbData.translations && tmdbData.translations.translations) {
+            var trans = tmdbData.translations.translations;
+            for (var i = 0; i < trans.length; i++) {
+                if (trans[i].iso_639_1 === 'ja' && trans[i].data) {
+                    var jaTitle = trans[i].data.title || trans[i].data.name;
+                    // Chỉ lấy nếu là chữ Latin (romaji)
+                    if (jaTitle && isLatin(jaTitle)) {
+                        return jaTitle;
+                    }
+                }
+            }
+        }
+
+        // 3. Nếu original_title là Latin và card có genre Anime/Animation
+        var orig = tmdbData.original_title || tmdbData.original_name || '';
+        if (orig && isLatin(orig) && isAnime(tmdbData)) {
+            return orig;
+        }
+
+        return null;
+    }
+
+    function isLatin(str) {
+        // Kiểm tra có CHỨA chữ Latin nhưng KHÔNG có Hiragana/Katakana/Kanji
+        if (!str) return false;
+        var hasLatin = /[a-zA-Z]/.test(str);
+        var hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(str);
+        return hasLatin && !hasJapanese;
+    }
+
+    function isAnime(tmdbData) {
+        // Kiểm tra có phải anime không (qua genre hoặc origin_country)
+        var genres = tmdbData.genres || [];
+        for (var i = 0; i < genres.length; i++) {
+            if (genres[i].name === 'Animation' || genres[i].id === 16) {
+                return true;
+            }
+        }
+        var countries = tmdbData.origin_country || tmdbData.production_countries || [];
+        if (typeof countries === 'string') countries = [countries];
+        for (var i = 0; i < countries.length; i++) {
+            var c = countries[i];
+            if (c === 'JP' || (c.iso_3166_1 && c.iso_3166_1 === 'JP')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       BUTTON ACTIONS - KKPhim/OPhim
     ════════════════════════════════════════════════════════════ */
     
     function searchAndPlay(sourceKey, card) {
@@ -645,7 +736,7 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Jackett
+       BUTTON ACTIONS - Jackett (WITH ROMAJI LATIN)
     ════════════════════════════════════════════════════════════ */
     
     function searchJackett(card) {
@@ -655,16 +746,122 @@
             return;
         }
 
-        var title = card.title || card.name || '';
-        var orig  = card.original_title || card.original_name || '';
-        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query = (orig || title) + (year ? ' ' + year : '');
-
         Lampa.Noty.show('🔍 Jackett: đang tìm...');
-        
-        fetchJackettResults(card, function (results) {
-            showPackMenu(results, title, 'Jackett', card);
+
+        getAnimeRomaji(card, function (romaji) {
+            var title = card.title || card.name || '';
+            var orig  = card.original_title || card.original_name || '';
+            var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
+
+            var searchTerms = [];
+            
+            // Ưu tiên romaji (chữ Latin phiên âm)
+            if (romaji) {
+                searchTerms.push(romaji + (year ? ' ' + year : ''));
+                console.log('[Jackett] 🎌 Tìm bằng romaji: ' + romaji);
+            }
+            
+            // Original title (có thể là tiếng Nhật hoặc Latin)
+            if (orig && orig !== romaji) {
+                searchTerms.push(orig + (year ? ' ' + year : ''));
+            }
+            
+            // Tiếng Anh
+            if (title && title !== orig && title !== romaji) {
+                searchTerms.push(title + (year ? ' ' + year : ''));
+            }
+
+            if (!searchTerms.length) {
+                searchTerms.push((orig || title) + (year ? ' ' + year : ''));
+            }
+
+            searchJackettMultipleTerms(searchTerms, 0, [], card, function (allResults) {
+                if (!allResults || !allResults.length) {
+                    Lampa.Noty.show('❌ Không tìm thấy');
+                    return;
+                }
+                var displayTitle = romaji ? title + ' (' + romaji + ')' : title;
+                showPackMenu(allResults, displayTitle, 'Jackett', card);
+            });
         });
+    }
+
+    function searchJackettMultipleTerms(terms, index, accumulated, card, callback) {
+        if (index >= terms.length) {
+            callback(accumulated);
+            return;
+        }
+
+        var term = terms[index];
+        
+        fetchJackettResultsByQuery(term, function (results) {
+            results.forEach(function (r) {
+                var exists = accumulated.some(function (a) {
+                    return a.hash === r.hash || a.title === r.title;
+                });
+                if (!exists) {
+                    accumulated.push(r);
+                }
+            });
+
+            if (accumulated.length >= 15) {
+                callback(accumulated);
+            } else {
+                searchJackettMultipleTerms(terms, index + 1, accumulated, card, callback);
+            }
+        });
+    }
+
+    function fetchJackettResultsByQuery(query, callback) {
+        var url = getJackettUrl(), key = getJackettKey();
+        
+        reguest(
+            url + '/api/v2.0/indexers/all/results?apikey=' + 
+            encodeURIComponent(key) +
+            '&Query=' + encodeURIComponent(query) + 
+            '&Category[]=2000&Category[]=5000&Category[]=5070',
+            function (data) {
+                var d = typeof data === 'string' ? JSON.parse(data) : data;
+                if (!d || !d.Results || !Array.isArray(d.Results)) {
+                    callback([]);
+                    return;
+                }
+
+                var results = d.Results.map(function (r) {
+                    var link = r.MagnetUri || r.Link || '';
+                    if (!link) return null;
+                    
+                    var hm = link.match(/btih:([a-f0-9]+)/i);
+                    var hash = hm ? hm[1].toLowerCase() : '';
+                    if (!hash && !link.startsWith('http')) return null;
+                    
+                    var qm = (r.Title || '').match(/\b(2160p|4K|1080p|720p|480p)\b/i);
+                    var quality = qm ? qm[1] : '';
+                    
+                    var size = parseInt(r.Size) || 0;
+                    var seeds = parseInt(r.Seeders) || 0;
+                    
+                    return {
+                        title: r.Title || 'Unknown',
+                        quality: quality,
+                        info: (seeds ? '👤 ' + seeds + '  ' : '') + '💾 ' + fmtBytes(size),
+                        size: size,
+                        seeds: seeds,
+                        hash: hash,
+                        magnet: link,
+                        tracker: r.Tracker || 'Jackett'
+                    };
+                }).filter(Boolean);
+
+                results.sort(function (a, b) { 
+                    if (b.seeds !== a.seeds) return b.seeds - a.seeds;
+                    return b.size - a.size; 
+                });
+                
+                callback(results);
+            },
+            function () { callback([]); }
+        );
     }
 
     function showPackMenu(results, movieTitle, label, card) {
@@ -810,288 +1007,6 @@
         });
     }
 
-    /* ════════════════════════════════════════════════════════════
-       MANIFEST - ONLINE (KKPhim/OPhim)
-    ════════════════════════════════════════════════════════════ */
-    
-    function createOnlinePlugin(sourceKey) {
-        var source = SOURCES[sourceKey];
-        
-        return {
-            component: 'online',
-            name: source.name,
-            
-            search: function (object, data) {
-                var _this = this;
-                var card  = object.movie;
-                var title = card.title || card.name || '';
-                var orig  = card.original_title || card.original_name || '';
-                
-                this.search_stat = 0;
-                
-                searchSource(source, orig || title, function (items) {
-                    if (!items.length && orig && orig !== title) {
-                        searchSource(source, title, function (items2) {
-                            _this.processResults(items2, card, object);
-                        });
-                    } else {
-                        _this.processResults(items, card, object);
-                    }
-                });
-                
-                return this.render();
-            },
-            
-            processResults: function (items, card, object) {
-                var _this = this;
-                
-                if (!items.length) {
-                    this.empty();
-                    return;
-                }
-
-                var bestItem = items[0];
-                
-                fetchDetail(source, bestItem.slug, function (data) {
-                    var episodes = data.episodes || [];
-                    if (!episodes.length) {
-                        _this.empty();
-                        return;
-                    }
-
-                    var isTV = getMediaType(card) === 'series';
-                    var results = [];
-
-                    episodes.forEach(function (server) {
-                        var serverName = cleanName(server.server_name) || 'Server';
-                        var serverData = server.server_data || [];
-                        
-                        if (!serverData.length) return;
-
-                        if (isTV) {
-                            var translation = {
-                                title: source.name + ' · ' + serverName,
-                                quality: serverData.length + ' tập',
-                                seasons: []
-                            };
-
-                            var seasonNum = extractSeasonNumber(bestItem.name, bestItem.slug);
-                            var season = {
-                                title: 'Season ' + seasonNum,
-                                episode: []
-                            };
-
-                            serverData.forEach(function (ep, idx) {
-                                season.episode.push({
-                                    title: ep.name || ('Tập ' + (idx + 1)),
-                                    season: seasonNum,
-                                    episode: idx + 1,
-                                    link: ep.link_m3u8 || ep.link_embed || ''
-                                });
-                            });
-
-                            translation.seasons = [season];
-                            results.push(translation);
-                        } else {
-                            var firstEp = serverData[0];
-                            results.push({
-                                title: source.name + ' · ' + serverName,
-                                quality: firstEp.link_m3u8 ? 'M3U8' : 'Embed',
-                                link: firstEp.link_m3u8 || firstEp.link_embed || ''
-                            });
-                        }
-                    });
-
-                    _this.build(results);
-                    if (_this.search_stat > 0) _this.append(object);
-                });
-            },
-            
-            build: function (data) {
-                var _this = this;
-                this.search_stat++;
-                
-                data.forEach(function (element) {
-                    var item = Lampa.Template.get('online_mod', {
-                        title: element.title,
-                        quality: element.quality || '',
-                        info: element.info || ''
-                    });
-                    
-                    item.on('hover:enter', function () {
-                        if (element.link) {
-                            _this.start(element);
-                        } else if (element.seasons) {
-                            _this.showSeasons(element);
-                        }
-                    });
-                    
-                    _this.append(item);
-                });
-            },
-            
-            showSeasons: function (translation) {
-                var _this = this;
-                var items = [];
-                
-                translation.seasons.forEach(function (season) {
-                    season.episode.forEach(function (ep) {
-                        items.push({
-                            title: ep.title,
-                            quality: 'S' + padZero(ep.season) + 'E' + padZero(ep.episode),
-                            link: ep.link,
-                            season: ep.season,
-                            episode: ep.episode
-                        });
-                    });
-                });
-                
-                Lampa.Select.show({
-                    title: translation.title,
-                    items: items,
-                    onSelect: function (item) {
-                        _this.start(item);
-                    },
-                    onBack: function () {
-                        Lampa.Controller.toggle('content');
-                    }
-                });
-            },
-            
-            start: function (element) {
-                if (!element.link) {
-                    Lampa.Noty.show('Không có link phát');
-                    return;
-                }
-                
-                Lampa.Player.play({
-                    title: element.title,
-                    url: element.link,
-                    season: element.season,
-                    episode: element.episode
-                });
-                
-                Lampa.Player.playlist([{
-                    title: element.title,
-                    url: element.link
-                }]);
-            },
-            
-            append: function (item) {
-                item.on('hover:focus', function (e) {
-                    last = e.target;
-                    var scroll = $(e.target).closest('.online');
-                    if (scroll.length && typeof scroll.scrollTo === 'function') {
-                        scroll.scrollTo(e.target);
-                    }
-                });
-                
-                this.html.append(item);
-            },
-            
-            empty: function () {
-                var empty = Lampa.Template.get('online_mod_empty');
-                this.html.append(empty);
-            },
-            
-            render: function () {
-                this.html = Lampa.Template.get('online_mod');
-                return this.html;
-            }
-        };
-    }
-
-    /* ════════════════════════════════════════════════════════════
-       MANIFEST - TORRENT (Torrentio/AIO/Jackett)
-    ════════════════════════════════════════════════════════════ */
-    
-    function createTorrentPlugin(name, fetchFn) {
-        return {
-            component: 'torrents',
-            name: name,
-            
-            search: function (object, kinopoisk_id) {
-                var _this = this;
-                var card = object.movie;
-                
-                this.search_stat = 0;
-                
-                fetchFn(card, function (results) {
-                    _this.build(results);
-                    if (_this.search_stat > 0) _this.append(object);
-                });
-                
-                return this.render();
-            },
-            
-            build: function (data) {
-                var _this = this;
-                this.search_stat++;
-                
-                data.forEach(function (element) {
-                    var quality = element.quality ? element.quality + ' ' : '';
-                    var info = element.info ? element.info : '';
-                    
-                    var item = Lampa.Template.get('torrent', {
-                        title: element.title,
-                        tracker: element.tracker || name,
-                        quality: quality,
-                        info: info
-                    });
-                    
-                    item.on('hover:enter', function () {
-                        _this.start(element);
-                    });
-                    
-                    _this.append(item);
-                });
-            },
-            
-            start: function (element) {
-                var tsUrl = getTsUrl();
-                if (!tsUrl) {
-                    Lampa.Noty.show('❌ Chưa cấu hình TorrServer!');
-                    return;
-                }
-                
-                if (!element.hash) {
-                    Lampa.Noty.show('❌ Không có hash');
-                    return;
-                }
-                
-                var url = tsUrl + '/stream/' + encodeURIComponent(element.title) +
-                          '?link=' + element.hash + '&index=' + (element.fileIdx || 0) + '&play';
-                
-                Lampa.Player.play({
-                    title: element.title,
-                    url: url
-                });
-                
-                Lampa.Player.playlist([{
-                    title: element.title,
-                    url: url
-                }]);
-            },
-            
-            append: function (item) {
-                item.on('hover:focus', function (e) {
-                    last = e.target;
-                    var scroll = $(e.target).closest('.torrent');
-                    if (scroll.length && typeof scroll.scrollTo === 'function') {
-                        scroll.scrollTo(e.target);
-                    }
-                });
-                
-                this.html.append(item);
-            },
-            
-            render: function () {
-                this.html = Lampa.Template.get('torrent');
-                return this.html;
-            }
-        };
-    }
-
     function fetchTorrentioResults(card, callback) {
         var engine = getTorrentEngine();
         var type   = getMediaType(card);
@@ -1179,63 +1094,6 @@
                 function () { callback([]); }
             );
         }
-    }
-
-    function fetchJackettResults(card, callback) {
-        var url = getJackettUrl(), key = getJackettKey();
-        if (!url || !key) {
-            callback([]);
-            return;
-        }
-
-        var title = card.title || card.name || '';
-        var orig  = card.original_title || card.original_name || '';
-        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query = (orig || title) + (year ? ' ' + year : '');
-
-        reguest(
-            url + '/api/v2.0/indexers/all/results?apikey=' + 
-            encodeURIComponent(key) +
-            '&Query=' + encodeURIComponent(query) + 
-            '&Category[]=2000&Category[]=5000',
-            function (data) {
-                var d = typeof data === 'string' ? JSON.parse(data) : data;
-                if (!d || !d.Results || !Array.isArray(d.Results)) {
-                    callback([]);
-                    return;
-                }
-
-                var results = d.Results.map(function (r) {
-                    var link = r.MagnetUri || r.Link || '';
-                    if (!link) return null;
-                    
-                    var hm = link.match(/btih:([a-f0-9]+)/i);
-                    var hash = hm ? hm[1].toLowerCase() : '';
-                    if (!hash && !link.startsWith('http')) return null;
-                    
-                    var qm = (r.Title || '').match(/\b(2160p|4K|1080p|720p|480p)\b/i);
-                    var quality = qm ? qm[1] : '';
-                    
-                    var size = parseInt(r.Size) || 0;
-                    var seeds = parseInt(r.Seeders) || 0;
-                    
-                    return {
-                        title: r.Title || 'Unknown',
-                        quality: quality,
-                        info: (seeds ? '👤 ' + seeds + '  ' : '') + '💾 ' + fmtBytes(size),
-                        size: size,
-                        seeds: seeds,
-                        hash: hash,
-                        magnet: link,
-                        tracker: r.Tracker || 'Jackett'
-                    };
-                }).filter(Boolean);
-
-                results.sort(function (a, b) { return b.size - a.size; });
-                callback(results);
-            },
-            function () { callback([]); }
-        );
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -1412,38 +1270,17 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 3.3.0', description: 'Manifest + Buttons Full Integration' }
+            field: { name: '📦 Version 3.4.0', description: '🎌 Romaji (Latin) Support' }
         });
     }
 
     /* ════════════════════════════════════════════════════════════
-       REGISTER & START
+       START
     ════════════════════════════════════════════════════════════ */
     
-    function registerPlugins() {
-        // Online plugins
-        Lampa.Manifest.plugins.push(createOnlinePlugin('kkphim'));
-        Lampa.Manifest.plugins.push(createOnlinePlugin('ophim'));
-        
-        // Torrent plugins
-        var engine = getTorrentEngine();
-        var torrentioName = engine === 'aio' ? 'AIOStreams' : 'Torrentio';
-        
-        Lampa.Manifest.plugins.push(
-            createTorrentPlugin(torrentioName, fetchTorrentioResults)
-        );
-        
-        Lampa.Manifest.plugins.push(
-            createTorrentPlugin('Jackett', fetchJackettResults)
-        );
-
-        console.log('[KKPhim Parser] ✅ Manifest: KKPhim, OPhim, ' + torrentioName + ', Jackett');
-    }
-
     function start() {
         initSettings();
-        registerPlugins();
-        console.log('[KKPhim Parser] v3.3.0 — Full Integration (Manifest + Buttons) ✅');
+        console.log('[KKPhim Parser] v3.4.0 — 🎌 Romaji (Latin) Support ✅');
     }
 
     if (window.appready) start();
