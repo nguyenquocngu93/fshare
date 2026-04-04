@@ -905,7 +905,7 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Torrentio/AIO (WITH DEBUG)
+       BUTTON ACTIONS - Torrentio/AIO
     ════════════════════════════════════════════════════════════ */
     
     function searchTorrent(card, season, episode) {
@@ -916,7 +916,7 @@
         Lampa.Noty.show('🔍 Đang tìm torrent...');
 
         function run(id) {
-            fetchTorrentioResults(card, function (results) {
+            fetchTorrentioResults(card, season, episode, function (results) {
                 var epLabel = (season && episode) ? ' S' + padZero(season) + 'E' + padZero(episode) : '';
                 showStreamsMenu(results, title + epLabel, card);
             });
@@ -943,7 +943,10 @@
     }
 
     function showStreamsMenu(results, movieTitle, card) {
+        console.log('[showStreamsMenu] 📥 Received results:', results.length);
+        
         if (!results || !results.length) {
+            console.warn('[showStreamsMenu] ❌ No results to display');
             Lampa.Noty.show('❌ Không tìm thấy torrent');
             return;
         }
@@ -956,6 +959,8 @@
 
         var engine = getTorrentEngine();
         var label = engine === 'aio' ? 'AIOStreams' : 'Torrentio';
+
+        console.log('[showStreamsMenu] 🎬 Showing menu with', results.length, 'items');
 
         Lampa.Select.show({
             title: '🧲 ' + label + ': ' + movieTitle + ' (' + results.length + ')',
@@ -1014,58 +1019,68 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       🔥 AIO/TORRENTIO WITH FULL DEBUG
+       🔥 FIX: AIO/TORRENTIO PARSER
     ════════════════════════════════════════════════════════════ */
     
-    function fetchTorrentioResults(card, callback) {
+    function fetchTorrentioResults(card, season, episode, callback) {
         var engine = getTorrentEngine();
         var type   = getMediaType(card);
         var imdbId = getImdbId(card);
 
         function run(id) {
             var sType = type === 'series' ? 'series' : 'movie';
+            var idWithSeason = id;
+            
+            // Add season/episode to ID for series
+            if (sType === 'series' && season && episode) {
+                idWithSeason = id + ':' + season + ':' + episode;
+            }
             
             if (engine === 'aio') {
                 var base = getAioUrl();
                 if (!base) {
-                    console.warn('[AIO] ⚠️ Chưa cấu hình URL');
-                    fetchFromTorrentio(sType, id, callback);
+                    console.warn('[AIO] ⚠️ No URL configured');
+                    fetchFromTorrentio(sType, idWithSeason, callback);
                     return;
                 }
                 
-                var url = base + '/stream/' + sType + '/' + id + '.json';
-                console.log('[AIO] 🔍 Request URL:', url);
+                var url = base + '/stream/' + sType + '/' + idWithSeason + '.json';
+                console.log('[AIO] 🔍 URL:', url);
                 
                 reguest(url,
                     function (data) {
-                        console.log('[AIO] 📦 Raw Response:', JSON.stringify(data).substring(0, 500));
-                        console.log('[AIO] 📊 Type:', typeof data);
-                        console.log('[AIO] 🗂️ Keys:', Object.keys(data || {}));
+                        console.log('[AIO] 📦 Response type:', typeof data);
+                        console.log('[AIO] 📊 Keys:', Object.keys(data || {}));
                         
                         var streams = extractStreams(data);
                         console.log('[AIO] ✅ Extracted streams:', streams.length);
                         
-                        if (streams.length > 0) {
-                            console.log('[AIO] 🎬 Sample stream:', JSON.stringify(streams[0]));
-                        }
-                        
                         if (!streams.length) {
-                            console.warn('[AIO] ❌ No streams, fallback Torrentio');
+                            console.warn('[AIO] ❌ No streams, fallback');
                             Lampa.Noty.show('⚠️ AIO không có kết quả, chuyển Torrentio...');
-                            fetchFromTorrentio(sType, id, callback);
+                            fetchFromTorrentio(sType, idWithSeason, callback);
                             return;
                         }
                         
-                        callback(parseStreams(streams, 'AIO'));
+                        var parsed = parseStreams(streams, 'AIO');
+                        console.log('[AIO] 🎬 Parsed results:', parsed.length);
+                        
+                        if (!parsed.length) {
+                            console.error('[AIO] ❌ Parse failed, fallback');
+                            fetchFromTorrentio(sType, idWithSeason, callback);
+                            return;
+                        }
+                        
+                        callback(parsed);
                     },
                     function (err) {
                         console.error('[AIO] ❌ Error:', err);
                         Lampa.Noty.show('⚠️ AIO lỗi: ' + err);
-                        fetchFromTorrentio(sType, id, callback);
+                        fetchFromTorrentio(sType, idWithSeason, callback);
                     }
                 );
             } else {
-                fetchFromTorrentio(sType, id, callback);
+                fetchFromTorrentio(sType, idWithSeason, callback);
             }
         }
 
@@ -1093,14 +1108,15 @@
         var base = TORRENTIO_BASE + (cfg ? '/' + cfg : '');
         var url = base + '/stream/' + sType + '/' + id + '.json';
         
-        console.log('[Torrentio] 🔍 Request URL:', url);
+        console.log('[Torrentio] 🔍 URL:', url);
         
         reguest(url,
             function (data) {
-                console.log('[Torrentio] 📦 Response:', JSON.stringify(data).substring(0, 300));
                 var streams = (data && data.streams) || [];
                 console.log('[Torrentio] ✅ Streams:', streams.length);
-                callback(parseStreams(streams, 'Torrentio'));
+                var parsed = parseStreams(streams, 'Torrentio');
+                console.log('[Torrentio] 🎬 Parsed:', parsed.length);
+                callback(parsed);
             },
             function (err) {
                 console.error('[Torrentio] ❌ Error:', err);
@@ -1110,12 +1126,27 @@
     }
 
     function extractStreams(data) {
-        if (!data) return [];
+        if (!data) {
+            console.warn('[Extract] ⚠️ No data');
+            return [];
+        }
         
-        if (Array.isArray(data.streams)) return data.streams;
-        if (Array.isArray(data)) return data;
-        if (Array.isArray(data.results)) return data.results;
-        if (Array.isArray(data.torrents)) return data.torrents;
+        if (Array.isArray(data.streams)) {
+            console.log('[Extract] ✅ Found data.streams');
+            return data.streams;
+        }
+        if (Array.isArray(data)) {
+            console.log('[Extract] ✅ Data is array');
+            return data;
+        }
+        if (Array.isArray(data.results)) {
+            console.log('[Extract] ✅ Found data.results');
+            return data.results;
+        }
+        if (Array.isArray(data.torrents)) {
+            console.log('[Extract] ✅ Found data.torrents');
+            return data.torrents;
+        }
         
         console.warn('[Extract] ⚠️ Unknown structure, keys:', Object.keys(data));
         return [];
@@ -1127,34 +1158,64 @@
             return [];
         }
         
-        return streams.map(function (st) {
+        console.log('[Parse] 🔧 Parsing', streams.length, 'streams from', source);
+        
+        var parsed = [];
+        
+        for (var i = 0; i < streams.length; i++) {
+            var st = streams[i];
+            
+            // Extract title
             var rawTitle = st.title || st.name || st.description || '';
             var lines = rawTitle.split('\n');
-            var name  = lines[0] || '?';
-            var info  = lines[1] || '';
+            var name  = lines[0] || st.name || '?';
+            var info  = lines.length > 1 ? lines.slice(1).join(' ') : '';
             
+            // Parse seeds
             var seedM = info.match(/👤\s*(\d+)|Seeds?:\s*(\d+)|S:\s*(\d+)/i);
             var seeds = seedM ? parseInt(seedM[1] || seedM[2] || seedM[3]) : 0;
             
+            // Parse size
             var sizeM = info.match(/💾\s*([\d.,]+\s*[TGMK]?B)|Size:\s*([\d.,]+\s*[TGMK]?B)/i);
             var sz = sizeM ? (sizeM[1] || sizeM[2]).trim() : '';
             
+            // Parse tracker
             var srcM = info.match(/⚙️\s*([^\s]+)|Tracker:\s*([^\s]+)/i);
             var tracker = srcM ? (srcM[1] || srcM[2]) : source;
             
+            // Parse quality
             var qualityM = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
             var quality = qualityM ? qualityM[1] : '';
             
-            var hash = (st.infoHash || st.infohash || st.hash || '').toLowerCase();
+            // Get hash (CRITICAL FIX)
+            var hash = '';
             
+            // Try different hash fields
+            if (st.infoHash) hash = st.infoHash;
+            else if (st.infohash) hash = st.infohash;
+            else if (st.hash) hash = st.hash;
+            
+            // Parse from URL if exists
             if (!hash && st.url) {
                 var urlMatch = st.url.match(/btih:([a-f0-9]{40})/i);
-                if (urlMatch) hash = urlMatch[1].toLowerCase();
+                if (urlMatch) hash = urlMatch[1];
             }
             
-            if (!hash) return null;
+            // Parse from magnet link
+            if (!hash && st.magnetUri) {
+                var magMatch = st.magnetUri.match(/btih:([a-f0-9]{40})/i);
+                if (magMatch) hash = magMatch[1];
+            }
             
-            return {
+            // Normalize hash
+            hash = (hash || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+            
+            if (!hash || hash.length !== 40) {
+                console.warn('[Parse] ⚠️ No valid hash at index', i, ':', JSON.stringify(st).substring(0, 100));
+                continue;
+            }
+            
+            var result = {
                 title: name,
                 quality: quality,
                 info: (seeds ? '👤 ' + seeds + '  ' : '') + (sz ? '💾 ' + sz : ''),
@@ -1164,16 +1225,28 @@
                 fileIdx: st.fileIdx || st.file_idx || 0,
                 tracker: tracker
             };
-        })
-        .filter(Boolean)
-        .sort(function (a, b) {
+            
+            parsed.push(result);
+        }
+        
+        console.log('[Parse] ✅ Successfully parsed', parsed.length, '/', streams.length, 'streams');
+        
+        if (parsed.length === 0 && streams.length > 0) {
+            console.error('[Parse] ❌ CRITICAL: 0 parsed from', streams.length, 'streams!');
+            console.log('[Parse] 🔍 Sample stream:', JSON.stringify(streams[0], null, 2));
+        }
+        
+        // Sort by seeds and size
+        parsed.sort(function (a, b) {
             if (b.seeds !== a.seeds) return b.seeds - a.seeds;
             return b.size - a.size;
         });
+        
+        return parsed;
     }
 
     /* ════════════════════════════════════════════════════════════
-       🧪 AIO DEBUG TEST FUNCTION
+       🧪 AIO DEBUG TEST
     ════════════════════════════════════════════════════════════ */
     
     function testAioConnection() {
@@ -1184,40 +1257,47 @@
         }
 
         console.log('═══════════════════════════════════════');
-        console.log('[AIO Test] 🧪 Starting test...');
-        console.log('[AIO Test] 📍 Base URL:', base);
+        console.log('[AIO Test] 🧪 Starting...');
+        console.log('[AIO Test] 📍 Base:', base);
         
-        var testImdb = 'tt5311514'; // Your Name
+        var testImdb = 'tt5311514';
         var url = base + '/stream/movie/' + testImdb + '.json';
         
-        console.log('[AIO Test] 🔗 Test URL:', url);
-        Lampa.Noty.show('🧪 Testing AIO...\n' + url);
+        console.log('[AIO Test] 🔗 URL:', url);
+        Lampa.Noty.show('🧪 Testing AIO...');
 
         reguest(url,
             function (data) {
-                console.log('[AIO Test] ✅ SUCCESS!');
+                console.log('[AIO Test] ✅ SUCCESS');
                 console.log('[AIO Test] 📦 Full Response:', JSON.stringify(data, null, 2));
-                console.log('[AIO Test] 📊 Type:', typeof data);
-                console.log('[AIO Test] 🗂️ Keys:', Object.keys(data || {}));
                 
                 var streams = extractStreams(data);
-                console.log('[AIO Test] 🎬 Streams found:', streams.length);
+                console.log('[AIO Test] 🎬 Extracted:', streams.length);
                 
                 if (streams.length > 0) {
-                    console.log('[AIO Test] 📝 First stream:', JSON.stringify(streams[0], null, 2));
-                    Lampa.Noty.show('✅ AIO OK!\nTìm được ' + streams.length + ' streams\nXem Console (F12)');
+                    console.log('[AIO Test] 📝 Sample:', JSON.stringify(streams[0], null, 2));
+                    
+                    var parsed = parseStreams(streams, 'AIO');
+                    console.log('[AIO Test] ✅ Parsed:', parsed.length);
+                    
+                    if (parsed.length > 0) {
+                        console.log('[AIO Test] 🎯 Result sample:', JSON.stringify(parsed[0], null, 2));
+                        Lampa.Noty.show('✅ AIO OK!\n' + parsed.length + ' torrents\nXem Console (F12)');
+                    } else {
+                        console.error('[AIO Test] ❌ Parse failed!');
+                        Lampa.Noty.show('⚠️ Extracted OK nhưng parse thất bại!\nXem Console');
+                    }
                 } else {
                     console.warn('[AIO Test] ⚠️ No streams extracted');
-                    Lampa.Noty.show('⚠️ AIO response OK nhưng không có streams\nXem Console (F12)');
+                    Lampa.Noty.show('⚠️ Response OK nhưng không extract được streams');
                 }
                 
                 console.log('═══════════════════════════════════════');
             },
             function (err) {
-                console.error('[AIO Test] ❌ FAILED!');
-                console.error('[AIO Test] 📛 Error:', err);
+                console.error('[AIO Test] ❌ FAILED:', err);
                 console.log('═══════════════════════════════════════');
-                Lampa.Noty.show('❌ AIO Error: ' + err + '\nXem Console (F12)');
+                Lampa.Noty.show('❌ AIO Error: ' + err);
             }
         );
     }
@@ -1373,11 +1453,10 @@
             onChange: function (v) { setSetting('aio_url', v); }
         });
 
-        // 🔥 BUTTON TEST AIO
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'test_aio', type: 'button', default: '' },
-            field: { name: '🧪 Test AIO & Console Debug', description: 'Xem Console (F12) để debug' },
+            field: { name: '🧪 Test AIO & Debug', description: 'Xem Console (F12)' },
             onChange: testAioConnection
         });
 
@@ -1404,7 +1483,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 3.6.0', description: '🧪 AIO Console Debug' }
+            field: { name: '📦 Version 3.7.0', description: '🔧 Fixed AIO Parser' }
         });
     }
 
@@ -1414,8 +1493,7 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v3.6.0 — 🧪 AIO Debug Mode ✅');
-        console.log('[KKPhim Parser] 💡 Test AIO: Settings → Test AIO & Console Debug');
+        console.log('[KKPhim Parser] v3.7.0 — 🔧 AIO Parser Fixed ✅');
     }
 
     if (window.appready) start();
