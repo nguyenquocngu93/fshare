@@ -903,7 +903,65 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       🔥 AIO/TORRENTIO PARSER (ENHANCED)
+       🔥 TRACKER REGEX PARSER
+    ════════════════════════════════════════════════════════════ */
+    
+    var TRACKER_PATTERNS = [
+        // Russian Trackers
+        { regex: /\b(rutracker|rut\.rip|sel\.rip)\b/i, name: 'RuTracker' },
+        { regex: /\b(kinozal|kz\.rip)\b/i, name: 'Kinozal' },
+        { regex: /\b(nnm-club|nnmclub)\b/i, name: 'NNM-Club' },
+        { regex: /\b(rutor|rutor\.org)\b/i, name: 'Rutor' },
+        
+        // Asian Trackers
+        { regex: /\b(nyaa|nyaa\.si)\b/i, name: 'Nyaa' },
+        { regex: /\b(anidex|anidex\.info)\b/i, name: 'AniDex' },
+        { regex: /\b(subsplease|subsplease\.org)\b/i, name: 'SubsPlease' },
+        
+        // General Trackers
+        { regex: /\b(piratebay|tpb|1337x|torrentgalaxy|rarbg|eztv)\b/i, name: '1337X' },
+        { regex: /\b(kickass|kat\.cr)\b/i, name: 'KickAss' },
+        
+        // Streaming Services
+        { regex: /\b(netflix|amazon|prime|disney|hulu|hbo)\b/i, name: 'Streaming' }
+    ];
+    
+    function extractTrackerName(str) {
+        if (!str) return '';
+        
+        for (var i = 0; i < TRACKER_PATTERNS.length; i++) {
+            var match = str.match(TRACKER_PATTERNS[i].regex);
+            if (match) {
+                return TRACKER_PATTERNS[i].name;
+            }
+        }
+        
+        return '';
+    }
+
+    function extractSeeds(str) {
+        if (!str) return 0;
+        try {
+            var patterns = [
+                /👤\s*(\d+)/i,
+                /\bseed[s]?[\s:]*(\d+)/i,
+                /\((\d+)\s+seed/i
+            ];
+            
+            for (var i = 0; i < patterns.length; i++) {
+                var match = str.match(patterns[i]);
+                if (match && match[1]) {
+                    return parseInt(match[1]) || 0;
+                }
+            }
+        } catch(e) {
+            console.error('[extractSeeds Error]', e.message);
+        }
+        return 0;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       AIO/TORRENTIO PARSER (FIXED)
     ════════════════════════════════════════════════════════════ */
     
     function fetchTorrentioResults(card, season, episode, callback) {
@@ -1011,72 +1069,6 @@
         return [];
     }
 
-    /* ════════════════════════════════════════════════════════════
-       🔥 TRACKER REGEX PARSER
-       Ref: https://github.com/Vidhin05/Releases-Regex
-    ════════════════════════════════════════════════════════════ */
-    
-    var TRACKER_PATTERNS = [
-        // Russian Trackers
-        { regex: /\b(rutracker|rut\.rip|sel\.rip)\b/i, name: 'RuTracker' },
-        { regex: /\b(kinozal|kz\.rip)\b/i, name: 'Kinozal' },
-        { regex: /\b(nnm-club|nnmclub)\b/i, name: 'NNM-Club' },
-        { regex: /\b(rutor|rutor\.org)\b/i, name: 'Rutor' },
-        { regex: /\b(torrenty|torrenty\.org)\b/i, name: 'Torrenty' },
-        
-        // Asian Trackers
-        { regex: /\b(nyaa|nyaa\.si)\b/i, name: 'Nyaa' },
-        { regex: /\b(anidex|anidex\.info)\b/i, name: 'AniDex' },
-        { regex: /\b(subsplease|subsplease\.org)\b/i, name: 'SubsPlease' },
-        { regex: /\b(kamyroll|kamyroll\.com)\b/i, name: 'KamyRoll' },
-        
-        // General Trackers
-        { regex: /\b(piratebay|tpb|1337x|torrentgalaxy|rarbg|eztv)\b/i, name: 'TPB/1337X' },
-        { regex: /\b(kickass|kat\.cr)\b/i, name: 'KickAss' },
-        { regex: /\b(demonoid|isohunt)\b/i, name: 'Demonoid' },
-        
-        // Streaming Services
-        { regex: /\b(netflix|amazon|prime|disney|hulu|hbo|criterion)\b/i, name: 'Streaming' },
-        
-        // Format & Source Info
-        { regex: /\b(web-?dl|webrip|hdtv|dvdrip|bluray|remux|encode)\b/i, name: 'Source' }
-    ];
-    
-    function extractTrackerName(str) {
-        if (!str) return 'Unknown';
-        
-        for (var i = 0; i < TRACKER_PATTERNS.length; i++) {
-            var match = str.match(TRACKER_PATTERNS[i].regex);
-            if (match) {
-                return TRACKER_PATTERNS[i].name;
-            }
-        }
-        
-        // Fallback: extract first CamelCase word
-        var match = str.match(/\b([A-Z][a-z]+)\b/);
-        return match ? match[1] : 'Unknown';
-    }
-
-    function extractSeeds(str) {
-        if (!str) return 0;
-        
-        var patterns = [
-            /👤\s*(\d+)/i,
-            /\bseed[s]?:?\s*(\d+)/i,
-            /\b(\d+)\s*seed/i,
-            /\((\d+)\)/,
-            /^(\d+)\s/
-        ];
-        
-        for (var i = 0; i < patterns.length; i++) {
-            var match = str.match(patterns[i]);
-            if (match) {
-                return parseInt(match[1]) || 0;
-            }
-        }
-        return 0;
-    }
-
     function parseStreams(streams, source) {
         if (!Array.isArray(streams)) { 
             console.error('[Parse] Not array'); 
@@ -1087,215 +1079,148 @@
         
         var parsed = [];
         
-        for (var i = 0; i < streams.length; i++) {
-            var st = streams[i];
-            
-            var name = st.name || st.title || '';
-            var desc = st.description || '';
-            var filename = st.filename || '';
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT QUALITY
-            // ═══════════════════════════════════════════════════════
-            var quality = '';
-            var qm = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
-            if (qm) quality = qm[1];
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT TRACKER NAME 🔥
-            // ═══════════════════════════════════════════════════════
-            var trackerName = extractTrackerName(name + ' ' + desc + ' ' + filename);
-            
-            // Remove "Aio " prefix and clean up
-            var cleanTitle = name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
-            if (!cleanTitle || cleanTitle === source) cleanTitle = source;
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT SIZE
-            // ═══════════════════════════════════════════════════════
-            var sizeStr = '';
-            var sizeBytes = 0;
-            var sizeMatch = desc.match(/([\d.,]+)\s*(TB|GB|MB)/i);
-            if (sizeMatch) {
-                var sizeNum = parseFloat(sizeMatch[1].replace(',', '.'));
-                var sizeUnit = sizeMatch[2].toUpperCase();
-                
-                if (sizeUnit === 'TB') {
-                    sizeBytes = sizeNum * 1e12;
-                    sizeStr = sizeNum.toFixed(2) + ' TB';
-                } else if (sizeUnit === 'GB') {
-                    sizeBytes = sizeNum * 1e9;
-                    sizeStr = sizeNum.toFixed(2) + ' GB';
-                } else if (sizeUnit === 'MB') {
-                    sizeBytes = sizeNum * 1e6;
-                    sizeStr = sizeNum.toFixed(0) + ' MB';
-                }
-            }
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT SEEDS 🔥
-            // ═══════════════════════════════════════════════════════
-            var seeds = extractSeeds(desc);
-            if (seeds === 0) {
-                seeds = extractSeeds(name);
-            }
-            if (seeds === 0 && st.seeders !== undefined) {
-                seeds = parseInt(st.seeders) || 0;
-            }
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT SOURCE INFO & BITRATE
-            // ═══════════════════════════════════════════════════════
-            var lines = desc.split('\n');
-            var sourceInfo = lines[0] ? lines[0].trim() : '';
-            
-            var bitrateMatch = desc.match(/\((\d+)\s*Mbps\)/i);
-            var bitrate = bitrateMatch ? bitrateMatch[1] + ' Mbps' : '';
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT TITLE FROM FILENAME
-            // ═══════════════════════════════════════════════════════
-            var title = '';
-            
-            var titleMatch = filename.match(/\/\s*([^\/\[]+?)\s*\/\s*Geudae/i);
-            if (titleMatch) {
-                title = titleMatch[1].trim();
-            } else {
-                var bracketMatch = filename.match(/^([^\[]+)/);
-                if (bracketMatch) {
-                    var parts = bracketMatch[1].split('/');
-                    for (var p = 0; p < parts.length; p++) {
-                        var part = parts[p].trim();
-                        if (/^[a-zA-Z0-9\s:'\-]+$/.test(part) && part.length > 3) {
-                            title = part;
-                            break;
+        try {
+            for (var i = 0; i < streams.length; i++) {
+                try {
+                    var st = streams[i];
+                    if (!st) continue;
+                    
+                    var name = String(st.name || st.title || '');
+                    var desc = String(st.description || '');
+                    var filename = String(st.filename || '');
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT QUALITY
+                    // ═══════════════════════════════════════════════════════
+                    var quality = '';
+                    var qm = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
+                    if (qm) quality = qm[1];
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT TRACKER NAME 🔥
+                    // ═══════════════════════════════════════════════════════
+                    var trackerName = extractTrackerName(name + ' ' + desc);
+                    if (!trackerName) trackerName = '';
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT SIZE
+                    // ═══════════════════════════════════════════════════════
+                    var sizeStr = '';
+                    var sizeBytes = 0;
+                    var sizeMatch = desc.match(/([\d.,]+)\s*(TB|GB|MB)/i);
+                    if (sizeMatch) {
+                        var sizeNum = parseFloat(sizeMatch[1].replace(',', '.'));
+                        var sizeUnit = sizeMatch[2].toUpperCase();
+                        
+                        if (sizeUnit === 'TB') {
+                            sizeBytes = sizeNum * 1e12;
+                            sizeStr = sizeNum.toFixed(2) + ' TB';
+                        } else if (sizeUnit === 'GB') {
+                            sizeBytes = sizeNum * 1e9;
+                            sizeStr = sizeNum.toFixed(2) + ' GB';
+                        } else if (sizeUnit === 'MB') {
+                            sizeBytes = sizeNum * 1e6;
+                            sizeStr = sizeNum.toFixed(0) + ' MB';
                         }
                     }
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT SEEDS 🔥
+                    // ═══════════════════════════════════════════════════════
+                    var seeds = extractSeeds(desc);
+                    if (seeds === 0) {
+                        seeds = extractSeeds(name);
+                    }
+                    if (seeds === 0 && st.seeders !== undefined) {
+                        seeds = parseInt(st.seeders) || 0;
+                    }
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT HASH
+                    // ═══════════════════════════════════════════════════════
+                    var hash = '';
+                    
+                    if (st.infoHash) hash = st.infoHash;
+                    else if (st.infohash) hash = st.infohash;
+                    else if (st.hash) hash = st.hash;
+                    
+                    if (!hash && st.url) {
+                        var magMatch = st.url.match(/btih:([a-f0-9]{40})/i);
+                        if (magMatch) hash = magMatch[1];
+                        else {
+                            var urlMatch = st.url.match(/([a-f0-9]{40})/i);
+                            if (urlMatch) hash = urlMatch[1];
+                        }
+                    }
+                    
+                    if (!hash && st.magnetUri) {
+                        var mag2 = st.magnetUri.match(/btih:([a-f0-9]{40})/i);
+                        if (mag2) hash = mag2[1];
+                    }
+                    
+                    hash = (hash || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    
+                    if (!hash || hash.length !== 40) {
+                        continue;
+                    }
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // BUILD TITLE
+                    // ═══════════════════════════════════════════════════════
+                    var displayTitle = '';
+                    
+                    if (trackerName) {
+                        displayTitle += '[' + trackerName + '] ';
+                    }
+                    
+                    if (quality) {
+                        displayTitle += quality + ' ';
+                    }
+                    
+                    displayTitle += name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
+                    
+                    // ═══════════════════════════════════════════════════════
+                    // BUILD INFO
+                    // ═══════════════════════════════════════════════════════
+                    var info = '';
+                    
+                    // Seed count
+                    if (seeds > 0) {
+                        var seedEmoji = seeds > 100 ? '🟢' : seeds > 10 ? '🟡' : '🔴';
+                        info += seedEmoji + ' ' + seeds + ' seed';
+                    } else {
+                        info += '⚫ 0 seed';
+                    }
+                    
+                    if (sizeStr) {
+                        info += '  💾 ' + sizeStr;
+                    }
+                    
+                    parsed.push({
+                        title: displayTitle.trim(),
+                        quality: quality,
+                        info: info.trim(),
+                        size: sizeBytes,
+                        seeds: seeds,
+                        hash: hash,
+                        fileIdx: st.fileIdx || st.file_idx || st.index || 0,
+                        tracker: trackerName
+                    });
+                    
+                } catch(e) {
+                    console.error('[Parse Item Error]', i, e.message);
+                    continue;
                 }
             }
-            
-            if (!title) {
-                title = name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
-            }
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT YEAR
-            // ═══════════════════════════════════════════════════════
-            var yearMatch = filename.match(/\[(\d{4}),/);
-            var year = yearMatch ? yearMatch[1] : '';
-            
-            // ═══════════════════════════════════════════════════════
-            // EXTRACT HASH
-            // ═══════════════════════════════════════════════════════
-            var hash = '';
-            
-            if (st.infoHash) hash = st.infoHash;
-            else if (st.infohash) hash = st.infohash;
-            else if (st.hash) hash = st.hash;
-            
-            if (!hash && st.url) {
-                var magMatch = st.url.match(/magnet:\?xt=urn:btih:([a-f0-9]{40})/i);
-                if (magMatch) hash = magMatch[1];
-                else {
-                    var urlMatch = st.url.match(/([a-f0-9]{40})/i);
-                    if (urlMatch) hash = urlMatch[1];
-                }
-            }
-            
-            if (!hash && st.magnetUri) {
-                var mag2 = st.magnetUri.match(/btih:([a-f0-9]{40})/i);
-                if (mag2) hash = mag2[1];
-            }
-            
-            if (!hash && st.externalUrl) {
-                var ext = st.externalUrl.match(/([a-f0-9]{40})/i);
-                if (ext) hash = ext[1];
-            }
-            
-            hash = (hash || '').toLowerCase().replace(/[^a-f0-9]/g, '');
-            
-            if (!hash || hash.length !== 40) {
-                console.warn('[Parse] No hash at', i);
-                continue;
-            }
-            
-            // ═══════════════════════════════════════════════════════
-            // BUILD DISPLAY TITLE
-            // ═══════════════════════════════════════════════════════
-            
-            var displayTitle = '';
-            
-            // Show tracker source
-            if (trackerName && trackerName !== source && trackerName !== 'Unknown') {
-                displayTitle += '[' + trackerName + '] ';
-            }
-            
-            // Show quality
-            if (quality) {
-                displayTitle += quality + ' ';
-            }
-            
-            displayTitle += title;
-            
-            if (year) {
-                displayTitle += ' (' + year + ')';
-            }
-            
-            // ═══════════════════════════════════════════════════════
-            // BUILD INFO STRING
-            // ═══════════════════════════════════════════════════════
-            
-            var info = '';
-            
-            // Add seed count with emoji
-            if (seeds > 0) {
-                var seedEmoji = seeds > 100 ? '🟢' : seeds > 10 ? '🟡' : '🔴';
-                info += seedEmoji + ' ' + seeds + ' seed  ';
-            } else {
-                info += '⚫ 0 seed  ';
-            }
-            
-            if (sizeStr) {
-                info += '💾 ' + sizeStr + '  ';
-            }
-            
-            if (sourceInfo) {
-                info += sourceInfo + '  ';
-            }
-            
-            if (bitrate) {
-                info += '⚡ ' + bitrate;
-            }
-            
-            if (!info.trim() && desc) {
-                info = desc.substring(0, 100);
-            }
-            
-            parsed.push({
-                title: displayTitle.trim(),
-                quality: quality,
-                info: info.trim() || 'No info',
-                size: sizeBytes,
-                seeds: seeds,
-                hash: hash,
-                fileIdx: st.fileIdx || st.file_idx || st.index || 0,
-                tracker: trackerName
-            });
+        } catch(e) {
+            console.error('[Parse Error]', e.message);
         }
         
-        console.log('[Parse] Parsed', parsed.length, '/', streams.length);
+        console.log('[Parse] Result:', parsed.length, '/', streams.length);
         
-        if (parsed.length === 0 && streams.length > 0) {
-            console.error('[Parse] ZERO PARSED!');
-            console.log('[Parse] Sample:', JSON.stringify(streams[0], null, 2));
-        }
-        
-        // ═══════════════════════════════════════════════════════
-        // SORT BY QUALITY, SEEDS, THEN SIZE
-        // ═══════════════════════════════════════════════════════
-        
+        // SORT
         parsed.sort(function (a, b) {
-            var qOrder = { '2160p': 4, '4K': 4, 'UHD': 4, '1080p': 3, '720p': 2, '480p': 1 };
+            var qOrder = { '2160p': 4, '4K': 4, '1080p': 3, '720p': 2, '480p': 1 };
             var qa = qOrder[a.quality] || 0;
             var qb = qOrder[b.quality] || 0;
             
@@ -1307,10 +1232,6 @@
         return parsed;
     }
 
-    /* ════════════════════════════════════════════════════════════
-       TEST AIO
-    ════════════════════════════════════════════════════════════ */
-    
     function testAioConnection() {
         var base = getAioUrl();
         if (!base) {
@@ -1334,25 +1255,124 @@
                     return;
                 }
                 
-                if (streams[0]) {
-                    console.log('[AIO Test] Sample:', JSON.stringify(streams[0], null, 2));
-                }
-                
                 var parsed = parseStreams(streams, 'AIO');
                 console.log('[AIO Test] Parsed:', parsed.length);
                 
                 if (parsed.length > 0) {
-                    var msg = '✅ AIO OK!\n\n' + parsed.length + ' torrents\n\nSample:\n' + 
-                              parsed[0].title + '\n' + parsed[0].info;
-                    Lampa.Noty.show(msg);
+                    Lampa.Noty.show('✅ AIO OK! ' + parsed.length + ' torrents');
                 } else {
-                    Lampa.Noty.show('⚠️ Parse failed!\nXem Console (F12)');
+                    Lampa.Noty.show('⚠️ Parse failed!');
                 }
             },
             function (err) {
                 Lampa.Noty.show('❌ AIO Error: ' + err);
             }
         );
+    }
+
+    function searchTorrent(card, season, episode) {
+        var title  = card.title || card.name || '';
+        var type   = getMediaType(card);
+        var imdbId = getImdbId(card);
+
+        Lampa.Noty.show('🔍 Đang tìm torrent...');
+
+        function run(id) {
+            fetchTorrentioResults(card, season, episode, function (results) {
+                var epLabel = (season && episode) ? ' S' + padZero(season) + 'E' + padZero(episode) : '';
+                showStreamsMenu(results, title + epLabel, card);
+            });
+        }
+
+        if (imdbId) {
+            run(imdbId);
+        } else {
+            reguest(
+                'https://api.themoviedb.org/3/' + (type === 'series' ? 'tv' : 'movie') + '/' + card.id +
+                '/external_ids?api_key=' + TMDB_API_KEY,
+                function (d) {
+                    var id = d && d.imdb_id;
+                    if (id) {
+                        card.imdb_id = id;
+                        run(id);
+                    } else {
+                        Lampa.Noty.show('❌ Không tìm thấy IMDB ID');
+                    }
+                },
+                function () { Lampa.Noty.show('❌ Lỗi lấy IMDB ID'); }
+            );
+        }
+    }
+
+    function showStreamsMenu(results, movieTitle, card) {
+        if (!results || !results.length) {
+            Lampa.Noty.show('❌ Không tìm thấy torrent');
+            return;
+        }
+
+        var tsUrl = getTsUrl();
+        if (!tsUrl) {
+            Lampa.Noty.show('❌ Chưa cấu hình TorrServer!');
+            return;
+        }
+
+        var engine = getTorrentEngine();
+        var label = engine === 'aio' ? 'AIO' : 'Torrentio';
+
+        Lampa.Select.show({
+            title: '🧲 ' + label + ': ' + movieTitle + ' (' + results.length + ')',
+            items: results.map(function (r) {
+                var qualityBadge = r.quality ? '[' + r.quality + '] ' : '';
+                return {
+                    title: qualityBadge + r.title,
+                    subtitle: r.info || '',
+                    r: r
+                };
+            }),
+            onSelect: function (item) {
+                var r = item.r;
+                if (!r.hash) {
+                    Lampa.Noty.show('❌ Không có hash');
+                    return;
+                }
+                var magnet = makeMagnet(r.hash, r.title);
+                tsAddAndPickFile(magnet, r.hash, r.title, movieTitle, card);
+            },
+            onBack: function () { Lampa.Controller.toggle('full'); }
+        });
+    }
+
+    function getSeasonEpCount(card, season) {
+        if (card.seasons) {
+            var s = card.seasons.filter(function (x) { return x.season_number === season; })[0];
+            if (s && s.episode_count) return s.episode_count;
+        }
+        return 50;
+    }
+
+    function askTorrentTV(card) {
+        var total = card.number_of_seasons || 1;
+
+        function pickEp(s) {
+            var totalEps = getSeasonEpCount(card, s);
+            var ee = [];
+            for (var e = 1; e <= totalEps; e++) ee.push({ title: 'S' + padZero(s) + 'E' + padZero(e), s: s, e: e });
+            Lampa.Select.show({
+                title: 'Season ' + s + ' — Chọn tập', items: ee,
+                onSelect: function (item) { searchTorrent(card, item.s, item.e); },
+                onBack: function () { Lampa.Controller.toggle('full'); }
+            });
+        }
+
+        if (total === 1) { pickEp(1); return; }
+
+        var ss = [];
+        for (var s = 1; s <= total; s++) ss.push({ title: 'Season ' + s, s: s });
+        Lampa.Select.show({
+            title: 'Chọn Season', items: ss,
+            onSelect: function (item) { pickEp(item.s); },
+            onBack: function () { Lampa.Controller.toggle('full'); }
+        });
     }
 
     /* ════════════════════════════════════════════════════════════
@@ -1536,7 +1556,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 4.0.0', description: '🔥 AIO Parser + Tracker Names + Seeds ✅' }
+            field: { name: '📦 Version 4.1.0', description: '🔧 Parser Fixed + Tracker Names + Seeds' }
         });
     }
 
@@ -1546,7 +1566,7 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v4.0.0 — 🔥 Tracker Parser + Seeds ✅');
+        console.log('[KKPhim Parser] v4.1.0 — 🔧 Fixed Parser ✅');
     }
 
     if (window.appready) start();
