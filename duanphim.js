@@ -903,27 +903,19 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       🔥 TRACKER REGEX PARSER
+       TRACKER REGEX PARSER
     ════════════════════════════════════════════════════════════ */
     
     var TRACKER_PATTERNS = [
-        // Russian Trackers
         { regex: /\b(rutracker|rut\.rip|sel\.rip)\b/i, name: 'RuTracker' },
         { regex: /\b(kinozal|kz\.rip)\b/i, name: 'Kinozal' },
         { regex: /\b(nnm-club|nnmclub)\b/i, name: 'NNM-Club' },
         { regex: /\b(rutor|rutor\.org)\b/i, name: 'Rutor' },
-        
-        // Asian Trackers
         { regex: /\b(nyaa|nyaa\.si)\b/i, name: 'Nyaa' },
         { regex: /\b(anidex|anidex\.info)\b/i, name: 'AniDex' },
         { regex: /\b(subsplease|subsplease\.org)\b/i, name: 'SubsPlease' },
-        
-        // General Trackers
         { regex: /\b(piratebay|tpb|1337x|torrentgalaxy|rarbg|eztv)\b/i, name: '1337X' },
-        { regex: /\b(kickass|kat\.cr)\b/i, name: 'KickAss' },
-        
-        // Streaming Services
-        { regex: /\b(netflix|amazon|prime|disney|hulu|hbo)\b/i, name: 'Streaming' }
+        { regex: /\b(kickass|kat\.cr)\b/i, name: 'KickAss' }
     ];
     
     function extractTrackerName(str) {
@@ -939,29 +931,8 @@
         return '';
     }
 
-    function extractSeeds(str) {
-        if (!str) return 0;
-        try {
-            var patterns = [
-                /👤\s*(\d+)/i,
-                /\bseed[s]?[\s:]*(\d+)/i,
-                /\((\d+)\s+seed/i
-            ];
-            
-            for (var i = 0; i < patterns.length; i++) {
-                var match = str.match(patterns[i]);
-                if (match && match[1]) {
-                    return parseInt(match[1]) || 0;
-                }
-            }
-        } catch(e) {
-            console.error('[extractSeeds Error]', e.message);
-        }
-        return 0;
-    }
-
     /* ════════════════════════════════════════════════════════════
-       AIO/TORRENTIO PARSER (FIXED)
+       AIO/TORRENTIO PARSER
     ════════════════════════════════════════════════════════════ */
     
     function fetchTorrentioResults(card, season, episode, callback) {
@@ -1089,22 +1060,16 @@
                     var desc = String(st.description || '');
                     var filename = String(st.filename || '');
                     
-                    // ═══════════════════════════════════════════════════════
                     // EXTRACT QUALITY
-                    // ═══════════════════════════════════════════════════════
                     var quality = '';
                     var qm = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
                     if (qm) quality = qm[1];
                     
-                    // ═══════════════════════════════════════════════════════
-                    // EXTRACT TRACKER NAME 🔥
-                    // ═══════════════════════════════════════════════════════
+                    // EXTRACT TRACKER NAME
                     var trackerName = extractTrackerName(name + ' ' + desc);
                     if (!trackerName) trackerName = '';
                     
-                    // ═══════════════════════════════════════════════════════
                     // EXTRACT SIZE
-                    // ═══════════════════════════════════════════════════════
                     var sizeStr = '';
                     var sizeBytes = 0;
                     var sizeMatch = desc.match(/([\d.,]+)\s*(TB|GB|MB)/i);
@@ -1124,20 +1089,7 @@
                         }
                     }
                     
-                    // ═══════════════════════════════════════════════════════
-                    // EXTRACT SEEDS 🔥
-                    // ═══════════════════════════════════════════════════════
-                    var seeds = extractSeeds(desc);
-                    if (seeds === 0) {
-                        seeds = extractSeeds(name);
-                    }
-                    if (seeds === 0 && st.seeders !== undefined) {
-                        seeds = parseInt(st.seeders) || 0;
-                    }
-                    
-                    // ═══════════════════════════════════════════════════════
                     // EXTRACT HASH
-                    // ═══════════════════════════════════════════════════════
                     var hash = '';
                     
                     if (st.infoHash) hash = st.infoHash;
@@ -1164,9 +1116,15 @@
                         continue;
                     }
                     
-                    // ═══════════════════════════════════════════════════════
-                    // BUILD TITLE
-                    // ═══════════════════════════════════════════════════════
+                    // BUILD CLEAN NAME
+                    var cleanName = name
+                        .replace(/^Aio\s*/i, '')
+                        .replace(/\b(2160p|4K|UHD|1080p|720p|480p)\b/gi, '')
+                        .trim();
+                    
+                    if (!cleanName) cleanName = name;
+                    
+                    // BUILD DISPLAY TITLE
                     var displayTitle = '';
                     
                     if (trackerName) {
@@ -1177,31 +1135,22 @@
                         displayTitle += quality + ' ';
                     }
                     
-                    displayTitle += name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
+                    displayTitle += cleanName;
+                    displayTitle = displayTitle.trim();
                     
-                    // ═══════════════════════════════════════════════════════
                     // BUILD INFO
-                    // ═══════════════════════════════════════════════════════
                     var info = '';
                     
-                    // Seed count
-                    if (seeds > 0) {
-                        var seedEmoji = seeds > 100 ? '🟢' : seeds > 10 ? '🟡' : '🔴';
-                        info += seedEmoji + ' ' + seeds + ' seed';
-                    } else {
-                        info += '⚫ 0 seed';
-                    }
-                    
                     if (sizeStr) {
-                        info += '  💾 ' + sizeStr;
+                        info = '💾 ' + sizeStr;
                     }
                     
                     parsed.push({
-                        title: displayTitle.trim(),
+                        title: displayTitle,
                         quality: quality,
-                        info: info.trim(),
+                        info: info.trim() || 'No info',
                         size: sizeBytes,
-                        seeds: seeds,
+                        seeds: 0,
                         hash: hash,
                         fileIdx: st.fileIdx || st.file_idx || st.index || 0,
                         tracker: trackerName
@@ -1218,14 +1167,13 @@
         
         console.log('[Parse] Result:', parsed.length, '/', streams.length);
         
-        // SORT
+        // SORT BY QUALITY → SIZE
         parsed.sort(function (a, b) {
             var qOrder = { '2160p': 4, '4K': 4, '1080p': 3, '720p': 2, '480p': 1 };
             var qa = qOrder[a.quality] || 0;
             var qb = qOrder[b.quality] || 0;
             
             if (qb !== qa) return qb - qa;
-            if (b.seeds !== a.seeds) return b.seeds - a.seeds;
             return b.size - a.size;
         });
         
@@ -1556,7 +1504,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 4.1.0', description: '🔧 Parser Fixed + Tracker Names + Seeds' }
+            field: { name: '📦 Version 4.2.0', description: '✅ Tracker Names + Full Names (No Seed)' }
         });
     }
 
@@ -1566,7 +1514,7 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v4.1.0 — 🔧 Fixed Parser ✅');
+        console.log('[KKPhim Parser] v4.2.0 — ✅ Complete ');
     }
 
     if (window.appready) start();
