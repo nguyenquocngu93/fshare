@@ -903,115 +903,6 @@
     }
 
     /* ════════════════════════════════════════════════════════════
-       BUTTON ACTIONS - Torrentio/AIO
-    ════════════════════════════════════════════════════════════ */
-    
-    function searchTorrent(card, season, episode) {
-        var title  = card.title || card.name || '';
-        var type   = getMediaType(card);
-        var imdbId = getImdbId(card);
-
-        Lampa.Noty.show('🔍 Đang tìm torrent...');
-
-        function run(id) {
-            fetchTorrentioResults(card, season, episode, function (results) {
-                var epLabel = (season && episode) ? ' S' + padZero(season) + 'E' + padZero(episode) : '';
-                showStreamsMenu(results, title + epLabel, card);
-            });
-        }
-
-        if (imdbId) {
-            run(imdbId);
-        } else {
-            reguest(
-                'https://api.themoviedb.org/3/' + (type === 'series' ? 'tv' : 'movie') + '/' + card.id +
-                '/external_ids?api_key=' + TMDB_API_KEY,
-                function (d) {
-                    var id = d && d.imdb_id;
-                    if (id) {
-                        card.imdb_id = id;
-                        run(id);
-                    } else {
-                        Lampa.Noty.show('❌ Không tìm thấy IMDB ID');
-                    }
-                },
-                function () { Lampa.Noty.show('❌ Lỗi lấy IMDB ID'); }
-            );
-        }
-    }
-
-    function showStreamsMenu(results, movieTitle, card) {
-        if (!results || !results.length) {
-            Lampa.Noty.show('❌ Không tìm thấy torrent');
-            return;
-        }
-
-        var tsUrl = getTsUrl();
-        if (!tsUrl) {
-            Lampa.Noty.show('❌ Chưa cấu hình TorrServer!');
-            return;
-        }
-
-        var engine = getTorrentEngine();
-        var label = engine === 'aio' ? 'AIOStreams' : 'Torrentio';
-
-        Lampa.Select.show({
-            title: '🧲 ' + label + ': ' + movieTitle + ' (' + results.length + ')',
-            items: results.map(function (r) {
-                var qualityBadge = r.quality ? '[' + r.quality + '] ' : '';
-                return {
-                    title: qualityBadge + r.title,
-                    subtitle: r.info || '',
-                    r: r
-                };
-            }),
-            onSelect: function (item) {
-                var r = item.r;
-                if (!r.hash) {
-                    Lampa.Noty.show('❌ Không có hash');
-                    return;
-                }
-                var magnet = makeMagnet(r.hash, r.title);
-                tsAddAndPickFile(magnet, r.hash, r.title, movieTitle, card);
-            },
-            onBack: function () { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    function getSeasonEpCount(card, season) {
-        if (card.seasons) {
-            var s = card.seasons.filter(function (x) { return x.season_number === season; })[0];
-            if (s && s.episode_count) return s.episode_count;
-        }
-        return 50;
-    }
-
-    function askTorrentTV(card) {
-        var total = card.number_of_seasons || 1;
-
-        function pickEp(s) {
-            var totalEps = getSeasonEpCount(card, s);
-            var ee = [];
-            for (var e = 1; e <= totalEps; e++) ee.push({ title: 'S' + padZero(s) + 'E' + padZero(e), s: s, e: e });
-            Lampa.Select.show({
-                title: 'Season ' + s + ' — Chọn tập', items: ee,
-                onSelect: function (item) { searchTorrent(card, item.s, item.e); },
-                onBack: function () { Lampa.Controller.toggle('full'); }
-            });
-        }
-
-        if (total === 1) { pickEp(1); return; }
-
-        var ss = [];
-        for (var s = 1; s <= total; s++) ss.push({ title: 'Season ' + s, s: s });
-        Lampa.Select.show({
-            title: 'Chọn Season', items: ss,
-            onSelect: function (item) { pickEp(item.s); },
-            onBack: function () { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    /* ════════════════════════════════════════════════════════════
        🔥 AIO/TORRENTIO PARSER (ENHANCED)
     ════════════════════════════════════════════════════════════ */
     
@@ -1120,6 +1011,72 @@
         return [];
     }
 
+    /* ════════════════════════════════════════════════════════════
+       🔥 TRACKER REGEX PARSER
+       Ref: https://github.com/Vidhin05/Releases-Regex
+    ════════════════════════════════════════════════════════════ */
+    
+    var TRACKER_PATTERNS = [
+        // Russian Trackers
+        { regex: /\b(rutracker|rut\.rip|sel\.rip)\b/i, name: 'RuTracker' },
+        { regex: /\b(kinozal|kz\.rip)\b/i, name: 'Kinozal' },
+        { regex: /\b(nnm-club|nnmclub)\b/i, name: 'NNM-Club' },
+        { regex: /\b(rutor|rutor\.org)\b/i, name: 'Rutor' },
+        { regex: /\b(torrenty|torrenty\.org)\b/i, name: 'Torrenty' },
+        
+        // Asian Trackers
+        { regex: /\b(nyaa|nyaa\.si)\b/i, name: 'Nyaa' },
+        { regex: /\b(anidex|anidex\.info)\b/i, name: 'AniDex' },
+        { regex: /\b(subsplease|subsplease\.org)\b/i, name: 'SubsPlease' },
+        { regex: /\b(kamyroll|kamyroll\.com)\b/i, name: 'KamyRoll' },
+        
+        // General Trackers
+        { regex: /\b(piratebay|tpb|1337x|torrentgalaxy|rarbg|eztv)\b/i, name: 'TPB/1337X' },
+        { regex: /\b(kickass|kat\.cr)\b/i, name: 'KickAss' },
+        { regex: /\b(demonoid|isohunt)\b/i, name: 'Demonoid' },
+        
+        // Streaming Services
+        { regex: /\b(netflix|amazon|prime|disney|hulu|hbo|criterion)\b/i, name: 'Streaming' },
+        
+        // Format & Source Info
+        { regex: /\b(web-?dl|webrip|hdtv|dvdrip|bluray|remux|encode)\b/i, name: 'Source' }
+    ];
+    
+    function extractTrackerName(str) {
+        if (!str) return 'Unknown';
+        
+        for (var i = 0; i < TRACKER_PATTERNS.length; i++) {
+            var match = str.match(TRACKER_PATTERNS[i].regex);
+            if (match) {
+                return TRACKER_PATTERNS[i].name;
+            }
+        }
+        
+        // Fallback: extract first CamelCase word
+        var match = str.match(/\b([A-Z][a-z]+)\b/);
+        return match ? match[1] : 'Unknown';
+    }
+
+    function extractSeeds(str) {
+        if (!str) return 0;
+        
+        var patterns = [
+            /👤\s*(\d+)/i,
+            /\bseed[s]?:?\s*(\d+)/i,
+            /\b(\d+)\s*seed/i,
+            /\((\d+)\)/,
+            /^(\d+)\s/
+        ];
+        
+        for (var i = 0; i < patterns.length; i++) {
+            var match = str.match(patterns[i]);
+            if (match) {
+                return parseInt(match[1]) || 0;
+            }
+        }
+        return 0;
+    }
+
     function parseStreams(streams, source) {
         if (!Array.isArray(streams)) { 
             console.error('[Parse] Not array'); 
@@ -1133,50 +1090,73 @@
         for (var i = 0; i < streams.length; i++) {
             var st = streams[i];
             
-            // ═══════════════════════════════════════════════════════
-            // 🔥 AIO STRUCTURE PARSER
-            // ═══════════════════════════════════════════════════════
-            
             var name = st.name || st.title || '';
             var desc = st.description || '';
             var filename = st.filename || '';
             
-            // Extract quality
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT QUALITY
+            // ═══════════════════════════════════════════════════════
             var quality = '';
             var qm = name.match(/\b(2160p|4K|UHD|1080p|720p|480p)\b/i);
             if (qm) quality = qm[1];
             
-            // Extract tracker (remove "Aio " prefix)
-            var tracker = name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
-            if (!tracker || tracker === source) tracker = source;
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT TRACKER NAME 🔥
+            // ═══════════════════════════════════════════════════════
+            var trackerName = extractTrackerName(name + ' ' + desc + ' ' + filename);
             
-            // Extract size
+            // Remove "Aio " prefix and clean up
+            var cleanTitle = name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
+            if (!cleanTitle || cleanTitle === source) cleanTitle = source;
+            
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT SIZE
+            // ═══════════════════════════════════════════════════════
             var sizeStr = '';
             var sizeBytes = 0;
-            var sizeMatch = desc.match(/([\d.,]+)\s*GB/i);
+            var sizeMatch = desc.match(/([\d.,]+)\s*(TB|GB|MB)/i);
             if (sizeMatch) {
-                sizeStr = sizeMatch[1] + ' GB';
-                sizeBytes = parseFloat(sizeMatch[1].replace(',', '.')) * 1e9;
+                var sizeNum = parseFloat(sizeMatch[1].replace(',', '.'));
+                var sizeUnit = sizeMatch[2].toUpperCase();
+                
+                if (sizeUnit === 'TB') {
+                    sizeBytes = sizeNum * 1e12;
+                    sizeStr = sizeNum.toFixed(2) + ' TB';
+                } else if (sizeUnit === 'GB') {
+                    sizeBytes = sizeNum * 1e9;
+                    sizeStr = sizeNum.toFixed(2) + ' GB';
+                } else if (sizeUnit === 'MB') {
+                    sizeBytes = sizeNum * 1e6;
+                    sizeStr = sizeNum.toFixed(0) + ' MB';
+                }
             }
             
-            // Extract source info
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT SEEDS 🔥
+            // ═══════════════════════════════════════════════════════
+            var seeds = extractSeeds(desc);
+            if (seeds === 0) {
+                seeds = extractSeeds(name);
+            }
+            if (seeds === 0 && st.seeders !== undefined) {
+                seeds = parseInt(st.seeders) || 0;
+            }
+            
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT SOURCE INFO & BITRATE
+            // ═══════════════════════════════════════════════════════
             var lines = desc.split('\n');
             var sourceInfo = lines[0] ? lines[0].trim() : '';
             
-            // Extract bitrate
             var bitrateMatch = desc.match(/\((\d+)\s*Mbps\)/i);
             var bitrate = bitrateMatch ? bitrateMatch[1] + ' Mbps' : '';
             
-            // Extract languages
-            var langMatch = desc.match(/(Engl|English|Korean|Russian|Japanese|Chinese|Sub)[\s\|]*/gi);
-            var langs = langMatch ? langMatch.slice(0, 3).map(function(l) { 
-                return l.replace(/[\s\|]/g, ''); 
-            }).join(', ') : '';
-            
-            // Extract title from filename
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT TITLE FROM FILENAME
+            // ═══════════════════════════════════════════════════════
             var title = '';
             
-            // Try to find English title
             var titleMatch = filename.match(/\/\s*([^\/\[]+?)\s*\/\s*Geudae/i);
             if (titleMatch) {
                 title = titleMatch[1].trim();
@@ -1198,12 +1178,14 @@
                 title = name.replace(/^Aio\s*/i, '').replace(/\b(2160p|4K|1080p|720p|480p)\b/i, '').trim();
             }
             
-            // Extract year
+            // ═══════════════════════════════════════════════════════
+            // EXTRACT YEAR
+            // ═══════════════════════════════════════════════════════
             var yearMatch = filename.match(/\[(\d{4}),/);
             var year = yearMatch ? yearMatch[1] : '';
             
             // ═══════════════════════════════════════════════════════
-            // HASH EXTRACTION
+            // EXTRACT HASH
             // ═══════════════════════════════════════════════════════
             var hash = '';
             
@@ -1238,15 +1220,17 @@
             }
             
             // ═══════════════════════════════════════════════════════
-            // BUILD DISPLAY
+            // BUILD DISPLAY TITLE
             // ═══════════════════════════════════════════════════════
             
             var displayTitle = '';
             
-            if (tracker && tracker !== source && tracker !== 'AIO') {
-                displayTitle += '[' + tracker + '] ';
+            // Show tracker source
+            if (trackerName && trackerName !== source && trackerName !== 'Unknown') {
+                displayTitle += '[' + trackerName + '] ';
             }
             
+            // Show quality
             if (quality) {
                 displayTitle += quality + ' ';
             }
@@ -1257,23 +1241,30 @@
                 displayTitle += ' (' + year + ')';
             }
             
-            // Build info
+            // ═══════════════════════════════════════════════════════
+            // BUILD INFO STRING
+            // ═══════════════════════════════════════════════════════
+            
             var info = '';
             
-            if (sourceInfo) {
-                info += sourceInfo + '  ';
+            // Add seed count with emoji
+            if (seeds > 0) {
+                var seedEmoji = seeds > 100 ? '🟢' : seeds > 10 ? '🟡' : '🔴';
+                info += seedEmoji + ' ' + seeds + ' seed  ';
+            } else {
+                info += '⚫ 0 seed  ';
             }
             
             if (sizeStr) {
                 info += '💾 ' + sizeStr + '  ';
             }
             
-            if (bitrate) {
-                info += '⚡ ' + bitrate + '  ';
+            if (sourceInfo) {
+                info += sourceInfo + '  ';
             }
             
-            if (langs) {
-                info += '🌐 ' + langs;
+            if (bitrate) {
+                info += '⚡ ' + bitrate;
             }
             
             if (!info.trim() && desc) {
@@ -1285,10 +1276,10 @@
                 quality: quality,
                 info: info.trim() || 'No info',
                 size: sizeBytes,
-                seeds: 0,
+                seeds: seeds,
                 hash: hash,
                 fileIdx: st.fileIdx || st.file_idx || st.index || 0,
-                tracker: tracker
+                tracker: trackerName
             });
         }
         
@@ -1299,13 +1290,17 @@
             console.log('[Parse] Sample:', JSON.stringify(streams[0], null, 2));
         }
         
-        // Sort by quality then size
+        // ═══════════════════════════════════════════════════════
+        // SORT BY QUALITY, SEEDS, THEN SIZE
+        // ═══════════════════════════════════════════════════════
+        
         parsed.sort(function (a, b) {
             var qOrder = { '2160p': 4, '4K': 4, 'UHD': 4, '1080p': 3, '720p': 2, '480p': 1 };
             var qa = qOrder[a.quality] || 0;
             var qb = qOrder[b.quality] || 0;
             
             if (qb !== qa) return qb - qa;
+            if (b.seeds !== a.seeds) return b.seeds - a.seeds;
             return b.size - a.size;
         });
         
@@ -1541,7 +1536,7 @@
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
             param: { name: STG_PREFIX + 'ver', type: 'static', default: '' },
-            field: { name: '📦 Version 3.9.0 Final', description: '🔥 AIO Parser Complete' }
+            field: { name: '📦 Version 4.0.0', description: '🔥 AIO Parser + Tracker Names + Seeds ✅' }
         });
     }
 
@@ -1551,7 +1546,7 @@
     
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v3.9.0 Final — 🔥 AIO Parser Complete ✅');
+        console.log('[KKPhim Parser] v4.0.0 — 🔥 Tracker Parser + Seeds ✅');
     }
 
     if (window.appready) start();
