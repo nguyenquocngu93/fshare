@@ -8,6 +8,14 @@
     var TMDB_IMG = 'https://image.tmdb.org/t/p';
     var CSS_URL = 'https://nguyenquocngu93.github.io/fshare/style.css';
 
+    var CATEGORIES = [
+        { name: 'Phim mới cập nhật', slug: 'phim-moi-cap-nhat' },
+        { name: 'Phim bộ', slug: 'phim-bo' },
+        { name: 'Phim lẻ', slug: 'phim-le' },
+        { name: 'Hoạt hình', slug: 'hoat-hinh' },
+        { name: 'TV Shows', slug: 'tv-shows' }
+    ];
+
     // ===== LOAD CSS =====
     function loadCSS() {
         if (window.kkphim_css_loaded) return;
@@ -22,7 +30,7 @@
         console.log('[KKPhim] CSS loaded');
     }
 
-    // ===== NETWORK REQUEST =====
+    // ===== NETWORK =====
     function request(url, onSuccess, onError) {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', url, true);
@@ -34,7 +42,6 @@
                     var data = JSON.parse(xhr.responseText);
                     onSuccess(data);
                 } catch(e) {
-                    console.error('[KKPhim] Parse error:', e);
                     if (onError) onError(e);
                 }
             } else {
@@ -42,18 +49,14 @@
             }
         };
         
-        xhr.onerror = function() {
-            if (onError) onError(xhr);
-        };
-        
-        xhr.ontimeout = function() {
+        xhr.onerror = xhr.ontimeout = function() {
             if (onError) onError(xhr);
         };
         
         xhr.send();
     }
 
-    // ===== TMDB HELPERS =====
+    // ===== TMDB =====
     function getTMDBData(name, year, type, callback) {
         var searchType = type === 'series' ? 'tv' : 'movie';
         var query = encodeURIComponent(name);
@@ -87,20 +90,9 @@
             similar: TMDB_BASE + '/' + type + '/' + id + '/similar?api_key=' + TMDB_KEY + '&language=vi-VN&page=1'
         };
 
-        request(urls.details, function(data) { 
-            result.details = data; 
-            check(); 
-        }, check);
-        
-        request(urls.credits, function(data) { 
-            result.credits = data; 
-            check(); 
-        }, check);
-        
-        request(urls.similar, function(data) { 
-            result.similar = data; 
-            check(); 
-        }, check);
+        request(urls.details, function(data) { result.details = data; check(); }, check);
+        request(urls.credits, function(data) { result.credits = data; check(); }, check);
+        request(urls.similar, function(data) { result.similar = data; check(); }, check);
     }
 
     // ===== UTILS =====
@@ -111,92 +103,95 @@
         return div.innerHTML;
     }
 
-    // ===== MAIN COMPONENT =====
-    function KKPhimComponent(object) {
+    // ===== HOME COMPONENT (Rows) =====
+    function KKPhimHome(object) {
         var network = new Lampa.Reguest();
         var scroll = new Lampa.Scroll({ mask: true, over: true });
-        var items = [];
         var html = $('<div></div>');
-        var body = $('<div class="category-full"></div>');
-
-        var page = 1;
-        var type = object.type || 'phim-moi-cap-nhat';
-        var isLoading = false;
+        var loaded = 0;
 
         loadCSS();
 
         this.create = function() {
+            var _this = this;
             this.activity.loader(true);
-            this.loadData();
+            
+            html.append('<div class="kk-topbar"><div class="kk-topbar-title">KKPhim</div></div>');
+
+            CATEGORIES.forEach(function(cat) {
+                _this.createRow(cat);
+            });
+
+            this.activity.loader(false);
             return this.render();
         };
 
-        this.loadData = function() {
+        this.createRow = function(category) {
             var _this = this;
-            if (isLoading) return;
-            isLoading = true;
+            var url = API_BASE + '/danh-sach/' + category.slug + '?page=1';
 
-            this.activity.loader(true);
-            var url = API_BASE + '/danh-sach/' + type + '?page=' + page;
+            var row = $('<div class="kk-row"></div>');
+            var head = $('<div class="kk-row-head"></div>');
+            var title = $('<div class="kk-row-title">' + escapeHtml(category.name) + '</div>');
+            var more = $('<div class="kk-row-more selector">Xem thêm</div>');
+
+            more.on('hover:enter', function() {
+                Lampa.Activity.push({
+                    url: '',
+                    title: category.name,
+                    component: 'kkphim_category',
+                    category: category,
+                    page: 1
+                });
+            });
+
+            head.append(title);
+            head.append(more);
+            row.append(head);
+
+            var list = $('<div class="kk-row-list"></div>');
+            var loading = $('<div class="kk-row-loading"><div class="kk-row-spinner"></div></div>');
+            list.append(loading);
+            row.append(list);
+
+            scroll.append(row);
 
             request(url, function(resp) {
-                _this.activity.loader(false);
-                isLoading = false;
-
+                loading.remove();
+                
                 if (resp && resp.data && resp.data.items) {
-                    items = items.concat(resp.data.items);
-                    _this.build();
-                } else {
-                    _this.empty('Không có dữ liệu');
+                    var items = resp.data.items.slice(0, 10);
+                    
+                    items.forEach(function(item) {
+                        var card = _this.createCard(item);
+                        list.append(card);
+                    });
                 }
             }, function() {
-                _this.activity.loader(false);
-                isLoading = false;
-                _this.empty('Lỗi tải dữ liệu');
+                loading.remove();
+                list.append('<div class="kk-row-error">Lỗi tải dữ liệu</div>');
             });
         };
 
-        this.build = function() {
-            var _this = this;
-            
-            scroll.clear();
+        this.createCard = function(data) {
+            var poster = data.poster_url || data.thumb_url || '';
+            var posterHtml = poster 
+                ? '<img src="' + escapeHtml(poster) + '">' 
+                : '<div class="kk-card-noposter">N/A</div>';
 
-            var wrapper = $('<div class="kk-grid-wrap"></div>');
-            var grid = $('<div class="kk-grid kk-grid--hgrid-2"></div>');
-
-            items.forEach(function(item) {
-                var card = _this.card(item);
-                grid.append(card);
-            });
-
-            wrapper.append(grid);
-
-            var more = $('<div class="kk-loadmore selector">Xem thêm</div>');
-            more.on('hover:enter', function() {
-                page++;
-                _this.loadData();
-            });
-            wrapper.append(more);
-
-            scroll.append(wrapper);
-            body.append(scroll.render());
-        };
-
-        this.card = function(data) {
-            var thumb = data.thumb_url ? '<img src="' + escapeHtml(data.thumb_url) + '">' : '<div class="kk-card-h-noposter">Không có ảnh</div>';
             var quality = data.quality ? '<div class="kk-card-q">' + escapeHtml(data.quality) + '</div>' : '';
             var episode = data.episode_current ? '<div class="kk-card-ep">' + escapeHtml(data.episode_current) + '</div>' : '';
 
-            var card = $('<div class="kk-card-h selector"></div>');
+            var card = $('<div class="kk-card selector"></div>');
             
             card.html(
-                '<div class="kk-card-h-img">' + thumb + quality + episode + '</div>' +
-                '<div class="kk-card-h-body">' +
+                '<div class="kk-card-img">' + posterHtml + quality + episode + '</div>' +
+                '<div class="kk-card-body">' +
                     '<div class="kk-card-name">' + escapeHtml(data.name) + '</div>' +
                     '<div class="kk-card-origin">' + escapeHtml(data.origin_name || '') + '</div>' +
                     '<div class="kk-card-meta">' +
                         '<span class="kk-card-year">' + escapeHtml(data.year || 'N/A') + '</span>' +
-                        '<span class="kk-card-lang">' + escapeHtml(data.lang || 'Vietsub') + '</span>' +
+                        (data.lang ? '<span class="kk-card-lang">' + escapeHtml(data.lang) + '</span>' : '') +
                     '</div>' +
                 '</div>'
             );
@@ -212,13 +207,6 @@
             });
 
             return card;
-        };
-
-        this.empty = function(msg) {
-            var empty = Lampa.Template.get('list_empty');
-            empty.find('.empty__descr').text(msg || 'Không có dữ liệu');
-            scroll.append(empty);
-            body.append(scroll.render());
         };
 
         this.start = function() {
@@ -261,13 +249,162 @@
         };
     }
 
-    // ===== DETAIL COMPONENT (Same as before) =====
+    // ===== CATEGORY COMPONENT (Grid) =====
+    function KKPhimCategory(object) {
+        var network = new Lampa.Reguest();
+        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var html = $('<div></div>');
+        var items = [];
+        var page = 1;
+        var category = object.category;
+        var isLoading = false;
+
+        loadCSS();
+
+        this.create = function() {
+            this.activity.loader(true);
+            this.loadData();
+            return this.render();
+        };
+
+        this.loadData = function() {
+            var _this = this;
+            if (isLoading) return;
+            isLoading = true;
+
+            var url = API_BASE + '/danh-sach/' + category.slug + '?page=' + page;
+
+            request(url, function(resp) {
+                _this.activity.loader(false);
+                isLoading = false;
+
+                if (resp && resp.data && resp.data.items) {
+                    items = items.concat(resp.data.items);
+                    _this.build();
+                } else {
+                    _this.empty('Không có dữ liệu');
+                }
+            }, function() {
+                _this.activity.loader(false);
+                isLoading = false;
+                _this.empty('Lỗi tải dữ liệu');
+            });
+        };
+
+        this.build = function() {
+            var _this = this;
+            scroll.clear();
+
+            var wrapper = $('<div class="kk-grid-wrap"></div>');
+            var title = $('<div class="kk-grid-title">' + escapeHtml(category.name) + '</div>');
+            var grid = $('<div class="kk-grid"></div>');
+
+            items.forEach(function(item) {
+                var card = _this.createCard(item);
+                grid.append(card);
+            });
+
+            wrapper.append(title);
+            wrapper.append(grid);
+
+            var more = $('<div class="kk-loadmore selector">Xem thêm</div>');
+            more.on('hover:enter', function() {
+                page++;
+                _this.loadData();
+            });
+            wrapper.append(more);
+
+            scroll.append(wrapper);
+            html.append(scroll.render());
+        };
+
+        this.createCard = function(data) {
+            var poster = data.poster_url || data.thumb_url || '';
+            var posterHtml = poster 
+                ? '<img src="' + escapeHtml(poster) + '">' 
+                : '<div class="kk-card-noposter">N/A</div>';
+
+            var quality = data.quality ? '<div class="kk-card-q">' + escapeHtml(data.quality) + '</div>' : '';
+            var episode = data.episode_current ? '<div class="kk-card-ep">' + escapeHtml(data.episode_current) + '</div>' : '';
+
+            var card = $('<div class="kk-card kk-card--grid selector"></div>');
+            
+            card.html(
+                '<div class="kk-card-img">' + posterHtml + quality + episode + '</div>' +
+                '<div class="kk-card-body">' +
+                    '<div class="kk-card-name">' + escapeHtml(data.name) + '</div>' +
+                    '<div class="kk-card-origin">' + escapeHtml(data.origin_name || '') + '</div>' +
+                    '<div class="kk-card-meta">' +
+                        '<span class="kk-card-year">' + escapeHtml(data.year || 'N/A') + '</span>' +
+                    '</div>' +
+                '</div>'
+            );
+
+            card.on('hover:enter', function() {
+                Lampa.Activity.push({
+                    url: '',
+                    title: data.name,
+                    component: 'kkphim_detail',
+                    slug: data.slug,
+                    page: 1
+                });
+            });
+
+            return card;
+        };
+
+        this.empty = function(msg) {
+            var empty = Lampa.Template.get('list_empty');
+            empty.find('.empty__descr').text(msg);
+            scroll.append(empty);
+            html.append(scroll.render());
+        };
+
+        this.start = function() {
+            Lampa.Controller.add('content', {
+                toggle: function() {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.collectionFocus(false, scroll.render());
+                },
+                left: function() {
+                    if (Navigator.canmove('left')) Navigator.move('left');
+                    else Lampa.Controller.toggle('menu');
+                },
+                up: function() {
+                    if (Navigator.canmove('up')) Navigator.move('up');
+                    else Lampa.Controller.toggle('head');
+                },
+                down: function() {
+                    Navigator.move('down');
+                },
+                right: function() {
+                    Navigator.move('right');
+                },
+                back: function() {
+                    Lampa.Activity.backward();
+                }
+            });
+
+            Lampa.Controller.toggle('content');
+        };
+
+        this.pause = function() {};
+        this.stop = function() {};
+        this.render = function() {
+            return html;
+        };
+        this.destroy = function() {
+            network.clear();
+            scroll.destroy();
+            html.remove();
+        };
+    }
+
+    // ===== DETAIL COMPONENT =====
     function KKPhimDetail(object) {
         var network = new Lampa.Reguest();
         var scroll = new Lampa.Scroll({ mask: true, over: true });
         var html = $('<div></div>');
-        var body = $('<div class="category-full"></div>');
-        
         var slug = object.slug;
         var movie = null;
         var tmdb = null;
@@ -318,23 +455,23 @@
             var container = $('<div class="kk-detail-wrap"></div>');
             container.append(this.createHero());
 
-            var bodyEl = $('<div class="kk-body"></div>');
+            var body = $('<div class="kk-body"></div>');
 
             if (tmdb && tmdb.credits) {
                 var crew = this.createCrew();
-                if (crew) bodyEl.append(crew);
+                if (crew) body.append(crew);
 
                 var cast = this.createCast();
-                if (cast) bodyEl.append(cast);
+                if (cast) body.append(cast);
             }
 
             var desc = this.createDescription();
-            if (desc) bodyEl.append(desc);
+            if (desc) body.append(desc);
 
             var actions = this.createActions();
-            if (actions) bodyEl.append(actions);
+            if (actions) body.append(actions);
 
-            container.append(bodyEl);
+            container.append(body);
 
             if (tmdb && tmdb.similar) {
                 var similar = this.createSimilar();
@@ -342,7 +479,7 @@
             }
 
             scroll.append(container);
-            body.append(scroll.render());
+            html.append(scroll.render());
         };
 
         this.createHero = function() {
@@ -521,7 +658,7 @@
             var empty = Lampa.Template.get('list_empty');
             empty.find('.empty__descr').text(msg);
             scroll.append(empty);
-            body.append(scroll.render());
+            html.append(scroll.render());
         };
 
         this.start = function() {
@@ -550,61 +687,51 @@
     }
 
     // ===== REGISTER =====
-    Lampa.Component.add('kkphim', KKPhimComponent);
+    Lampa.Component.add('kkphim', KKPhimHome);
+    Lampa.Component.add('kkphim_category', KKPhimCategory);
     Lampa.Component.add('kkphim_detail', KKPhimDetail);
 
-    // ===== ADD MENU SAFELY =====
-    function addMenuSafe() {
-        // Kiểm tra menu đã có chưa
-        if ($('.menu__item[data-action="kkphim"]').length > 0) {
-            console.log('[KKPhim] Menu already exists');
-            return;
-        }
+    // ===== ADD MENU (ONCE) =====
+    var menuAdded = false;
 
-        var html = '<li class="menu__item selector" data-action="kkphim">' +
+    function addMenu() {
+        if (menuAdded) return;
+        if ($('.menu__item[data-action="kkphim"]').length > 0) return;
+
+        var item = $('<li class="menu__item selector" data-action="kkphim">' +
             '<div class="menu__ico">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">' +
                     '<path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>' +
                 '</svg>' +
             '</div>' +
             '<div class="menu__text">KKPhim</div>' +
-        '</li>';
-
-        var item = $(html);
+        '</li>');
 
         item.on('hover:enter', function() {
             Lampa.Activity.push({
                 url: '',
                 title: 'KKPhim',
                 component: 'kkphim',
-                type: 'phim-moi-cap-nhat',
                 page: 1
             });
         });
 
-        // Tìm menu container
         var menu = $('.menu .menu__list');
-        
         if (menu.length > 0) {
             menu.append(item);
-            console.log('[KKPhim] Menu added successfully');
-        } else {
-            console.error('[KKPhim] Menu container not found');
+            menuAdded = true;
+            console.log('[KKPhim] Menu added');
         }
     }
 
-    // Thử add menu khi app ready
-    if (window.Lampa && Lampa.Listener) {
+    if (Lampa.Listener) {
         Lampa.Listener.follow('app', function(e) {
             if (e.type === 'ready') {
-                setTimeout(addMenuSafe, 500);
+                setTimeout(addMenu, 100);
             }
         });
     }
 
-    // Backup: thử ngay nếu app đã ready
-    setTimeout(addMenuSafe, 1000);
-
-    console.log('[KKPhim] Plugin initialized');
+    console.log('[KKPhim] Plugin loaded');
 
 })();
