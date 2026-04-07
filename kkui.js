@@ -19,7 +19,7 @@
         document.head.appendChild(link);
         
         window.kkphim_css_loaded = true;
-        console.log('[KKPhim] CSS loaded from:', CSS_URL);
+        console.log('[KKPhim] CSS loaded');
     }
 
     // ===== NETWORK REQUEST =====
@@ -38,18 +38,15 @@
                     if (onError) onError(e);
                 }
             } else {
-                console.error('[KKPhim] HTTP error:', xhr.status);
                 if (onError) onError(xhr);
             }
         };
         
         xhr.onerror = function() {
-            console.error('[KKPhim] Network error:', url);
             if (onError) onError(xhr);
         };
         
         xhr.ontimeout = function() {
-            console.error('[KKPhim] Timeout:', url);
             if (onError) onError(xhr);
         };
         
@@ -114,12 +111,6 @@
         return div.innerHTML;
     }
 
-    function createElement(html) {
-        var div = document.createElement('div');
-        div.innerHTML = html.trim();
-        return div.firstChild;
-    }
-
     // ===== MAIN COMPONENT =====
     function KKPhimComponent(object) {
         var network = new Lampa.Reguest();
@@ -127,8 +118,6 @@
         var items = [];
         var html = $('<div></div>');
         var body = $('<div class="category-full"></div>');
-        var info;
-        var last;
 
         var page = 1;
         var type = object.type || 'phim-moi-cap-nhat';
@@ -137,10 +126,8 @@
         loadCSS();
 
         this.create = function() {
-            var _this = this;
-            
             this.activity.loader(true);
-            
+            this.loadData();
             return this.render();
         };
 
@@ -196,8 +183,6 @@
         };
 
         this.card = function(data) {
-            var _this = this;
-            
             var thumb = data.thumb_url ? '<img src="' + escapeHtml(data.thumb_url) + '">' : '<div class="kk-card-h-noposter">Không có ảnh</div>';
             var quality = data.quality ? '<div class="kk-card-q">' + escapeHtml(data.quality) + '</div>' : '';
             var episode = data.episode_current ? '<div class="kk-card-ep">' + escapeHtml(data.episode_current) + '</div>' : '';
@@ -274,11 +259,9 @@
             scroll.destroy();
             html.remove();
         };
-
-        this.loadData();
     }
 
-    // ===== DETAIL COMPONENT =====
+    // ===== DETAIL COMPONENT (Same as before) =====
     function KKPhimDetail(object) {
         var network = new Lampa.Reguest();
         var scroll = new Lampa.Scroll({ mask: true, over: true });
@@ -330,15 +313,11 @@
         };
 
         this.build = function() {
-            var _this = this;
             scroll.clear();
 
             var container = $('<div class="kk-detail-wrap"></div>');
-
-            // Hero
             container.append(this.createHero());
 
-            // Body
             var bodyEl = $('<div class="kk-body"></div>');
 
             if (tmdb && tmdb.credits) {
@@ -357,7 +336,6 @@
 
             container.append(bodyEl);
 
-            // Similar
             if (tmdb && tmdb.similar) {
                 var similar = this.createSimilar();
                 if (similar) container.append(similar);
@@ -425,10 +403,7 @@
 
             var director = directors[0];
             var avatar = director.profile_path ? TMDB_IMG + '/w185' + director.profile_path : '';
-
-            var avatarHtml = avatar 
-                ? '<img src="' + avatar + '">' 
-                : '<div class="kk-crew-avatar-empty"></div>';
+            var avatarHtml = avatar ? '<img src="' + avatar + '">' : '<div class="kk-crew-avatar-empty"></div>';
 
             return $('<div class="kk-section">' +
                 '<div class="kk-block-title">ĐẠO DIỄN</div>' +
@@ -451,9 +426,7 @@
             var listHtml = '';
             cast.forEach(function(person) {
                 var img = person.profile_path ? TMDB_IMG + '/w185' + person.profile_path : '';
-                var imgHtml = img 
-                    ? '<img src="' + img + '">' 
-                    : '<div class="kk-cast-empty"></div>';
+                var imgHtml = img ? '<img src="' + img + '">' : '<div class="kk-cast-empty"></div>';
 
                 listHtml += '<div class="kk-cast-card selector">' +
                     '<div class="kk-cast-img">' + imgHtml + '</div>' +
@@ -506,19 +479,14 @@
             var listHtml = '';
             items.forEach(function(item) {
                 var poster = item.poster_path ? TMDB_IMG + '/w342' + item.poster_path : '';
-                var posterHtml = poster 
-                    ? '<img src="' + poster + '">' 
-                    : '<div class="kk-card-noposter">N/A</div>';
-
+                var posterHtml = poster ? '<img src="' + poster + '">' : '<div class="kk-card-noposter">N/A</div>';
                 var year = (item.release_date || item.first_air_date || '').substring(0, 4);
 
                 listHtml += '<div class="kk-card selector">' +
                     '<div class="kk-card-img">' + posterHtml + '</div>' +
                     '<div class="kk-card-body">' +
                         '<div class="kk-card-name">' + escapeHtml(item.title || item.name) + '</div>' +
-                        '<div class="kk-card-meta">' +
-                            '<span class="kk-card-year">' + year + '</span>' +
-                        '</div>' +
+                        '<div class="kk-card-meta"><span class="kk-card-year">' + year + '</span></div>' +
                     '</div>' +
                 '</div>';
             });
@@ -585,9 +553,15 @@
     Lampa.Component.add('kkphim', KKPhimComponent);
     Lampa.Component.add('kkphim_detail', KKPhimDetail);
 
-    // ===== ADD MENU - FIX CRITICAL =====
-    function addMenu() {
-        var menuHTML = '<li class="menu__item selector" data-action="kkphim">' +
+    // ===== ADD MENU SAFELY =====
+    function addMenuSafe() {
+        // Kiểm tra menu đã có chưa
+        if ($('.menu__item[data-action="kkphim"]').length > 0) {
+            console.log('[KKPhim] Menu already exists');
+            return;
+        }
+
+        var html = '<li class="menu__item selector" data-action="kkphim">' +
             '<div class="menu__ico">' +
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">' +
                     '<path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>' +
@@ -596,9 +570,9 @@
             '<div class="menu__text">KKPhim</div>' +
         '</li>';
 
-        var menuItem = $(menuHTML);
+        var item = $(html);
 
-        menuItem.on('hover:enter', function() {
+        item.on('hover:enter', function() {
             Lampa.Activity.push({
                 url: '',
                 title: 'KKPhim',
@@ -608,27 +582,29 @@
             });
         });
 
-        var menu = $('.menu .menu__list').eq(0);
-        if (menu.length) {
-            menu.append(menuItem);
-            console.log('[KKPhim] Menu added ✓');
+        // Tìm menu container
+        var menu = $('.menu .menu__list');
+        
+        if (menu.length > 0) {
+            menu.append(item);
+            console.log('[KKPhim] Menu added successfully');
         } else {
             console.error('[KKPhim] Menu container not found');
         }
     }
 
-    if (Lampa.Activity) {
-        addMenu();
-    } else {
+    // Thử add menu khi app ready
+    if (window.Lampa && Lampa.Listener) {
         Lampa.Listener.follow('app', function(e) {
             if (e.type === 'ready') {
-                addMenu();
+                setTimeout(addMenuSafe, 500);
             }
         });
     }
 
-    console.log('[KKPhim] Plugin loaded ✓');
-    console.log('[KKPhim] TMDB Key:', TMDB_KEY);
-    console.log('[KKPhim] CSS URL:', CSS_URL);
+    // Backup: thử ngay nếu app đã ready
+    setTimeout(addMenuSafe, 1000);
+
+    console.log('[KKPhim] Plugin initialized');
 
 })();
