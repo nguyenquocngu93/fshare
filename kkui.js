@@ -97,7 +97,7 @@ function applyFontScale(){
     +'.kk-coll-name{font-size:'+(1.2*r)+'em!important;font-weight:700!important;}'
     +'.kk-coll-header-label{font-size:'+(0.95*r)+'em!important;}'
     +'.kk-coll-header-name{font-size:'+(1.4*r)+'em!important;font-weight:800!important;}'    +'.kk-coll-header-count{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-coll-overview{font-size:'+(.2*r)+'em!important;line-height:1.6!important;}'
+    +'.kk-coll-overview{font-size:'+(1.2*r)+'em!important;line-height:1.6!important;}'
     +'.kk-prod-name{font-size:'+(1.0*r)+'em!important;font-weight:700!important;}'
     +'.kk-prod-country{font-size:'+(0.9*r)+'em!important;}'
     +'.kk-tag-chip{font-size:'+(1.0*r)+'em!important;}'
@@ -119,7 +119,7 @@ function E(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function fTxt(s){return E(s||'').replace(/\n/g,'<br>');}
 function nStr(s){return String(s||'').toLowerCase().trim().replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g,'').replace(/\s+/g,' ');}
 
-// ✅ FIX: Hàm parse tmdb_id từ slug — ĐÃ ĐƯỢC ĐỊNH NGHĨA TRƯỚC KHI DÙNG
+// ✅ FIX: Parse tmdb_id từ slug
 function parseTmdbIdFromSlug(slug) {
     if (!slug) return null;
     var m = slug.match(/(?:tmdid-|)(\d+)(?:\.html|\/)?$/);
@@ -632,12 +632,10 @@ function mkTCPF(item){
 // ✅ SỬA: mkSourceCard — phân biệt TV/Movie chính xác
 function mkSourceCard(item,source){
     var p=fImg(item.poster_url||item.thumb_url,source);
-
-    // XÁC ĐỊNH LOẠI PHIM
     var isTV = (item.episode_total && item.episode_total > 0) ||
-               (item.type && /(?:series|tv|bo|phim-bo|hoat-hinh|anime)/i.test(item.type)) ||               (item.category && item.category.some(c => /(?:phim bộ|tv|series|hoạt hình)/i.test(c.name || '')));
+               (item.type && /(?:series|tv|bo|phim-bo|hoat-hinh|anime)/i.test(item.type)) ||
+               (item.category && item.category.some(c => /(?:phim bộ|tv|series|hoạt hình)/i.test(c.name || '')));
     var typeLabel = isTV ? 'TV Series' : 'Movie';
-
     var h='<div class="kk-card selector"><div class="kk-card-img">';
     if(p)h+='<img src="'+p+'" loading="lazy">';
     else h+='<div class="kk-card-noposter"><span>No Poster</span></div>';
@@ -665,10 +663,8 @@ function mkSourceCard(item,source){
     return c;
 }
 
-// ✅ SỬA: mkSourceCardH — tương tự
 function mkSourceCardH(item,source){
     var p=fImg(item.thumb_url||item.poster_url,source);
-
     var isTV = (item.episode_total && item.episode_total > 0) ||
                (item.type && /(?:series|tv|bo|phim-bo|hoat-hinh|anime)/i.test(item.type)) ||
                (item.category && item.category.some(c => /(?:phim bộ|tv|series|hoạt hình)/i.test(c.name || '')));
@@ -684,11 +680,11 @@ function mkSourceCardH(item,source){
     if(item.year)h+='<span class="kk-card-year">'+E(item.year)+'</span>';
     h+='</div></div></div>';
     var c=$(h);
-    bE(c,function(){        if(!item.slug){
+    bE(c,function(){
+        if(!item.slug){
             Lampa.Noty.show('Không có slug');
             return;
-        }
-        Lampa.Activity.push({
+        }        Lampa.Activity.push({
             url:'',
             title:item.name||item.title||'',
             component:'kkphim_source_detail',
@@ -733,10 +729,10 @@ function mkDirHtml(dirs,isTmdb){
         var restNames=rest.map(function(c){
             return(isTmdb&&c.id)?'<span class="kk-crew-rest-name selector" data-pid="'+c.id+'">'+E(c.name||'')+'</span>':'<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';
         });
-        restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';    }
+        restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';
+    }
     return'<div class="kk-crew">'+avatarH+'<div class="kk-crew-info"><span class="kk-crew-label">Đạo diễn</span>'+nameH+'<span class="kk-crew-role">'+E(first.job||'Director')+'</span>'+restH+'</div></div>';
 }
-
 function bindDirClicks(el){
     el.find('.kk-crew-name[data-pid],.kk-crew-rest-name[data-pid]').each(function(){
         var sp=$(this);
@@ -782,11 +778,11 @@ function mkProductionSection(companies){
         var logoUrl=comp.logo_path?TMDB_W200+comp.logo_path:'';
         var card=$('<div class="kk-prod-card selector"></div>');
         card.html('<div class="kk-prod-logo">'+(logoUrl?'<img src="'+logoUrl+'" loading="lazy">':'<div class="kk-prod-logo-empty">'+E((comp.name||'?')[0])+'</div>')+'</div><div class="kk-prod-name">'+E(comp.name||'')+'</div>'+(comp.origin_country?'<div class="kk-prod-country">'+E(comp.origin_country)+'</div>':''));
-        bE(card,function(){            Lampa.Activity.push({url:'',title:comp.name||'',component:'kkphim_company',company_id:comp.id,company_name:comp.name||'',company_logo:logoUrl,page_num:1});
+        bE(card,function(){
+            Lampa.Activity.push({url:'',title:comp.name||'',component:'kkphim_company',company_id:comp.id,company_name:comp.name||'',company_logo:logoUrl,page_num:1});
         });
         list.append(card);
-    });
-    sec.append(list);
+    });    sec.append(list);
     return sec;
 }
 
@@ -831,11 +827,11 @@ function mkCollectionSection(collection){
     var ps=collection.poster_path?TMDB_W200+collection.poster_path:'';
     var card=$('<div class="kk-coll-card selector"></div>');
     card.html('<div class="kk-coll-bg">'+(bk?'<img src="'+bk+'" loading="lazy">':'')+'</div><div class="kk-coll-ov"></div><div class="kk-coll-inner">'+(ps?'<div class="kk-coll-poster"><img src="'+ps+'" loading="lazy"></div>':'')+'<div class="kk-coll-info"><div class="kk-coll-label">Bộ sưu tập</div><div class="kk-coll-name">'+E(collection.name||'')+'</div></div></div>');
-    bE(card,function(){        Lampa.Activity.push({url:'',title:collection.name||'',component:'kkphim_collection',collection_id:collection.id,page_num:1});
+    bE(card,function(){
+        Lampa.Activity.push({url:'',title:collection.name||'',component:'kkphim_collection',collection_id:collection.id,page_num:1});
     });
     sec.append(card);
-    return sec;
-}
+    return sec;}
 
 function mkSeasonsSection(seasons,tvId,tvTitle){
     if(!seasons||!seasons.length)return $('<div></div>');
@@ -868,7 +864,8 @@ function injectExtraCSS(){
         '.kk-tags-list{display:flex;flex-wrap:wrap;gap:0.4em;padding:0.4em 0 0.5em;}'+
         '.kk-tag-chip{display:inline-flex;align-items:center;padding:0.3em 0.8em;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:2em;font-size:0.8em;color:rgba(255,255,255,0.7);cursor:pointer;transition:all 0.2s;white-space:nowrap;}.kk-tag-chip:hover,.kk-tag-chip.focus,.kk-tag-chip.selected{background:rgba(1,180,228,0.18);border-color:rgba(1,180,228,0.5);color:#fff;transform:scale(1.04);}'+
         '.kk-coll-card{position:relative;border-radius:0.8em;overflow:hidden;cursor:pointer;height:9em;transition:all 0.25s;}.kk-coll-card:hover,.kk-coll-card.focus,.kk-coll-card.selected{transform:scale(1.02);box-shadow:0 4px 20px rgba(1,180,228,0.2);}'+
-        '.kk-coll-bg{position:absolute;inset:0;}.kk-coll-bg img{width:100%;height:100%;object-fit:cover;}.kk-coll-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.4) 60(0,0,0,0.15) 100%);}.kk-coll-inner{position:relative;z-index:1;display:flex;align-items:center;gap:0.8em;padding:0.8em;height:100%;}.kk-coll-poster{width:3.5em;height:5.2em;flex-shrink:0;border-radius:0.3em;overflow:hidden;}.kk-coll-poster img{width:100%;height:100%;object-fit:cover;}.kk-coll-info{flex:1;min-width:0;}'+
+        '.kk-coll-bg{position:absolute;inset:0;}.kk-coll-bg img{width:100%;height:100%;object-fit:cover;}.kk-coll-ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.4) 60%,rgba(0,0,0,0.15) 100%);}'+
+        '.kk-coll-inner{position:relative;z-index:1;display:flex;align-items:center;gap:0.8em;padding:0.8em;height:100%;}.kk-coll-poster{width:3.5em;height:5.2em;flex-shrink:0;border-radius:0.3em;overflow:hidden;}.kk-coll-poster img{width:100%;height:100%;object-fit:cover;}.kk-coll-info{flex:1;min-width:0;}'+
         '.kk-coll-label{font-size:0.7em;text-transform:uppercase;letter-spacing:0.06em;color:rgba(1,180,228,0.8);font-weight:600;margin-bottom:0.15em;}.kk-coll-name{font-size:0.95em;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}'+
         '.kk-seasons-list{display:flex;overflow-x:auto;gap:0.7em;padding:0.4em 0 0.6em;-webkit-overflow-scrolling:touch;scrollbar-width:none;}.kk-seasons-list::-webkit-scrollbar{display:none;}'+
         '.kk-season-card{flex:0 0 auto;width:10em;cursor:pointer;transition:all 0.25s;border-radius:0.5em;overflow:hidden;background:rgba(255,255,255,0.04);}.kk-season-card:hover,.kk-season-card.focus,.kk-season-card.selected{background:rgba(255,255,255,0.1);transform:translateY(-2px);}'+
@@ -881,10 +878,9 @@ function injectExtraCSS(){
         '.kk-netflix-ep-still{width:10em;min-width:10em;aspect-ratio:16/9;overflow:hidden;position:relative;background:rgba(255,255,255,0.04);flex-shrink:0;}.kk-netflix-ep-still img{width:100%;height:100%;object-fit:cover;}.kk-netflix-ep-still-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2em;color:rgba(255,255,255,0.08);background:linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,255,255,0.08));}'+
         '.kk-netflix-ep-num{position:absolute;top:0.4em;left:0.4em;background:rgba(0,0,0,0.75);color:#01b4e4;font-size:0.72em;font-weight:700;padding:0.15em 0.45em;border-radius:0.25em;backdrop-filter:blur(4px);}'+
         '.kk-netflix-ep-runtime{position:absolute;bottom:0.4em;right:0.4em;background:rgba(0,0,0,0.7);color:rgba(255,255,255,0.8);font-size:0.65em;padding:0.15em 0.35em;border-radius:0.2em;}'+
-        '.kk-netflix-ep-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2.2em;height:2.2em;border-radius:50%;background:rgba(1,180,228,0.85);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.4);}.kk-netflix-ep:hover .kk-netflix-ep-play,.kk-netflix-ep.focus .kk-netflix-ep-play,.kk-netflixkk-netflix-ep-play{opacity:1;}.kk-netflix-ep-play svg{width:0.9em;height:0.9em;fill:#fff;margin-left:0.1em;}'+
+        '.kk-netflix-ep-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2.2em;height:2.2em;border-radius:50%;background:rgba(1,180,228,0.85);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.25s;box-shadow:0 2px 8px rgba(0,0,0,0.4);}.kk-netflix-ep:hover .kk-netflix-ep-play,.kk-netflix-ep.focus .kk-netflix-ep-play,.kk-netflix-ep.selected .kk-netflix-ep-play{opacity:1;}.kk-netflix-ep-play svg{width:0.9em;height:0.9em;fill:#fff;margin-left:0.1em;}'+
         '.kk-netflix-ep-body{flex:1;padding:0.55em 0.7em;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;}'+
-        '.kk-netflix-ep-title{font-size:0.88em;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:0.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'+
-        '.kk-netflix-ep-meta{display:flex;gap:0.6em;align-items:center;margin-bottom:0.15em;flex-wrap:wrap;}'+
+        '.kk-netflix-ep-title{font-size:0.88em;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:0.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'+        '.kk-netflix-ep-meta{display:flex;gap:0.6em;align-items:center;margin-bottom:0.15em;flex-wrap:wrap;}'+
         '.kk-netflix-ep-date{font-size:0.72em;color:rgba(255,255,255,0.4);}'+
         '.kk-netflix-ep-vote{font-size:0.72em;color:rgba(255,200,0,0.8);}'+
         '.kk-netflix-ep-desc{font-size:0.75em;color:rgba(255,255,255,0.45);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}'+
@@ -923,7 +919,8 @@ function addM(){
         bE(m,function(){Lampa.Activity.push({url:'',title:'KKPhim',component:'kkphim_main',page:1});});
         $('.menu .menu__list').first().append(m);
     }
-    setTimeout(ins,500);    Lampa.Listener.follow('app',function(e){if(e.type==='ready')setTimeout(ins,500);});
+    setTimeout(ins,500);
+    Lampa.Listener.follow('app',function(e){if(e.type==='ready')setTimeout(ins,500);});
 }
 
 function mkGridInfinite(name,fetchFn,titleFn){
@@ -932,8 +929,7 @@ function mkGridInfinite(name,fetchFn,titleFn){
         var wrap=$('<div class="kk-grid-wrap"></div>'),titleEl=$('<div class="kk-grid-title">'+E(titleFn(obj))+'</div>');
         var gridContainer=$('<div></div>'),spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
         var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
-        var ld=false,done=false,curGrid=null;
-        this.create=function(){
+        var ld=false,done=false,curGrid=null;        this.create=function(){
             comp.activity.loader(true);
             cScr(scroll);
             wrap.append(titleEl).append(gridContainer).append(spinner).append(endMsg);
@@ -972,7 +968,8 @@ function mkGridInfinite(name,fetchFn,titleFn){
                     page++;
                 }
                 ld=false;
-                comp.activity.loader(false);                comp.start();
+                comp.activity.loader(false);
+                comp.start();
             }).catch(function(){
                 ld=false;
                 spinner.hide();
@@ -981,8 +978,7 @@ function mkGridInfinite(name,fetchFn,titleFn){
             });
         }
         this.start=function(){aCtrl(scroll);eScr(scroll);};
-        this.pause=function(){};
-        this.stop=function(){};
+        this.pause=function(){};        this.stop=function(){};
         this.render=function(){return scroll.render();};
         this.destroy=function(){scroll.destroy();};
     });
@@ -1021,7 +1017,8 @@ Lampa.Component.add('kkphim_settings',function(){
         });
         w.append(gSrc);
         var gFont=mg('🔠 Cỡ font');
-        var fs=String(s.font_scale||'100');        [{k:'85',n:'Nhỏ'},{k:'100',n:'Mặc định'},{k:'115',n:'Lớn'},{k:'130',n:'Rất lớn'}].forEach(function(o){
+        var fs=String(s.font_scale||'100');
+        [{k:'85',n:'Nhỏ'},{k:'100',n:'Mặc định'},{k:'115',n:'Lớn'},{k:'130',n:'Rất lớn'}].forEach(function(o){
             gFont.append(mo(o.n,'Cỡ chữ toàn plugin',fs===o.k,function(){
                 ss({font_scale:o.k});
                 applyFontScale();
@@ -1052,8 +1049,7 @@ Lampa.Component.add('kkphim_settings',function(){
         [{k:'hgrid',n:'📐 Ngang (x2)'},{k:'vgrid',n:'🖼️ Dọc (tùy chỉnh)'}].forEach(function(o){
             gCat.append(mo(o.n,'',ctm===o.k,function(){
                 ss({cat_mode:o.k});
-                comp.create();
-            }));
+                comp.create();            }));
         });
         w.append(gCat);
         var g5=mg('🎨 Số cột poster dọc');
@@ -1070,7 +1066,8 @@ Lampa.Component.add('kkphim_settings',function(){
         [{k:'vi-VN',n:'Tiếng Việt'},{k:'en-US',n:'English'},{k:'ja-JP',n:'日本語'},{k:'ko-KR',n:'한국어'},{k:'zh-CN',n:'中文'}].forEach(function(o){
             g6.append(mo(o.n,o.k,cl2===o.k,function(){
                 ss({tmdb_lang:o.k});
-                _gc={movie:null,tv:null};                comp.create();
+                _gc={movie:null,tv:null};
+                comp.create();
             }));
         });
         w.append(g6);
@@ -1101,8 +1098,7 @@ Lampa.Component.add('kkphim_settings',function(){
         g2.append(mi('Config','Dán link manifest',s.torrentio_config?'Có':'Mặc định','Config','torrentio_config',s));
         w.append(g2);
         var gA=mg('🌊 AIOStreams');
-        gA.append(mi('URL','Dán full URL',s.aio_url||'Chưa cài','AIO URL','aio_url',s));
-        w.append(gA);
+        gA.append(mi('URL','Dán full URL',s.aio_url||'Chưa cài','AIO URL','aio_url',s));        w.append(gA);
         var gHist=mg('🕘 Dữ liệu');
         var clearHist=si2('Xóa lịch sử','','Xóa');
         bE(clearHist,function(){
@@ -1119,7 +1115,8 @@ Lampa.Component.add('kkphim_settings',function(){
             localStorage.removeItem(HIST_KEY);
             _gc={movie:null,tv:null};
             applyFontScale();
-            Lampa.Activity.backward();        });
+            Lampa.Activity.backward();
+        });
         g4.append(cl);
         w.append(g4);
         w.append('<div class="kk-stg-ver">KKPhim v4.5.3 - Final Fixed</div>');
@@ -1150,8 +1147,7 @@ Lampa.Component.add('kkphim_settings',function(){
             if(v!==null){
                 v=v.trim();
                 var o={};o[key]=v;ss(o);s[key]=v;it.find('.kk-stg-value').text(v||val);
-            }
-        });
+            }        });
         return it;
     }
     this.start=function(){aCtrl(scroll);eScr(scroll);};
@@ -1168,7 +1164,8 @@ Lampa.Component.add('kkphim_person',function(obj){
         cScr(scroll);
         if(!pid){
             comp.activity.loader(false);
-            comp.start();            return;
+            comp.start();
+            return;
         }
         Promise.all([tFetch('/person/'+pid+'?language='+tmLang()),tPersonC(pid)]).then(function(res){
             var p=res[0],cr=res[1],w=$('<div class="kk-detail-wrap"></div>');
@@ -1199,8 +1196,7 @@ Lampa.Component.add('kkphim_person',function(obj){
                     r2.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">📺 Phim bộ</div>').append(mr2)).append(rl2);
                     w.append(r2);
                 }
-            }
-            scroll.append(w);
+            }            scroll.append(w);
             comp.activity.loader(false);
             comp.start();
         }).catch(function(){
@@ -1217,7 +1213,8 @@ Lampa.Component.add('kkphim_person',function(obj){
 Lampa.Component.add('kkphim_person_films',function(obj){
     var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,pid=obj.person_id,ft=obj.film_type||'movie';
     var all=[],rd=0,pp=20,gridContainer=$('<div></div>'),curGrid=null;
-    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Hết</div>');
+    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Hết</div>');
     this.create=function(){
         comp.activity.loader(true);
         cScr(scroll);
@@ -1248,8 +1245,7 @@ Lampa.Component.add('kkphim_person_films',function(obj){
         gridContainer.empty().append(curGrid);
     }
     function rMore(){
-        var b=all.slice(rd,rd+pp);
-        if(!b.length){endMsg.show();return;}
+        var b=all.slice(rd,rd+pp);        if(!b.length){endMsg.show();return;}
         var cm=catMode();
         b.forEach(function(c){
             curGrid.append((cm==='hgrid'?mkTCH(c):mkTC(c)).addClass('kk-card--grid'));
@@ -1266,7 +1262,8 @@ Lampa.Component.add('kkphim_person_films',function(obj){
 
 Lampa.Component.add('kkphim_main',function(){
     var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
-    var currentTab='kkphim';    var tabKK,tabOP,tabTMDB;
+    var currentTab='kkphim';
+    var tabKK,tabOP,tabTMDB;
     var contentContainer;
 
     this.create=function(){
@@ -1297,8 +1294,7 @@ Lampa.Component.add('kkphim_main',function(){
         });
         bE($(tb.find('.kk-btn')[1]),function(){
             Lampa.Activity.push({url:'',title:'Cài đặt',component:'kkphim_settings'});
-        });
-        wrapper.append(tb);
+        });        wrapper.append(tb);
 
         var tabs=$('<div class="kk-type-tabs" style="padding-top:0.8em"></div>');
         tabKK=$('<div class="kk-type-tab kk-type-tab--active selector">KKPhim</div>');
@@ -1316,6 +1312,7 @@ Lampa.Component.add('kkphim_main',function(){
         scroll.append(wrapper);
 
         loadTab(currentTab);
+
         function switchTab(tab){
             if(currentTab===tab)return;
             currentTab=tab;
@@ -1347,7 +1344,6 @@ Lampa.Component.add('kkphim_main',function(){
 
         var cm=cardMode(),cnt=cm==='poster'?12:rowCount();
         var loaded=0,total=srcCats.length;
-
         srcCats.forEach(function(cat){
             fetch(source.api+cat.api+'?page=1').then(function(r){
                 return r.json();
@@ -1364,7 +1360,8 @@ Lampa.Component.add('kkphim_main',function(){
                         Lampa.Activity.push({url:'',title:rowTitle,component:'kkphim_source_list',source_key:source.key,api_path:cat.api,page_num:1});
                     });
                     row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(rowTitle)+'</div>').append(mr));
-                    row.append(mkRowList(list.slice(0,cnt),false,source));                    contentContainer.append(row);
+                    row.append(mkRowList(list.slice(0,cnt),false,source));
+                    contentContainer.append(row);
                 }
 
                 loaded++;
@@ -1396,7 +1393,6 @@ Lampa.Component.add('kkphim_main',function(){
         ];
 
         var cm=cardMode(),cnt=cm==='poster'?12:rowCount();
-
         var hist=lastHistory();
         if(hist&&hist.tmdb_id){
             tRec(hist.media_type||'movie',hist.tmdb_id,1).then(function(res){
@@ -1413,7 +1409,8 @@ Lampa.Component.add('kkphim_main',function(){
             }).catch(function(){});
         }
 
-        var rr=$('<div class="kk-row"></div>');        rr.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎲 Ngẫu nhiên</div>'));
+        var rr=$('<div class="kk-row"></div>');
+        rr.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">🎲 Ngẫu nhiên</div>'));
         var randC=$('<div></div>');
         rr.append(randC);
         contentContainer.append(rr);
@@ -1444,8 +1441,7 @@ Lampa.Component.add('kkphim_main',function(){
                 if(items.length){
                     var row=$('<div class="kk-row"></div>');
                     var mr=$('<div class="kk-row-more selector">Xem thêm</div>');
-                    bE(mr,function(){
-                        Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});
+                    bE(mr,function(){                        Lampa.Activity.push({url:'',title:sec.name,component:'kkphim_tmdb_list',listType:sec.lt,page_num:1});
                     });
                     row.append($('<div class="kk-row-head"></div>').append('<div class="kk-row-title">'+E(sec.name)+'</div>').append(mr));
                     row.append(mkRowList(items.slice(0,cnt),true));
@@ -1462,7 +1458,8 @@ Lampa.Component.add('kkphim_main',function(){
     }
 
     this.start=function(){aCtrl(scroll);eScr(scroll);};
-    this.pause=function(){};    this.stop=function(){};
+    this.pause=function(){};
+    this.stop=function(){};
     this.render=function(){return scroll.render();};
     this.destroy=function(){scroll.destroy();};
 });
@@ -1493,8 +1490,7 @@ Lampa.Component.add('kkphim_source_search',function(obj){
     };
 
     function doL(){
-        spinner.show();
-        sSrc(source,kw).then(function(items){
+        spinner.show();        sSrc(source,kw).then(function(items){
             spinner.hide();
             if(!items||!items.length){
                 endMsg.show();
@@ -1511,7 +1507,8 @@ Lampa.Component.add('kkphim_source_search',function(obj){
         }).catch(function(){
             spinner.hide();
             endMsg.show().text('Lỗi');
-            comp.activity.loader(false);            comp.start();
+            comp.activity.loader(false);
+            comp.start();
         });
     }
 
@@ -1542,8 +1539,7 @@ Lampa.Component.add('kkphim_source_list',function(obj){
         cScr(scroll);
         initGrid();
         scroll.append($('<div class="kk-grid-wrap"></div>').append('<div class="kk-grid-title">'+E(obj.title||'')+'</div>').append(gridContainer).append(spinner).append(endMsg));
-        var sb=scroll.render().find('.scroll__body');
-        sb.on('scroll',function(){
+        var sb=scroll.render().find('.scroll__body');        sb.on('scroll',function(){
             if(ld||done)return;
             var el=sb[0];
             if(el.scrollTop+el.clientHeight>=el.scrollHeight-400)doL();
@@ -1560,7 +1556,8 @@ Lampa.Component.add('kkphim_source_list',function(obj){
                 done=true;
                 endMsg.show().text(page<=1?'Không có':'Đã hết');
                 comp.activity.loader(false);
-                ld=false;                comp.start();
+                ld=false;
+                comp.start();
                 return;
             }
             var cm=catMode();
@@ -1592,7 +1589,6 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
     this.create=function(){
         comp.activity.loader(true);
         cScr(scroll);
-
         if(!slug){
             comp.activity.loader(false);
             comp.start();
@@ -1610,6 +1606,7 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
 
             var movie=det.movie;
             var episodes=det.episodes||[];
+
             var tmdbData=null;
             var tmdbId=null;
             var mediaType='movie';
@@ -1640,7 +1637,6 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
                         var rOrig=nStr(r.original_title||r.original_name||'');
                         var rYear=(r.release_date||r.first_air_date||'').slice(0,4);
                         var nT=nStr(title),nO=nStr(origin);
-
                         var nameMatch=(nT&&(rName===nT||rOrig===nT))||(nO&&(rName===nO||rOrig===nO));
                         var yearMatch=!year||!rYear||year===rYear||Math.abs(parseInt(year)-parseInt(rYear))<=1;
 
@@ -1658,7 +1654,8 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
                         tmdbData=await tDetFull(mediaType,tmdbId);
                     }
                 }
-            } catch(e) {                console.warn('TMDB fetch error:',e);
+            } catch(e) {
+                console.warn('TMDB fetch error:',e);
             }
 
             buildDetail(movie,episodes,tmdbData,mediaType);
@@ -1689,8 +1686,7 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
             if(!runtime&&tmdbData.episode_run_time&&tmdbData.episode_run_time.length)
                 runtime=tmdbData.episode_run_time[0]+' phút/tập';
 
-            var epExtra='';
-            if(tmdbData.number_of_episodes)epExtra=tmdbData.number_of_episodes+' tập';
+            var epExtra='';            if(tmdbData.number_of_episodes)epExtra=tmdbData.number_of_episodes+' tập';
             if(tmdbData.number_of_seasons)epExtra+=(epExtra?' | ':'')+tmdbData.number_of_seasons+' season';
             if(epExtra)runtime+=(runtime?' · ':'')+epExtra;
 
@@ -1707,7 +1703,8 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
                 logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
             } else if(poster){
                 // Fallback: dùng poster làm logo (nhỏ hơn, nhưng vẫn hiển thị)
-                logoH='<div class="kk-logo"><img src="'+poster+'"></div>';            }
+                logoH='<div class="kk-logo"><img src="'+poster+'"></div>';
+            }
 
             if(tmdbData.credits){
                 cast=(tmdbData.credits.cast||[]).slice(0,15);
@@ -1738,7 +1735,6 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         }else if(genres.length){
             genreStr=genres.slice(0,3).map(function(g){return g.name;}).join(' | ');
         }
-
         var typeLabel=mediaType==='tv'?'TV Series':'Movie';
 
         var tH=logoH?'':'<div class="kk-title">'+E(title)+'</div>';
@@ -1757,6 +1753,7 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         wrapper.append(hero);
 
         var body=$('<div class="kk-body"></div>');
+
         if(genres.length){
             var genresDiv=$('<div class="kk-body-genres"></div>');
             genres.forEach(function(g){
@@ -1787,8 +1784,7 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
             var nameH='<span class="kk-crew-name">'+E(first.name||'')+'</span>';
 
             var restH='';
-            if(crew.length>1){
-                var restNames=crew.slice(1).map(function(c){
+            if(crew.length>1){                var restNames=crew.slice(1).map(function(c){
                     return '<span class="kk-crew-rest-name">'+E(c.name||'')+'</span>';
                 });
                 restH='<div class="kk-crew-rest">'+restNames.join('')+'</div>';
@@ -1805,7 +1801,8 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         if(episodes.length===0){
             episodesSection.append('<div class="kk-ep-er">❌ Không có tập phim</div>');
         }else{
-            episodes.forEach(function(server){                var serverName=server.server_name||'Server';
+            episodes.forEach(function(server){
+                var serverName=server.server_name||'Server';
                 var serverData=server.server_data||[];
 
                 if(serverData.length===0)return;
@@ -1836,7 +1833,6 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         }
 
         body.append(episodesSection);
-
         if(cast.length){
             var castSection=$('<div class="kk-section"><div class="kk-block-title">Diễn viên</div></div>');
             var castList=$('<div class="kk-cast-list"></div>');
@@ -1854,7 +1850,8 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         if(movie.actor&&movie.actor.length&&!cast.length){
             var actorSection=$('<div class="kk-section"><div class="kk-block-title">Diễn viên</div></div>');
             var actorList=$('<div class="kk-cast-list"></div>');
-            movie.actor.forEach(function(actor){                var card=$('<div class="kk-cast-card"><div class="kk-cast-img"><div class="kk-cast-empty"></div></div><div class="kk-cast-info"><div class="kk-cast-name">'+E(actor)+'</div></div></div>');
+            movie.actor.forEach(function(actor){
+                var card=$('<div class="kk-cast-card"><div class="kk-cast-img"><div class="kk-cast-empty"></div></div><div class="kk-cast-info"><div class="kk-cast-name">'+E(actor)+'</div></div></div>');
                 actorList.append(card);
             });
             actorSection.append(actorList);
@@ -1885,7 +1882,6 @@ Lampa.Component.add('kkphim_source_detail',function(obj){
         }
 
         wrapper.append(body);
-
         scroll.append(wrapper);
 
         comp.activity.loader(false);
@@ -1903,7 +1899,8 @@ Lampa.Component.add('kkphim_source_genre',function(obj){
     var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
     var sk=obj.source_key||'kkphim',gslug=obj.genre_slug||'',source=SOURCES[sk];
     var page=obj.page_num||1,gridContainer=$('<div></div>'),ld=false,done=false,curGrid=null;
-    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
+    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
+    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
 
     function initGrid(){
         var cm=catMode();
@@ -1934,8 +1931,7 @@ Lampa.Component.add('kkphim_source_genre',function(obj){
         spinner.show();
 
         fetch(source.api+'v1/api/the-loai/'+gslug+'?page='+page).then(function(r){
-            return r.json();
-        }).then(function(res){
+            return r.json();        }).then(function(res){
             var list=((res&&res.items)||(res&&res.data&&res.data.items)||[]).filter(function(i){
                 return i&&i.slug;
             });
@@ -1952,7 +1948,8 @@ Lampa.Component.add('kkphim_source_genre',function(obj){
             }
 
             var cm=catMode();
-            list.forEach(function(i){                curGrid.append((cm==='hgrid'?mkSourceCardH(i,source):mkSourceCard(i,source)).addClass('kk-card--grid'));
+            list.forEach(function(i){
+                curGrid.append((cm==='hgrid'?mkSourceCardH(i,source):mkSourceCard(i,source)).addClass('kk-card--grid'));
             });
 
             page++;
@@ -1983,8 +1980,7 @@ mkGridInfinite('kkphim_tmdb_list',function(obj,page){
 
 mkGridInfinite('kkphim_tmdb_search',function(obj,page){
     return tSearchM(obj.keyword||'',page).then(function(r){
-        return(r.results||[]).filter(function(i){return i.media_type!=='person';});
-    });
+        return(r.results||[]).filter(function(i){return i.media_type!=='person';});    });
 },function(obj){return'🔍 '+(obj.keyword||'');});
 
 function mkTabbedPage(name,fetchMovie,fetchTV,mkHeader){
@@ -2001,7 +1997,8 @@ function mkTabbedPage(name,fetchMovie,fetchTV,mkHeader){
             if(cm==='hgrid')curGrid=$('<div class="kk-grid kk-grid--cat-h"></div>');
             else{
                 curGrid=$('<div class="kk-grid"></div>');
-                curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');            }
+                curGrid.css('grid-template-columns','repeat('+cardSt()+',minmax(0,1fr))');
+            }
             gridContainer.empty().append(curGrid);
         }
 
@@ -2032,8 +2029,7 @@ function mkTabbedPage(name,fetchMovie,fetchTV,mkHeader){
                 tabTV.addClass('kk-type-tab--active');
                 tabMovie.removeClass('kk-type-tab--active');
                 initGrid();
-                endMsg.hide();
-                tp=1;
+                endMsg.hide();                tp=1;
                 tdone=false;
                 doL();
             });
@@ -2050,7 +2046,8 @@ function mkTabbedPage(name,fetchMovie,fetchTV,mkHeader){
         };
 
         function doL(){
-            ld=true;            spinner.show();
+            ld=true;
+            spinner.show();
             var page=curType==='movie'?mp:tp;
             var fn=curType==='movie'?fetchMovie:fetchTV;
             fn(obj,page).then(function(r){
@@ -2081,8 +2078,7 @@ function mkTabbedPage(name,fetchMovie,fetchTV,mkHeader){
         }
 
         this.start=function(){aCtrl(scroll);eScr(scroll);};
-        this.pause=function(){};
-        this.stop=function(){};
+        this.pause=function(){};        this.stop=function(){};
         this.render=function(){return scroll.render();};
         this.destroy=function(){scroll.destroy();};
     });
@@ -2100,6 +2096,7 @@ mkTabbedPage('kkphim_company',function(obj,p){
     }).catch(function(){});
     return header;
 });
+
 Lampa.Component.add('kkphim_network',function(obj){
     var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
     var page=1,ld=false,done=false;
@@ -2131,7 +2128,6 @@ Lampa.Component.add('kkphim_network',function(obj){
         });
         doL();
     };
-
     function doL(){
         ld=true;
         spinner.show();
@@ -2148,7 +2144,8 @@ Lampa.Component.add('kkphim_network',function(obj){
                     curGrid.append((cm==='hgrid'?mkTCH(i):mkTC(i)).addClass('kk-card--grid'));
                 });
                 page++;
-            }            ld=false;
+            }
+            ld=false;
             comp.activity.loader(false);
             comp.start();
         }).catch(function(){
@@ -2179,8 +2176,7 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
     var cg=String(obj.genre_id||'');
     var curType='movie',mp=1,tp=1,ld=false,mdone=false,tdone=false;
     var gridContainer=$('<div></div>'),curGrid=null;
-    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');
-    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
+    var spinner=$('<div class="kk-row-loading" style="display:none"><div class="kk-row-spinner"></div></div>');    var endMsg=$('<div class="kk-loadmore" style="display:none;cursor:default;background:transparent">Đã hết</div>');
     var tabMovie,tabTV;
 
     function initGrid(){
@@ -2197,7 +2193,8 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
         comp.activity.loader(true);
         cScr(scroll);
         var gb=$('<div class="kk-genre-bar"></div>');
-        scroll.append(gb);        var titleEl=$('<div class="kk-grid-title" style="padding:0 1.5em">'+E(obj.title||'')+'</div>');
+        scroll.append(gb);
+        var titleEl=$('<div class="kk-grid-title" style="padding:0 1.5em">'+E(obj.title||'')+'</div>');
         scroll.append(titleEl);
         var tabs=$('<div class="kk-type-tabs"></div>');
         tabMovie=$('<div class="kk-type-tab kk-type-tab--active selector">Phim lẻ</div>');
@@ -2228,13 +2225,12 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
         scroll.append(tabs);
         scroll.append($('<div class="kk-grid-wrap" style="padding-top:0.3em"></div>').append(gridContainer).append(spinner).append(endMsg));
         initGrid();
-        scroll.render().find('.scroll__body').on('scroll',function(){
-            if(ld||(curType==='movie'?mdone:tdone))return;
+        scroll.render().find('.scroll__body').on('scroll',function(){            if(ld||(curType==='movie'?mdone:tdone))return;
             if(this.scrollTop+this.clientHeight>=this.scrollHeight-400)doL();
         });
 
         Promise.all([lGenres('movie'),lGenres('tv')]).then(function(res){
-            var mg};
+            var mg2=[],sn={}; // ✅ ĐÃ SỬA LỖI CÚ PHÁP Ở ĐÂY
             (res[0]||[]).concat(res[1]||[]).forEach(function(g){
                 if(!sn[g.id]){sn[g.id]=true;mg2.push(g);}
             });
@@ -2246,7 +2242,8 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
                     Lampa.Activity.push({url:'',title:g.name,component:'kkphim_tmdb_genre',genre_id:g.id,page_num:1});
                 });
                 gb.append(ch);
-            });            var cur=mg2.find(function(g){return String(g.id)===cg;});
+            });
+            var cur=mg2.find(function(g){return String(g.id)===cg;});
             if(cur)titleEl.text(cur.name);
             doL();
         }).catch(function(){
@@ -2277,8 +2274,7 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
             ld=false;
             comp.activity.loader(false);
             comp.start();
-        }).catch(function(){
-            ld=false;
+        }).catch(function(){            ld=false;
             spinner.hide();
             endMsg.show().text('Lỗi');
             comp.activity.loader(false);
@@ -2295,7 +2291,8 @@ Lampa.Component.add('kkphim_tmdb_genre',function(obj){
 Lampa.Component.add('kkphim_collection',function(obj){
     var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this;
     this.create=function(){
-        comp.activity.loader(true);        cScr(scroll);
+        comp.activity.loader(true);
+        cScr(scroll);
         tCollectionDetail(obj.collection_id).then(function(coll){
             if(!coll){
                 comp.activity.loader(false);
@@ -2326,8 +2323,7 @@ Lampa.Component.add('kkphim_collection',function(obj){
             comp.activity.loader(false);
         });
     };
-    this.start=function(){aCtrl(scroll);eScr(scroll);};
-    this.pause=function(){};
+    this.start=function(){aCtrl(scroll);eScr(scroll);};    this.pause=function(){};
     this.stop=function(){};
     this.render=function(){return scroll.render();};
     this.destroy=function(){scroll.destroy();};
@@ -2344,7 +2340,8 @@ Lampa.Component.add('kkphim_season_detail',function(obj){
         Promise.all([tSeasonDetail(tvId,seasonNum),gImdb('tv',tvId)]).then(function(res){
             var season=res[0];imdbId=res[1];
             if(!season){
-                comp.activity.loader(false);                return;
+                comp.activity.loader(false);
+                return;
             }
             var ps=season.poster_path?TMDB_W300+season.poster_path:'';
             var header=$('<div class="kk-sd-header"></div>');
@@ -2375,8 +2372,7 @@ Lampa.Component.add('kkphim_season_detail',function(obj){
     this.destroy=function(){scroll.destroy();};
 });
 
-Lampa.Component.add('kkphim_tmdb_detail',function(obj){
-    var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';
+Lampa.Component.add('kkphim_tmdb_detail',function(obj){    var scroll=new Lampa.Scroll({mask:true,over:true}),comp=this,tid=obj.tmdb_id,mt=obj.media_type||'movie';
     this.create=function(){
         comp.activity.loader(true);
         cScr(scroll);
@@ -2393,7 +2389,8 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
             saveHistory({tmdb_id:tid,media_type:mt,name:t,poster_url:tmdb.poster_path?TMDB_W500+tmdb.poster_path:'',year:y,origin_name:o});
             var imdb=(tmdb.external_ids&&tmdb.external_ids.imdb_id)||null;
             if(!imdb)try{imdb=await gImdb(mt,tid);}catch(e){}
-            _detCtx={imdbId:imdb};            var keywords=[];
+            _detCtx={imdbId:imdb};
+            var keywords=[];
             try{keywords=await tKeywords(mt,tid);}catch(e){}
             bDet(tmdb,logos,imdb,keywords);
         }).catch(function(e){
@@ -2423,9 +2420,7 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
         var status=tmdb.status||'';
         var logo=pLogo(logos||(tmdb.images||{})),logoH='';
         if(logo&&logo.file_path)logoH='<div class="kk-logo"><img src="'+TMDB_W500+logo.file_path+'"></div>';
-        // ⚠️ Nếu không có logo nhưng có poster → dùng poster làm logo (đã sửa)
         else if(ps) logoH='<div class="kk-logo"><img src="'+ps+'"></div>';
-
         var gh=gHtml(tmdb.genres,true),dirsArr=[],castArr=[];
         if(tmdb.credits){
             castArr=(tmdb.credits.cast||[]).slice(0,15);
@@ -2442,7 +2437,8 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
             tagline:tmdb.tagline||'',
             vote:v,
             year:y,
-            runtime:rt+(epExtra?' · '+epExtra:''),            country:country,
+            runtime:rt+(epExtra?' · '+epExtra:''),
+            country:country,
             genres:genreStr,
             status:status,
             _title:t
@@ -2474,8 +2470,7 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
         }
 
         if(mt==='tv'){
-            try{
-                var tmdbSeasons=await gSeasons(tid);
+            try{                var tmdbSeasons=await gSeasons(tid);
                 if(tmdbSeasons&&tmdbSeasons.length)dw.append(mkSeasonsSection(tmdbSeasons,tid,t));
             }catch(e){}
         }
@@ -2491,6 +2486,7 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
 
         if(keywords&&keywords.length)
             dw.append(mkTagsSection(keywords));
+
         var simI=(tmdb.similar&&tmdb.similar.results)?tmdb.similar.results.slice(0,20):[];
         if(simI.length){
             var ss2=$('<div class="kk-section kk-similar"></div>').append('<div class="kk-block-title">Phim tương tự</div>');
@@ -2523,8 +2519,7 @@ Lampa.Component.add('kkphim_tmdb_detail',function(obj){
         comp.start();
     }
 
-    this.start=function(){aCtrl(scroll);eScr(scroll);};
-    this.pause=function(){};
+    this.start=function(){aCtrl(scroll);eScr(scroll);};    this.pause=function(){};
     this.stop=function(){};
     this.render=function(){return scroll.render();};
     this.destroy=function(){scroll.destroy();};
