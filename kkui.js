@@ -1,2320 +1,1158 @@
-(function () {
-  "use strict";
+(function() {
+'use strict';
 
-  // ============================================================
-  // CONFIGURATION
-  // ============================================================
-  var PLUGIN_NAME = "KKPhim";
-  var PLUGIN_VERSION = "2.0.0";
-  var KKPHIM_API = "https://phimapi.com";
-  var TMDB_API_KEY = "6979c8ec101ed849f44d197c86582644";
-  var TMDB_BASE = "https://api.themoviedb.org/3";
-  var TMDB_IMG = "https://image.tmdb.org/t/p/";
-  var CACHE = {};
-  var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+var PLUGIN_ID   = 'kkphim';
+var PLUGIN_VER  = '1.0.0';
+var KK_API      = 'https://phimapi.com';
+var TMDB_KEY    = '6979c8ec101ed849f44d197c86582644';
+var TMDB_API    = 'https://api.themoviedb.org/3';
+var TMDB_IMG    = 'https://image.tmdb.org/t/p/';
+var cache       = {};
 
-  // ============================================================
-  // INJECT CSS
-  // ============================================================
-  var CSS = `
-    /* ===== KKPhim Plugin CSS ===== */
-    .kkphim-wrap {
-      padding: 0;
-      background: transparent;
-    }
+// ─── UTILS ───────────────────────────────────────────────
+function cacheGet(k) {
+    var e = cache[k];
+    if (e && Date.now() - e.t < 300000) return e.d;
+    return null;
+}
+function cacheSet(k, d) {
+    cache[k] = { d: d, t: Date.now() };
+}
 
-    /* Hero Banner */
-    .kkphim-hero {
-      position: relative;
-      width: 100%;
-      height: 56vw;
-      max-height: 680px;
-      min-height: 320px;
-      overflow: hidden;
-      border-radius: 0 0 2em 2em;
-      margin-bottom: 2em;
-      background: #0a0a0f;
-    }
-    .kkphim-hero__bg {
-      position: absolute;
-      inset: 0;
-      background-size: cover;
-      background-position: center top;
-      filter: brightness(0.45) saturate(1.2);
-      transition: all 0.8s ease;
-      transform: scale(1.05);
-    }
-    .kkphim-hero__gradient {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(10,10,20,0.1) 0%,
-        rgba(10,10,20,0.3) 40%,
-        rgba(10,10,20,0.85) 75%,
-        rgba(10,10,20,1) 100%
-      );
-    }
-    .kkphim-hero__content {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 2em 2.5em;
-      display: flex;
-      align-items: flex-end;
-      gap: 1.8em;
-    }
-    .kkphim-hero__poster {
-      width: 120px;
-      min-width: 120px;
-      height: 180px;
-      border-radius: 1em;
-      overflow: hidden;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.7);
-      border: 2px solid rgba(255,255,255,0.15);
-      flex-shrink: 0;
-    }
-    .kkphim-hero__poster img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .kkphim-hero__info {
-      flex: 1;
-      min-width: 0;
-    }
-    .kkphim-hero__badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4em;
-      background: linear-gradient(135deg, #e50914, #b00710);
-      color: #fff;
-      font-size: 0.75em;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 0.3em 0.8em;
-      border-radius: 0.4em;
-      margin-bottom: 0.6em;
-    }
-    .kkphim-hero__title {
-      font-size: clamp(1.4em, 4vw, 2.4em);
-      font-weight: 800;
-      color: #fff;
-      line-height: 1.2;
-      margin: 0 0 0.3em;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.6);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .kkphim-hero__subtitle {
-      font-size: clamp(0.85em, 2vw, 1em);
-      color: rgba(255,255,255,0.65);
-      margin: 0 0 0.7em;
-      font-style: italic;
-    }
-    .kkphim-hero__meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6em;
-      margin-bottom: 1em;
-    }
-    .kkphim-hero__tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3em;
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.18);
-      color: rgba(255,255,255,0.9);
-      font-size: clamp(0.78em, 2vw, 0.88em);
-      padding: 0.28em 0.7em;
-      border-radius: 2em;
-    }
-    .kkphim-hero__tag.quality {
-      background: linear-gradient(135deg, #f5a623, #e8880a);
-      border-color: transparent;
-      color: #fff;
-      font-weight: 700;
-    }
-    .kkphim-hero__tag.rating {
-      background: linear-gradient(135deg, #27ae60, #1e8449);
-      border-color: transparent;
-      color: #fff;
-      font-weight: 700;
-    }
-    .kkphim-hero__actions {
-      display: flex;
-      gap: 0.8em;
-    }
-    .kkphim-hero__btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5em;
-      padding: 0.7em 1.5em;
-      border-radius: 0.6em;
-      font-size: clamp(0.85em, 2.2vw, 1em);
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: none;
-      outline: none;
-    }
-    .kkphim-hero__btn--play {
-      background: linear-gradient(135deg, #e50914, #c0050f);
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(229,9,20,0.5);
-    }
-    .kkphim-hero__btn--play:hover,
-    .kkphim-hero__btn--play.focus {
-      background: linear-gradient(135deg, #ff1a25, #e50914);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(229,9,20,0.7);
-    }
-    .kkphim-hero__btn--info {
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-    }
-    .kkphim-hero__btn--info:hover,
-    .kkphim-hero__btn--info.focus {
-      background: rgba(255,255,255,0.25);
-      transform: translateY(-2px);
-    }
+function request(url, ok, fail) {
+    var cached = cacheGet(url);
+    if (cached) { ok(cached); return; }
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        success: function(data) {
+            cacheSet(url, data);
+            ok(data);
+        },
+        error: function() {
+            if (fail) fail();
+        }
+    });
+}
 
-    /* Search Bar */
-    .kkphim-search-wrap {
-      padding: 0 1.5em 1.5em;
-    }
-    .kkphim-search {
-      display: flex;
-      align-items: center;
-      gap: 0.8em;
-      background: rgba(255,255,255,0.08);
-      border: 1.5px solid rgba(255,255,255,0.15);
-      border-radius: 1em;
-      padding: 0.7em 1.2em;
-      transition: all 0.3s ease;
-    }
-    .kkphim-search.focus {
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(229,9,20,0.6);
-      box-shadow: 0 0 0 3px rgba(229,9,20,0.15);
-    }
-    .kkphim-search__icon {
-      font-size: 1.2em;
-      color: rgba(255,255,255,0.5);
-      flex-shrink: 0;
-    }
-    .kkphim-search__input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: #fff;
-      font-size: clamp(0.9em, 2.5vw, 1.1em);
-      caret-color: #e50914;
-    }
-    .kkphim-search__input::placeholder {
-      color: rgba(255,255,255,0.35);
-    }
+function imgUrl(url) {
+    if (!url) return '';
+    if (url.indexOf('http') === 0) return url;
+    return 'https://phimimg.com/' + url;
+}
 
-    /* Section / Row */
-    .kkphim-section {
-      margin-bottom: 2.5em;
-    }
-    .kkphim-section__head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 1.5em 1em;
-    }
-    .kkphim-section__title {
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-      font-size: clamp(1em, 3vw, 1.25em);
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: 0.02em;
-    }
-    .kkphim-section__title::before {
-      content: '';
-      display: block;
-      width: 4px;
-      height: 1.2em;
-      background: linear-gradient(to bottom, #e50914, #ff6b6b);
-      border-radius: 2px;
-    }
-    .kkphim-section__icon {
-      font-size: 1.1em;
-    }
-    .kkphim-section__more {
-      font-size: clamp(0.78em, 2vw, 0.88em);
-      color: rgba(255,255,255,0.5);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.3em;
-      padding: 0.4em 0.8em;
-      border-radius: 0.5em;
-      transition: all 0.2s;
-    }
-    .kkphim-section__more:hover,
-    .kkphim-section__more.focus {
-      color: #e50914;
-      background: rgba(229,9,20,0.1);
-    }
+function tmdbImg(path, size) {
+    if (!path) return '';
+    return TMDB_IMG + (size || 'w300') + path;
+}
 
-    /* Category chips */
-    .kkphim-cats {
-      display: flex;
-      gap: 0.7em;
-      padding: 0 1.5em 1.2em;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .kkphim-cats::-webkit-scrollbar { display: none; }
-    .kkphim-cat {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4em;
-      white-space: nowrap;
-      padding: 0.5em 1.1em;
-      border-radius: 2em;
-      font-size: clamp(0.8em, 2.2vw, 0.95em);
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(255,255,255,0.08);
-      border: 1.5px solid rgba(255,255,255,0.12);
-      color: rgba(255,255,255,0.75);
-      transition: all 0.25s ease;
-      user-select: none;
-    }
-    .kkphim-cat:hover,
-    .kkphim-cat.focus {
-      background: rgba(229,9,20,0.2);
-      border-color: rgba(229,9,20,0.5);
-      color: #fff;
-      transform: translateY(-2px);
-    }
-    .kkphim-cat.active {
-      background: linear-gradient(135deg, #e50914, #c0050f);
-      border-color: transparent;
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(229,9,20,0.4);
-    }
+function stripTags(str) {
+    if (!str) return '';
+    return str.replace(/<[^>]*>/g, '');
+}
 
-    /* Cards Scroll Row */
-    .kkphim-row {
-      display: flex;
-      gap: 1em;
-      padding: 0.3em 1.5em 1em;
-      overflow-x: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(229,9,20,0.5) transparent;
-    }
-    .kkphim-row::-webkit-scrollbar {
-      height: 4px;
-    }
-    .kkphim-row::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .kkphim-row::-webkit-scrollbar-thumb {
-      background: rgba(229,9,20,0.5);
-      border-radius: 2px;
-    }
+// ─── CSS ─────────────────────────────────────────────────
+var CSS = [
+'.kkp-wrap { background: #0d0d14; min-height: 100vh; color: #fff; font-family: sans-serif; }',
 
-    /* Movie Card */
-    .kkphim-card {
-      flex-shrink: 0;
-      width: clamp(130px, 22vw, 180px);
-      cursor: pointer;
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-      position: relative;
-    }
-    .kkphim-card:hover,
-    .kkphim-card.focus {
-      transform: translateY(-8px) scale(1.03);
-      z-index: 10;
-    }
-    .kkphim-card__poster {
-      width: 100%;
-      aspect-ratio: 2/3;
-      border-radius: 0.8em;
-      overflow: hidden;
-      position: relative;
-      background: rgba(255,255,255,0.05);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-    .kkphim-card.focus .kkphim-card__poster {
-      box-shadow: 0 0 0 3px #e50914, 0 8px 32px rgba(229,9,20,0.4);
-    }
-    .kkphim-card__img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.4s ease;
-    }
-    .kkphim-card:hover .kkphim-card__img {
-      transform: scale(1.08);
-    }
-    .kkphim-card__overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to top,
-        rgba(0,0,0,0.85) 0%,
-        rgba(0,0,0,0.2) 50%,
-        transparent 100%
-      );
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .kkphim-card:hover .kkphim-card__overlay,
-    .kkphim-card.focus .kkphim-card__overlay {
-      opacity: 1;
-    }
-    .kkphim-card__play-btn {
-      width: 2.8em;
-      height: 2.8em;
-      background: rgba(229,9,20,0.9);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 16px rgba(229,9,20,0.6);
-      backdrop-filter: blur(4px);
-    }
-    .kkphim-card__play-btn svg {
-      width: 1em;
-      height: 1em;
-      fill: #fff;
-      margin-left: 0.15em;
-    }
-    .kkphim-card__badges {
-      position: absolute;
-      top: 0.5em;
-      left: 0.5em;
-      right: 0.5em;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-    .kkphim-card__badge {
-      font-size: 0.65em;
-      font-weight: 700;
-      padding: 0.25em 0.55em;
-      border-radius: 0.4em;
-      backdrop-filter: blur(8px);
-      letter-spacing: 0.05em;
-    }
-    .kkphim-card__badge--quality {
-      background: rgba(245,166,35,0.9);
-      color: #fff;
-    }
-    .kkphim-card__badge--ep {
-      background: rgba(229,9,20,0.85);
-      color: #fff;
-    }
-    .kkphim-card__badge--rating {
-      background: rgba(39,174,96,0.85);
-      color: #fff;
-    }
-    .kkphim-card__info {
-      padding: 0.6em 0.2em 0;
-    }
-    .kkphim-card__name {
-      font-size: clamp(0.82em, 2.2vw, 0.92em);
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.3;
-      margin: 0 0 0.25em;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .kkphim-card__meta {
-      display: flex;
-      align-items: center;
-      gap: 0.4em;
-      flex-wrap: wrap;
-    }
-    .kkphim-card__year,
-    .kkphim-card__type {
-      font-size: clamp(0.7em, 1.8vw, 0.78em);
-      color: rgba(255,255,255,0.5);
-    }
-    .kkphim-card__dot {
-      width: 3px;
-      height: 3px;
-      background: rgba(255,255,255,0.3);
-      border-radius: 50%;
-    }
+// Hero
+'.kkp-hero { position: relative; width: 100%; height: 55vw; max-height: 620px; min-height: 300px; overflow: hidden; margin-bottom: 30px; }',
+'.kkp-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: brightness(.4); transition: background .6s; }',
+'.kkp-hero-grad { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 20%, rgba(13,13,20,.7) 60%, #0d0d14 100%); }',
+'.kkp-hero-body { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 28px; display: flex; align-items: flex-end; gap: 20px; }',
+'.kkp-hero-poster { width: 110px; min-width: 110px; height: 165px; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.7); border: 2px solid rgba(255,255,255,.15); flex-shrink: 0; }',
+'.kkp-hero-poster img { width: 100%; height: 100%; object-fit: cover; }',
+'.kkp-hero-info { flex: 1; min-width: 0; }',
+'.kkp-hero-badge { display: inline-block; background: #e50914; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; }',
+'.kkp-hero-title { font-size: clamp(18px,4vw,34px); font-weight: 900; color: #fff; margin: 0 0 4px; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+'.kkp-hero-orig { font-size: clamp(12px,2vw,15px); color: rgba(255,255,255,.55); margin: 0 0 10px; font-style: italic; }',
+'.kkp-hero-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }',
+'.kkp-hero-tag { font-size: clamp(11px,1.8vw,13px); background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.9); padding: 3px 10px; border-radius: 20px; }',
+'.kkp-hero-tag.ql { background: rgba(245,166,35,.85); border-color: transparent; font-weight: 700; }',
+'.kkp-hero-tag.rt { background: rgba(39,174,96,.85); border-color: transparent; font-weight: 700; }',
+'.kkp-hero-btns { display: flex; gap: 10px; flex-wrap: wrap; }',
+'.kkp-hero-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 8px; font-size: clamp(13px,2vw,15px); font-weight: 700; cursor: pointer; border: none; outline: none; transition: all .2s; }',
+'.kkp-hero-btn.primary { background: #e50914; color: #fff; box-shadow: 0 4px 16px rgba(229,9,20,.5); }',
+'.kkp-hero-btn.primary:hover { background: #ff1f2a; transform: translateY(-2px); }',
+'.kkp-hero-btn.secondary { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(6px); }',
+'.kkp-hero-btn.secondary:hover { background: rgba(255,255,255,.25); transform: translateY(-2px); }',
 
-    /* Grid view */
-    .kkphim-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(clamp(130px, 22vw, 180px), 1fr));
-      gap: 1.2em;
-      padding: 0.5em 1.5em 1em;
-    }
-    .kkphim-grid .kkphim-card {
-      width: 100%;
-    }
+// Search
+'.kkp-search-wrap { padding: 0 16px 16px; }',
+'.kkp-search-box { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px; padding: 10px 16px; transition: all .3s; }',
+'.kkp-search-box:focus-within { border-color: rgba(229,9,20,.6); background: rgba(255,255,255,.1); box-shadow: 0 0 0 3px rgba(229,9,20,.12); }',
+'.kkp-search-box svg { width: 18px; height: 18px; fill: rgba(255,255,255,.4); flex-shrink: 0; }',
+'.kkp-search-input { flex: 1; background: none; border: none; outline: none; color: #fff; font-size: clamp(13px,2.5vw,16px); caret-color: #e50914; }',
+'.kkp-search-input::placeholder { color: rgba(255,255,255,.3); }',
 
-    /* Info Modal / Detail Page */
-    .kkphim-detail {
-      background: #0a0a0f;
-      min-height: 100vh;
-      color: #fff;
-    }
-    .kkphim-detail__hero {
-      position: relative;
-      height: 55vw;
-      max-height: 580px;
-      min-height: 280px;
-      overflow: hidden;
-    }
-    .kkphim-detail__bg {
-      position: absolute;
-      inset: 0;
-      background-size: cover;
-      background-position: center 20%;
-      filter: brightness(0.4) saturate(1.1);
-    }
-    .kkphim-detail__gradient {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        180deg,
-        rgba(10,10,20,0) 0%,
-        rgba(10,10,20,0.95) 80%,
-        rgba(10,10,20,1) 100%
-      );
-    }
-    .kkphim-detail__back {
-      position: absolute;
-      top: 1.2em;
-      left: 1.2em;
-      width: 2.4em;
-      height: 2.4em;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(8px);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff;
-      font-size: 1.2em;
-      transition: all 0.2s;
-      z-index: 10;
-    }
-    .kkphim-detail__back:hover,
-    .kkphim-detail__back.focus {
-      background: rgba(229,9,20,0.7);
-      border-color: transparent;
-      transform: scale(1.1);
-    }
-    .kkphim-detail__body {
-      padding: 0 1.5em 3em;
-      margin-top: -3em;
-      position: relative;
-    }
-    .kkphim-detail__main {
-      display: flex;
-      gap: 1.5em;
-      align-items: flex-start;
-    }
-    .kkphim-detail__poster {
-      width: clamp(100px, 25vw, 160px);
-      flex-shrink: 0;
-    }
-    .kkphim-detail__poster img {
-      width: 100%;
-      aspect-ratio: 2/3;
-      object-fit: cover;
-      border-radius: 0.8em;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-      border: 2px solid rgba(255,255,255,0.1);
-    }
-    .kkphim-detail__right {
-      flex: 1;
-      min-width: 0;
-      padding-top: 0.5em;
-    }
-    .kkphim-detail__quality {
-      display: inline-block;
-      background: linear-gradient(135deg, #f5a623, #e8880a);
-      color: #fff;
-      font-size: 0.72em;
-      font-weight: 700;
-      padding: 0.3em 0.8em;
-      border-radius: 0.4em;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 0.6em;
-    }
-    .kkphim-detail__title {
-      font-size: clamp(1.2em, 4vw, 2em);
-      font-weight: 900;
-      line-height: 1.2;
-      margin: 0 0 0.2em;
-    }
-    .kkphim-detail__subtitle {
-      font-size: clamp(0.82em, 2vw, 0.95em);
-      color: rgba(255,255,255,0.55);
-      margin: 0 0 0.8em;
-      font-style: italic;
-    }
-    .kkphim-detail__stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6em;
-      margin-bottom: 1em;
-    }
-    .kkphim-detail__stat {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35em;
-      font-size: clamp(0.78em, 2vw, 0.88em);
-      color: rgba(255,255,255,0.8);
-      background: rgba(255,255,255,0.08);
-      padding: 0.3em 0.7em;
-      border-radius: 0.5em;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .kkphim-detail__stat.star { color: #f5a623; }
-    .kkphim-detail__stat.green { color: #2ecc71; }
+// Tabs / cats
+'.kkp-cats-wrap { padding: 0 16px 16px; }',
+'.kkp-cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }',
+'.kkp-cats::-webkit-scrollbar { display: none; }',
+'.kkp-cat { white-space: nowrap; padding: 7px 16px; border-radius: 20px; font-size: clamp(12px,2vw,14px); font-weight: 600; cursor: pointer; background: rgba(255,255,255,.07); border: 1.5px solid rgba(255,255,255,.1); color: rgba(255,255,255,.7); transition: all .2s; user-select: none; }',
+'.kkp-cat:hover { background: rgba(229,9,20,.2); border-color: rgba(229,9,20,.4); color: #fff; }',
+'.kkp-cat.on { background: #e50914; border-color: transparent; color: #fff; box-shadow: 0 4px 14px rgba(229,9,20,.4); }',
 
-    /* Ratings row */
-    .kkphim-ratings {
-      display: flex;
-      gap: 1em;
-      margin-bottom: 1.2em;
-      flex-wrap: wrap;
-    }
-    .kkphim-rating-box {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 0.8em;
-      padding: 0.6em 1em;
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-    }
-    .kkphim-rating-box__icon {
-      font-size: 1.4em;
-    }
-    .kkphim-rating-box__val {
-      font-size: 1.1em;
-      font-weight: 800;
-    }
-    .kkphim-rating-box__src {
-      font-size: 0.72em;
-      color: rgba(255,255,255,0.5);
-    }
-    .kkphim-rating-box.imdb { border-color: rgba(245,197,24,0.3); }
-    .kkphim-rating-box.imdb .kkphim-rating-box__val { color: #f5c518; }
-    .kkphim-rating-box.tmdb { border-color: rgba(1,180,228,0.3); }
-    .kkphim-rating-box.tmdb .kkphim-rating-box__val { color: #01b4e4; }
+// Section
+'.kkp-section { margin-bottom: 28px; }',
+'.kkp-sec-head { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 12px; }',
+'.kkp-sec-title { display: flex; align-items: center; gap: 8px; font-size: clamp(14px,3vw,18px); font-weight: 800; color: #fff; }',
+'.kkp-sec-bar { width: 4px; height: 20px; background: linear-gradient(#e50914,#ff6b6b); border-radius: 2px; flex-shrink: 0; }',
+'.kkp-sec-more { font-size: 13px; color: rgba(255,255,255,.45); cursor: pointer; padding: 4px 10px; border-radius: 6px; transition: all .2s; }',
+'.kkp-sec-more:hover { color: #e50914; background: rgba(229,9,20,.1); }',
 
-    /* Actions */
-    .kkphim-detail__actions {
-      display: flex;
-      gap: 0.8em;
-      flex-wrap: wrap;
-      margin-top: 1.2em;
-    }
-    .kkphim-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5em;
-      padding: 0.75em 1.6em;
-      border-radius: 0.6em;
-      font-size: clamp(0.88em, 2.5vw, 1.05em);
-      font-weight: 700;
-      cursor: pointer;
-      border: none;
-      outline: none;
-      transition: all 0.25s ease;
-      user-select: none;
-    }
-    .kkphim-btn--primary {
-      background: linear-gradient(135deg, #e50914, #c0050f);
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(229,9,20,0.4);
-    }
-    .kkphim-btn--primary:hover,
-    .kkphim-btn--primary.focus {
-      box-shadow: 0 6px 24px rgba(229,9,20,0.6);
-      transform: translateY(-2px);
-    }
-    .kkphim-btn--secondary {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-      border: 1.5px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px);
-    }
-    .kkphim-btn--secondary:hover,
-    .kkphim-btn--secondary.focus {
-      background: rgba(255,255,255,0.18);
-      transform: translateY(-2px);
-    }
-    .kkphim-btn--trailer {
-      background: rgba(229,9,20,0.15);
-      color: #e50914;
-      border: 1.5px solid rgba(229,9,20,0.35);
-    }
-    .kkphim-btn--trailer:hover,
-    .kkphim-btn--trailer.focus {
-      background: rgba(229,9,20,0.25);
-    }
+// Row (horizontal scroll)
+'.kkp-row { display: flex; gap: 12px; padding: 4px 16px 8px; overflow-x: auto; scrollbar-width: thin; scrollbar-color: rgba(229,9,20,.4) transparent; }',
+'.kkp-row::-webkit-scrollbar { height: 3px; }',
+'.kkp-row::-webkit-scrollbar-thumb { background: rgba(229,9,20,.4); border-radius: 2px; }',
 
-    /* Description */
-    .kkphim-detail__desc-wrap {
-      margin-top: 1.5em;
-    }
-    .kkphim-detail__desc-title {
-      font-size: clamp(0.9em, 2.5vw, 1em);
-      font-weight: 700;
-      color: rgba(255,255,255,0.6);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.6em;
-    }
-    .kkphim-detail__desc {
-      font-size: clamp(0.88em, 2.4vw, 1em);
-      color: rgba(255,255,255,0.8);
-      line-height: 1.7;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      transition: all 0.3s;
-    }
-    .kkphim-detail__desc.expanded {
-      -webkit-line-clamp: unset;
-    }
-    .kkphim-detail__desc-toggle {
-      color: #e50914;
-      font-size: 0.88em;
-      cursor: pointer;
-      margin-top: 0.4em;
-      display: inline-block;
-    }
+// Grid
+'.kkp-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(clamp(120px,20vw,170px),1fr)); gap: 14px; padding: 4px 16px 8px; }',
 
-    /* Meta table */
-    .kkphim-detail__meta-table {
-      margin-top: 1.5em;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 0.5em 1em;
-    }
-    .kkphim-detail__meta-key {
-      font-size: clamp(0.78em, 2vw, 0.88em);
-      color: rgba(255,255,255,0.45);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    .kkphim-detail__meta-val {
-      font-size: clamp(0.82em, 2.2vw, 0.92em);
-      color: rgba(255,255,255,0.85);
-    }
-    .kkphim-detail__meta-val a {
-      color: #e50914;
-      text-decoration: none;
-    }
+// Card
+'.kkp-card { flex-shrink: 0; width: clamp(120px,20vw,170px); cursor: pointer; transition: transform .3s cubic-bezier(.34,1.56,.64,1); }',
+'.kkp-grid .kkp-card { width: 100%; }',
+'.kkp-card:hover { transform: translateY(-8px) scale(1.03); z-index: 5; }',
+'.kkp-card-poster { width: 100%; aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; position: relative; background: rgba(255,255,255,.05); box-shadow: 0 4px 16px rgba(0,0,0,.4); }',
+'.kkp-card:hover .kkp-card-poster,.kkp-card.sel .kkp-card-poster { box-shadow: 0 0 0 3px #e50914, 0 8px 24px rgba(229,9,20,.4); }',
+'.kkp-card-img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; display: block; }',
+'.kkp-card:hover .kkp-card-img { transform: scale(1.08); }',
+'.kkp-card-overlay { position: absolute; inset: 0; background: linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 60%); opacity: 0; transition: opacity .3s; display: flex; align-items: center; justify-content: center; }',
+'.kkp-card:hover .kkp-card-overlay { opacity: 1; }',
+'.kkp-card-play { width: 42px; height: 42px; background: rgba(229,9,20,.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; }',
+'.kkp-card-play svg { width: 18px; height: 18px; fill: #fff; margin-left: 2px; }',
+'.kkp-card-bgs { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; justify-content: space-between; pointer-events: none; }',
+'.kkp-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; backdrop-filter: blur(6px); }',
+'.kkp-badge.ql { background: rgba(245,166,35,.9); color: #fff; }',
+'.kkp-badge.ep { background: rgba(229,9,20,.85); color: #fff; }',
+'.kkp-badge.rt { background: rgba(39,174,96,.85); color: #fff; }',
+'.kkp-card-name { font-size: clamp(12px,2.2vw,14px); font-weight: 700; color: #fff; margin: 8px 0 3px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }',
+'.kkp-card-sub { font-size: clamp(10px,1.8vw,12px); color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 4px; }',
+'.kkp-card-dot { width: 3px; height: 3px; background: rgba(255,255,255,.3); border-radius: 50%; }',
 
-    /* Genre chips */
-    .kkphim-genres {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5em;
-      margin-top: 1.5em;
-    }
-    .kkphim-genre {
-      font-size: clamp(0.75em, 2vw, 0.85em);
-      padding: 0.3em 0.8em;
-      background: rgba(229,9,20,0.12);
-      border: 1px solid rgba(229,9,20,0.3);
-      color: rgba(255,255,255,0.85);
-      border-radius: 2em;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .kkphim-genre:hover,
-    .kkphim-genre.focus {
-      background: rgba(229,9,20,0.3);
-      color: #fff;
-    }
+// Detail page
+'.kkp-detail { background: #0d0d14; min-height: 100vh; }',
+'.kkp-det-hero { position: relative; height: 52vw; max-height: 560px; min-height: 260px; overflow: hidden; }',
+'.kkp-det-bg { position: absolute; inset: 0; background-size: cover; background-position: center 20%; filter: brightness(.35); }',
+'.kkp-det-grad { position: absolute; inset: 0; background: linear-gradient(180deg,transparent 0%,rgba(13,13,20,.9) 75%,#0d0d14 100%); }',
+'.kkp-det-back { position: absolute; top: 14px; left: 14px; width: 38px; height: 38px; background: rgba(0,0,0,.55); backdrop-filter: blur(8px); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,.2); color: #fff; z-index: 10; transition: all .2s; }',
+'.kkp-det-back:hover { background: rgba(229,9,20,.7); border-color: transparent; }',
+'.kkp-det-back svg { width: 20px; height: 20px; fill: currentColor; }',
+'.kkp-det-body { padding: 0 16px 40px; margin-top: -40px; position: relative; }',
+'.kkp-det-main { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 20px; }',
+'.kkp-det-poster { width: clamp(90px,22vw,150px); flex-shrink: 0; }',
+'.kkp-det-poster img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.6); border: 2px solid rgba(255,255,255,.1); }',
+'.kkp-det-info { flex: 1; min-width: 0; padding-top: 6px; }',
+'.kkp-det-ql { display: inline-block; background: linear-gradient(135deg,#f5a623,#e07b00); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; }',
+'.kkp-det-title { font-size: clamp(16px,4vw,28px); font-weight: 900; color: #fff; margin: 0 0 4px; line-height: 1.2; }',
+'.kkp-det-orig { font-size: clamp(11px,2vw,13px); color: rgba(255,255,255,.5); margin: 0 0 12px; font-style: italic; }',
+'.kkp-det-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }',
+'.kkp-det-stat { display: inline-flex; align-items: center; gap: 4px; font-size: clamp(11px,1.8vw,13px); color: rgba(255,255,255,.8); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); padding: 4px 10px; border-radius: 6px; }',
+'.kkp-det-stat.grn { color: #2ecc71; }',
+'.kkp-det-stat.ylw { color: #f5c518; }',
+'.kkp-rating-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }',
+'.kkp-rating-box { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 8px 14px; }',
+'.kkp-rating-box.tmdb { border-color: rgba(1,180,228,.3); }',
+'.kkp-rating-box.imdb { border-color: rgba(245,197,24,.3); }',
+'.kkp-rating-icon { font-size: 20px; }',
+'.kkp-rating-val { font-size: 16px; font-weight: 800; }',
+'.kkp-rating-src { font-size: 11px; color: rgba(255,255,255,.45); }',
+'.kkp-rating-box.tmdb .kkp-rating-val { color: #01b4e4; }',
+'.kkp-rating-box.imdb .kkp-rating-val { color: #f5c518; }',
+'.kkp-det-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }',
+'.kkp-btn { display: inline-flex; align-items: center; gap: 6px; padding: 11px 22px; border-radius: 8px; font-size: clamp(13px,2.5vw,15px); font-weight: 700; cursor: pointer; border: none; outline: none; transition: all .25s; user-select: none; }',
+'.kkp-btn.red { background: #e50914; color: #fff; box-shadow: 0 4px 14px rgba(229,9,20,.4); }',
+'.kkp-btn.red:hover { box-shadow: 0 6px 20px rgba(229,9,20,.6); transform: translateY(-2px); }',
+'.kkp-btn.ghost { background: rgba(255,255,255,.1); color: #fff; border: 1.5px solid rgba(255,255,255,.2); }',
+'.kkp-btn.ghost:hover { background: rgba(255,255,255,.18); transform: translateY(-2px); }',
+'.kkp-btn.yt { background: rgba(255,0,0,.15); color: #ff4444; border: 1.5px solid rgba(255,0,0,.3); }',
+'.kkp-btn.yt:hover { background: rgba(255,0,0,.25); }',
+'.kkp-btn svg { width: 18px; height: 18px; fill: currentColor; }',
 
-    /* Episode list */
-    .kkphim-episodes {
-      margin-top: 2em;
-    }
-    .kkphim-episodes__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1em;
-    }
-    .kkphim-episodes__title {
-      font-size: clamp(1em, 3vw, 1.15em);
-      font-weight: 800;
-    }
-    .kkphim-episodes__count {
-      font-size: 0.82em;
-      color: rgba(255,255,255,0.5);
-    }
-    .kkphim-server-tabs {
-      display: flex;
-      gap: 0.6em;
-      margin-bottom: 1em;
-      overflow-x: auto;
-      scrollbar-width: none;
-      padding-bottom: 0.3em;
-    }
-    .kkphim-server-tab {
-      white-space: nowrap;
-      padding: 0.5em 1.1em;
-      border-radius: 0.5em;
-      font-size: clamp(0.78em, 2vw, 0.88em);
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: rgba(255,255,255,0.7);
-      transition: all 0.2s;
-    }
-    .kkphim-server-tab.active,
-    .kkphim-server-tab.focus {
-      background: rgba(229,9,20,0.85);
-      border-color: transparent;
-      color: #fff;
-    }
-    .kkphim-ep-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(clamp(56px, 14vw, 80px), 1fr));
-      gap: 0.6em;
-    }
-    .kkphim-ep {
-      aspect-ratio: 1.6;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 0.5em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(0.78em, 2vw, 0.9em);
-      font-weight: 700;
-      color: rgba(255,255,255,0.75);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      user-select: none;
-    }
-    .kkphim-ep:hover,
-    .kkphim-ep.focus {
-      background: rgba(229,9,20,0.85);
-      border-color: transparent;
-      color: #fff;
-      transform: scale(1.05);
-    }
-    .kkphim-ep.current {
-      background: #e50914;
-      border-color: transparent;
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(229,9,20,0.5);
-    }
+// Description
+'.kkp-desc-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }',
+'.kkp-desc-text { font-size: clamp(13px,2.2vw,15px); color: rgba(255,255,255,.8); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }',
+'.kkp-desc-text.exp { -webkit-line-clamp: unset; }',
+'.kkp-desc-more { color: #e50914; font-size: 13px; cursor: pointer; margin-top: 5px; display: inline-block; }',
 
-    /* Cast section */
-    .kkphim-cast {
-      margin-top: 2em;
-    }
-    .kkphim-cast__row {
-      display: flex;
-      gap: 1em;
-      overflow-x: auto;
-      padding: 0.5em 0 1em;
-      scrollbar-width: none;
-    }
-    .kkphim-cast__row::-webkit-scrollbar { display: none; }
-    .kkphim-cast-card {
-      flex-shrink: 0;
-      width: clamp(80px, 16vw, 110px);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .kkphim-cast-card:hover { transform: translateY(-4px); }
-    .kkphim-cast-card__img {
-      width: 100%;
-      aspect-ratio: 1;
-      border-radius: 50%;
-      object-fit: cover;
-      background: rgba(255,255,255,0.08);
-      border: 2px solid rgba(255,255,255,0.1);
-    }
-    .kkphim-cast-card__name {
-      font-size: clamp(0.7em, 1.8vw, 0.78em);
-      color: rgba(255,255,255,0.8);
-      text-align: center;
-      margin-top: 0.4em;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .kkphim-cast-card__role {
-      font-size: clamp(0.62em, 1.6vw, 0.7em);
-      color: rgba(255,255,255,0.45);
-      text-align: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+// Meta
+'.kkp-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 16px 0; }',
+'.kkp-meta-k { font-size: clamp(11px,1.8vw,13px); color: rgba(255,255,255,.4); font-weight: 600; white-space: nowrap; }',
+'.kkp-meta-v { font-size: clamp(12px,2vw,14px); color: rgba(255,255,255,.85); }',
 
-    /* Similar */
-    .kkphim-similar {
-      margin-top: 2em;
-    }
+// Genres
+'.kkp-genres { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }',
+'.kkp-genre { font-size: clamp(11px,1.8vw,13px); padding: 4px 12px; background: rgba(229,9,20,.1); border: 1px solid rgba(229,9,20,.3); color: rgba(255,255,255,.85); border-radius: 20px; cursor: pointer; transition: all .2s; }',
+'.kkp-genre:hover { background: rgba(229,9,20,.3); color: #fff; }',
 
-    /* Loading & empty */
-    .kkphim-loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 3em;
-      gap: 1em;
-      color: rgba(255,255,255,0.5);
-    }
-    .kkphim-spinner {
-      width: 2.5em;
-      height: 2.5em;
-      border: 3px solid rgba(255,255,255,0.1);
-      border-top-color: #e50914;
-      border-radius: 50%;
-      animation: kkphim-spin 0.8s linear infinite;
-    }
-    @keyframes kkphim-spin {
-      to { transform: rotate(360deg); }
-    }
-    .kkphim-empty {
-      text-align: center;
-      padding: 3em 1.5em;
-      color: rgba(255,255,255,0.4);
-    }
-    .kkphim-empty__icon { font-size: 3em; margin-bottom: 0.3em; }
-    .kkphim-empty__text { font-size: clamp(0.9em, 2.5vw, 1.05em); }
+// Episodes
+'.kkp-eps { margin: 22px 0; }',
+'.kkp-eps-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }',
+'.kkp-eps-title { font-size: clamp(14px,2.5vw,17px); font-weight: 800; display: flex; align-items: center; gap: 6px; }',
+'.kkp-eps-count { font-size: 13px; color: rgba(255,255,255,.45); }',
+'.kkp-svr-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }',
+'.kkp-svr-tabs::-webkit-scrollbar { display: none; }',
+'.kkp-svr-tab { white-space: nowrap; padding: 6px 14px; border-radius: 6px; font-size: clamp(12px,2vw,13px); font-weight: 600; cursor: pointer; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.65); transition: all .2s; }',
+'.kkp-svr-tab.on,.kkp-svr-tab:hover { background: rgba(229,9,20,.8); border-color: transparent; color: #fff; }',
+'.kkp-ep-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(clamp(52px,12vw,72px),1fr)); gap: 6px; }',
+'.kkp-ep { aspect-ratio: 1.6; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: clamp(11px,2vw,13px); font-weight: 700; color: rgba(255,255,255,.7); cursor: pointer; transition: all .2s; user-select: none; }',
+'.kkp-ep:hover { background: rgba(229,9,20,.8); border-color: transparent; color: #fff; transform: scale(1.05); }',
+'.kkp-ep.on { background: #e50914; border-color: transparent; color: #fff; box-shadow: 0 2px 10px rgba(229,9,20,.5); }',
+'.kkp-ep-panel { display: none; }',
+'.kkp-ep-panel.on { display: block; }',
 
-    /* Pagination */
-    .kkphim-pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5em;
-      padding: 1.5em;
-    }
-    .kkphim-page-btn {
-      width: 2.5em;
-      height: 2.5em;
-      border-radius: 0.5em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(0.82em, 2vw, 0.92em);
-      font-weight: 700;
-      cursor: pointer;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: rgba(255,255,255,0.7);
-      transition: all 0.2s;
-      user-select: none;
-    }
-    .kkphim-page-btn:hover,
-    .kkphim-page-btn.focus { background: rgba(229,9,20,0.85); color: #fff; }
-    .kkphim-page-btn.active { background: #e50914; color: #fff; border-color: transparent; }
-    .kkphim-page-btn:disabled { opacity: 0.3; cursor: default; }
+// Cast
+'.kkp-cast-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: none; }',
+'.kkp-cast-row::-webkit-scrollbar { display: none; }',
+'.kkp-cast-card { flex-shrink: 0; width: clamp(72px,14vw,100px); cursor: pointer; transition: transform .2s; text-align: center; }',
+'.kkp-cast-card:hover { transform: translateY(-4px); }',
+'.kkp-cast-img { width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.1); display: block; }',
+'.kkp-cast-name { font-size: clamp(10px,1.8vw,12px); color: rgba(255,255,255,.8); margin-top: 5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+'.kkp-cast-role { font-size: clamp(9px,1.6vw,11px); color: rgba(255,255,255,.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
 
-    /* Scrollbar mobile friendly */
-    @media (max-width: 600px) {
-      .kkphim-hero { height: 72vw; }
-      .kkphim-hero__content { padding: 1.2em; gap: 1em; }
-      .kkphim-hero__poster { width: 80px; min-width: 80px; height: 120px; }
-      .kkphim-detail__main { flex-direction: column; align-items: center; }
-      .kkphim-detail__poster { width: 140px; }
-      .kkphim-detail__right { width: 100%; padding-top: 0; text-align: center; }
-      .kkphim-detail__stats { justify-content: center; }
-      .kkphim-detail__actions { justify-content: center; }
-      .kkphim-ratings { justify-content: center; }
-      .kkphim-genres { justify-content: center; }
-    }
+// Loading / empty
+'.kkp-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; gap: 12px; color: rgba(255,255,255,.4); font-size: 14px; }',
+'.kkp-spin { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,.1); border-top-color: #e50914; border-radius: 50%; animation: kkp-spin .8s linear infinite; }',
+'@keyframes kkp-spin { to { transform: rotate(360deg); } }',
+'.kkp-empty { text-align: center; padding: 50px 20px; color: rgba(255,255,255,.35); }',
+'.kkp-empty-icon { font-size: 48px; margin-bottom: 10px; }',
+'.kkp-empty-txt { font-size: clamp(13px,2.5vw,15px); }',
 
-    /* Scrollbar for all rows */
-    .kkphim-row::-webkit-scrollbar-thumb {
-      background: rgba(229,9,20,0.4);
-      border-radius: 4px;
-    }
+// Pagination
+'.kkp-pages { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 20px; flex-wrap: wrap; }',
+'.kkp-page { width: 36px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: clamp(12px,2vw,14px); font-weight: 700; cursor: pointer; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.65); transition: all .2s; user-select: none; }',
+'.kkp-page:hover { background: rgba(229,9,20,.8); color: #fff; border-color: transparent; }',
+'.kkp-page.on { background: #e50914; color: #fff; border-color: transparent; }',
+'.kkp-page.wide { width: auto; padding: 0 12px; }',
 
-    /* Fade-in animation */
-    @keyframes kkphim-fadein {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .kkphim-fadein {
-      animation: kkphim-fadein 0.4s ease forwards;
-    }
-  `;
+// Divider
+'.kkp-divider { height: 1px; background: rgba(255,255,255,.07); margin: 20px 16px; }',
 
-  // ============================================================
-  // UTILS
-  // ============================================================
-  function injectStyle() {
-    if (document.getElementById("kkphim-style")) return;
-    var s = document.createElement("style");
-    s.id = "kkphim-style";
+// Fade anim
+'@keyframes kkp-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }',
+'.kkp-in { animation: kkp-in .35s ease forwards; }',
+
+// Mobile
+'@media (max-width: 500px) {',
+'.kkp-hero { height: 75vw; }',
+'.kkp-hero-body { padding: 14px; gap: 12px; }',
+'.kkp-hero-poster { width: 75px; min-width: 75px; height: 112px; }',
+'.kkp-det-main { flex-direction: column; align-items: center; }',
+'.kkp-det-info { width: 100%; text-align: center; }',
+'.kkp-det-stats { justify-content: center; }',
+'.kkp-det-actions { justify-content: center; }',
+'.kkp-rating-row { justify-content: center; }',
+'.kkp-genres { justify-content: center; }',
+'}'
+].join('\n');
+
+function injectCSS() {
+    if (document.getElementById('kkp-style')) return;
+    var s = document.createElement('style');
+    s.id = 'kkp-style';
     s.textContent = CSS;
     document.head.appendChild(s);
-  }
+}
 
-  function cacheGet(key) {
-    var e = CACHE[key];
-    if (e && Date.now() - e.t < CACHE_TTL) return e.d;
-    return null;
-  }
-  function cacheSet(key, data) {
-    CACHE[key] = { d: data, t: Date.now() };
-  }
+// ─── SVG ICONS ───────────────────────────────────────────
+var IC = {
+    play:   'M8 5v14l11-7z',
+    back:   'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
+    search: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    film:   'M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z',
+    ep:     'M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zm-5-6l-8 4.5v-9z',
+    star:   'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+    clock:  'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13.5V7h1.5v5.75l4.5 2.67-1.26 2.08z',
+    heart:  'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+    yt:     'M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81zM10 15V9l5.2 3-5.2 3z',
+    person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+    fire:   'M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z',
+    trend:  'M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z'
+};
 
-  function fetchJSON(url, cb) {
-    var cached = cacheGet(url);
-    if (cached) return cb(null, cached);
-    Lampa.Network.timeout = 10000;
-    Lampa.Network.request(url, function (data) {
-      try {
-        var d = typeof data === "string" ? JSON.parse(data) : data;
-        cacheSet(url, d);
-        cb(null, d);
-      } catch (e) {
-        cb(e, null);
-      }
-    }, function (err) {
-      cb(err || "Network error", null);
-    });
-  }
+function ic(name, cls) {
+    var d = IC[name] || '';
+    return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="currentColor"><path d="' + d + '"/></svg>';
+}
 
-  function stripHtml(str) {
-    if (!str) return "";
-    return str.replace(/<[^>]*>/g, "");
-  }
-
-  function imgProxy(url) {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    return "https://phimimg.com/" + url;
-  }
-
-  function tmdbPoster(path, size) {
-    if (!path) return "";
-    return TMDB_IMG + (size || "w342") + path;
-  }
-
-  function tmdbBackdrop(path, size) {
-    if (!path) return "";
-    return TMDB_IMG + (size || "w1280") + path;
-  }
-
-  function tmdbProfile(path) {
-    if (!path) return "";
-    return TMDB_IMG + "w185" + path;
-  }
-
-  function formatRuntime(mins) {
-    if (!mins) return "";
-    var h = Math.floor(mins / 60);
-    var m = mins % 60;
-    return (h > 0 ? h + "h " : "") + m + "m";
-  }
-
-  function svg(path) {
-    return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="' + path + '"/></svg>';
-  }
-
-  // SVG icons
-  var ICONS = {
-    play: "M8 5v14l11-7z",
-    info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
-    back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
-    star: "M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z",
-    time: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13.5V7h1.5v5.75l4.5 2.67-1.26 2.08z",
-    ep: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z",
-    search: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
-    grid: "M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z",
-    list: "M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 16h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2z",
-    home: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
-    film: "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z",
-    trend: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z",
-    new: "M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 3h2v4h-2V7zm0 6h2v2h-2v-2z",
-    close: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
-    chev_right: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
-    chev_down: "M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z",
-    youtube: "M21.58 7.19c-.23-.86-.91-1.54-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.81.42c-.86.23-1.54.91-1.77 1.77C2 8.75 2 12 2 12s0 3.25.42 4.81c.23.86.91 1.54 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.81-.42c.86-.23 1.54-.91 1.77-1.77C22 15.25 22 12 22 12s0-3.25-.42-4.81zM10 15V9l5.2 3-5.2 3z",
-    person: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
-    bookmark: "M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z",
-    share: "M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"
-  };
-
-  function icon(name, cls) {
-    var d = ICONS[name] || "";
-    var c = cls || "";
-    return '<svg class="' + c + '" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="width:1em;height:1em;display:inline-block;vertical-align:middle"><path d="' + d + '"/></svg>';
-  }
-
-  // ============================================================
-  // API LAYER
-  // ============================================================
-  var API = {
-    // Get homepage movies
-    getHome: function (cb) {
-      var url = KKPHIM_API + "/danh-sach/phim-moi-cap-nhat?page=1";
-      fetchJSON(url, cb);
+// ─── API ─────────────────────────────────────────────────
+var API = {
+    list: function(type, page, cb) {
+        var url = KK_API + '/v1/api/danh-sach/' + type + '?page=' + (page || 1) + '&limit=24&sort_field=modified.time&sort_type=desc';
+        request(url, function(d) {
+            var items = (d.data && d.data.items) ? d.data.items : (d.items || []);
+            var total = 1;
+            if (d.data && d.data.params && d.data.params.pagination) {
+                total = d.data.params.pagination.totalPages || 1;
+            }
+            cb(null, items, total);
+        }, function() { cb('error', [], 1); });
     },
 
-    // Get list by type
-    getList: function (type, page, cb) {
-      // type: phim-bo, phim-le, hoat-hinh, tv-shows, phim-vietsub, phim-thuyet-minh
-      var url = KKPHIM_API + "/v1/api/danh-sach/" + type + "?page=" + (page || 1) + "&limit=24";
-      fetchJSON(url, cb);
+    category: function(slug, page, cb) {
+        var url = KK_API + '/v1/api/the-loai/' + slug + '?page=' + (page || 1) + '&limit=24';
+        request(url, function(d) {
+            var items = (d.data && d.data.items) ? d.data.items : (d.items || []);
+            var total = 1;
+            if (d.data && d.data.params && d.data.params.pagination) {
+                total = d.data.params.pagination.totalPages || 1;
+            }
+            cb(null, items, total);
+        }, function() { cb('error', [], 1); });
     },
 
-    // Get by category
-    getByCategory: function (slug, page, cb) {
-      var url = KKPHIM_API + "/v1/api/the-loai/" + slug + "?page=" + (page || 1) + "&limit=24";
-      fetchJSON(url, cb);
+    country: function(slug, page, cb) {
+        var url = KK_API + '/v1/api/quoc-gia/' + slug + '?page=' + (page || 1) + '&limit=24';
+        request(url, function(d) {
+            var items = (d.data && d.data.items) ? d.data.items : (d.items || []);
+            var total = 1;
+            if (d.data && d.data.params && d.data.params.pagination) {
+                total = d.data.params.pagination.totalPages || 1;
+            }
+            cb(null, items, total);
+        }, function() { cb('error', [], 1); });
     },
 
-    // Get by country
-    getByCountry: function (slug, page, cb) {
-      var url = KKPHIM_API + "/v1/api/quoc-gia/" + slug + "?page=" + (page || 1) + "&limit=24";
-      fetchJSON(url, cb);
+    search: function(q, page, cb) {
+        var url = KK_API + '/v1/api/tim-kiem?keyword=' + encodeURIComponent(q) + '&page=' + (page || 1);
+        request(url, function(d) {
+            var items = (d.data && d.data.items) ? d.data.items : (d.items || []);
+            cb(null, items);
+        }, function() { cb('error', []); });
     },
 
-    // Search
-    search: function (q, page, cb) {
-      var url = KKPHIM_API + "/v1/api/tim-kiem?keyword=" + encodeURIComponent(q) + "&page=" + (page || 1);
-      fetchJSON(url, cb);
+    detail: function(slug, cb) {
+        var url = KK_API + '/phim/' + slug;
+        request(url, function(d) { cb(null, d); }, function() { cb('error', null); });
     },
 
-    // Movie detail
-    getDetail: function (slug, cb) {
-      var url = KKPHIM_API + "/phim/" + slug;
-      fetchJSON(url, cb);
+    tmdbSearch: function(title, year, cb) {
+        var url = TMDB_API + '/search/multi?api_key=' + TMDB_KEY + '&query=' + encodeURIComponent(title) + '&language=vi-VN' + (year ? '&year=' + year : '');
+        request(url, function(d) {
+            var r = (d.results && d.results.length) ? d.results[0] : null;
+            cb(null, r);
+        }, function() { cb(null, null); });
     },
 
-    // Categories list
-    getCategories: function (cb) {
-      var url = KKPHIM_API + "/the-loai";
-      fetchJSON(url, cb);
+    tmdbDetail: function(id, type, cb) {
+        var url = TMDB_API + '/' + type + '/' + id + '?api_key=' + TMDB_KEY + '&language=vi-VN&append_to_response=credits,videos,recommendations';
+        request(url, function(d) { cb(null, d); }, function() { cb(null, null); });
     },
 
-    // TMDB search (for poster/backdrop/rating enrichment)
-    tmdbSearch: function (title, year, cb) {
-      var q = encodeURIComponent(title);
-      var url = TMDB_BASE + "/search/multi?api_key=" + TMDB_API_KEY + "&query=" + q + "&language=vi-VN" + (year ? "&year=" + year : "");
-      fetchJSON(url, function (err, data) {
-        if (err || !data || !data.results || !data.results.length) {
-          cb(null, null);
-          return;
-        }
-        cb(null, data.results[0]);
-      });
-    },
-
-    // TMDB detail (movie or tv)
-    tmdbDetail: function (id, type, cb) {
-      // type: movie or tv
-      var url = TMDB_BASE + "/" + type + "/" + id + "?api_key=" + TMDB_API_KEY + "&language=vi-VN&append_to_response=credits,videos,recommendations,images";
-      fetchJSON(url, cb);
-    },
-
-    // TMDB trending
-    tmdbTrending: function (cb) {
-      var url = TMDB_BASE + "/trending/all/week?api_key=" + TMDB_API_KEY + "&language=vi-VN";
-      fetchJSON(url, cb);
+    tmdbTrending: function(cb) {
+        var url = TMDB_API + '/trending/all/week?api_key=' + TMDB_KEY + '&language=vi-VN';
+        request(url, function(d) {
+            cb(null, d.results || []);
+        }, function() { cb(null, []); });
     }
-  };
+};
 
-  // ============================================================
-  // CATEGORIES DEFINITION
-  // ============================================================
-  var CATEGORIES = [
-    { slug: "phim-moi", name: "🆕 Phim Mới", type: "list" },
-    { slug: "phim-bo", name: "📺 Phim Bộ", type: "list" },
-    { slug: "phim-le", name: "🎬 Phim Lẻ", type: "list" },
-    { slug: "hoat-hinh", name: "🎠 Hoạt Hình", type: "list" },
-    { slug: "tv-shows", name: "📡 TV Shows", type: "list" },
-    { slug: "hanh-dong", name: "💥 Hành Động", type: "cat" },
-    { slug: "tinh-cam", name: "💕 Tình Cảm", type: "cat" },
-    { slug: "hai-huoc", name: "😂 Hài Hước", type: "cat" },
-    { slug: "kinh-di", name: "👻 Kinh Dị", type: "cat" },
-    { slug: "vien-tuong", name: "🚀 Viễn Tưởng", type: "cat" },
-    { slug: "chien-tranh", name: "⚔️ Chiến Tranh", type: "cat" },
-    { slug: "co-trang", name: "🏯 Cổ Trang", type: "cat" },
-    { slug: "tam-ly", name: "🧠 Tâm Lý", type: "cat" },
-    { slug: "hinh-su", name: "🔍 Hình Sự", type: "cat" },
-    { slug: "the-thao", name: "⚽ Thể Thao", type: "cat" },
-    { slug: "am-nhac", name: "🎵 Âm Nhạc", type: "cat" },
-    { slug: "gia-dinh", name: "👨‍👩‍👧 Gia Đình", type: "cat" },
-    { slug: "phieu-luu", name: "🗺️ Phiêu Lưu", type: "cat" },
-    { slug: "bi-an", name: "🔮 Bí Ẩn", type: "cat" }
-  ];
+// ─── BUILD HELPERS ────────────────────────────────────────
+function loading() {
+    return '<div class="kkp-loading"><div class="kkp-spin"></div><span>Đang tải...</span></div>';
+}
 
-  var COUNTRIES = [
-    { slug: "trung-quoc", name: "🇨🇳 Trung Quốc" },
-    { slug: "han-quoc", name: "🇰🇷 Hàn Quốc" },
-    { slug: "nhat-ban", name: "🇯🇵 Nhật Bản" },
-    { slug: "my", name: "🇺🇸 Mỹ" },
-    { slug: "viet-nam", name: "🇻🇳 Việt Nam" },
-    { slug: "thai-lan", name: "🇹🇭 Thái Lan" },
-    { slug: "hong-kong", name: "🇭🇰 Hồng Kông" },
-    { slug: "anh", name: "🇬🇧 Anh" }
-  ];
+function empty(msg) {
+    return '<div class="kkp-empty"><div class="kkp-empty-icon">🎬</div><div class="kkp-empty-txt">' + (msg || 'Không có dữ liệu') + '</div></div>';
+}
 
-  // ============================================================
-  // COMPONENT: Movie Card
-  // ============================================================
-  function buildCard(movie, opts) {
-    opts = opts || {};
-    var poster = imgProxy(movie.poster_url || movie.thumb_url || "");
-    var name = movie.name || movie.title || "";
-    var originName = movie.origin_name || "";
-    var year = movie.year || "";
-    var quality = movie.quality || "";
-    var epCurrent = movie.episode_current || "";
-    var type = movie.type === "series" ? "Phim Bộ" : movie.type === "single" ? "Phim Lẻ" : "";
-    var slug = movie.slug || "";
-    var vote = movie._tmdbVote || "";
+function secHead(iconName, title, more) {
+    return '<div class="kkp-sec-head">'
+        + '<div class="kkp-sec-title"><div class="kkp-sec-bar"></div>' + ic(iconName) + ' ' + title + '</div>'
+        + (more ? '<div class="kkp-sec-more" ' + more + '>Xem thêm ›</div>' : '')
+        + '</div>';
+}
 
-    var badgesHtml = "";
-    if (quality) {
-      badgesHtml += '<span class="kkphim-card__badge kkphim-card__badge--quality">' + quality + "</span>";
+function buildCard(m, isTmdb) {
+    var poster  = isTmdb ? tmdbImg(m.poster_path, 'w300') : imgUrl(m.poster_url || m.thumb_url);
+    var name    = m.name || m.title || '';
+    var year    = m.year || (m.release_date ? m.release_date.substr(0,4) : '') || (m.first_air_date ? m.first_air_date.substr(0,4) : '');
+    var quality = m.quality || 'HD';
+    var ep      = m.episode_current || '';
+    var slug    = isTmdb ? ('__tmdb__' + (m.media_type || 'movie') + '__' + m.id) : (m.slug || '');
+    var vote    = m._vote || (m.vote_average ? m.vote_average.toFixed(1) : '');
+    var type    = m.type === 'series' ? 'Phim Bộ' : m.type === 'single' ? 'Phim Lẻ' : (m.media_type === 'tv' ? 'TV' : 'Phim');
+
+    var leftB = quality ? '<span class="kkp-badge ql">' + quality + '</span>' : '';
+    var rightB = vote ? '<span class="kkp-badge rt">⭐' + vote + '</span>'
+                 : (ep && m.type === 'series') ? '<span class="kkp-badge ep">' + ep + '</span>' : '';
+
+    return '<div class="kkp-card" data-slug="' + slug + '">'
+        + '<div class="kkp-card-poster">'
+        +   '<img class="kkp-card-img" src="' + poster + '" alt="" loading="lazy" onerror="this.src=\'\'">'
+        +   '<div class="kkp-card-bgs">' + leftB + rightB + '</div>'
+        +   '<div class="kkp-card-overlay"><div class="kkp-card-play">' + ic('play') + '</div></div>'
+        + '</div>'
+        + '<div class="kkp-card-name">' + name + '</div>'
+        + '<div class="kkp-card-sub">'
+        +   (year ? '<span>' + year + '</span>' : '')
+        +   (year && type ? '<span class="kkp-card-dot"></span>' : '')
+        +   (type ? '<span>' + type + '</span>' : '')
+        + '</div>'
+        + '</div>';
+}
+
+function buildPages(cur, total) {
+    if (total <= 1) return '';
+    var h = '<div class="kkp-pages">';
+    if (cur > 1) h += '<div class="kkp-page wide" data-p="' + (cur-1) + '">‹ Trước</div>';
+    var s = Math.max(1, cur - 2), e = Math.min(total, cur + 2);
+    if (s > 1) { h += '<div class="kkp-page" data-p="1">1</div>'; if (s > 2) h += '<span style="color:rgba(255,255,255,.3);padding:0 4px">…</span>'; }
+    for (var p = s; p <= e; p++) {
+        h += '<div class="kkp-page' + (p === cur ? ' on' : '') + '" data-p="' + p + '">' + p + '</div>';
     }
-    var rightBadge = "";
-    if (vote) {
-      rightBadge = '<span class="kkphim-card__badge kkphim-card__badge--rating">⭐ ' + vote + "</span>";
-    } else if (epCurrent && movie.type === "series") {
-      rightBadge = '<span class="kkphim-card__badge kkphim-card__badge--ep">' + epCurrent + "</span>";
-    }
+    if (e < total) { if (e < total-1) h += '<span style="color:rgba(255,255,255,.3);padding:0 4px">…</span>'; h += '<div class="kkp-page" data-p="' + total + '">' + total + '</div>'; }
+    if (cur < total) h += '<div class="kkp-page wide" data-p="' + (cur+1) + '">Sau ›</div>';
+    h += '</div>';
+    return h;
+}
 
-    var html = '<div class="kkphim-card" data-slug="' + slug + '" tabindex="0">'
-      + '<div class="kkphim-card__poster">'
-      +   '<img class="kkphim-card__img" src="' + poster + '" alt="' + name + '" loading="lazy" onerror="this.src=\'\'"/>'
-      +   '<div class="kkphim-card__badges">'
-      +     badgesHtml
-      +     rightBadge
-      +   "</div>"
-      +   '<div class="kkphim-card__overlay">'
-      +     '<div class="kkphim-card__play-btn">'
-      +       '<svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>'
-      +     "</div>"
-      +   "</div>"
-      + "</div>"
-      + '<div class="kkphim-card__info">'
-      +   '<div class="kkphim-card__name">' + name + "</div>"
-      +   '<div class="kkphim-card__meta">'
-      +     (year ? '<span class="kkphim-card__year">' + year + "</span>" : "")
-      +     (year && type ? '<span class="kkphim-card__dot"></span>' : "")
-      +     (type ? '<span class="kkphim-card__type">' + type + "</span>" : "")
-      +   "</div>"
-      + "</div>"
-      + "</div>";
+// ─── CATS / COUNTRIES DATA ────────────────────────────────
+var CATS = [
+    { slug: 'phim-bo',    name: '📺 Phim Bộ',     api: 'list' },
+    { slug: 'phim-le',    name: '🎬 Phim Lẻ',     api: 'list' },
+    { slug: 'hoat-hinh',  name: '🎠 Hoạt Hình',   api: 'list' },
+    { slug: 'tv-shows',   name: '📡 TV Shows',     api: 'list' },
+    { slug: 'hanh-dong',  name: '💥 Hành Động',   api: 'cat'  },
+    { slug: 'tinh-cam',   name: '💕 Tình Cảm',    api: 'cat'  },
+    { slug: 'hai-huoc',   name: '😂 Hài Hước',    api: 'cat'  },
+    { slug: 'kinh-di',    name: '👻 Kinh Dị',     api: 'cat'  },
+    { slug: 'vien-tuong', name: '🚀 Viễn Tưởng',  api: 'cat'  },
+    { slug: 'co-trang',   name: '🏯 Cổ Trang',    api: 'cat'  },
+    { slug: 'tam-ly',     name: '🧠 Tâm Lý',      api: 'cat'  },
+    { slug: 'hinh-su',    name: '🔍 Hình Sự',     api: 'cat'  },
+    { slug: 'bi-an',      name: '🔮 Bí Ẩn',       api: 'cat'  },
+    { slug: 'phieu-luu',  name: '🗺️ Phiêu Lưu',  api: 'cat'  },
+    { slug: 'gia-dinh',   name: '👨‍👩‍👧 Gia Đình',  api: 'cat'  }
+];
 
-    return html;
-  }
+var COUNTRIES = [
+    { slug: 'trung-quoc', name: '🇨🇳 Trung Quốc' },
+    { slug: 'han-quoc',   name: '🇰🇷 Hàn Quốc'   },
+    { slug: 'nhat-ban',   name: '🇯🇵 Nhật Bản'   },
+    { slug: 'my',         name: '🇺🇸 Mỹ'          },
+    { slug: 'viet-nam',   name: '🇻🇳 Việt Nam'    },
+    { slug: 'thai-lan',   name: '🇹🇭 Thái Lan'    },
+    { slug: 'hong-kong',  name: '🇭🇰 Hồng Kông'   },
+    { slug: 'anh',        name: '🇬🇧 Anh'         }
+];
 
-  // ============================================================
-  // COMPONENT: Loading & Empty
-  // ============================================================
-  function buildLoading() {
-    return '<div class="kkphim-loading"><div class="kkphim-spinner"></div><span>Đang tải...</span></div>';
-  }
+// ─── MAIN COMPONENT ──────────────────────────────────────
+function KKPhim() {
+    var self     = this;
+    var $wrap    = $('<div class="kkp-wrap kkp-in"></div>');
+    var $home    = null;     // saved home html when going to detail
+    var stimer   = null;     // search debounce
 
-  function buildEmpty(msg) {
-    return '<div class="kkphim-empty"><div class="kkphim-empty__icon">🎬</div><div class="kkphim-empty__text">' + (msg || "Không tìm thấy kết quả") + "</div></div>";
-  }
-
-  // ============================================================
-  // COMPONENT: Section Header
-  // ============================================================
-  function buildSection(icon_name, title, moreHtml) {
-    return '<div class="kkphim-section__head">'
-      + '<div class="kkphim-section__title">'
-      +   icon(icon_name, "kkphim-section__icon")
-      +   " " + title
-      + "</div>"
-      + (moreHtml || "")
-      + "</div>";
-  }
-
-  // ============================================================
-  // MAIN PLUGIN COMPONENT
-  // ============================================================
-  function KKPhimPlugin() {
-    var self = this;
-    self.name = PLUGIN_NAME;
-    self.component = null;
-    self.current_movie = null;
-    self.current_page = 1;
-    self.current_cat = CATEGORIES[0];
-    self.search_timer = null;
-    self.search_query = "";
-
-    self.create = function () {
-      injectStyle();
-      self.component = $("<div class='kkphim-wrap kkphim-fadein'></div>");
-      self.renderHome();
-      return self.component;
+    // ── PUBLIC ──
+    self.create = function() {
+        injectCSS();
+        buildHome();
+        return $wrap;
     };
 
-    // ============================================================
-    // RENDER HOME
-    // ============================================================
-    self.renderHome = function () {
-      self.component.html(buildLoading());
+    // ── HOME ────────────────────────────────────────────
+    function buildHome() {
+        var html = ''
+            // Hero placeholder
+            + '<div id="kkp-hero" class="kkp-hero">'
+            +   '<div id="kkp-hero-bg" class="kkp-hero-bg"></div>'
+            +   '<div class="kkp-hero-grad"></div>'
+            +   '<div id="kkp-hero-body" class="kkp-hero-body">' + loading() + '</div>'
+            + '</div>'
 
-      // Build home layout
-      var html = '<div class="kkphim-home">';
+            // Search
+            + '<div class="kkp-search-wrap">'
+            +   '<div class="kkp-search-box">'
+            +     ic('search')
+            +     '<input id="kkp-sinput" class="kkp-search-input" type="text" placeholder="Tìm kiếm phim, series...">'
+            +   '</div>'
+            + '</div>'
 
-      // Hero placeholder
-      html += '<div class="kkphim-hero" id="kkphim-hero">'
-        + '<div class="kkphim-hero__bg" id="kkphim-hero-bg"></div>'
-        + '<div class="kkphim-hero__gradient"></div>'
-        + '<div class="kkphim-hero__content" id="kkphim-hero-content">'
-        +   '<div class="kkphim-hero__info"><div class="kkphim-spinner"></div></div>'
-        + "</div>"
-        + "</div>";
+            // Category chips
+            + '<div class="kkp-cats-wrap">'
+            +   '<div class="kkp-sec-head">' + '<div class="kkp-sec-title"><div class="kkp-sec-bar"></div>' + ic('film') + ' Thể Loại</div>' + '</div>'
+            +   '<div class="kkp-cats" id="kkp-cats">'
+            +   CATS.map(function(c, i) { return '<div class="kkp-cat' + (i===0?' on':'') + '" data-ci="' + i + '">' + c.name + '</div>'; }).join('')
+            +   '</div>'
+            + '</div>'
 
-      // Search
-      html += '<div class="kkphim-search-wrap">'
-        + '<div class="kkphim-search" id="kkphim-search">'
-        +   '<span class="kkphim-search__icon">' + icon("search") + "</span>"
-        +   '<input class="kkphim-search__input" id="kkphim-search-input" type="text" placeholder="Tìm kiếm phim..." />'
-        + "</div>"
-        + "</div>";
+            // Country chips
+            + '<div class="kkp-cats-wrap">'
+            +   '<div class="kkp-sec-head">' + '<div class="kkp-sec-title"><div class="kkp-sec-bar"></div>🌏 Quốc Gia</div>' + '</div>'
+            +   '<div class="kkp-cats" id="kkp-countries">'
+            +   COUNTRIES.map(function(c) { return '<div class="kkp-cat" data-cn="' + c.slug + '">' + c.name + '</div>'; }).join('')
+            +   '</div>'
+            + '</div>'
 
-      // Category chips
-      html += '<div class="kkphim-section">'
-        + buildSection("grid", "Thể Loại", "")
-        + '<div class="kkphim-cats" id="kkphim-cats">';
+            // Content rows
+            + '<div id="kkp-content">' + loading() + '</div>';
 
-      CATEGORIES.forEach(function (cat, i) {
-        html += '<div class="kkphim-cat' + (i === 0 ? " active" : "") + '" data-index="' + i + '" data-slug="' + cat.slug + '" data-type="' + cat.type + '">' + cat.name + "</div>";
-      });
-      html += "</div></div>";
+        $wrap.html(html);
 
-      // Quốc gia
-      html += '<div class="kkphim-section">'
-        + buildSection("home", "Quốc Gia", "")
-        + '<div class="kkphim-cats" id="kkphim-countries">';
-      COUNTRIES.forEach(function (c) {
-        html += '<div class="kkphim-cat" data-slug="' + c.slug + '" data-country="1">' + c.name + "</div>";
-      });
-      html += "</div></div>";
+        // Bind search
+        $wrap.find('#kkp-sinput').on('input', function() {
+            var q = $(this).val().trim();
+            clearTimeout(stimer);
+            if (q.length >= 2) {
+                stimer = setTimeout(function() { showSearch(q); }, 480);
+            } else if (q.length === 0) {
+                showRows(CATS[0], 1);
+            }
+        });
 
-      // Rows placeholder
-      html += '<div id="kkphim-rows"><div class="kkphim-section">' + buildSection("trend", "Đang Tải...", "") + '<div class="kkphim-row">' + buildLoading() + "</div></div></div>";
+        // Bind cat chips
+        $wrap.on('click', '.kkp-cat[data-ci]', function() {
+            $wrap.find('.kkp-cat[data-ci]').removeClass('on');
+            $(this).addClass('on');
+            var idx = parseInt($(this).attr('data-ci'));
+            showRows(CATS[idx], 1);
+        });
 
-      html += "</div>";
+        // Bind country chips
+        $wrap.on('click', '.kkp-cat[data-cn]', function() {
+            $wrap.find('.kkp-cat[data-cn]').removeClass('on');
+            $(this).addClass('on');
+            var slug = $(this).attr('data-cn');
+            showCountry(slug, 1);
+        });
 
-      self.component.html(html);
+        // Bind card click
+        $wrap.on('click', '.kkp-card[data-slug]', function() {
+            openDetail($(this).attr('data-slug'));
+        });
 
-      // Bind search
-      var searchInput = self.component.find("#kkphim-search-input");
-      searchInput.on("input", function () {
-        var q = $(this).val().trim();
-        clearTimeout(self.search_timer);
-        self.search_timer = setTimeout(function () {
-          if (q.length >= 2) {
-            self.renderSearchResults(q);
-          } else if (q.length === 0) {
-            self.loadHomeRows();
-          }
-        }, 500);
-      });
-      searchInput.on("focus", function () {
-        self.component.find("#kkphim-search").addClass("focus");
-      });
-      searchInput.on("blur", function () {
-        self.component.find("#kkphim-search").removeClass("focus");
-      });
+        // Load hero and first rows
+        loadHero();
+        showRows(CATS[0], 1);
+    }
 
-      // Bind category chips
-      self.component.on("click", ".kkphim-cat[data-index]", function () {
-        var idx = parseInt($(this).data("index"));
-        self.component.find(".kkphim-cat[data-index]").removeClass("active");
-        $(this).addClass("active");
-        self.current_cat = CATEGORIES[idx];
-        self.current_page = 1;
-        self.loadCategoryRows(self.current_cat, 1);
-      });
+    // ── HERO ────────────────────────────────────────────
+    function loadHero() {
+        API.tmdbTrending(function(err, results) {
+            if (!results || !results.length) {
+                // fallback to kkphim
+                API.list('phim-le', 1, function(e, items) {
+                    if (items && items.length) renderHeroKK(items[Math.floor(Math.random() * Math.min(items.length, 8))]);
+                });
+                return;
+            }
+            var item = results[Math.floor(Math.random() * Math.min(results.length, 8))];
+            renderHeroTMDB(item);
+        });
+    }
 
-      // Bind country chips
-      self.component.on("click", ".kkphim-cat[data-country]", function () {
-        var slug = $(this).data("slug");
-        self.component.find(".kkphim-cat[data-country]").removeClass("active");
-        $(this).addClass("active");
-        self.loadCountryRows(slug, 1);
-      });
+    function renderHeroTMDB(item) {
+        var bg    = item.backdrop_path ? (TMDB_IMG + 'w1280' + item.backdrop_path) : '';
+        var poster= item.poster_path   ? (TMDB_IMG + 'w500'  + item.poster_path)   : '';
+        var name  = item.title || item.name || '';
+        var orig  = item.original_title || item.original_name || '';
+        var year  = (item.release_date || item.first_air_date || '').substr(0, 4);
+        var vote  = item.vote_average ? item.vote_average.toFixed(1) : '';
+        var type  = item.media_type === 'tv' ? 'TV Series' : 'Phim';
+        var slug  = '__tmdb__' + (item.media_type || 'movie') + '__' + item.id;
 
-      // Bind movie card click
-      self.component.on("click", ".kkphim-card", function () {
-        var slug = $(this).data("slug");
-        if (slug) self.openDetail(slug);
-      });
-
-      // Load data
-      self.loadHero();
-      self.loadHomeRows();
-    };
-
-    // ============================================================
-    // HERO
-    // ============================================================
-    self.loadHero = function () {
-      API.getList("phim-le", 1, function (err, data) {
-        if (err || !data) return;
-        var items = [];
-        if (data.data && data.data.items) {
-          items = data.data.items;
-        } else if (data.items) {
-          items = data.items;
-        }
-        if (!items.length) return;
-
-        var hero = items[Math.floor(Math.random() * Math.min(items.length, 8))];
-        self.renderHero(hero);
-      });
-    };
-
-    self.renderHero = function (movie) {
-      var bg = imgProxy(movie.thumb_url || movie.poster_url || "");
-      var poster = imgProxy(movie.poster_url || movie.thumb_url || "");
-      var name = movie.name || "";
-      var originName = movie.origin_name || "";
-      var quality = movie.quality || "";
-      var year = movie.year || "";
-      var slug = movie.slug || "";
-      var epCurrent = movie.episode_current || "";
-      var lang = movie.lang || "";
-
-      // Try TMDB enrichment
-      API.tmdbSearch(originName || name, year, function (err, tmdb) {
-        var backdrop = bg;
-        var vote = "";
-        var overview = movie.content || "";
-        var genres = "";
-
-        if (tmdb) {
-          if (tmdb.backdrop_path) backdrop = tmdbBackdrop(tmdb.backdrop_path);
-          if (tmdb.vote_average) vote = tmdb.vote_average.toFixed(1);
-          if (tmdb.overview && !overview) overview = tmdb.overview;
-        }
-
-        var heroEl = self.component.find("#kkphim-hero-bg");
-        var heroContent = self.component.find("#kkphim-hero-content");
-
-        heroEl.css("background-image", "url(" + backdrop + ")");
-
-        var tagsHtml = "";
-        if (quality) tagsHtml += '<span class="kkphim-hero__tag quality">' + quality + "</span>";
-        if (year) tagsHtml += '<span class="kkphim-hero__tag">' + icon("time") + " " + year + "</span>";
-        if (vote) tagsHtml += '<span class="kkphim-hero__tag rating">⭐ " + vote + "</span>";
-        if (lang) tagsHtml += '<span class="kkphim-hero__tag">' + lang + "</span>";
-        if (epCurrent && movie.type === "series") {
-          tagsHtml += '<span class="kkphim-hero__tag">' + icon("ep") + " " + epCurrent + "</span>";
-        }
-
-        heroContent.html(
-          '<div class="kkphim-hero__poster"><img src="' + poster + '" alt="" loading="lazy"/></div>'
-          + '<div class="kkphim-hero__info">'
-          +   '<div class="kkphim-hero__badge">' + icon("film") + " Nổi Bật Hôm Nay</div>"
-          +   '<div class="kkphim-hero__title">' + name + "</div>"
-          +   (originName ? '<div class="kkphim-hero__subtitle">' + originName + "</div>" : "")
-          +   '<div class="kkphim-hero__meta">' + tagsHtml + "</div>"
-          +   '<div class="kkphim-hero__actions">'
-          +     '<button class="kkphim-hero__btn kkphim-hero__btn--play" data-slug="' + slug + '">'
-          +       icon("play") + " Xem Ngay"
-          +     "</button>"
-          +     '<button class="kkphim-hero__btn kkphim-hero__btn--info" data-slug="' + slug + '" data-info="1">'
-          +       icon("info") + " Chi Tiết"
-          +     "</button>"
-          +   "</div>"
-          + "</div>"
+        $wrap.find('#kkp-hero-bg').css('background-image', 'url(' + bg + ')');
+        $wrap.find('#kkp-hero-body').html(
+            '<div class="kkp-hero-poster"><img src="' + poster + '" alt="" loading="lazy"></div>'
+            + '<div class="kkp-hero-info">'
+            +   '<div class="kkp-hero-badge">' + ic('fire') + ' Xu Hướng Tuần Này</div>'
+            +   '<div class="kkp-hero-title">' + name + '</div>'
+            +   (orig && orig !== name ? '<div class="kkp-hero-orig">' + orig + '</div>' : '')
+            +   '<div class="kkp-hero-tags">'
+            +     (year  ? '<span class="kkp-hero-tag">' + ic('clock') + ' ' + year + '</span>' : '')
+            +     (vote  ? '<span class="kkp-hero-tag rt">⭐ ' + vote + '</span>' : '')
+            +     '<span class="kkp-hero-tag">' + type + '</span>'
+            +   '</div>'
+            +   '<div class="kkp-hero-btns">'
+            +     '<button class="kkp-hero-btn primary" data-slug="' + slug + '" data-play="1">' + ic('play') + ' Xem Ngay</button>'
+            +     '<button class="kkp-hero-btn secondary" data-slug="' + slug + '">' + ic('film') + ' Chi Tiết</button>'
+            +   '</div>'
+            + '</div>'
         );
 
-        // Bind hero buttons
-        heroContent.find(".kkphim-hero__btn--play").on("click", function () {
-          self.openDetail($(this).data("slug"), true);
+        $wrap.find('.kkp-hero-btn').on('click', function() {
+            openDetail($(this).attr('data-slug'));
         });
-        heroContent.find("[data-info]").on("click", function () {
-          self.openDetail($(this).data("slug"), false);
+    }
+
+    function renderHeroKK(m) {
+        var bg    = imgUrl(m.thumb_url || m.poster_url);
+        var poster= imgUrl(m.poster_url || m.thumb_url);
+        var name  = m.name || '';
+        var orig  = m.origin_name || '';
+        var year  = m.year || '';
+        var ql    = m.quality || '';
+        var slug  = m.slug || '';
+
+        $wrap.find('#kkp-hero-bg').css('background-image', 'url(' + bg + ')');
+        $wrap.find('#kkp-hero-body').html(
+            '<div class="kkp-hero-poster"><img src="' + poster + '" alt="" loading="lazy"></div>'
+            + '<div class="kkp-hero-info">'
+            +   '<div class="kkp-hero-badge">' + ic('fire') + ' Nổi Bật Hôm Nay</div>'
+            +   '<div class="kkp-hero-title">' + name + '</div>'
+            +   (orig ? '<div class="kkp-hero-orig">' + orig + '</div>' : '')
+            +   '<div class="kkp-hero-tags">'
+            +     (ql   ? '<span class="kkp-hero-tag ql">' + ql + '</span>' : '')
+            +     (year ? '<span class="kkp-hero-tag">' + ic('clock') + ' ' + year + '</span>' : '')
+            +   '</div>'
+            +   '<div class="kkp-hero-btns">'
+            +     '<button class="kkp-hero-btn primary" data-slug="' + slug + '">' + ic('play') + ' Xem Ngay</button>'
+            +     '<button class="kkp-hero-btn secondary" data-slug="' + slug + '">' + ic('film') + ' Chi Tiết</button>'
+            +   '</div>'
+            + '</div>'
+        );
+        $wrap.find('.kkp-hero-btn').on('click', function() {
+            openDetail($(this).attr('data-slug'));
         });
-      });
-    };
+    }
 
-    // ============================================================
-    // LOAD HOME ROWS
-    // ============================================================
-    self.loadHomeRows = function () {
-      var rowsEl = self.component.find("#kkphim-rows");
-      rowsEl.html('<div class="kkphim-section">' + buildSection("trend", "Đang Tải...", "") + buildLoading() + "</div>");
+    // ── HOME ROWS ────────────────────────────────────────
+    var HOME_ROWS = [
+        { type: 'phim-le',   title: '🎬 Phim Lẻ Mới',     icon: 'film',  api: 'list' },
+        { type: 'phim-bo',   title: '📺 Phim Bộ Mới',     icon: 'ep',    api: 'list' },
+        { type: 'hoat-hinh', title: '🎠 Hoạt Hình',        icon: 'star',  api: 'list' },
+        { type: 'tv-shows',  title: '📡 TV Shows',          icon: 'trend', api: 'list' }
+    ];
 
-      var rowsDef = [
-        { type: "phim-bo", title: "📺 Phim Bộ Mới Nhất", icon: "film" },
-        { type: "phim-le", title: "🎬 Phim Lẻ Mới Nhất", icon: "film" },
-        { type: "hoat-hinh", title: "🎠 Hoạt Hình", icon: "film" },
-        { type: "tv-shows", title: "📡 TV Shows", icon: "film" }
-      ];
+    function showHomeRows() {
+        var $c = $wrap.find('#kkp-content');
+        var html = '';
 
-      var html = "";
-      var loaded = 0;
+        // TMDB Trending row
+        html += '<div class="kkp-section kkp-in">'
+            + secHead('fire', '🔥 Xu Hướng TMDB', '')
+            + '<div id="kkp-tmdb-row" class="kkp-row">' + loading() + '</div>'
+            + '</div>';
 
-      // First load trending from TMDB
-      html += '<div class="kkphim-section kkphim-fadein" id="kkphim-tmdb-trending">'
-        + buildSection("trend", "🔥 Xu Hướng TMDB", '<span class="kkphim-section__more">Xem thêm ' + icon("chev_right") + "</span>")
-        + '<div class="kkphim-row" id="kkphim-tmdb-row">' + buildLoading() + "</div>"
-        + "</div>";
-
-      rowsDef.forEach(function (rd) {
-        html += '<div class="kkphim-section kkphim-fadein" id="kkphim-row-' + rd.type + '">'
-          + buildSection(rd.icon, rd.title, '<span class="kkphim-section__more" data-type="' + rd.type + '">Xem thêm ' + icon("chev_right") + "</span>")
-          + '<div class="kkphim-row" id="kkphim-row-items-' + rd.type + '">' + buildLoading() + "</div>"
-          + "</div>";
-      });
-
-      html += '<div class="kkphim-section kkphim-fadein">'
-        + buildSection("grid", "🌏 Phim Theo Quốc Gia", "")
-        + "</div>";
-
-      rowsEl.html(html);
-
-      // Load TMDB trending
-      API.tmdbTrending(function (err, data) {
-        var tmdbRow = rowsEl.find("#kkphim-tmdb-row");
-        if (err || !data || !data.results) {
-          tmdbRow.html(buildEmpty("Không tải được"));
-          return;
-        }
-        var cardsHtml = "";
-        data.results.slice(0, 20).forEach(function (item) {
-          var fakeMovie = {
-            name: item.title || item.name || "",
-            origin_name: item.original_title || item.original_name || "",
-            year: (item.release_date || item.first_air_date || "").substr(0, 4),
-            poster_url: tmdbPoster(item.poster_path),
-            thumb_url: tmdbPoster(item.poster_path),
-            slug: item.id + "_tmdb_" + (item.media_type || "movie"),
-            quality: "HD",
-            type: item.media_type === "tv" ? "series" : "single",
-            _tmdbVote: item.vote_average ? item.vote_average.toFixed(1) : ""
-          };
-          cardsHtml += buildCard(fakeMovie);
+        HOME_ROWS.forEach(function(r) {
+            html += '<div class="kkp-section kkp-in">'
+                + secHead(r.icon, r.title, 'data-more="' + r.type + '"')
+                + '<div id="kkp-row-' + r.type + '" class="kkp-row">' + loading() + '</div>'
+                + '</div>';
         });
-        tmdbRow.html(cardsHtml || buildEmpty());
-      });
 
-      // Load each kkphim row
-      rowsDef.forEach(function (rd) {
-        API.getList(rd.type, 1, function (err, data) {
-          var rowEl = rowsEl.find("#kkphim-row-items-" + rd.type);
-          if (err || !data) {
-            rowEl.html(buildEmpty());
+        $c.html(html);
+
+        // Load TMDB
+        API.tmdbTrending(function(e, results) {
+            var html2 = '';
+            (results || []).slice(0, 20).forEach(function(item) {
+                item._vote = item.vote_average ? item.vote_average.toFixed(1) : '';
+                html2 += buildCard(item, true);
+            });
+            $c.find('#kkp-tmdb-row').html(html2 || empty());
+        });
+
+        // Load KK rows
+        HOME_ROWS.forEach(function(r) {
+            API.list(r.type, 1, function(e, items) {
+                var h = '';
+                (items || []).slice(0, 20).forEach(function(m) { h += buildCard(m, false); });
+                $c.find('#kkp-row-' + r.type).html(h || empty());
+            });
+        });
+
+        // More button
+        $c.off('click.more').on('click.more', '[data-more]', function() {
+            var type = $(this).attr('data-more');
+            openListPage(type);
+        });
+    }
+
+    // ── ROWS for a selected cat ──────────────────────────
+    function showRows(cat, page) {
+        var $c = $wrap.find('#kkp-content');
+
+        if (!cat) { showHomeRows(); return; }
+
+        $c.html(loading());
+
+        var fn = cat.api === 'list'
+            ? function(cb) { API.list(cat.slug, page, cb); }
+            : function(cb) { API.category(cat.slug, page, cb); };
+
+        fn(function(e, items, total) {
+            var h = '<div class="kkp-section kkp-in">'
+                + secHead('film', cat.name, '')
+                + '<div class="kkp-grid">';
+            (items || []).forEach(function(m) { h += buildCard(m, false); });
+            h += '</div>' + buildPages(page, total) + '</div>';
+            $c.html(h);
+
+            $c.off('click.page').on('click.page', '.kkp-page[data-p]', function() {
+                showRows(cat, parseInt($(this).attr('data-p')));
+            });
+        });
+    }
+
+    // ── COUNTRY rows ──────────────────────────────────────
+    function showCountry(slug, page) {
+        var $c = $wrap.find('#kkp-content');
+        var cname = '';
+        COUNTRIES.forEach(function(c) { if (c.slug === slug) cname = c.name; });
+
+        $c.html(loading());
+        API.country(slug, page, function(e, items, total) {
+            var h = '<div class="kkp-section kkp-in">'
+                + secHead('film', cname || slug, '')
+                + '<div class="kkp-grid">';
+            (items || []).forEach(function(m) { h += buildCard(m, false); });
+            h += '</div>' + buildPages(page, total) + '</div>';
+            $c.html(h);
+
+            $c.off('click.page').on('click.page', '.kkp-page[data-p]', function() {
+                showCountry(slug, parseInt($(this).attr('data-p')));
+            });
+        });
+    }
+
+    // ── SEARCH ───────────────────────────────────────────
+    function showSearch(q) {
+        var $c = $wrap.find('#kkp-content');
+        $c.html(loading());
+        API.search(q, 1, function(e, items) {
+            if (!items || !items.length) { $c.html(empty('Không tìm thấy: ' + q)); return; }
+            var h = '<div class="kkp-section kkp-in">'
+                + secHead('search', 'Kết quả: "' + q + '" (' + items.length + ')', '')
+                + '<div class="kkp-grid">';
+            items.forEach(function(m) { h += buildCard(m, false); });
+            h += '</div></div>';
+            $c.html(h);
+        });
+    }
+
+    // ── LIST PAGE (full) ─────────────────────────────────
+    function openListPage(type, page) {
+        page = page || 1;
+        var cat = null;
+        CATS.forEach(function(c) { if (c.slug === type) cat = c; });
+        var title = cat ? cat.name : type;
+
+        $home = $wrap.html();
+        $wrap.html(loading());
+
+        API.list(type, page, function(e, items, total) {
+            var h = '<div class="kkp-in" style="padding:14px">'
+                + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">'
+                +   '<div class="kkp-det-back" id="kkp-list-back">' + ic('back') + '</div>'
+                +   '<span style="font-size:clamp(15px,3vw,20px);font-weight:800">' + title + '</span>'
+                + '</div>'
+                + '<div class="kkp-grid">';
+            (items || []).forEach(function(m) { h += buildCard(m, false); });
+            h += '</div>' + buildPages(page, total) + '</div>';
+            $wrap.html(h);
+
+            $wrap.find('#kkp-list-back').on('click', function() {
+                $wrap.html($home);
+                $home = null;
+                rebindHome();
+            });
+
+            $wrap.on('click', '.kkp-page[data-p]', function() {
+                openListPage(type, parseInt($(this).attr('data-p')));
+            });
+
+            $wrap.on('click', '.kkp-card[data-slug]', function() {
+                openDetail($(this).attr('data-slug'));
+            });
+        });
+    }
+
+    // ── DETAIL ───────────────────────────────────────────
+    function openDetail(slug) {
+        var saved = $wrap.html();
+        $wrap.html(loading());
+
+        if (slug.indexOf('__tmdb__') === 0) {
+            // Format: __tmdb__movie__123 or __tmdb__tv__123
+            var parts = slug.replace('__tmdb__', '').split('__');
+            var mtype = parts[0] || 'movie';
+            var mid   = parts[1] || '';
+            API.tmdbDetail(mid, mtype, function(e, td) {
+                if (!td) { $wrap.html(empty()); return; }
+                renderDetail(null, [], td, null, saved);
+            });
             return;
-          }
-          var items = [];
-          if (data.data && data.data.items) items = data.data.items;
-          else if (data.items) items = data.items;
-
-          var cardsHtml = "";
-          items.slice(0, 20).forEach(function (movie) {
-            cardsHtml += buildCard(movie);
-          });
-          rowEl.html(cardsHtml || buildEmpty());
-        });
-      });
-
-      // Bind "Xem thêm"
-      rowsEl.on("click", ".kkphim-section__more[data-type]", function () {
-        var type = $(this).data("type");
-        self.openListPage(type);
-      });
-    };
-
-    // ============================================================
-    // LOAD CATEGORY ROWS
-    // ============================================================
-    self.loadCategoryRows = function (cat, page) {
-      var rowsEl = self.component.find("#kkphim-rows");
-      rowsEl.html('<div class="kkphim-section">' + buildSection("grid", cat.name, "") + buildLoading() + "</div>");
-
-      var fetchFn = cat.type === "list"
-        ? function (cb) { API.getList(cat.slug, page, cb); }
-        : function (cb) { API.getByCategory(cat.slug, page, cb); };
-
-      fetchFn(function (err, data) {
-        if (err || !data) {
-          rowsEl.html(buildEmpty("Không tải được dữ liệu"));
-          return;
-        }
-        var items = [];
-        var totalPages = 1;
-        if (data.data && data.data.items) {
-          items = data.data.items;
-          if (data.data.params && data.data.params.pagination) {
-            totalPages = data.data.params.pagination.totalPages || 1;
-          }
-        } else if (data.items) {
-          items = data.items;
-          totalPages = data.totalPages || 1;
         }
 
-        var html = '<div class="kkphim-section kkphim-fadein">'
-          + buildSection("grid", cat.name, "")
-          + '<div class="kkphim-grid">';
-        items.forEach(function (m) { html += buildCard(m); });
-        html += "</div>";
-        html += buildPagination(page, totalPages, "cat");
-        html += "</div>";
+        API.detail(slug, function(e, data) {
+            if (e || !data) { $wrap.html(empty('Không tải được thông tin phim')); return; }
+            var movie    = data.movie || data;
+            var episodes = data.episodes || [];
 
-        rowsEl.html(html);
-
-        rowsEl.on("click", ".kkphim-page-btn[data-page]", function () {
-          var p = parseInt($(this).data("page"));
-          self.current_page = p;
-          self.loadCategoryRows(self.current_cat, p);
-        });
-      });
-    };
-
-    // ============================================================
-    // LOAD COUNTRY ROWS
-    // ============================================================
-    self.loadCountryRows = function (slug, page) {
-      var rowsEl = self.component.find("#kkphim-rows");
-      var country = COUNTRIES.find(function (c) { return c.slug === slug; }) || { name: slug };
-      rowsEl.html('<div class="kkphim-section">' + buildSection("home", country.name, "") + buildLoading() + "</div>");
-
-      API.getByCountry(slug, page, function (err, data) {
-        if (err || !data) {
-          rowsEl.html(buildEmpty());
-          return;
-        }
-        var items = [];
-        var totalPages = 1;
-        if (data.data && data.data.items) {
-          items = data.data.items;
-          if (data.data.params && data.data.params.pagination) {
-            totalPages = data.data.params.pagination.totalPages || 1;
-          }
-        } else if (data.items) {
-          items = data.items;
-        }
-
-        var html = '<div class="kkphim-section kkphim-fadein">'
-          + buildSection("home", country.name, "")
-          + '<div class="kkphim-grid">';
-        items.forEach(function (m) { html += buildCard(m); });
-        html += "</div>";
-        html += buildPagination(page, totalPages, "country_" + slug);
-        html += "</div>";
-
-        rowsEl.html(html);
-      });
-    };
-
-    // ============================================================
-    // SEARCH RESULTS
-    // ============================================================
-    self.renderSearchResults = function (q) {
-      var rowsEl = self.component.find("#kkphim-rows");
-      rowsEl.html('<div class="kkphim-section">'
-        + buildSection("search", 'Tìm kiếm: "' + q + '"', "")
-        + buildLoading()
-        + "</div>");
-
-      API.search(q, 1, function (err, data) {
-        if (err || !data) {
-          rowsEl.html(buildEmpty("Không tìm được kết quả cho: " + q));
-          return;
-        }
-        var items = [];
-        if (data.data && data.data.items) items = data.data.items;
-        else if (data.items) items = data.items;
-
-        if (!items.length) {
-          rowsEl.html(buildEmpty('Không tìm được kết quả cho "' + q + '"'));
-          return;
-        }
-
-        var html = '<div class="kkphim-section kkphim-fadein">'
-          + buildSection("search", 'Kết quả: "' + q + '" (' + items.length + " phim)", "")
-          + '<div class="kkphim-grid">';
-        items.forEach(function (m) { html += buildCard(m); });
-        html += "</div></div>";
-
-        rowsEl.html(html);
-      });
-    };
-
-    // ============================================================
-    // OPEN LIST PAGE (full page)
-    // ============================================================
-    self.openListPage = function (type) {
-      var title = CATEGORIES.find(function (c) { return c.slug === type; });
-      title = title ? title.name : type;
-
-      var oldContent = self.component.html();
-      self.component.html(buildLoading());
-
-      API.getList(type, 1, function (err, data) {
-        if (err || !data) {
-          self.component.html(buildEmpty());
-          return;
-        }
-        var items = [];
-        var totalPages = 1;
-        if (data.data && data.data.items) {
-          items = data.data.items;
-          if (data.data.params && data.data.params.pagination) {
-            totalPages = data.data.params.pagination.totalPages || 1;
-          }
-        } else if (data.items) {
-          items = data.items;
-          totalPages = data.totalPages || 1;
-        }
-
-        var html = '<div class="kkphim-fadein" style="padding:1em">';
-        html += '<div style="display:flex;align-items:center;gap:0.8em;margin-bottom:1.2em;">'
-          + '<div class="kkphim-detail__back" id="kkphim-list-back">' + icon("back") + "</div>"
-          + '<h2 style="margin:0;font-size:clamp(1em,3vw,1.4em);">' + title + "</h2>"
-          + "</div>";
-        html += '<div class="kkphim-grid">';
-        items.forEach(function (m) { html += buildCard(m); });
-        html += "</div>";
-        html += buildPagination(1, totalPages, "list_" + type);
-        html += "</div>";
-
-        self.component.html(html);
-
-        self.component.find("#kkphim-list-back").on("click", function () {
-          self.component.html(oldContent);
-          self.bindEvents();
-        });
-
-        // Paginate
-        self.component.on("click", ".kkphim-page-btn[data-page]", function () {
-          var p = parseInt($(this).data("page"));
-          self.component.html(buildLoading());
-          API.getList(type, p, function (err2, data2) {
-            // re-render same structure
-            self.openListPage(type);
-          });
-        });
-      });
-    };
-
-    // ============================================================
-    // OPEN DETAIL
-    // ============================================================
-    self.openDetail = function (slug, autoPlay) {
-      // Handle TMDB-only items
-      if (slug.indexOf("_tmdb_") !== -1) {
-        var parts = slug.split("_tmdb_");
-        var tmdbId = parts[0];
-        var mediaType = parts[1] || "movie";
-        self.openTmdbDetail(tmdbId, mediaType);
-        return;
-      }
-
-      var oldContent = self.component.html();
-      self.component.html(buildLoading());
-
-      API.getDetail(slug, function (err, data) {
-        if (err || !data) {
-          self.component.html(buildEmpty("Không tải được thông tin phim"));
-          return;
-        }
-
-        var movie = data.movie || data;
-        var episodes = data.episodes || [];
-
-        // Enrich with TMDB
-        API.tmdbSearch(movie.origin_name || movie.name, movie.year, function (terr, tmdb) {
-          if (tmdb && tmdb.id) {
-            var mtype = tmdb.media_type || "movie";
-            API.tmdbDetail(tmdb.id, mtype, function (err2, td) {
-              self.renderDetail(movie, episodes, td, oldContent, autoPlay);
+            // Enrich with TMDB
+            var qTitle = movie.origin_name || movie.name || '';
+            API.tmdbSearch(qTitle, movie.year, function(te, tmdb) {
+                if (tmdb && tmdb.id) {
+                    var mtype2 = tmdb.media_type || 'movie';
+                    API.tmdbDetail(tmdb.id, mtype2, function(e2, td) {
+                        renderDetail(movie, episodes, td, tmdb, saved);
+                    });
+                } else {
+                    renderDetail(movie, episodes, null, null, saved);
+                }
             });
-          } else {
-            self.renderDetail(movie, episodes, null, oldContent, autoPlay);
-          }
         });
-      });
-    };
+    }
 
-    self.openTmdbDetail = function (tmdbId, mediaType) {
-      var oldContent = self.component.html();
-      self.component.html(buildLoading());
+    function renderDetail(movie, episodes, tmdb, tmdbBase, saved) {
+        // Prefer tmdb data for backdrop
+        var name     = (movie && movie.name) || (tmdb && (tmdb.title || tmdb.name)) || '';
+        var orig     = (movie && movie.origin_name) || (tmdb && (tmdb.original_title || tmdb.original_name)) || '';
+        var year     = (movie && movie.year) || (tmdb && ((tmdb.release_date || tmdb.first_air_date || '').substr(0,4))) || '';
+        var quality  = (movie && movie.quality) || 'HD';
+        var status   = (movie && movie.status) || '';
+        var time     = (movie && movie.time) || (tmdb && tmdb.runtime ? (Math.floor(tmdb.runtime/60) + 'h ' + (tmdb.runtime%60) + 'm') : '') || '';
+        var lang     = (movie && movie.lang) || '';
+        var content  = stripTags((movie && movie.content) || (tmdb && tmdb.overview) || '');
+        var type     = (movie && movie.type) || '';
+        var actorArr = (movie && movie.actor) || [];
+        var dirArr   = (movie && movie.director) || [];
+        var catArr   = (movie && movie.category) || [];
+        var cntArr   = (movie && movie.country) || [];
 
-      API.tmdbDetail(tmdbId, mediaType, function (err, td) {
-        if (err || !td) {
-          self.component.html(buildEmpty());
-          return;
+        var poster   = (tmdb && tmdb.poster_path) ? tmdbImg(tmdb.poster_path, 'w500')
+                     : imgUrl((movie && (movie.poster_url || movie.thumb_url)) || '');
+        var backdrop = (tmdb && tmdb.backdrop_path) ? (TMDB_IMG + 'w1280' + tmdb.backdrop_path)
+                     : imgUrl((movie && (movie.thumb_url || movie.poster_url)) || '');
+
+        var tmdbVote   = (tmdb && tmdb.vote_average) ? tmdb.vote_average.toFixed(1) : '';
+        var tmdbGenres = (tmdb && tmdb.genres) || [];
+        var cast       = (tmdb && tmdb.credits && tmdb.credits.cast) ? tmdb.credits.cast.slice(0,15) : [];
+        var trailer    = '';
+        if (tmdb && tmdb.videos && tmdb.videos.results) {
+            var tv = tmdb.videos.results.find(function(v) { return v.type === 'Trailer' && v.site === 'YouTube'; });
+            if (tv) trailer = 'https://www.youtube.com/watch?v=' + tv.key;
         }
-        var movie = {
-          name: td.title || td.name || "",
-          origin_name: td.original_title || td.original_name || "",
-          year: (td.release_date || td.first_air_date || "").substr(0, 4),
-          poster_url: tmdbPoster(td.poster_path, "w500"),
-          thumb_url: tmdbBackdrop(td.backdrop_path, "w1280"),
-          quality: "HD",
-          content: td.overview || "",
-          type: mediaType === "tv" ? "series" : "single",
-          time: formatRuntime(td.runtime),
-          lang: "Phụ đề",
-          status: "Hoàn Tất"
-        };
-        self.renderDetail(movie, [], td, oldContent, false);
-      });
-    };
+        var recs = (tmdb && tmdb.recommendations && tmdb.recommendations.results) ? tmdb.recommendations.results.slice(0,12) : [];
 
-    self.renderDetail = function (movie, episodes, tmdb, oldContent, autoPlay) {
-      var name = movie.name || "";
-      var originName = movie.origin_name || "";
-      var year = movie.year || "";
-      var quality = movie.quality || "";
-      var status = movie.status || "";
-      var time = movie.time || "";
-      var lang = movie.lang || "";
-      var content = stripHtml(movie.content || "");
-      var type = movie.type || "";
-      var categories = movie.category || [];
-      var countries = movie.country || [];
-      var actors = movie.actor || [];
-      var director = movie.director || [];
+        // ── Build HTML ───────────────────────────────────
+        var h = '<div class="kkp-detail kkp-in">';
 
-      var poster = imgProxy(movie.poster_url || "");
-      var backdrop = imgProxy(movie.thumb_url || movie.poster_url || "");
+        // Hero
+        h += '<div class="kkp-det-hero">'
+            + '<div class="kkp-det-bg" style="background-image:url(' + backdrop + ')"></div>'
+            + '<div class="kkp-det-grad"></div>'
+            + '<div class="kkp-det-back" id="kkp-det-back">' + ic('back') + '</div>'
+            + '</div>';
 
-      // TMDB data
-      var tmdbVote = "";
-      var tmdbGenres = [];
-      var tmdbCast = [];
-      var tmdbTrailer = "";
-      var tmdbRecommendations = [];
-      var imdbVote = "";
+        // Body
+        h += '<div class="kkp-det-body">';
+        h += '<div class="kkp-det-main">';
 
-      if (tmdb) {
-        if (tmdb.backdrop_path) backdrop = tmdbBackdrop(tmdb.backdrop_path, "w1280");
-        if (tmdb.poster_path && !movie.poster_url) poster = tmdbPoster(tmdb.poster_path, "w500");
-        if (tmdb.vote_average) tmdbVote = tmdb.vote_average.toFixed(1);
-        if (tmdb.genres) tmdbGenres = tmdb.genres;
-        if (tmdb.credits && tmdb.credits.cast) tmdbCast = tmdb.credits.cast.slice(0, 15);
-        if (tmdb.videos && tmdb.videos.results) {
-          var trailer = tmdb.videos.results.find(function (v) { return v.type === "Trailer" && v.site === "YouTube"; });
-          if (trailer) tmdbTrailer = "https://www.youtube.com/watch?v=" + trailer.key;
-        }
-        if (tmdb.recommendations && tmdb.recommendations.results) {
-          tmdbRecommendations = tmdb.recommendations.results.slice(0, 12);
-        }
-        if (tmdb.imdb_id) {
-          // We'd need another call for IMDB rating, use tmdb for now
-        }
-        if (tmdb.external_ids && tmdb.external_ids.imdb_id) {
-          // placeholder
-        }
-      }
+        // Poster
+        h += '<div class="kkp-det-poster"><img src="' + poster + '" alt="" loading="lazy" onerror="this.src=\'\'"></div>';
 
-      // Build HTML
-      var html = '<div class="kkphim-detail kkphim-fadein">';
+        // Info
+        h += '<div class="kkp-det-info">';
+        if (quality) h += '<span class="kkp-det-ql">' + quality + '</span>';
+        h += '<h1 class="kkp-det-title">' + name + '</h1>';
+        if (orig && orig !== name) h += '<p class="kkp-det-orig">' + orig + '</p>';
 
-      // Hero
-      html += '<div class="kkphim-detail__hero">'
-        + '<div class="kkphim-detail__bg" style="background-image:url(' + backdrop + ')"></div>'
-        + '<div class="kkphim-detail__gradient"></div>'
-        + '<div class="kkphim-detail__back" id="kkphim-detail-back">' + icon("back") + "</div>"
-        + "</div>";
+        // Stats
+        h += '<div class="kkp-det-stats">';
+        if (year)   h += '<span class="kkp-det-stat">' + ic('clock') + ' ' + year + '</span>';
+        if (time)   h += '<span class="kkp-det-stat">' + ic('clock') + ' ' + time + '</span>';
+        if (lang)   h += '<span class="kkp-det-stat">' + lang + '</span>';
+        if (status) h += '<span class="kkp-det-stat grn">✓ ' + status + '</span>';
+        if (type === 'series') h += '<span class="kkp-det-stat">' + ic('ep') + ' Phim Bộ</span>';
+        else if (type === 'single') h += '<span class="kkp-det-stat">' + ic('film') + ' Phim Lẻ</span>';
+        h += '</div>';
 
-      // Body
-      html += '<div class="kkphim-detail__body">';
-
-      // Main info
-      html += '<div class="kkphim-detail__main">';
-
-      // Poster
-      html += '<div class="kkphim-detail__poster">'
-        + '<img src="' + poster + '" alt="' + name + '" loading="lazy" />'
-        + "</div>";
-
-      // Right
-      html += '<div class="kkphim-detail__right">';
-      if (quality) html += '<span class="kkphim-detail__quality">' + quality + "</span>";
-      html += '<h1 class="kkphim-detail__title">' + name + "</h1>";
-      if (originName) html += '<p class="kkphim-detail__subtitle">' + originName + "</p>";
-
-      // Stats row
-      html += '<div class="kkphim-detail__stats">';
-      if (year) html += '<span class="kkphim-detail__stat">' + icon("time") + " " + year + "</span>";
-      if (time) html += '<span class="kkphim-detail__stat">' + icon("time") + " " + time + "</span>";
-      if (lang) html += '<span class="kkphim-detail__stat">' + lang + "</span>";
-      if (status) html += '<span class="kkphim-detail__stat green">✓ " + status + "</span>";
-      if (type === "series") html += '<span class="kkphim-detail__stat">' + icon("ep") + " Phim Bộ</span>";
-      else if (type === "single") html += '<span class="kkphim-detail__stat">' + icon("film") + " Phim Lẻ</span>";
-      html += "</div>";
-
-      // Ratings
-      if (tmdbVote || imdbVote) {
-        html += '<div class="kkphim-ratings">';
+        // Ratings
         if (tmdbVote) {
-          html += '<div class="kkphim-rating-box tmdb">'
-            + '<span class="kkphim-rating-box__icon">🎬</span>'
-            + '<div><div class="kkphim-rating-box__val">⭐ ' + tmdbVote + "</div>"
-            + '<div class="kkphim-rating-box__src">TMDB</div></div>'
-            + "</div>";
+            h += '<div class="kkp-rating-row">'
+                + '<div class="kkp-rating-box tmdb">'
+                +   '<span class="kkp-rating-icon">🎬</span>'
+                +   '<div><div class="kkp-rating-val">⭐ ' + tmdbVote + '</div><div class="kkp-rating-src">TMDB</div></div>'
+                + '</div></div>';
         }
-        html += "</div>";
-      }
 
-      // Actions
-      html += '<div class="kkphim-detail__actions">';
-      if (episodes.length) {
-        html += '<button class="kkphim-btn kkphim-btn--primary" id="kkphim-watch-btn">'
-          + icon("play") + " Xem Phim"
-          + "</button>";
-      }
-      html += '<button class="kkphim-btn kkphim-btn--secondary" id="kkphim-bookmark-btn">'
-        + icon("bookmark") + " Lưu"
-        + "</button>";
-      if (tmdbTrailer) {
-        html += '<a href="' + tmdbTrailer + '" target="_blank" class="kkphim-btn kkphim-btn--trailer" id="kkphim-trailer-btn">'
-          + icon("youtube") + " Trailer"
-          + "</a>";
-      }
-      html += "</div>"; // actions
-
-      html += "</div>"; // right
-      html += "</div>"; // main
-
-      // Description
-      if (content) {
-        html += '<div class="kkphim-detail__desc-wrap">'
-          + '<div class="kkphim-detail__desc-title">Nội Dung</div>'
-          + '<div class="kkphim-detail__desc" id="kkphim-desc">' + content + "</div>"
-          + '<span class="kkphim-detail__desc-toggle" id="kkphim-desc-toggle">Xem thêm ▾</span>'
-          + "</div>";
-      }
-
-      // Meta table
-      html += '<div class="kkphim-detail__meta-table">';
-      if (director && director.length) {
-        html += '<div class="kkphim-detail__meta-key">Đạo diễn</div>'
-          + '<div class="kkphim-detail__meta-val">' + (Array.isArray(director) ? director.join(", ") : director) + "</div>";
-      }
-      if (actors && actors.length) {
-        var actorsStr = Array.isArray(actors) ? actors.slice(0, 6).join(", ") : actors;
-        html += '<div class="kkphim-detail__meta-key">Diễn viên</div>'
-          + '<div class="kkphim-detail__meta-val">' + actorsStr + "</div>";
-      }
-      if (countries && countries.length) {
-        var countryStr = countries.map(function (c) { return c.name || c; }).join(", ");
-        html += '<div class="kkphim-detail__meta-key">Quốc gia</div>'
-          + '<div class="kkphim-detail__meta-val">' + countryStr + "</div>";
-      }
-      if (categories && categories.length) {
-        var catStr = categories.map(function (c) { return c.name || c; }).join(", ");
-        html += '<div class="kkphim-detail__meta-key">Thể loại</div>'
-          + '<div class="kkphim-detail__meta-val">' + catStr + "</div>";
-      }
-      html += "</div>";
-
-      // Genres from TMDB
-      if (tmdbGenres.length) {
-        html += '<div class="kkphim-genres">';
-        tmdbGenres.forEach(function (g) {
-          html += '<span class="kkphim-genre">' + g.name + "</span>";
-        });
-        html += "</div>";
-      }
-
-      // Episodes
-      if (episodes.length) {
-        html += self.buildEpisodes(episodes);
-      }
-
-      // Cast from TMDB
-      if (tmdbCast.length) {
-        html += '<div class="kkphim-cast">';
-        html += buildSection("person", "Diễn Viên", "");
-        html += '<div class="kkphim-cast__row">';
-        tmdbCast.forEach(function (c) {
-          var img = c.profile_path ? tmdbProfile(c.profile_path) : "";
-          html += '<div class="kkphim-cast-card">'
-            + '<img class="kkphim-cast-card__img" src="' + img + '" alt="' + c.name + '" loading="lazy" onerror="this.src=\'\'"/>'
-            + '<div class="kkphim-cast-card__name">' + c.name + "</div>"
-            + '<div class="kkphim-cast-card__role">' + (c.character || "") + "</div>"
-            + "</div>";
-        });
-        html += "</div></div>";
-      }
-
-      // Recommendations
-      if (tmdbRecommendations.length) {
-        html += '<div class="kkphim-similar">';
-        html += buildSection("film", "Có Thể Bạn Thích", "");
-        html += '<div class="kkphim-row">';
-        tmdbRecommendations.forEach(function (item) {
-          var fakeMovie = {
-            name: item.title || item.name || "",
-            poster_url: tmdbPoster(item.poster_path),
-            year: (item.release_date || item.first_air_date || "").substr(0, 4),
-            slug: item.id + "_tmdb_" + (item.media_type || "movie"),
-            quality: "HD",
-            type: item.media_type === "tv" ? "series" : "single",
-            _tmdbVote: item.vote_average ? item.vote_average.toFixed(1) : ""
-          };
-          html += buildCard(fakeMovie);
-        });
-        html += "</div></div>";
-      }
-
-      html += "</div>"; // body
-      html += "</div>"; // detail
-
-      self.component.html(html);
-
-      // Back button
-      self.component.find("#kkphim-detail-back").on("click", function () {
-        self.component.html(oldContent);
-        self.bindEvents();
-      });
-
-      // Description toggle
-      self.component.find("#kkphim-desc-toggle").on("click", function () {
-        var desc = self.component.find("#kkphim-desc");
-        var isExpanded = desc.hasClass("expanded");
-        desc.toggleClass("expanded");
-        $(this).text(isExpanded ? "Xem thêm ▾" : "Thu gọn ▴");
-      });
-
-      // Watch button -> scroll to episodes
-      self.component.find("#kkphim-watch-btn").on("click", function () {
-        var epsEl = self.component.find(".kkphim-episodes");
-        if (epsEl.length) {
-          $("html, body").animate({ scrollTop: epsEl.offset().top - 20 }, 400);
+        // Actions
+        h += '<div class="kkp-det-actions">';
+        if (episodes.length) {
+            h += '<button class="kkp-btn red" id="kkp-watch-btn">' + ic('play') + ' Xem Phim</button>';
         }
-      });
-
-      // Bind episode click
-      self.component.on("click", ".kkphim-ep", function () {
-        self.component.find(".kkphim-ep").removeClass("current");
-        $(this).addClass("current");
-        var url = $(this).data("url");
-        var name = $(this).data("name");
-        if (url) self.playEpisode(url, name, movie);
-      });
-
-      // Bind server tabs
-      self.component.on("click", ".kkphim-server-tab", function () {
-        self.component.find(".kkphim-server-tab").removeClass("active");
-        $(this).addClass("active");
-        var serverIdx = parseInt($(this).data("server"));
-        self.component.find(".kkphim-ep-panel").hide();
-        self.component.find(".kkphim-ep-panel[data-server='" + serverIdx + "']").show();
-      });
-
-      // Similar / recommendations card click
-      self.component.on("click", ".kkphim-card", function () {
-        var slug = $(this).data("slug");
-        if (slug) self.openDetail(slug, false);
-      });
-
-      // Auto play first ep
-      if (autoPlay && episodes.length) {
-        var firstEp = self.component.find(".kkphim-ep").first();
-        if (firstEp.length) {
-          setTimeout(function () { firstEp.trigger("click"); }, 500);
+        h += '<button class="kkp-btn ghost" id="kkp-save-btn">' + ic('heart') + ' Lưu</button>';
+        if (trailer) {
+            h += '<a href="' + trailer + '" target="_blank" class="kkp-btn yt">' + ic('yt') + ' Trailer</a>';
         }
-      }
-    };
+        h += '</div>';
+        h += '</div>'; // info
+        h += '</div>'; // main
 
-    // ============================================================
-    // BUILD EPISODES
-    // ============================================================
-    self.buildEpisodes = function (episodes) {
-      if (!episodes.length) return "";
+        // Description
+        if (content) {
+            h += '<div class="kkp-desc-title">Nội Dung</div>'
+                + '<div class="kkp-desc-text" id="kkp-desc">' + content + '</div>'
+                + '<span class="kkp-desc-more" id="kkp-desc-btn">Xem thêm ▾</span>';
+        }
 
-      var html = '<div class="kkphim-episodes">';
-      html += '<div class="kkphim-episodes__header">';
-      html += '<div class="kkphim-episodes__title">' + icon("ep") + " Danh Sách Tập</div>";
-      var totalEps = 0;
-      episodes.forEach(function (s) { totalEps += (s.server_data || []).length; });
-      html += '<div class="kkphim-episodes__count">' + totalEps + " tập</div>";
-      html += "</div>";
+        // Genres
+        if (tmdbGenres.length) {
+            h += '<div class="kkp-genres">';
+            tmdbGenres.forEach(function(g) { h += '<span class="kkp-genre">' + g.name + '</span>'; });
+            h += '</div>';
+        }
 
-      if (episodes.length > 1) {
-        html += '<div class="kkphim-server-tabs">';
-        episodes.forEach(function (server, i) {
-          html += '<div class="kkphim-server-tab' + (i === 0 ? " active" : "") + '" data-server="' + i + '">'
-            + (server.server_name || ("Server " + (i + 1)))
-            + "</div>";
-        });
-        html += "</div>";
-      }
+        // Meta
+        h += '<div class="kkp-meta">';
+        if (dirArr.length) {
+            h += '<div class="kkp-meta-k">Đạo diễn</div><div class="kkp-meta-v">' + (Array.isArray(dirArr) ? dirArr.join(', ') : dirArr) + '</div>';
+        }
+        if (actorArr.length) {
+            var actStr = Array.isArray(actorArr) ? actorArr.slice(0,6).join(', ') : actorArr;
+            h += '<div class="kkp-meta-k">Diễn viên</div><div class="kkp-meta-v">' + actStr + '</div>';
+        }
+        if (cntArr.length) {
+            h += '<div class="kkp-meta-k">Quốc gia</div><div class="kkp-meta-v">' + cntArr.map(function(c) { return c.name || c; }).join(', ') + '</div>';
+        }
+        if (catArr.length) {
+            h += '<div class="kkp-meta-k">Thể loại</div><div class="kkp-meta-v">' + catArr.map(function(c) { return c.name || c; }).join(', ') + '</div>';
+        }
+        h += '</div>';
 
-      episodes.forEach(function (server, si) {
-        var eps = server.server_data || [];
-        html += '<div class="kkphim-ep-panel" data-server="' + si + '" style="' + (si > 0 ? "display:none" : "") + '">';
-        html += '<div class="kkphim-ep-grid">';
-        eps.forEach(function (ep) {
-          var url = ep.link_m3u8 || ep.link_embed || "";
-          var epName = ep.name || ep.slug || "";
-          html += '<div class="kkphim-ep" data-url="' + url + '" data-name="' + epName + '">' + epName + "</div>";
-        });
-        html += "</div></div>";
-      });
+        // Divider
+        h += '<div class="kkp-divider"></div>';
 
-      html += "</div>";
-      return html;
-    };
+        // Episodes
+        if (episodes.length) {
+            h += buildEpisodeHTML(episodes);
+        }
 
-    // ============================================================
-    // PLAY EPISODE
-    // ============================================================
-    self.playEpisode = function (url, epName, movie) {
-      if (!url) {
-        Lampa.Noty.show("Không tìm thấy link phát");
-        return;
-      }
-
-      // Use Lampa player
-      if (typeof Lampa.Player !== "undefined") {
-        Lampa.Player.play({
-          url: url,
-          title: (movie.name || "") + (epName ? " - Tập " + epName : ""),
-          poster: imgProxy(movie.poster_url || movie.thumb_url || "")
-        });
-      } else {
-        // Fallback: open in new tab
-        window.open(url, "_blank");
-      }
-    };
-
-    // ============================================================
-    // PAGINATION
-    // ============================================================
-    function buildPagination(current, total, ctx) {
-      if (total <= 1) return "";
-      var html = '<div class="kkphim-pagination">';
-
-      if (current > 1) {
-        html += '<div class="kkphim-page-btn" data-page="' + (current - 1) + '" data-ctx="' + ctx + '">‹</div>';
-      }
-
-      var startPage = Math.max(1, current - 2);
-      var endPage = Math.min(total, current + 2);
-
-      if (startPage > 1) {
-        html += '<div class="kkphim-page-btn" data-page="1" data-ctx="' + ctx + '">1</div>';
-        if (startPage > 2) html += '<span style="color:rgba(255,255,255,0.3);padding:0 0.3em;">···</span>';
-      }
-
-      for (var p = startPage; p <= endPage; p++) {
-        html += '<div class="kkphim-page-btn' + (p === current ? " active" : "") + '" data-page="' + p + '" data-ctx="' + ctx + '">' + p + "</div>";
-      }
-
-      if (endPage < total) {
-        if (endPage < total - 1) html += '<span style="color:rgba(255,255,255,0.3);padding:0 0.3em;">···</span>';
-        html += '<div class="kkphim-page-btn" data-page="' + total + '" data-ctx="' + ctx + '">' + total + "</div>";
-      }
-
-      if (current < total) {
-        html += '<div class="kkphim-page-btn" data-page="' + (current + 1) + '" data-ctx="' + ctx + '">›</div>';
-      }
-
-      html += "</div>";
-      return html;
-    }
-
-    // ============================================================
-    // RE-BIND EVENTS after restoring content
-    // ============================================================
-    self.bindEvents = function () {
-      self.component.off("click");
-
-      self.component.on("click", ".kkphim-card", function () {
-        var slug = $(this).data("slug");
-        if (slug) self.openDetail(slug, false);
-      });
-
-      self.component.on("click", ".kkphim-cat[data-index]", function () {
-        var idx = parseInt($(this).data("index"));
-        self.component.find(".kkphim-cat[data-index]").removeClass("active");
-        $(this).addClass("active");
-        self.current_cat = CATEGORIES[idx];
-        self.loadCategoryRows(self.current_cat, 1);
-      });
-
-      self.component.on("click", ".kkphim-cat[data-country]", function () {
-        var slug = $(this).data("slug");
-        self.component.find(".kkphim-cat[data-country]").removeClass("active");
-        $(this).addClass("active");
-        self.loadCountryRows(slug, 1);
-      });
-
-      self.component.on("click", ".kkphim-section__more[data-type]", function () {
-        self.openListPage($(this).data("type"));
-      });
-
-      var searchInput = self.component.find("#kkphim-search-input");
-      searchInput.off("input").on("input", function () {
-        var q = $(this).val().trim();
-        clearTimeout(self.search_timer);
-        self.search_timer = setTimeout(function () {
-          if (q.length >= 2) self.renderSearchResults(q);
-          else if (q.length === 0) self.loadHomeRows();
-        }, 500);
-      });
-    };
-  }
-
-  // ============================================================
-  // REGISTER LAMPA PLUGIN
-  // ============================================================
-  function registerPlugin() {
-    if (typeof Lampa === "undefined") {
-      console.warn("[KKPhim] Lampa is not defined");
-      return;
-    }
-
-    // Register as a menu item / component
-    Lampa.Component.add("kkphim_home", {
-      create: function () {
-        var plugin = new KKPhimPlugin();
-        this.html = plugin.create();
-      },
-      start: function () {},
-      pause: function () {},
-      stop: function () {},
-      destroy: function () {}
-    });
-
-    // Add to main menu
-    Lampa.Template.add("kkphim_menu", "<li class=\"menu__item selector\" data-action=\"kkphim_home\"><div class=\"menu__ico\">🎬</div><div class=\"menu__text\">KKPhim</div></li>");
-
-    Lampa.Listener.follow("app", function (e) {
-      if (e.type === "ready") {
-        try {
-          // Add menu button
-          var menuItem = document.createElement("li");
-          menuItem.className = "menu__item selector";
-          menuItem.setAttribute("data-action", "kkphim_home");
-          menuItem.innerHTML = '<div class="menu__ico">'
-            + '<svg viewBox="0 0 24 24" fill="currentColor" style="width:1.4em;height:1.4em"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>'
-            + '</div><div class="menu__text">KKPhim</div>';
-
-          menuItem.addEventListener("click", function () {
-            Lampa.Activity.push({
-              url: "",
-              title: "KKPhim",
-              component: "kkphim_home",
-              page: 1
+        // Cast
+        if (cast.length) {
+            h += '<div class="kkp-section">'
+                + secHead('person', 'Diễn Viên', '')
+                + '<div class="kkp-cast-row">';
+            cast.forEach(function(c) {
+                var img = c.profile_path ? tmdbImg(c.profile_path, 'w185') : '';
+                h += '<div class="kkp-cast-card">'
+                    + '<img class="kkp-cast-img" src="' + img + '" alt="" loading="lazy" onerror="this.src=\'\'">'
+                    + '<div class="kkp-cast-name">' + (c.name || '') + '</div>'
+                    + '<div class="kkp-cast-role">' + (c.character || '') + '</div>'
+                    + '</div>';
             });
-          });
-
-          var menu = document.querySelector(".menu__list");
-          if (menu) {
-            menu.appendChild(menuItem);
-            Lampa.Controller.toggle("menu");
-          }
-        } catch (ex) {
-          console.warn("[KKPhim] Menu inject error:", ex);
+            h += '</div></div>';
         }
 
-        Lampa.Noty.show("🎬 KKPhim Plugin v" + PLUGIN_VERSION + " đã sẵn sàng!");
-      }
-    });
-  }
+        // Recommendations
+        if (recs.length) {
+            h += '<div class="kkp-section">'
+                + secHead('film', '👍 Có Thể Bạn Thích', '')
+                + '<div class="kkp-row">';
+            recs.forEach(function(item) {
+                item._vote = item.vote_average ? item.vote_average.toFixed(1) : '';
+                h += buildCard(item, true);
+            });
+            h += '</div></div>';
+        }
 
-  // ============================================================
-  // LAMPA ACTIVITY COMPONENT
-  // ============================================================
-  (function () {
-    var defined = false;
+        h += '</div>'; // body
+        h += '</div>'; // detail
 
-    function define() {
-      if (defined) return;
-      defined = true;
+        $wrap.html(h);
 
-      Lampa.Component.add("kkphim_home", {
-        create: function () {
-          var self = this;
-          self.plugin = new KKPhimPlugin();
-          self.html = $("<div></div>");
-          var content = self.plugin.create();
-          self.html.append(content);
-          return self.html;
-        },
-        start: function () {},
-        pause: function () {},
-        stop: function () {},
-        destroy: function () {}
-      });
-    }
+        // Back
+        $wrap.find('#kkp-det-back').on('click', function() {
+            $wrap.html(saved);
+            rebindHome();
+        });
 
-    if (window.Lampa) {
-      define();
-      registerPlugin();
-    } else {
-      document.addEventListener("DOMContentLoaded", function () {
-        if (window.Lampa) {
-          define();
-          registerPlugin();
-        } else {
-          // Wait for Lampa
-          var check = setInterval(function () {
-            if (window.Lampa) {
-              clearInterval(check);
-              define();
-              registerPlugin();
+        // Desc toggle
+        $wrap.find('#kkp-desc-btn').on('click', function() {
+            var $d = $wrap.find('#kkp-desc');
+            var exp = $d.hasClass('exp');
+            $d.toggleClass('exp');
+            $(this).text(exp ? 'Xem thêm ▾' : 'Thu gọn ▴');
+        });
+
+        // Watch scroll
+        $wrap.find('#kkp-watch-btn').on('click', function() {
+            var $e = $wrap.find('.kkp-eps');
+            if ($e.length) $('html,body').animate({ scrollTop: $e.offset().top - 10 }, 350);
+        });
+
+        // Save
+        $wrap.find('#kkp-save-btn').on('click', function() {
+            if (typeof Lampa !== 'undefined' && Lampa.Favorite) {
+                Lampa.Favorite.toggle({
+                    id: (movie && movie.slug) || '',
+                    title: name,
+                    poster: poster
+                });
             }
-          }, 200);
-          setTimeout(function () { clearInterval(check); }, 15000);
-        }
-      });
-    }
-  })();
+            Lampa && Lampa.Noty && Lampa.Noty.show('Đã lưu: ' + name);
+        });
 
-  // ============================================================
-  // MANIFEST
-  // ============================================================
-  if (window.Lampa && Lampa.Manifest) {
-    Lampa.Manifest.plugins = Lampa.Manifest.plugins || [];
-    Lampa.Manifest.plugins.push({
-      name: PLUGIN_NAME,
-      version: PLUGIN_VERSION,
-      description: "Plugin xem phim KKPhim với giao diện đẹp và TMDB integration",
-      author: "KKPhim Plugin",
-      icon: "🎬"
+        // Server tabs
+        $wrap.on('click', '.kkp-svr-tab', function() {
+            var si = $(this).attr('data-si');
+            $wrap.find('.kkp-svr-tab').removeClass('on');
+            $(this).addClass('on');
+            $wrap.find('.kkp-ep-panel').removeClass('on');
+            $wrap.find('.kkp-ep-panel[data-si="' + si + '"]').addClass('on');
+        });
+
+        // Episode click
+        $wrap.on('click', '.kkp-ep[data-url]', function() {
+            $wrap.find('.kkp-ep').removeClass('on');
+            $(this).addClass('on');
+            var url  = $(this).attr('data-url');
+            var enm  = $(this).attr('data-en');
+            playEpisode(url, name + (enm ? ' - Tập ' + enm : ''), poster);
+        });
+
+        // Rec card click
+        $wrap.on('click', '.kkp-card[data-slug]', function() {
+            openDetail($(this).attr('data-slug'));
+        });
+    }
+
+    // ── EPISODES ─────────────────────────────────────────
+    function buildEpisodeHTML(episodes) {
+        var total = 0;
+        episodes.forEach(function(s) { total += (s.server_data || []).length; });
+
+        var h = '<div class="kkp-eps">'
+            + '<div class="kkp-eps-head">'
+            +   '<div class="kkp-eps-title">' + ic('ep') + ' Danh Sách Tập</div>'
+            +   '<div class="kkp-eps-count">' + total + ' tập</div>'
+            + '</div>';
+
+        if (episodes.length > 1) {
+            h += '<div class="kkp-svr-tabs">';
+            episodes.forEach(function(s, i) {
+                h += '<div class="kkp-svr-tab' + (i===0?' on':'') + '" data-si="' + i + '">' + (s.server_name || 'Server ' + (i+1)) + '</div>';
+            });
+            h += '</div>';
+        }
+
+        episodes.forEach(function(s, si) {
+            var eps = s.server_data || [];
+            h += '<div class="kkp-ep-panel' + (si===0?' on':'') + '" data-si="' + si + '">';
+            h += '<div class="kkp-ep-grid">';
+            eps.forEach(function(ep) {
+                var url = ep.link_m3u8 || ep.link_embed || '';
+                var en  = ep.name || ep.slug || '';
+                h += '<div class="kkp-ep" data-url="' + url + '" data-en="' + en + '">' + en + '</div>';
+            });
+            h += '</div></div>';
+        });
+
+        h += '</div>';
+        return h;
+    }
+
+    // ── PLAY ─────────────────────────────────────────────
+    function playEpisode(url, title, poster) {
+        if (!url) { if (window.Lampa) Lampa.Noty.show('Không tìm thấy link phát'); return; }
+        try {
+            if (window.Lampa && Lampa.Player) {
+                Lampa.Player.play({ url: url, title: title, poster: poster });
+            } else {
+                window.open(url, '_blank');
+            }
+        } catch(ex) {
+            window.open(url, '_blank');
+        }
+    }
+
+    // ── REBIND after back ─────────────────────────────────
+    function rebindHome() {
+        $wrap.off('click');
+
+        $wrap.on('click', '.kkp-cat[data-ci]', function() {
+            $wrap.find('.kkp-cat[data-ci]').removeClass('on');
+            $(this).addClass('on');
+            showRows(CATS[parseInt($(this).attr('data-ci'))], 1);
+        });
+
+        $wrap.on('click', '.kkp-cat[data-cn]', function() {
+            $wrap.find('.kkp-cat[data-cn]').removeClass('on');
+            $(this).addClass('on');
+            showCountry($(this).attr('data-cn'), 1);
+        });
+
+        $wrap.on('click', '.kkp-card[data-slug]', function() {
+            openDetail($(this).attr('data-slug'));
+        });
+
+        $wrap.on('click', '[data-more]', function() {
+            openListPage($(this).attr('data-more'));
+        });
+
+        $wrap.find('#kkp-sinput').off('input').on('input', function() {
+            var q = $(this).val().trim();
+            clearTimeout(stimer);
+            if (q.length >= 2) {
+                stimer = setTimeout(function() { showSearch(q); }, 480);
+            } else if (q.length === 0) {
+                showHomeRows();
+            }
+        });
+    }
+
+    // expose
+    return self;
+}
+
+// ─── LAMPA REGISTRATION ──────────────────────────────────
+function register() {
+    if (typeof Lampa === 'undefined') return;
+
+    Lampa.Component.add('kkphim_main', {
+        create: function() {
+            var plugin = new KKPhim();
+            this.html  = plugin.create();
+        },
+        start:   function() {},
+        pause:   function() {},
+        stop:    function() {},
+        destroy: function() {}
     });
-  }
+
+    Lampa.Listener.follow('app', function(e) {
+        if (e.type !== 'ready') return;
+
+        // inject menu item
+        try {
+            var li = document.createElement('li');
+            li.className = 'menu__item selector';
+            li.innerHTML =
+                '<div class="menu__ico" style="font-size:22px">🎬</div>'
+                + '<div class="menu__text">KKPhim</div>';
+
+            li.addEventListener('click', function() {
+                Lampa.Activity.push({
+                    url: '', title: 'KKPhim',
+                    component: 'kkphim_main',
+                    page: 1
+                });
+            });
+
+            var ul = document.querySelector('.menu__list');
+            if (ul) ul.appendChild(li);
+        } catch(ex) {}
+
+        Lampa.Noty.show('🎬 KKPhim đã sẵn sàng!');
+    });
+}
+
+// ─── BOOT ────────────────────────────────────────────────
+if (window.Lampa) {
+    register();
+} else {
+    var _boot = setInterval(function() {
+        if (window.Lampa) {
+            clearInterval(_boot);
+            register();
+        }
+    }, 300);
+    setTimeout(function() { clearInterval(_boot); }, 20000);
+}
 
 })();
