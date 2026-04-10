@@ -1,20 +1,22 @@
-/* KKPhim Torrent Extension v1.0 */
-/* Yêu cầu: File 1 (UI) phải được cài trước */
+/* KKPhim Torrent Extension v1.1 - Fixed */
 (function(){
 'use strict';
 if(window.__kkphim_torrent_started)return;
 window.__kkphim_torrent_started=true;
 
-/* Chờ file UI chính sẵn sàng */
+/* Chờ file UI chính sẵn sàng - sửa flag đúng */
 function waitForCore(cb){
   var t=0;
   var iv=setInterval(function(){
     t++;
-    if(window.__kkphim_plugin_started){
+    if(window.__kkphim_ui_started){ /* FIX 1: đúng flag */
       clearInterval(iv);
       cb();
     }
-    if(t>100){clearInterval(iv);console.warn('[KKTorrent] Timeout waiting for core');}
+    if(t>100){
+      clearInterval(iv);
+      console.warn('[KKTorrent] Timeout waiting for core UI');
+    }
   },100);
 }
 
@@ -24,7 +26,7 @@ waitForCore(function(){
 
 function init(){
 
-/* ---- HELPERS (copy từ core nếu cần) ---- */
+/* ---- HELPERS ---- */
 function ls(){try{return JSON.parse(localStorage.getItem('kkphim_settings'))||{};}catch(e){return{};}}
 function ss(o){try{var c=ls();Object.keys(o).forEach(function(k){c[k]=o[k];});localStorage.setItem('kkphim_settings',JSON.stringify(c));}catch(e){}}
 function tsHost(){return ls().torrserver_host||'';}
@@ -359,7 +361,6 @@ async function oTorTV(tid,title,poster,imdb){
     }else if(sn.length===1){
       pTorEp(sn[0],id,title,poster);
     }else{
-      /* Không có season info, thử stream thẳng */
       Lampa.Noty.show('Đang tìm...');
       var st=await fStreams('tv',id,1,1);
       if(st.length)showStr(st,title+' S01E01',poster);
@@ -404,7 +405,29 @@ async function playEpTorrent(imdbId,seasonNum,epNum,title,poster){
   }catch(e){Lampa.Noty.show('Lỗi: '+(e.message||''));}
 }
 
-/* ---- TORRENT BUTTON BUILDER ---- */
+/* ---- TORRENT BUTTON CSS ---- */
+function injectTorrentCSS(){
+  var id='kk-torrent-ext-css';
+  if($('#'+id).length)return;
+  $('head').append(
+    '<style id="'+id+'">'
+    +'.kk-src-btn--torrent{'
+    +'background:linear-gradient(135deg,rgba(220,38,38,0.15),rgba(220,38,38,0.05))!important;'
+    +'border:1px solid rgba(220,38,38,0.3)!important;}'
+    +'.kk-src-btn--torrent:hover,.kk-src-btn--torrent.focus,.kk-src-btn--torrent.selected{'
+    +'background:linear-gradient(135deg,rgba(220,38,38,0.3),rgba(220,38,38,0.1))!important;'
+    +'border-color:rgba(220,38,38,0.6)!important;}'
+    +'.kk-src-btn--aio{'
+    +'background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(124,58,237,0.05))!important;'
+    +'border:1px solid rgba(124,58,237,0.3)!important;}'
+    +'.kk-src-btn--aio:hover,.kk-src-btn--aio.focus,.kk-src-btn--aio.selected{'
+    +'background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(124,58,237,0.1))!important;'
+    +'border-color:rgba(124,58,237,0.6)!important;}'
+    +'</style>'
+  );
+}
+
+/* ---- BUTTON EVENT HELPER ---- */
 function bE(el,fn){
   var sx=0,sy=0,mv=false,tc=false;
   el.on('touchstart',function(e){
@@ -431,7 +454,11 @@ function bE(el,fn){
   });
 }
 
-function bTorBtn(mt,tid,title,poster,imdb){
+/* ---- BUILD TORRENT BUTTON
+ * FIX 2: Đổi tên thành buildTorrentBtn để khớp với file UI
+ * File UI gọi: window.__kkphim_torrent.buildTorrentBtn(mt,tid,t,ps,imdb)
+ ---- */
+function buildTorrentBtn(mt,tid,title,poster,imdb){
   var eng=tEngine();
   var label=eng==='aio'?'AIOStreams':'Torrent';
   if(tsHost())label+=' → TS';
@@ -440,137 +467,151 @@ function bTorBtn(mt,tid,title,poster,imdb){
     +'<div class="kk-sb-main">'+label+'</div>'
     +'<div class="kk-sb-sub">Phát qua torrent</div>'
     +'</div>');
+
+  /* FIX 3: Lấy imdbId từ window._detCtx (đúng tên file UI dùng)
+   * File UI set: _detCtx = {imdbId: imdb} nhưng là local var.
+   * Ta expose nó qua window trong hàm này nếu được truyền vào */
+  var resolvedImdb = imdb || (window._kkphim_detCtx && window._kkphim_detCtx.imdbId) || null;
+
   if(mt==='movie'){
-    bE(btn,function(){oTorMov(tid,title,poster,imdb);});
+    bE(btn,function(){oTorMov(tid,title,poster,resolvedImdb);});
   }else{
-    bE(btn,function(){oTorTV(tid,title,poster,imdb);});
+    bE(btn,function(){oTorTV(tid,title,poster,resolvedImdb);});
   }
   return $('<div style="width:100%"></div>').append(btn);
 }
 
-/* ---- PATCH: inject torrent button vào detail ---- */
-/*
-  Chiến lược: Hook vào Lampa.Activity và theo dõi khi component
-  kkphim_tmdb_detail được render, sau đó inject nút torrent vào khu vực .kk-actions
-  Nếu file UI đã có bTorBtn thì không cần patch.
-  Nếu file UI KHÔNG có bTorBtn (vì tách file), ta cần inject.
-*/
+/* ---- BUILD SETTINGS SECTION
+ * FIX 4: Thêm hàm buildSettings mà file UI gọi:
+ * window.__kkphim_torrent.buildSettings(w, mg, mo, mi, si2, comp)
+ ---- */
+function buildSettings(w, mg, mo, mi, si2, comp){
+  var s = {};
+  try{ s = JSON.parse(localStorage.getItem('kkphim_settings'))||{}; }catch(e){}
 
-function patchDetailComponent(){
-  /* Ghi đè global functions mà file UI gọi */
-  window.__kkphim_torrent_api = {
-    bTorBtn: bTorBtn,
-    oTorMov: oTorMov,
-    oTorTV: oTorTV,
-    playEpTorrent: playEpTorrent,
-    fStreams: fStreams,
-    showStr: showStr,
-    tsHost: tsHost,
-    playTS: playTS
-  };
+  /* --- Engine selector --- */
+  var gEng = mg('Torrent Engine');
+  var eng = s.torrent_engine||'torrentio';
+  [{k:'torrentio',n:'Torrentio'},{k:'aio',n:'AIOStreams'}].forEach(function(o){
+    gEng.append(mo(o.n,'',eng===o.k,function(){
+      ss({torrent_engine:o.k});
+      Lampa.Noty.show('Engine: '+o.n);
+      comp.create();
+    }));
+  });
+  w.append(gEng);
 
-  /* Inject CSS bổ sung cho nút torrent */
-  injectTorrentCSS();
+  /* --- Torrentio config --- */
+  var gTio = mg('Torrentio Config');
+  var tioVal = s.torrentio_config||'';
+  gTio.append(mi(
+    'Torrentio Config URL',
+    'Dán URL manifest hoặc chuỗi config',
+    tioVal||'(chưa cấu hình)',
+    'Torrentio Config URL',
+    'torrentio_config',
+    s
+  ));
+  w.append(gTio);
 
-  /* Theo dõi DOM để inject nút vào detail page */
-  observeDetailPage();
+  /* --- AIOStreams URL --- */
+  var gAio = mg('AIOStreams URL');
+  var aioVal = s.aio_url||'';
+  gAio.append(mi(
+    'AIOStreams Base URL',
+    'VD: https://aiostreams.example.com',
+    aioVal||'(chưa cấu hình)',
+    'AIOStreams Base URL',
+    'aio_url',
+    s
+  ));
+  w.append(gAio);
+
+  /* --- TorrServer --- */
+  var gTS = mg('TorrServer');
+  var tsVal = s.torrserver_host||'';
+  var tsPassVal = s.torrserver_password||'';
+  gTS.append(mi(
+    'TorrServer Host',
+    'VD: http://192.168.1.100:8090',
+    tsVal||'(chưa cấu hình)',
+    'TorrServer Host (bao gồm http://)',
+    'torrserver_host',
+    s
+  ));
+  gTS.append(mi(
+    'TorrServer Password',
+    'Để trống nếu không có',
+    tsPassVal?'••••••':'(không có)',
+    'TorrServer Password',
+    'torrserver_password',
+    s
+  ));
+  w.append(gTS);
+
+  /* --- Test connection --- */
+  var gTest = mg('Kiểm tra kết nối');
+  var testBtn = si2('Test TorrServer','Kiểm tra kết nối TorrServer','Thử');
+  bE(testBtn, function(){
+    var host = tsHost();
+    if(!host){Lampa.Noty.show('Chưa nhập host!');return;}
+    Lampa.Noty.show('Đang kiểm tra...');
+    fetch(tsU('/echo'),{method:'GET',headers:tsH()})
+      .then(function(r){
+        if(r.ok)Lampa.Noty.show('TorrServer OK!');
+        else Lampa.Noty.show('Lỗi: HTTP '+r.status);
+      })
+      .catch(function(e){Lampa.Noty.show('Không kết nối được: '+(e.message||''));});
+  });
+  gTest.append(testBtn);
+  w.append(gTest);
 }
 
-function injectTorrentCSS(){
-  var id='kk-torrent-ext-css';
-  if($('#'+id).length)return;
-  $('head').append(
-    '<style id="'+id+'">'
-    +'.kk-src-btn--torrent{'
-    +'background:linear-gradient(135deg,rgba(220,38,38,0.15),rgba(220,38,38,0.05))!important;'
-    +'border:1px solid rgba(220,38,38,0.3)!important;}'
-    +'.kk-src-btn--torrent:hover,.kk-src-btn--torrent.focus,.kk-src-btn--torrent.selected{'
-    +'background:linear-gradient(135deg,rgba(220,38,38,0.3),rgba(220,38,38,0.1))!important;'
-    +'border-color:rgba(220,38,38,0.6)!important;}'
-    +'.kk-src-btn--aio{'
-    +'background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(124,58,237,0.05))!important;'
-    +'border:1px solid rgba(124,58,237,0.3)!important;}'
-    +'.kk-src-btn--aio:hover,.kk-src-btn--aio.focus,.kk-src-btn--aio.selected{'
-    +'background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(124,58,237,0.1))!important;'
-    +'border-color:rgba(124,58,237,0.6)!important;}'
-    +'.kk-tor-injected{border-top:1px solid rgba(255,255,255,0.06);margin-top:0.5em;padding-top:0.5em;}'
-    +'</style>'
-  );
-}
+/* ---- EXPOSE API ra window.__kkphim_torrent
+ * FIX 2 (tiếp): Namespace phải là __kkphim_torrent (không phải __kkphim_torrent_api)
+ * và phải có đúng các method mà file UI gọi:
+ *   - buildTorrentBtn(mt, tid, t, ps, imdb)
+ *   - buildSettings(w, mg, mo, mi, si2, comp)
+ *   - playEpTorrent(imdbId, seasonNum, epNum, title, poster)
+ ---- */
+window.__kkphim_torrent = {
+  buildTorrentBtn:  buildTorrentBtn,   /* File UI gọi cái này */
+  buildSettings:    buildSettings,     /* File UI gọi cái này */
+  playEpTorrent:    playEpTorrent,     /* kkphim_season_detail gọi */
+  /* Bonus exports để dùng nội bộ nếu cần */
+  oTorMov:          oTorMov,
+  oTorTV:           oTorTV,
+  fStreams:         fStreams,
+  showStr:          showStr,
+  tsHost:           tsHost,
+  playTS:           playTS
+};
 
-/* ---- OBSERVER: inject vào .kk-actions khi xuất hiện ---- */
-var _lastInjected=null;
-
-function observeDetailPage(){
-  /* Lampa Activity listener */
-  Lampa.Listener.follow('activity',function(e){
+/* FIX 3: Expose _detCtx ra window để file Torrent đọc được
+ * File UI dùng local var _detCtx, ta patch window._kkphim_detCtx
+ * bằng cách hook vào Activity */
+function patchDetCtx(){
+  Lampa.Listener.follow('activity', function(e){
     if(e.type==='start'||e.type==='push'){
-      setTimeout(tryInject,800);
-      setTimeout(tryInject,1500);
-      setTimeout(tryInject,2500);
+      setTimeout(function(){
+        try{
+          var act = Lampa.Activity && Lampa.Activity.active && Lampa.Activity.active();
+          if(act && act.component==='kkphim_tmdb_detail'){
+            /* Đọc imdb từ act nếu có, hoặc để null */
+            window._kkphim_detCtx = { imdbId: act.imdb_id || null };
+          }
+        }catch(e2){}
+      }, 500);
     }
   });
-
-  /* MutationObserver để bắt DOM thay đổi */
-  var obs=new MutationObserver(function(){
-    tryInject();
-  });
-  obs.observe(document.body,{childList:true,subtree:true});
-}
-
-function tryInject(){
-  /* Tìm .kk-actions chưa có nút torrent */
-  var actions=$('.kk-actions');
-  if(!actions.length)return;
-
-  actions.each(function(){
-    var act=$(this);
-    /* Kiểm tra đã inject chưa */
-    if(act.find('.kk-tor-injected').length)return;
-    /* Kiểm tra có phải detail page không */
-    if(!act.closest('.kk-detail-wrap').length)return;
-
-    /* Lấy thông tin từ context */
-    var ctx=getCurrentDetailCtx();
-    if(!ctx)return;
-
-    /* Tạo wrapper với class đánh dấu */
-    var wrap=$('<div class="kk-tor-injected"></div>');
-    wrap.append(bTorBtn(ctx.mt,ctx.tid,ctx.title,ctx.poster,ctx.imdb));
-    act.append(wrap);
-
-    console.log('[KKTorrent] Injected torrent button for',ctx.title);
-  });
-}
-
-/* Lấy context từ Lampa Activity hiện tại */
-function getCurrentDetailCtx(){
-  try{
-    var act=Lampa.Activity&&Lampa.Activity.active&&Lampa.Activity.active();
-    if(!act)return null;
-    if(act.component!=='kkphim_tmdb_detail')return null;
-    return{
-      tid:act.tmdb_id,
-      mt:act.media_type||'movie',
-      title:act.title||'',
-      poster:'',
-      imdb:window._kkphim_detCtx&&window._kkphim_detCtx.imdbId||null
-    };
-  }catch(e){return null;}
-}
-
-/* ---- SETTINGS PATCH: thêm section torrent vào settings ---- */
-function patchSettings(){
-  /* Settings đã có trong file UI, chỉ cần expose API */
-  console.log('[KKTorrent] Settings patch ready');
 }
 
 /* ---- STARTUP ---- */
 function startTorrent(){
   injectTorrentMenuCSS();
-  patchDetailComponent();
-  patchSettings();
-  console.log('[KKTorrent] v1.0 OK - Torrent extension loaded');
+  injectTorrentCSS();
+  patchDetCtx();
+  console.log('[KKTorrent] v1.1 OK - Loaded, namespace: window.__kkphim_torrent');
   Lampa.Noty.show('KKPhim Torrent đã sẵn sàng');
 }
 
