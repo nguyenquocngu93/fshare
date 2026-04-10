@@ -90,65 +90,115 @@ function getTypeLabel(item){var t=getItemType(item);return t==='tv'?'TV':'Phim';
 
 /* ---- FONT SCALE ---- */
 /* FIX 1: Bổ sung tất cả class bị thiếu trong fontScale */
+/* Chỉ thay hàm applyFontScale() và injectExtraCSS() */
+
 function applyFontScale(){
   var id='kkphim-font-scale';
   $('#'+id).remove();
   var fs=fontScale();
   var r=fs/100;
+
+  /* Tính px dựa trên viewport để không bị ảnh hưởng bởi parent em */
+  var base=Math.max(14, Math.round(16*r));  /* base px */
+  var sm=Math.max(12, Math.round(13*r));
+  var md=Math.max(14, Math.round(15*r));
+  var lg=Math.max(16, Math.round(18*r));
+  var xl=Math.max(20, Math.round(24*r));
+  var xxl=Math.max(24, Math.round(30*r));
+
   var css=''
     /* Cards */
     +'.kk-card,.kk-card-h,.kk-pfc{font-size:'+fs+'%!important;}'
-    +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+(0.95*r)+'em!important;}'
+    +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+sm+'px!important;}'
+
     /* Hero meta */
-    +'.kk-hm-year{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-hm-country{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-hm-origin{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-hm-tagline{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-hm-vote{font-size:'+(1.8*r)+'em!important;}'
-    +'.kk-hm-vote small{font-size:'+(0.5*r)+'em!important;}'
-    +'.kk-hm-badge{font-size:'+(1.05*r)+'em!important;}'
-    +'.kk-hm-rt,.kk-hm-genres{font-size:'+(1.1*r)+'em!important;}'
-    /* Genres / Tags */
-    +'.kk-body-genres .kk-genre{font-size:'+(1.15*r)+'em!important;}'
-    /* FIX 1a: Tag chips */
-    +'.kk-tag-chip{font-size:'+(0.85*r)+'em!important;}'
+    +'.kk-hm-year{font-size:'+lg+'px!important;}'
+    +'.kk-hm-country{font-size:'+md+'px!important;}'
+    +'.kk-hm-origin{font-size:'+md+'px!important;}'
+    +'.kk-hm-tagline{font-size:'+md+'px!important;}'
+    +'.kk-hm-vote{font-size:'+xxl+'px!important;}'
+    +'.kk-hm-vote small{font-size:'+sm+'px!important;}'
+    +'.kk-hm-badge{font-size:'+md+'px!important;}'
+    +'.kk-hm-rt,.kk-hm-genres{font-size:'+md+'px!important;}'
+
+    /* Genres body */
+    +'.kk-body-genres .kk-genre{font-size:'+md+'px!important;}'
+
+    /* ===== FIX: TAG CHIPS ===== */
+    +'.kk-tag-chip{font-size:'+md+'px!important;'
+    +'padding:0.5em 1em!important;}'
+
     /* Crew */
-    +'.kk-crew-name{font-size:'+(1.5*r)+'em!important;}'
+    +'.kk-crew-name{font-size:'+lg+'px!important;}'
+
     /* Description */
-    +'.kk-body-desc-text{font-size:'+(1.25*r)+'em!important;line-height:1.8!important;}'
+    +'.kk-body-desc-text{font-size:'+md+'px!important;line-height:1.8!important;}'
+
     /* Source buttons */
-    +'.kk-src-btn .kk-sb-main{font-size:'+(1.5*r)+'em!important;}'
-    +'.kk-src-btn .kk-sb-sub{font-size:'+(1.1*r)+'em!important;}'
+    +'.kk-src-btn .kk-sb-main{font-size:'+lg+'px!important;}'
+    +'.kk-src-btn .kk-sb-sub{font-size:'+md+'px!important;}'
+
     /* Episode chips */
-    +'.kk-ep-c{font-size:'+(1.1*r)+'em!important;}'
+    +'.kk-ep-c{font-size:'+md+'px!important;}'
+
     /* Cast */
-    +'.kk-cast-name{font-size:'+(1.3*r)+'em!important;}'
+    +'.kk-cast-name{font-size:'+md+'px!important;}'
+
     /* Settings */
-    +'.kk-stg-group-title{font-size:'+(1.3*r)+'em!important;}'
-    /* Season detail */
-    +'.kk-sd-title{font-size:'+(1.6*r)+'em!important;}'
-    /* Netflix ep */
-    +'.kk-netflix-ep-title{font-size:'+(1.3*r)+'em!important;font-weight:700!important;}'
+    +'.kk-stg-group-title{font-size:'+lg+'px!important;}'
+
     /* Block title */
-    +'.kk-block-title{font-size:'+(1.2*r)+'em!important;}'
-    /* FIX 1b: Tabs */
-    +'.kk-type-tab{font-size:'+(0.9*r)+'em!important;}'
-    /* FIX 1c: Production / Network */
-    +'.kk-prod-name{font-size:'+(0.8*r)+'em!important;}'
-    +'.kk-prod-country{font-size:'+(0.7*r)+'em!important;}'
-    /* FIX 1d: Collection */
-    +'.kk-coll-name{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-coll-label{font-size:'+(0.75*r)+'em!important;}'
-    /* Season cards */
-    +'.kk-season-name{font-size:'+(0.8*r)+'em!important;}'
-    +'.kk-season-meta{font-size:'+(0.7*r)+'em!important;}'
-    /* Page header */
-    +'.kk-page-header-name{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-page-header-meta{font-size:'+(0.88*r)+'em!important;}'
+    +'.kk-block-title{font-size:'+lg+'px!important;font-weight:700!important;}'
+
+    /* ===== FIX: TABS ===== */
+    +'.kk-type-tab{font-size:'+md+'px!important;'
+    +'padding:0.5em 1.2em!important;}'
+
+    /* ===== FIX: PRODUCTION / NETWORK logo + name ===== */
+    +'.kk-prod-card{width:8em!important;}'
+    +'.kk-prod-logo{width:5em!important;height:5em!important;}'
+    +'.kk-prod-name{font-size:'+md+'px!important;font-weight:700!important;}'
+    +'.kk-prod-country{font-size:'+sm+'px!important;}'
+
+    /* ===== FIX: COLLECTION logo + name ===== */
+    +'.kk-coll-label{font-size:'+md+'px!important;font-weight:700!important;}'
+    +'.kk-coll-name{font-size:'+xl+'px!important;font-weight:800!important;}'
+    +'.kk-coll-poster{width:5.5em!important;height:8em!important;}'
+
+    /* ===== FIX: SEASONS poster + name ===== */
+    +'.kk-season-card{width:12em!important;}'
+    +'.kk-season-poster{min-height:8em!important;}'
+    +'.kk-season-name{font-size:'+md+'px!important;font-weight:700!important;}'
+    +'.kk-season-meta{font-size:'+sm+'px!important;}'
+
+    /* ===== FIX: SEASON DETAIL ===== */
+    +'.kk-sd-poster{width:8em!important;}'
+    +'.kk-sd-title{font-size:'+xl+'px!important;font-weight:800!important;}'
+    +'.kk-sd-meta{font-size:'+md+'px!important;}'
+    +'.kk-sd-overview{font-size:'+md+'px!important;}'
+    +'.kk-netflix-ep-title{font-size:'+lg+'px!important;font-weight:700!important;}'
+    +'.kk-netflix-ep-desc{font-size:'+sm+'px!important;}'
+    +'.kk-netflix-ep-still{width:12em!important;min-width:12em!important;}'
+
+    /* Season detail header */
+    +'.kk-sd-header{padding:2em!important;gap:1.5em!important;}'
+
+    /* Page header (network/company) */
+    +'.kk-page-header-name{font-size:'+xl+'px!important;font-weight:800!important;}'
+    +'.kk-page-header-meta{font-size:'+md+'px!important;}'
+    +'.kk-page-header-logo{width:5.5em!important;height:5.5em!important;}'
+
     /* Keyword badge */
-    +'.kk-keyword-header-badge{font-size:'+(1.1*r)+'em!important;}';
+    +'.kk-keyword-header-badge{font-size:'+lg+'px!important;}'
+
+    /* Netflix season detail */
+    +'.kk-netflix-ep{margin-bottom:0.8em!important;}'
+    +'.kk-netflix-ep-body{padding:0.8em 1em!important;}'
+    ;
+
   $('head').append('<style id="'+id+'">'+css+'</style>');
 }
+
 
 /* ---- IMAGE / UTILS ---- */
 function fImg(u,src){
