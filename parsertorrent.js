@@ -1,4 +1,4 @@
-/* KKPhim Torrent Extension v1.7 - Fixed TorrServer Stream URL */
+/* KKPhim Torrent Extension v1.8 - Back to basics */
 (function(){
 'use strict';
 if(window.__kkphim_torrent_started)return;
@@ -51,7 +51,7 @@ function dbgLog(msg){
 }
 
 /* ================================================================
-   PARSE
+   PARSE - Confirmed working từ console log
 ================================================================ */
 function extractSize(name,desc,bh){
   var texts=[desc,name];
@@ -98,6 +98,7 @@ function extractSource(desc){
   var m=(desc||'').match(/⚙️\s*([^\n\r]+)/);
   return m?m[1].trim():'';
 }
+
 function pStream(st){
   var rn=String(st.name||'');
   var rd=String(st.description||'');
@@ -124,7 +125,6 @@ function pStream(st){
   if(audio)badges.push(audio);
   if(src&&src!==provider&&src.length<25)badges.push(src);
   var displayName=provider+(badges.length?' ['+badges.join('|')+']':'');
-  dbgLog('PARSED name='+displayName+' size='+size+' seeds='+seeds);
   return{
     name:displayName,provider:provider,
     infoHash:st.infoHash||'',fileIdx:st.fileIdx,
@@ -134,239 +134,299 @@ function pStream(st){
 }
 
 /* ================================================================
-   STREAM POPUP
+   STREAM POPUP - HTML overlay với size+seeds hiện rõ
 ================================================================ */
-var _popupStreams=[];
-var _popupTitle='';
-var _popupPoster='';
-var _popupIsJac=false;
+var _pop={streams:[],title:'',poster:'',isJac:false};
 
 function injectPopupCSS(){
-  if($('#kkt-popup-css').length)return;
-  $('head').append('<style id="kkt-popup-css">'
-    +'#kkt-popup{position:fixed;inset:0;z-index:99999;background:#0d0d0f;display:flex;flex-direction:column;font-family:inherit;}'
-    +'#kkt-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#111116;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}'
-    +'#kkt-back{background:rgba(255,255,255,0.1);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:0.9em;flex-shrink:0;outline:none;}'
-    +'#kkt-back:focus,#kkt-back:hover{background:rgba(255,255,255,0.22);}'
-    +'#kkt-title{font-size:0.82em;color:rgba(255,255,255,0.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
-    +'#kkt-list{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}'
-    +'.kkt-row{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;outline:none;user-select:none;-webkit-user-select:none;}'
-    +'.kkt-row:hover,.kkt-row:focus{background:rgba(255,255,255,0.07);}'
-    +'.kkt-row:active{background:rgba(255,255,255,0.14);}'
-    +'.kkt-name{font-size:1em;color:#fff;font-weight:500;line-height:1.4;margin-bottom:3px;}'
-    +'.kkt-meta{font-size:0.82em;margin-bottom:2px;}'
-    +'.kkt-size{color:#fbbf24;margin-right:12px;}'
-    +'.kkt-seeds{color:#34d399;}'
-    +'.kkt-fn{font-size:0.72em;color:rgba(255,255,255,0.38);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+  if($('#kkt-css').length)return;
+  $('head').append('<style id="kkt-css">'
+    +'#kkt-wrap{position:fixed;inset:0;z-index:99999;background:#0e0e12;display:flex;flex-direction:column;}'
+    +'#kkt-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#15151c;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}'
+    +'#kkt-hdr button{background:rgba(255,255,255,0.1);border:none;color:#fff;padding:5px 12px;border-radius:16px;cursor:pointer;font-size:0.88em;white-space:nowrap;}'
+    +'#kkt-hdr button:active{background:rgba(255,255,255,0.22);}'
+    +'#kkt-hdr span{font-size:0.8em;color:rgba(255,255,255,0.55);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}'
+    +'#kkt-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}'
+    +'.kkt-item{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;-webkit-tap-highlight-color:rgba(255,255,255,0.08);}'
+    +'.kkt-item:active{background:rgba(255,255,255,0.1);}'
+    +'.kkt-item.kkt-focus{background:rgba(255,255,255,0.07);}'
+    +'.kkt-n{font-size:0.97em;color:#fff;font-weight:500;line-height:1.35;}'
+    +'.kkt-m{font-size:0.8em;margin-top:3px;display:flex;gap:10px;}'
+    +'.kkt-sz{color:#fbbf24;}'
+    +'.kkt-sd{color:#4ade80;}'
+    +'.kkt-f{font-size:0.7em;color:rgba(255,255,255,0.35);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
     +'</style>');
 }
 
-function showStreamPopup(streams,title,poster,isJackett){
-  if(!streams||!streams.length){Lampa.Noty.show('Không tìm thấy stream nào!');return;}
+function showStreamPopup(streams,title,poster,isJac){
+  if(!streams||!streams.length){Lampa.Noty.show('Không có stream nào!');return;}
   streams=streams.slice().sort(function(a,b){return(parseInt(b.seeds)||0)-(parseInt(a.seeds)||0);});
-  _popupStreams=streams;_popupTitle=title;_popupPoster=poster;_popupIsJac=isJackett;
+  _pop.streams=streams;_pop.title=title;_pop.poster=poster;_pop.isJac=isJac;
+
   injectPopupCSS();
-  $('#kkt-popup').remove();
+  $('#kkt-wrap').remove();
   $(document).off('keydown.kkt');
 
-  var label=isJackett?'Jackett':(tEngine()==='aio'?'AIOStreams':'Torrentio');
+  var label=isJac?'Jackett':(tEngine()==='aio'?'AIOStreams':'Torrentio');
   var ts=!!tsHost();
 
-  /* Build HTML */
-  var rowsHtml=streams.slice(0,60).map(function(s,idx){
-    var metaHtml='';
+  /* Build item HTML */
+  var items=streams.slice(0,60);
+  var rows=items.map(function(s,i){
+    var meta='';
     if(s.size||s.seeds){
-      metaHtml='<div class="kkt-meta">'
-        +(s.size?'<span class="kkt-size">📦 '+s.size+'</span>':'')
-        +(s.seeds?'<span class="kkt-seeds">🌱 '+s.seeds+'</span>':'')
+      meta='<div class="kkt-m">'
+        +(s.size?'<span class="kkt-sz">📦 '+s.size+'</span>':'')
+        +(s.seeds?'<span class="kkt-sd">🌱 '+s.seeds+'</span>':'')
         +'</div>';
     }
-    var fnHtml='';
-    if(s.filename){
-      var fn=s.filename.length>55?s.filename.substr(0,52)+'...':s.filename;
-      fnHtml='<div class="kkt-fn">'+fn+'</div>';
-    }
-    return '<div class="kkt-row" data-idx="'+idx+'" tabindex="0">'
-      +'<div class="kkt-name">'+s.name+'</div>'
-      +metaHtml+fnHtml
+    var fn=s.filename?'<div class="kkt-f">'+(s.filename.length>52?s.filename.substr(0,49)+'...':s.filename)+'</div>':'';
+    return '<div class="kkt-item" data-i="'+i+'">'
+      +'<div class="kkt-n">'+s.name+'</div>'
+      +meta+fn
       +'</div>';
   }).join('');
 
-  var popup=$('<div id="kkt-popup">'
-    +'<div id="kkt-header">'
+  var wrap=$('<div id="kkt-wrap">'
+    +'<div id="kkt-hdr">'
     +'<button id="kkt-back">← Quay lại</button>'
-    +'<span id="kkt-title">'+label+': '+title+' ('+streams.length+')'+(ts?' → TS':'')+'</span>'
+    +'<span>'+label+': '+title+' ('+streams.length+')'+(ts?' → TS':'')+'</span>'
     +'</div>'
-    +'<div id="kkt-list">'+rowsHtml+'</div>'
+    +'<div id="kkt-body">'+rows+'</div>'
     +'</div>');
 
-  $('body').append(popup);
+  $('body').append(wrap);
 
-  /* Back */
-  $('#kkt-back').on('click',function(){closePopup();});
+  $('#kkt-back').on('click touchend',function(e){e.preventDefault();closePop();});
 
-  /* Touch handling - chống nhạy scroll */
-  var touchStartY=0,touchStartX=0,touchMoved=false,lastSelect=0;
-
-  $('#kkt-list')
-    .on('touchstart','.kkt-row',function(e){
+  /* Touch - chống nhạy */
+  var ty0=0,tx0=0,moved=false,lastT=0;
+  $('#kkt-body')
+    .on('touchstart','.kkt-item',function(e){
       var t=e.originalEvent.touches[0];
-      touchStartY=t.clientY;touchStartX=t.clientX;touchMoved=false;
+      ty0=t.clientY;tx0=t.clientX;moved=false;
     })
-    .on('touchmove',function(e){
-      /* Trên list, không trên item cụ thể - để scroll hoạt động */
-      var t=e.originalEvent.touches[0];
-      if(Math.abs(t.clientY-touchStartY)>12||Math.abs(t.clientX-touchStartX)>12){
-        touchMoved=true;
+    .on('touchmove','#kkt-body',function(e){
+      /* touchmove trên container để detect scroll */
+      if(e.originalEvent.touches[0]){
+        if(Math.abs(e.originalEvent.touches[0].clientY-ty0)>10)moved=true;
       }
     })
-    .on('touchend','.kkt-row',function(e){
-      if(touchMoved)return;
+    .on('touchend','.kkt-item',function(e){
+      if(moved)return;
       var now=Date.now();
-      if(now-lastSelect<600)return; /* Debounce 600ms */
-      lastSelect=now;
+      if(now-lastT<500)return;
+      lastT=now;
       e.preventDefault();
-      var idx=parseInt($(this).data('idx'))||0;
-      var s=_popupStreams[idx];
-      setTimeout(function(){
-        closePopup();
-        handleStreamSelect(s,_popupTitle,_popupPoster,_popupIsJac);
-      },200);
+      var i=parseInt($(this).data('i'));
+      setTimeout(function(){closePop();onSelect(items[i]);},120);
     })
-    .on('click','.kkt-row',function(e){
+    .on('click','.kkt-item',function(e){
       var now=Date.now();
-      if(now-lastSelect<600)return;
-      lastSelect=now;
-      var idx=parseInt($(this).data('idx'))||0;
-      var s=_popupStreams[idx];
-      closePopup();
-      handleStreamSelect(s,_popupTitle,_popupPoster,_popupIsJac);
+      if(now-lastT<500)return;
+      lastT=now;
+      var i=parseInt($(this).data('i'));
+      closePop();
+      onSelect(items[i]);
     });
 
   /* Keyboard */
+  var fi=0;
+  function setFocus(idx){
+    fi=Math.max(0,Math.min(idx,items.length-1));
+    $('.kkt-item').removeClass('kkt-focus');
+    var el=$('.kkt-item[data-i='+fi+']');
+    el.addClass('kkt-focus');
+    el[0]&&el[0].scrollIntoView({block:'nearest'});
+  }
   $(document).on('keydown.kkt',function(e){
-    var k=e.key;
-    if(k==='Escape'||k==='Backspace'){e.preventDefault();closePopup();return;}
-    var rows=$('.kkt-row');
-    var focused=document.activeElement;
-    var idx=rows.index(focused);
-    if(idx<0)idx=0;
-    if(k==='ArrowDown'){
-      e.preventDefault();
-      var n=rows.eq(Math.min(idx+1,rows.length-1));
-      n.focus();n[0]&&n[0].scrollIntoView({block:'nearest'});
-    }else if(k==='ArrowUp'){
-      e.preventDefault();
-      var p=rows.eq(Math.max(idx-1,0));
-      p.focus();p[0]&&p[0].scrollIntoView({block:'nearest'});
-    }else if(k==='Enter'){
-      e.preventDefault();
-      var s=_popupStreams[idx];
-      if(s){closePopup();handleStreamSelect(s,_popupTitle,_popupPoster,_popupIsJac);}
-    }
+    var k=e.key||e.keyCode;
+    if(k==='Escape'||k==='Backspace'||k===8||k===27){e.preventDefault();closePop();return;}
+    if(k==='ArrowDown'||k===40){e.preventDefault();setFocus(fi+1);}
+    if(k==='ArrowUp'||k===38){e.preventDefault();setFocus(fi-1);}
+    if(k==='Enter'||k===13){e.preventDefault();closePop();onSelect(items[fi]);}
   });
+  setTimeout(function(){setFocus(0);},80);
 
-  setTimeout(function(){$('.kkt-row').first().focus();},80);
+  function onSelect(s){
+    if(!s)return;
+    var ts2=!!tsHost();
+    if(!ts2){
+      if(s.url)Lampa.Player.play({title:_pop.title,url:s.url});
+      else Lampa.Noty.show('Chưa cấu hình TorrServer!');
+      return;
+    }
+    if(_pop.isJac)playTSJac(s,_pop.title,_pop.poster);
+    else playTS(s,_pop.title,_pop.poster);
+  }
 }
 
-function closePopup(){
-  $('#kkt-popup').remove();
+function closePop(){
+  $('#kkt-wrap').remove();
   $(document).off('keydown.kkt');
   try{Lampa.Controller.toggle('content');}catch(e){}
 }
 
-function handleStreamSelect(s,title,poster,isJackett){
-  var ts=!!tsHost();
-  if(!ts){
-    if(s.url)Lampa.Player.play({title:title,url:s.url});
-    else Lampa.Noty.show('Chưa cấu hình TorrServer!');
-    return;
-  }
-  if(isJackett)playTSWithFilePicker(s,title,poster,true);
-  else playTS(s,title,poster);
-}
-
-function showStr(streams,title,poster,isJackett){
-  showStreamPopup(streams,title,poster,isJackett||false);
+function showStr(streams,title,poster,isJac){
+  showStreamPopup(streams,title,poster,!!isJac);
 }
 
 /* ================================================================
-   DEBUG MENU
+   TORRSERVER - Giữ nguyên 100% như file gốc
 ================================================================ */
-function showDebugMenu(){
+function tsU(p){
+  var h=tsHost();if(!h)return'';
+  h=h.replace(/\/+$/,'');
+  if(h.indexOf('http')!==0)h='http://'+h;
+  return h+p;
+}
+function tsH(){
+  var h={'Content-Type':'application/json'};
+  var pw=tsPass();if(pw)h['Authorization']='Basic '+btoa('admin:'+pw);
+  return h;
+}
+function bMag(h){
+  var m='magnet:?xt=urn:btih:'+h;
+  ['udp://tracker.opentrackr.org:1337/announce','udp://open.stealth.si:80/announce'].forEach(function(t){
+    m+='&tr='+encodeURIComponent(t);
+  });
+  return m;
+}
+
+/* ---- playTS: COPY NGUYÊN từ file gốc, chỉ thêm log ---- */
+async function playTS(stream,title,poster){
+  if(!tsHost()){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
+  Lampa.Noty.show('Đang gửi TorrServer...');
+  try{
+    var u=tsU('/torrents');
+    var r=await fetch(u,{
+      method:'POST',
+      headers:tsH(),
+      body:JSON.stringify({
+        action:'add',
+        link:bMag(stream.infoHash),
+        title:title||'',
+        poster:poster||'',
+        save_to_db:false
+      })
+    });
+    if(!r.ok)throw new Error('TS:'+r.status);
+    var td=await r.json();
+    var hash=td.hash||stream.infoHash;
+    dbgLog('TS add ok hash='+hash);
+
+    await dly(2000);
+
+    /* GET file_stats - retry như file gốc */
+    var info=null;
+    var rt=0;
+    while(rt<3){
+      try{
+        var r2=await fetch(u,{
+          method:'POST',
+          headers:tsH(),
+          body:JSON.stringify({action:'get',hash:hash})
+        });
+        info=await r2.json();
+        if(info&&info.file_stats&&info.file_stats.length)break;
+      }catch(e){}
+      rt++;
+      await dly(1500);
+    }
+
+    var files=[];
+    if(info&&info.file_stats){
+      files=info.file_stats.filter(function(f){
+        return(f.path||'').toLowerCase().match(/\.(mp4|mkv|avi|mov|flv|webm|ts|m2ts)$/);
+      }).sort(function(a,b){return(a.id||0)-(b.id||0);});
+    }
+    dbgLog('TS files='+files.length);
+
+    /* ---- URL format GIỐNG HỆT file gốc ---- */
+    var mkUrl=function(id){
+      return tsU('/stream/fname?link='+hash+'&index='+id+'&play');
+    };
+
+    if(!files.length){
+      Lampa.Player.play({title:title,url:mkUrl(0)});
+    }else if(files.length===1){
+      Lampa.Player.play({title:title,url:mkUrl(files[0].id||0)});
+    }else if(stream.fileIdx!==undefined&&stream.fileIdx!==null&&stream.fileIdx>=0){
+      var tgt=files[stream.fileIdx]||files[0];
+      Lampa.Player.play({title:title,url:mkUrl(tgt.id||stream.fileIdx)});
+    }else{
+      /* Nhiều file → chọn */
+      showFilePicker(files,hash,title,mkUrl);
+    }
+  }catch(e){
+    Lampa.Noty.show('Lỗi TorrServer: '+(e.message||''));
+    dbgLog('playTS err: '+e.message);
+  }
+}
+
+/* Jackett: luôn hiện file picker */
+async function playTSJac(stream,title,poster){
+  if(!tsHost()){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
+  Lampa.Noty.show('Đang thêm vào TorrServer...');
+  try{
+    var link=stream.infoHash?bMag(stream.infoHash):(stream.url||'');
+    if(!link)throw new Error('Không có link');
+    var u=tsU('/torrents');
+    var r=await fetch(u,{
+      method:'POST',headers:tsH(),
+      body:JSON.stringify({action:'add',link:link,title:title||'',poster:poster||'',save_to_db:false})
+    });
+    if(!r.ok)throw new Error('TS:'+r.status);
+    var td=await r.json();
+    var hash=td.hash||stream.infoHash;
+    dbgLog('TS jac hash='+hash);
+
+    Lampa.Noty.show('Đang lấy danh sách file...');
+    await dly(2000);
+    var info=null,rt=0;
+    while(rt<4){
+      try{
+        var r2=await fetch(u,{method:'POST',headers:tsH(),body:JSON.stringify({action:'get',hash:hash})});
+        info=await r2.json();
+        if(info&&info.file_stats&&info.file_stats.length)break;
+      }catch(e){}
+      rt++;await dly(1500);
+    }
+    var files=[];
+    if(info&&info.file_stats){
+      files=info.file_stats.filter(function(f){
+        return(f.path||'').toLowerCase().match(/\.(mp4|mkv|avi|mov|flv|webm|ts|m2ts)$/);
+      }).sort(function(a,b){return(a.id||0)-(b.id||0);});
+    }
+
+    var mkUrl=function(id){return tsU('/stream/fname?link='+hash+'&index='+id+'&play');};
+
+    if(!files.length){
+      Lampa.Player.play({title:title,url:mkUrl(0)});
+      return;
+    }
+    /* Luôn hiện picker cho Jackett */
+    showFilePicker(files,hash,title,mkUrl);
+  }catch(e){
+    Lampa.Noty.show('Lỗi: '+(e.message||''));
+    dbgLog('playTSJac err: '+e.message);
+  }
+}
+
+function showFilePicker(files,hash,title,mkUrl){
   Lampa.Select.show({
-    title:'🔧 KKTorrent Debug v1.7',
-    items:[
-      {title:'📋 Raw Streams ('+_dbgRaw.length+')',value:'raw'},
-      {title:'📡 Last URL',value:'url'},
-      {title:'📝 Log ('+_dbgLog.length+')',value:'log'},
-      {title:'🧪 Test Parse',value:'test'},
-      {title:'🗑️ Clear',value:'clear'},
-    ],
+    title:'📁 Chọn file ('+files.length+')',
+    items:files.map(function(f){
+      var nm=(f.path||'').split('/').pop()||('File '+f.id);
+      var sz=f.length?'  ('+bytesToSize(f.length)+')':'';
+      return{title:nm+sz,value:f};
+    }),
     onSelect:function(a){
-      if(a.value==='raw')showDebugRaw();
-      else if(a.value==='url'){
-        Lampa.Select.show({title:'Last URL',items:[{title:_dbgUrl||'(chưa có)',value:''}],onSelect:function(){},onBack:function(){showDebugMenu();}});
-      }
-      else if(a.value==='log')showDebugLog();
-      else if(a.value==='test')showDebugTest();
-      else if(a.value==='clear'){_dbgLog=[];_dbgRaw=[];Lampa.Noty.show('Cleared');}
+      var url=mkUrl(a.value.id||0);
+      dbgLog('play: '+url);
+      Lampa.Player.play({title:title,url:url});
     },
     onBack:function(){Lampa.Controller.toggle('content');}
-  });
-}
-
-function showDebugRaw(){
-  if(!_dbgRaw.length){Lampa.Noty.show('Chưa có data');return;}
-  Lampa.Select.show({
-    title:'Raw Streams',
-    items:_dbgRaw.slice(0,15).map(function(st,i){
-      var p=pStream(st);
-      return{title:'#'+(i+1)+' '+p.name+'\nsize='+p.size+' seeds='+p.seeds,value:i};
-    }),
-    onSelect:function(a){
-      var st=_dbgRaw[a.value];var p=pStream(st);
-      Lampa.Select.show({
-        title:'Stream #'+(a.value+1),
-        items:[
-          {title:'name: '+JSON.stringify(st.name||''),value:''},
-          {title:'desc: '+JSON.stringify((st.description||'').substr(0,100)),value:''},
-          {title:'hash: '+(st.infoHash||'none'),value:''},
-          {title:'fileIdx: '+st.fileIdx,value:''},
-          {title:'bh.videoSize: '+((st.behaviorHints||{}).videoSize||'none'),value:''},
-          {title:'>> size: "'+(p.size||'EMPTY')+'"',value:''},
-          {title:'>> seeds: "'+(p.seeds||'EMPTY')+'"',value:''},
-          {title:'>> quality: "'+(p.quality||'EMPTY')+'"',value:''},
-        ],
-        onSelect:function(){},onBack:function(){showDebugRaw();}
-      });
-    },
-    onBack:function(){showDebugMenu();}
-  });
-}
-
-function showDebugLog(){
-  var lines=_dbgLog.slice(-50).reverse();
-  Lampa.Select.show({
-    title:'Log',
-    items:(lines.length?lines:['']).map(function(l){return{title:l||'(trống)',value:l};}),
-    onSelect:function(){},onBack:function(){showDebugMenu();}
-  });
-}
-
-function showDebugTest(){
-  var cases=[
-    {name:'Torrentio\n1080p',description:'👤 42 💾 1.74 GB ⚙️ YTS\nMovie.Title.1080p.BluRay.mkv'},
-    {name:'AIOStreams\n[Prowlarr|RD] 1080p',description:'👤 1080 💾 17.9 GB ⚙️ 1337x\nFilename.mkv'},
-    {name:'AIOStreams\n2160p',description:'Size: 56.4 GB\nSeeds: 15\nMovie.2160p.mkv'},
-  ];
-  Lampa.Select.show({
-    title:'Test Parse',
-    items:cases.map(function(st,i){
-      var p=pStream(st);
-      return{title:'Case '+(i+1)+': '+p.name+'\nsize="'+p.size+'" seeds="'+p.seeds+'"',value:i};
-    }),
-    onSelect:function(){},onBack:function(){showDebugMenu();}
   });
 }
 
@@ -403,15 +463,11 @@ async function fStreams(type,imdb,s,e){
   if(eng==='aio'){url=aioU(type,imdb,s,e);if(!url)throw new Error('Chưa cấu hình AIOStreams URL');}
   else url=tioU(type,imdb,s,e);
   _dbgUrl=url;dbgLog('Fetch: '+url);
-  var r=await fetch(url,{headers:{'Accept':'application/json'},mode:'cors'});
+  var r=await fetch(url,{headers:{'Accept':'application/json'}});
   if(!r.ok)throw new Error((eng==='aio'?'AIOStreams':'Torrentio')+' HTTP '+r.status);
   var d=await r.json();
   _dbgRaw=d.streams||[];
   dbgLog('Got '+_dbgRaw.length+' streams');
-  _dbgRaw.slice(0,3).forEach(function(st,i){
-    dbgLog('RAW['+i+'] name='+JSON.stringify(st.name||''));
-    dbgLog('RAW['+i+'] desc='+JSON.stringify(st.description||''));
-  });
   return _dbgRaw.map(pStream);
 }
 
@@ -428,20 +484,19 @@ async function searchJackett(query,cat){
   var d=await r.json();
   dbgLog('Jackett results: '+(d.Results||[]).length);
   return(d.Results||[]).map(function(item){
-    var title=item.Title||'';
+    var t=item.Title||'';
     var size=bytesToSize(item.Size||0);
     var seeds=String(item.Seeders||0);
     var tracker=item.Tracker||'Jackett';
-    var qual=extractQuality(title,'');
-    var codec=extractCodec(title);
-    var audio=extractAudio(title);
-    var badges=[];
-    if(qual)badges.push(qual);if(codec)badges.push(codec);if(audio)badges.push(audio);
+    var qual=extractQuality(t,'');
+    var codec=extractCodec(t);
+    var audio=extractAudio(t);
+    var badges=[];if(qual)badges.push(qual);if(codec)badges.push(codec);if(audio)badges.push(audio);
     var dn=tracker+(badges.length?' ['+badges.join('|')+']':'');
     var magnet=item.MagnetUri||'';
     var hash='';
     if(magnet){var hm=magnet.match(/urn:btih:([a-fA-F0-9]{40,})/i);if(hm)hash=hm[1].toLowerCase();}
-    return{name:dn,provider:tracker,infoHash:hash,fileIdx:undefined,url:magnet||item.Link||'',size:size,seeds:seeds,quality:qual,codec:codec,audio:audio,source:tracker,filename:title};
+    return{name:dn,provider:tracker,infoHash:hash,fileIdx:undefined,url:magnet||item.Link||'',size:size,seeds:seeds,quality:qual,codec:codec,audio:audio,source:tracker,filename:t};
   }).filter(function(s){return parseInt(s.seeds)>0&&(s.infoHash||s.url);})
     .sort(function(a,b){return parseInt(b.seeds)-parseInt(a.seeds);});
 }
@@ -466,202 +521,64 @@ async function gSeasons(id){
 }
 
 /* ================================================================
-   TORRSERVER - Fixed stream URL
-   
-   TorrServer endpoints:
-   POST /torrents {action:"add", link, title, poster, save_to_db}
-   POST /torrents {action:"get", hash}  → {hash, file_stats:[{id,path,length}]}
-   
-   Stream URL format (confirmed từ TorrServer source):
-   /stream/[encoded_filename]?link=[hash]&index=[file_id]&play
-   
-   Nếu không có filename: /stream/stream.mkv?link=[hash]&index=[id]&play
+   DEBUG MENU
 ================================================================ */
-function tsU(p){
-  var h=tsHost();if(!h)return'';
-  h=h.replace(/\/+$/,'');
-  if(!/^https?:\/\//i.test(h))h='http://'+h;
-  return h+p;
-}
-function tsH(){
-  var h={'Content-Type':'application/json'};
-  var pw=tsPass();if(pw)h['Authorization']='Basic '+btoa('admin:'+pw);
-  return h;
-}
-function bMag(hash){
-  return'magnet:?xt=urn:btih:'+hash
-    +'&tr='+encodeURIComponent('udp://tracker.opentrackr.org:1337/announce')
-    +'&tr='+encodeURIComponent('udp://open.stealth.si:80/announce')
-    +'&tr='+encodeURIComponent('udp://tracker.torrent.eu.org:451/announce');
-}
-
-/* Build TorrServer stream URL đúng format */
-function buildTsStreamUrl(hash, fileId, filePath){
-  var base=tsHost().replace(/\/+$/,'');
-  if(!/^https?:\/\//i.test(base))base='http://'+base;
-
-  /* Lấy filename từ path */
-  var filename='stream.mkv';
-  if(filePath){
-    var parts=filePath.split(/[\/\\]/);
-    var fname=parts[parts.length-1]||'stream.mkv';
-    /* Encode đúng cách - chỉ encode các ký tự đặc biệt */
-    filename=encodeURIComponent(fname);
-  }
-
-  /* TorrServer stream URL format */
-  var url=base+'/stream/'+filename+'?link='+encodeURIComponent(hash)+'&index='+fileId+'&play';
-  dbgLog('buildTsStreamUrl: '+url);
-  return url;
-}
-
-async function addToTS(stream,title,poster){
-  var h=tsHost();
-  if(!h)throw new Error('Chưa cấu hình TorrServer host');
-  /* Dùng magnet nếu có hash, fallback sang url */
-  var link=stream.infoHash?bMag(stream.infoHash):(stream.url||'');
-  if(!link)throw new Error('Stream không có infoHash hoặc URL');
-  var apiUrl=tsU('/torrents');
-  dbgLog('addToTS url='+apiUrl);
-  dbgLog('addToTS link='+link.substr(0,80));
-  var r=await fetch(apiUrl,{
-    method:'POST',
-    headers:tsH(),
-    body:JSON.stringify({
-      action:'add',
-      link:link,
-      title:title||'',
-      poster:poster||'',
-      save_to_db:false
-    })
-  });
-  if(!r.ok){
-    var errText='';
-    try{errText=await r.text();}catch(ex){}
-    throw new Error('TorrServer add HTTP '+r.status+': '+errText.substr(0,80));
-  }
-  var td=await r.json();
-  /* TorrServer trả về {hash, ...} */
-  var hash=td.hash||td.Hash||stream.infoHash;
-  if(!hash)throw new Error('TorrServer không trả về hash');
-  dbgLog('addToTS success hash='+hash);
-  return hash;
-}
-
-async function getFilesFromTS(hash){
-  var apiUrl=tsU('/torrents');
-  for(var attempt=0;attempt<6;attempt++){
-    await dly(attempt===0?2500:1500);
-    try{
-      var r=await fetch(apiUrl,{
-        method:'POST',
-        headers:tsH(),
-        body:JSON.stringify({action:'get',hash:hash})
-      });
-      if(!r.ok){dbgLog('getFiles HTTP '+r.status+' attempt '+(attempt+1));continue;}
-      var info=await r.json();
-      var statsLen=info&&info.file_stats?info.file_stats.length:0;
-      dbgLog('getFiles attempt '+(attempt+1)+' file_stats='+statsLen);
-      if(statsLen>0){
-        var files=info.file_stats
-          .filter(function(f){return/\.(mp4|mkv|avi|ts|m2ts|webm|mov)$/i.test(f.path||'');})
-          .sort(function(a,b){return(a.id||0)-(b.id||0);});
-        if(files.length){
-          dbgLog('getFiles: '+files.length+' video files found');
-          files.forEach(function(f,i){dbgLog('  file['+i+']: id='+f.id+' path='+f.path+' size='+f.length);});
-          return files;
-        }
-        /* Nếu không có file video, trả về tất cả */
-        dbgLog('getFiles: no video ext match, returning all '+statsLen+' files');
-        return info.file_stats.sort(function(a,b){return(a.id||0)-(b.id||0);});
-      }
-    }catch(ex){dbgLog('getFiles err attempt '+(attempt+1)+': '+ex.message);}
-  }
-  dbgLog('getFiles: gave up after 6 attempts');
-  return[];
-}
-
-function showFilePicker(files,hash,title){
+function showDebugMenu(){
   Lampa.Select.show({
-    title:'📁 Chọn file ('+files.length+')',
-    items:files.map(function(f){
-      var nm=(f.path||'').split(/[\/\\]/).pop()||('File '+f.id);
-      var sz=f.length?'  ('+bytesToSize(f.length)+')':'';
-      return{title:nm+sz,value:f};
-    }),
+    title:'🔧 KKTorrent Debug v1.8',
+    items:[
+      {title:'📋 Raw Streams ('+_dbgRaw.length+')',value:'raw'},
+      {title:'📡 Last URL',value:'url'},
+      {title:'📝 Log ('+_dbgLog.length+')',value:'log'},
+      {title:'🗑️ Clear',value:'clear'},
+    ],
     onSelect:function(a){
-      var url=buildTsStreamUrl(hash,a.value.id,a.value.path);
-      dbgLog('FilePicker play: '+url);
-      Lampa.Player.play({title:title,url:url});
+      if(a.value==='raw')showDebugRaw();
+      else if(a.value==='url'){Lampa.Select.show({title:'URL',items:[{title:_dbgUrl||'(none)',value:''}],onSelect:function(){},onBack:function(){showDebugMenu();}});}
+      else if(a.value==='log')showDebugLog();
+      else if(a.value==='clear'){_dbgLog=[];_dbgRaw=[];Lampa.Noty.show('Cleared');}
     },
     onBack:function(){Lampa.Controller.toggle('content');}
   });
 }
-
-async function playTSWithFilePicker(stream,title,poster,alwaysPick){
-  if(!tsHost()){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
-  Lampa.Noty.show('Đang thêm vào TorrServer...');
-  try{
-    var hash=await addToTS(stream,title,poster);
-    Lampa.Noty.show('Đang lấy danh sách file...');
-    var files=await getFilesFromTS(hash);
-    if(!files.length){
-      var url=buildTsStreamUrl(hash,0,'stream.mkv');
-      dbgLog('No files, fallback: '+url);
-      Lampa.Noty.show('Đang phát...');
-      Lampa.Player.play({title:title,url:url});
-      return;
-    }
-    showFilePicker(files,hash,title);
-  }catch(e){
-    Lampa.Noty.show('Lỗi: '+(e.message||''));
-    dbgLog('playTSWithFilePicker: '+e.message);
-  }
+function showDebugRaw(){
+  if(!_dbgRaw.length){Lampa.Noty.show('Chưa có data');return;}
+  Lampa.Select.show({
+    title:'Raw ('+_dbgRaw.length+')',
+    items:_dbgRaw.slice(0,15).map(function(st,i){
+      var p=pStream(st);
+      return{title:'#'+(i+1)+' '+p.name+'\nsize='+p.size+' seeds='+p.seeds,value:i};
+    }),
+    onSelect:function(a){
+      var st=_dbgRaw[a.value];var p=pStream(st);
+      Lampa.Select.show({
+        title:'#'+(a.value+1),
+        items:[
+          {title:'name: '+JSON.stringify(st.name||''),value:''},
+          {title:'desc: '+JSON.stringify((st.description||'').substr(0,100)),value:''},
+          {title:'hash: '+(st.infoHash||'none'),value:''},
+          {title:'fileIdx: '+st.fileIdx,value:''},
+          {title:'[size]: '+(p.size||'EMPTY'),value:''},
+          {title:'[seeds]: '+(p.seeds||'EMPTY'),value:''},
+          {title:'[qual]: '+(p.quality||'EMPTY'),value:''},
+        ],
+        onSelect:function(){},onBack:function(){showDebugRaw();}
+      });
+    },
+    onBack:function(){showDebugMenu();}
+  });
 }
-
-async function playTS(stream,title,poster){
-  if(!tsHost()){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
-  Lampa.Noty.show('Đang gửi TorrServer...');
-  try{
-    var hash=await addToTS(stream,title,poster);
-    var files=await getFilesFromTS(hash);
-
-    if(!files.length){
-      var url0=buildTsStreamUrl(hash,0,'stream.mkv');
-      dbgLog('No files fallback: '+url0);
-      Lampa.Player.play({title:title,url:url0});
-      return;
-    }
-
-    if(files.length===1){
-      var url1=buildTsStreamUrl(hash,files[0].id,files[0].path);
-      dbgLog('Single file: '+url1);
-      Lampa.Player.play({title:title,url:url1});
-      return;
-    }
-
-    /* Có fileIdx hint từ Torrentio */
-    if(stream.fileIdx!==undefined&&stream.fileIdx!==null&&stream.fileIdx>=0){
-      var fi=stream.fileIdx;
-      var tgt=files.find(function(f){return f.id===fi;});
-      if(!tgt&&fi<files.length)tgt=files[fi];
-      if(!tgt)tgt=files[0];
-      var urlFi=buildTsStreamUrl(hash,tgt.id,tgt.path);
-      dbgLog('fileIdx='+fi+' play: '+urlFi);
-      Lampa.Player.play({title:title,url:urlFi});
-      return;
-    }
-
-    /* Nhiều file, không có hint */
-    showFilePicker(files,hash,title);
-  }catch(e){
-    Lampa.Noty.show('Lỗi TorrServer: '+(e.message||''));
-    dbgLog('playTS: '+e.message);
-  }
+function showDebugLog(){
+  var lines=_dbgLog.slice(-50).reverse();
+  Lampa.Select.show({
+    title:'Log',
+    items:(lines.length?lines:['(trống)']).map(function(l){return{title:l,value:l};}),
+    onSelect:function(){},onBack:function(){showDebugMenu();}
+  });
 }
 
 /* ================================================================
-   CSS
+   CSS - Buttons
 ================================================================ */
 function injectCSS(){
   if($('#kk-torrent-css').length)return;
@@ -811,10 +728,13 @@ function buildDebugBtn(){
 ================================================================ */
 function buildSettings(w,mg,mo,mi,si2,comp){
   var s={};try{s=JSON.parse(localStorage.getItem('kkphim_settings'))||{};}catch(e){}
+
   var gEng=mg('Torrent Engine');
   var eng=s.torrent_engine||'torrentio';
   [{k:'torrentio',n:'Torrentio'},{k:'aio',n:'AIOStreams'}].forEach(function(o){
-    gEng.append(mo(o.n,'Torrentio và AIOStreams thay thế nhau',eng===o.k,function(){ss({torrent_engine:o.k});Lampa.Noty.show('Engine: '+o.n);comp.create();}));
+    gEng.append(mo(o.n,'Torrentio và AIOStreams thay thế nhau',eng===o.k,function(){
+      ss({torrent_engine:o.k});Lampa.Noty.show('Engine: '+o.n);comp.create();
+    }));
   });
   w.append(gEng);
 
@@ -853,7 +773,7 @@ function buildSettings(w,mg,mo,mi,si2,comp){
   w.append(gTS);
 
   var gDbg=mg('Debug');
-  var dbgBtn=si2('🔧 Debug Menu','Xem raw data và logs','Mở');
+  var dbgBtn=si2('🔧 Debug Menu','','Mở');
   bE(dbgBtn,function(){showDebugMenu();});
   gDbg.append(dbgBtn);
   w.append(gDbg);
@@ -891,8 +811,8 @@ try{
 
 injectCSS();
 injectPopupCSS();
-dbgLog('v1.7 loaded. Engine='+tEngine()+' TS='+tsHost());
-console.log('[KKTorrent] v1.7 loaded');
+dbgLog('v1.8 loaded. Engine='+tEngine()+' TS='+tsHost());
+console.log('[KKTorrent] v1.8 loaded');
 
 }/* end init */
 })();
