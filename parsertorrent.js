@@ -1,4 +1,4 @@
-/* KKPhim Torrent Extension v2.5 - Fix Jackett no magnet */
+/* KKPhim Torrent Extension v2.5.1 - Fix AIOStreams display */
 (function(){
 'use strict';
 if(window.__kkphim_torrent_started)return;
@@ -22,20 +22,15 @@ function gs(k){
   try{
     var ls=JSON.parse(localStorage.getItem('kkphim_settings')||'{}');
     var map={
-      'torrserver_url':'torrserver_host',
-      'torrserver_pass':'torrserver_password',
-      'torrentio_config':'torrentio_config',
-      'aio_url':'aio_url',
-      'torrent_engine':'torrent_engine',
-      'jackett_url':'jackett_url',
-      'jackett_key':'jackett_key'
+      'torrserver_url':'torrserver_host','torrserver_pass':'torrserver_password',
+      'torrentio_config':'torrentio_config','aio_url':'aio_url',
+      'torrent_engine':'torrent_engine','jackett_url':'jackett_url','jackett_key':'jackett_key'
     };
     return ls[map[k]||k]||'';
   }catch(e){}
   return'';
 }
-function sv(k,v){try{Lampa.Storage.set(STG+k,v);}catch(e){}
-}
+function sv(k,v){try{Lampa.Storage.set(STG+k,v);}catch(e){}}
 
 function getTsUrl(){
   var u=gs('torrserver_url');if(!u)return null;
@@ -44,7 +39,6 @@ function getTsUrl(){
   return u;
 }
 function getTsPass()  {return gs('torrserver_pass');}
-function getTioConf() {return parseTioConf(gs('torrentio_config'));}
 function getAioUrl()  {return gs('aio_url').replace(/\/manifest\.json\s*$/i,'').replace(/\/+$/,'');}
 function getEngine()  {return gs('torrent_engine')||'torrentio';}
 function getJacUrl()  {
@@ -54,6 +48,7 @@ function getJacUrl()  {
   return u;
 }
 function getJacKey(){return gs('jackett_key');}
+function getTioConf(){return parseTioConf(gs('torrentio_config'));}
 
 function parseTioConf(raw){
   if(!raw)return'';
@@ -62,8 +57,7 @@ function parseTioConf(raw){
   m=raw.match(/torrentio\.strem\.fun\/([^\/]+?)\/stream\//i);if(m)return m[1];
   if(raw.indexOf('torrentio.strem.fun')>-1){
     raw=raw.replace(/^https?:\/\/torrentio\.strem\.fun\/?/i,'')
-           .replace(/\/(manifest\.json|stream\/.*)?$/i,'')
-           .replace(/^\/+|\/+$/g,'');
+           .replace(/\/(manifest\.json|stream\/.*)?$/i,'').replace(/^\/+|\/+$/g,'');
     return(raw.indexOf('=')>-1)?raw.replace(/\|/g,'%7C'):'';
   }
   raw=raw.replace(/^\/+|\/+$/g,'').replace(/\|/g,'%7C');
@@ -73,31 +67,23 @@ function parseTioConf(raw){
 var TIO_BASE='https://torrentio.strem.fun';
 var TMDB_KEY='4ef0d7355d9ffb5151e987764708ce96';
 
-/* ================================================================
-   TMDB CACHE
-================================================================ */
+/* TMDB CACHE */
 var _tmdbCache={};
-
 function getTmdbOriginal(tmdbId,mediaType,cb){
   if(!tmdbId){cb('');return;}
   if(_tmdbCache[tmdbId]){cb(_tmdbCache[tmdbId]);return;}
   var type=mediaType==='tv'?'tv':'movie';
-  var url='https://api.themoviedb.org/3/'+type+'/'+tmdbId
-    +'?api_key='+TMDB_KEY+'&language=en-US';
-  fetch(url)
+  fetch('https://api.themoviedb.org/3/'+type+'/'+tmdbId+'?api_key='+TMDB_KEY+'&language=en-US')
     .then(function(r){return r.json();})
     .then(function(d){
       var orig=d.original_title||d.original_name||d.title||d.name||'';
       var year=(d.release_date||d.first_air_date||'').slice(0,4);
       _tmdbCache[tmdbId]={orig:orig,year:year};
       cb(_tmdbCache[tmdbId]);
-    })
-    .catch(function(){cb('');});
+    }).catch(function(){cb('');});
 }
 
-/* ================================================================
-   HELPERS
-================================================================ */
+/* HELPERS */
 function pad(n){return(n<10?'0':'')+n;}
 function fmtBytes(b){
   b=parseInt(b)||0;
@@ -108,12 +94,12 @@ function fmtBytes(b){
 }
 function parseSize(str){
   if(!str)return 0;
-  var m=String(str).match(/([\d.,]+)\s*(TB|GB|MB|KB)/i);
+  var m=String(str).match(/([\d.,]+)\s*(TB|GB|GiB|MB|MiB|KB)/i);
   if(!m)return 0;
   var n=parseFloat(m[1].replace(',','.'));
   switch(m[2].toUpperCase()){
-    case'TB':return n*1e12;case'GB':return n*1e9;
-    case'MB':return n*1e6;case'KB':return n*1e3;
+    case'TB':return n*1e12;case'GB':case'GIB':return n*1e9;
+    case'MB':case'MIB':return n*1e6;case'KB':return n*1e3;
   }
   return n;
 }
@@ -124,43 +110,24 @@ function makeMagnet(hash,name){
     +'&tr='+encodeURIComponent('udp://open.stealth.si:80/announce')
     +'&tr='+encodeURIComponent('udp://tracker.torrent.eu.org:451/announce');
 }
-
-/* FIX: Extract hash từ nhiều nguồn hơn */
-function extractHash(magnetUri, linkUrl, guid){
-  var sources=[magnetUri||'', linkUrl||'', guid||''];
+function extractHash(magnetUri,linkUrl,guid){
+  var sources=[magnetUri||'',linkUrl||'',guid||''];
   for(var i=0;i<sources.length;i++){
-    var s=sources[i];
-    if(!s)continue;
-    /* urn:btih:HASH */
-    var m=s.match(/urn:btih:([a-fA-F0-9]{32,40})/i);
-    if(m)return m[1].toLowerCase();
-    /* /torrent/HASH hoặc info_hash=HASH */
-    m=s.match(/[\/=]([a-fA-F0-9]{40})(?:[&\/?#]|$)/i);
-    if(m)return m[1].toLowerCase();
-    /* Base32 hash (32 ký tự A-Z2-7) */
+    var s=sources[i];if(!s)continue;
+    var m=s.match(/urn:btih:([a-fA-F0-9]{32,40})/i);if(m)return m[1].toLowerCase();
+    m=s.match(/[\/=]([a-fA-F0-9]{40})(?:[&\/?#]|$)/i);if(m)return m[1].toLowerCase();
     m=s.match(/urn:btih:([A-Z2-7]{32})/i);
     if(m){
-      /* Convert Base32 to hex */
       try{
-        var b32=m[1].toUpperCase();
-        var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        var bits='';
-        for(var j=0;j<b32.length;j++){
-          var val=alphabet.indexOf(b32[j]);
-          if(val<0)break;
-          bits+=('00000'+val.toString(2)).slice(-5);
-        }
-        var hex='';
-        for(var j=0;j<bits.length-7;j+=8){
-          hex+=('0'+parseInt(bits.slice(j,j+8),2).toString(16)).slice(-2);
-        }
+        var b32=m[1].toUpperCase(),alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',bits='',hex='';
+        for(var j=0;j<b32.length;j++){var val=alphabet.indexOf(b32[j]);if(val<0)break;bits+=('00000'+val.toString(2)).slice(-5);}
+        for(var j=0;j<bits.length-7;j+=8)hex+=('0'+parseInt(bits.slice(j,j+8),2).toString(16)).slice(-2);
         if(hex.length>=32)return hex.toLowerCase();
       }catch(ex){}
     }
   }
   return'';
 }
-
 function getMediaType(card){
   if(card.number_of_seasons||card.first_air_date||card.type==='tv'||card.type==='series')return'series';
   return'movie';
@@ -171,43 +138,28 @@ function getImdbId(card){
   return id||null;
 }
 function reguest(url,onOk,onFail){
-  var net=new Lampa.Reguest();
-  net.timeout(15000);
+  var net=new Lampa.Reguest();net.timeout(15000);
   net.silent(url,
     function(data){onOk(data);},
     function(a,b){var code=(a&&a.status)?a.status:0;(onFail||function(){})(code?'HTTP '+code:(b||'Error'));}
   );
 }
 
-/* ================================================================
-   TORRSERVER
-================================================================ */
+/* TORRSERVER */
 function tsHeaders(){
   var h={'Content-Type':'application/json'};
   var p=getTsPass();if(p)h['Authorization']='Basic '+btoa('admin:'+p);
   return h;
 }
-function tsAdd(magnet,movieTitle,onDone,onFail){
+function tsAdd(link,movieTitle,onDone,onFail){
   var tsUrl=getTsUrl();
   if(!tsUrl){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
   $.ajax({
     url:tsUrl+'/torrents',type:'POST',headers:tsHeaders(),
-    data:JSON.stringify({action:'add',link:magnet,title:movieTitle,save_to_db:false}),
+    data:JSON.stringify({action:'add',link:link,title:movieTitle,save_to_db:false}),
     dataType:'json',timeout:15000,
     success:function(data){onDone((data&&data.hash)||'');},
     error:function(){if(onFail)onFail();}
-  });
-}
-function tsAddByLink(torrentLink,movieTitle,onDone,onFail){
-  /* Thêm bằng link .torrent trực tiếp */
-  var tsUrl=getTsUrl();
-  if(!tsUrl){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
-  $.ajax({
-    url:tsUrl+'/torrents',type:'POST',headers:tsHeaders(),
-    data:JSON.stringify({action:'add',link:torrentLink,title:movieTitle,save_to_db:false}),
-    dataType:'json',timeout:15000,
-    success:function(data){onDone((data&&data.hash)||'');},
-    error:function(xhr,st,err){if(onFail)onFail(err||st);}
   });
 }
 function tsGetFiles(hash,onDone){
@@ -228,23 +180,17 @@ function tsGetFiles(hash,onDone){
 function tsPlayFile(hash,fileId,movieTitle,card){
   var tsUrl=getTsUrl();
   var url=tsUrl+'/stream/'+encodeURIComponent(movieTitle||'video')+'?link='+hash+'&index='+fileId+'&play';
-  console.log('[KKTorrent] Play:',url);
   Lampa.Player.play({title:movieTitle,url:url,movie:card||{}});
 }
-
-function tsAddAndPlay(magnetOrLink,hash,movieTitle,card,fileIdx){
+function tsAddAndPlay(linkOrMagnet,hash,movieTitle,card,fileIdx){
   var tsUrl=getTsUrl();
   if(!tsUrl){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
-  if(!magnetOrLink){Lampa.Noty.show('Không có magnet hoặc link torrent!');return;}
-
+  if(!linkOrMagnet){Lampa.Noty.show('Không có magnet hoặc link torrent!');return;}
   Lampa.Noty.show('Đang thêm vào TorrServer...');
-
-  function afterAdd(returnedHash){
+  tsAdd(linkOrMagnet,movieTitle,function(returnedHash){
     var h=returnedHash||hash;
-    if(!h){Lampa.Noty.show('Không lấy được hash từ TorrServer!');return;}
-    if(fileIdx!==null&&fileIdx!==undefined&&fileIdx>=0){
-      tsPlayFile(h,fileIdx,movieTitle,card);return;
-    }
+    if(!h){Lampa.Noty.show('Không lấy được hash!');return;}
+    if(fileIdx!==null&&fileIdx!==undefined&&fileIdx>=0){tsPlayFile(h,fileIdx,movieTitle,card);return;}
     Lampa.Noty.show('Đang tải danh sách file...');
     var tries=0;
     function tryGet(){
@@ -257,23 +203,18 @@ function tsAddAndPlay(magnetOrLink,hash,movieTitle,card,fileIdx){
       });
     }
     setTimeout(tryGet,2000);
-  }
-
-  tsAdd(magnetOrLink,movieTitle,afterAdd,function(){
-    /* Nếu add thất bại nhưng có hash thì thử play trực tiếp */
+  },function(){
     if(hash)tsPlayFile(hash,0,movieTitle,card);
-    else Lampa.Noty.show('TorrServer lỗi khi thêm torrent!');
+    else Lampa.Noty.show('TorrServer lỗi!');
   });
 }
-
 function showFilePicker(files,hash,movieTitle,card){
   Lampa.Select.show({
     title:'📂 Chọn file — '+movieTitle,
     items:files.map(function(f){
       var parts=(f.path||'').split('/');
       var fname=parts[parts.length-1]||'File';
-      var sz=f.length?' — '+fmtBytes(f.length):'';
-      return{title:fname,subtitle:sz.trim(),file:f};
+      return{title:fname,subtitle:f.length?fmtBytes(f.length):'',file:f};
     }),
     onSelect:function(item){tsPlayFile(hash,item.file.id||0,movieTitle,card);},
     onBack:function(){Lampa.Controller.toggle('full');}
@@ -281,89 +222,140 @@ function showFilePicker(files,hash,movieTitle,card){
 }
 
 /* ================================================================
-   PARSE STREAM (Torrentio/AIO)
+   PARSE STREAM v2.5.1 - Fix AIOStreams: extract fileName, tracker
 ================================================================ */
 function parseStream(st){
   var rn=String(st.name||'');
   var rd=String(st.description||st.title||'');
   var bh=st.behaviorHints||{};
-  var nl=rn.split(/[\n\r]+/);
-  var provider=(nl[0]||'').replace(/^\[[^\]]*\]\s*/,'').trim()||'Stream';
-  var qualLine=(nl[1]||'').replace(/^\[[^\]]*\]\s*/,'').trim();
 
+  /* Debug log - bỏ khi production ổn */
+  console.log('[KKTorrent] raw name:',JSON.stringify(rn));
+  console.log('[KKTorrent] raw desc:',JSON.stringify(rd));
+
+  var nl=rn.split(/[\n\r]+/);
+  var dl=rd.split(/[\n\r]+/);
+  var allText=rn+' '+rd;
+
+  /* PROVIDER */
+  var provider=(nl[0]||'').replace(/^\[[^\]]*\]\s*/,'').trim()||'Stream';
+
+  /* TÊN FILE - nhiều pattern */
+  var fileName='';
+  var fm=rd.match(/📁\s*([^\n\r]+)/);
+  if(fm)fileName=fm[1].trim();
+  if(!fileName){
+    for(var i=0;i<dl.length;i++){
+      var dl_clean=dl[i].replace(/^[📁\s]+/,'').trim();
+      if(/\.(mkv|mp4|avi|ts|m2ts|mov)\b/i.test(dl_clean)){fileName=dl_clean;break;}
+    }
+  }
+  if(!fileName){
+    for(var i=1;i<nl.length;i++){
+      var nl_clean=nl[i].trim();
+      if(/\.(mkv|mp4|avi|ts)\b/i.test(nl_clean)||(/S\d+E\d+/i.test(nl_clean)&&nl_clean.length>10)){
+        fileName=nl_clean;break;
+      }
+    }
+  }
+
+  /* TRACKER */
+  var tracker='';
+  var trm=rd.match(/🔗\s*([^\n\r]+)/);if(trm)tracker=trm[1].trim();
+  if(!tracker){var sm2=rd.match(/⚙️\s*([^\n\r]+)/);if(sm2)tracker=sm2[1].trim();}
+  if(!tracker&&dl.length>1){
+    var last=dl[dl.length-1].trim();
+    if(last&&last.length>1&&last.length<40&&!/[👤💾📁🔗⚙️]/.test(last)&&!/^\d/.test(last))
+      tracker=last;
+  }
+
+  /* SIZE */
   var size='';
-  var sm=rd.match(/💾\s*([\d.,]+\s*(?:TB|GB|GiB|MB|MiB))/i);
-  if(sm)size=sm[1].trim();
-  if(!size){sm=rd.match(/[Ss]ize:?\s*([\d.,]+\s*(?:TB|GB|GiB|MB|MiB))/i);if(sm)size=sm[1].trim();}
-  if(!size){sm=(rn+' '+rd).match(/\b([\d.,]+)\s*(TB|GB|GiB|MB|MiB)\b/i);if(sm)size=sm[1]+' '+sm[2];}
+  var szm=rd.match(/💾\s*([\d.,]+\s*(?:TB|GB|GiB|MB|MiB))/i);
+  if(szm)size=szm[1].trim();
+  if(!size){szm=allText.match(/\b([\d.,]+)\s*(GB|GiB|MB|MiB|TB)\b/i);if(szm)size=szm[1]+' '+szm[2];}
   if(!size&&bh.videoSize)size=fmtBytes(bh.videoSize);
 
+  /* SEEDS */
   var seeds=0;
   var sdm=rd.match(/👤\s*(\d+)/);if(sdm)seeds=parseInt(sdm[1]);
-  if(!seeds){sdm=rd.match(/[Ss]eeds?:?\s*(\d+)/);if(sdm)seeds=parseInt(sdm[1]);}
+  if(!seeds){sdm=allText.match(/[Ss]eeds?:?\s*(\d+)/);if(sdm)seeds=parseInt(sdm[1]);}
 
-  var srcM=rd.match(/⚙️\s*([^\n\r]+)/);
-  var source=srcM?srcM[1].trim():'';
-
-  var allText=rn+' '+rd;
-  var qm=(qualLine+' '+allText).match(/\b(2160p|4K UHD|4K|UHD|1080p|1080i|720p|480p|360p)\b/i);
+  /* QUALITY */
+  var searchText=allText+' '+(fileName||'');
+  var qm=searchText.match(/\b(2160p|4K UHD|4K|UHD|1080p|1080i|720p|480p|360p)\b/i);
   var quality=qm?qm[1].toUpperCase():'';
   if(quality==='4K'||quality==='UHD'||quality==='4K UHD')quality='2160P';
 
-  var cm2=allText.match(/\b(HEVC|H\.?265|x265|H\.?264|x264|AVC|AV1)\b/i);
-  var codec=cm2?cm2[1].toUpperCase().replace('H.265','HEVC').replace('H265','HEVC').replace('H.264','AVC').replace('H264','AVC'):'';
+  /* CODEC */
+  var cm=searchText.match(/\b(HEVC|H\.?265|x265|H\.?264|x264|AVC|AV1)\b/i);
+  var codec=cm?cm[1].toUpperCase()
+    .replace(/H\.?265/i,'HEVC').replace(/X265/i,'HEVC')
+    .replace(/H\.?264/i,'AVC').replace(/X264/i,'AVC'):'';
 
-  var am=allText.match(/\b(Atmos|TrueHD|DTS-HD|DTS|EAC3|AC3|AAC)\b/i);
+  /* AUDIO */
+  var am=searchText.match(/\b(Atmos|TrueHD|DTS-HD|DTS|EAC3|AC3|AAC|FLAC)\b/i);
   var audio=am?am[1].toUpperCase():'';
 
+  /* SOURCE (BluRay etc) */
+  var slm=searchText.match(/\b(BluRay|Blu-Ray|WEB-?DL|WEBRip|HDRip|HDTV|BRRip)\b/i);
+  var srcLbl=slm?slm[1].replace(/blu.?ray/i,'BluRay').replace(/web.?dl/i,'WEB-DL'):'';
+
+  /* BUILD displayName */
   var badges=[];
-  if(quality)badges.push(quality);
-  if(codec)  badges.push(codec);
-  if(audio)  badges.push(audio);
-  if(source&&source!==provider&&source.length<20)badges.push(source);
+  if(quality) badges.push(quality);
+  if(codec)   badges.push(codec);
+  if(audio)   badges.push(audio);
+  if(srcLbl)  badges.push(srcLbl);
   var displayName=provider+(badges.length?' ['+badges.join('|')+']':'');
+  if(tracker&&tracker.toLowerCase()!==provider.toLowerCase()&&tracker.length<35)
+    displayName+=' • '+tracker;
 
   return{
-    displayName:displayName,provider:provider,
-    infoHash:(st.infoHash||'').toLowerCase(),
-    fileIdx:(typeof st.fileIdx==='number')?st.fileIdx:null,
-    url:st.url||'',size:size,sizeNum:parseSize(size),
-    seeds:seeds,quality:quality,
-    magnet:st.infoHash?makeMagnet(st.infoHash,displayName):''
+    displayName : displayName,
+    provider    : provider,
+    fileName    : fileName,
+    tracker     : tracker,
+    infoHash    : (st.infoHash||'').toLowerCase(),
+    fileIdx     : (typeof st.fileIdx==='number')?st.fileIdx:null,
+    url         : st.url||'',
+    size        : size,
+    sizeNum     : parseSize(size),
+    seeds       : seeds,
+    quality     : quality,
+    magnet      : st.infoHash?makeMagnet(st.infoHash,displayName):''
   };
 }
 
 /* ================================================================
-   TORRENTIO / AIOSTREAMS
+   SHOW TIO MENU v2.5.1
 ================================================================ */
-function buildTioUrl(type,imdbId,season,episode){
-  var sType=type==='series'?'series':'movie';
-  var id=imdbId;
-  if(type==='series'&&season&&episode)id=imdbId+':'+season+':'+episode;
-  if(getEngine()==='aio'){
-    var base=getAioUrl();
-    return base?base+'/stream/'+sType+'/'+id+'.json':null;
-  }
-  var cfg=getTioConf();
-  return TIO_BASE+(cfg?'/'+cfg:'')+'/stream/'+sType+'/'+id+'.json';
-}
-
-function showTioMenu(streams,movieTitle,card,season,episode){
+function showTioMenu(streams,movieTitle,card){
   if(!streams||!streams.length){Lampa.Noty.show('Không tìm thấy stream!');return;}
   var tsUrl=getTsUrl();
   var label=getEngine()==='aio'?'AIOStreams':'Torrentio';
   var parsed=streams.map(parseStream)
     .filter(function(s){return s.infoHash||s.url;})
-    .sort(function(a,b){return b.sizeNum-a.sizeNum;});
+    .sort(function(a,b){
+      if(b.seeds!==a.seeds)return b.seeds-a.seeds;
+      return b.sizeNum-a.sizeNum;
+    });
   if(!parsed.length){Lampa.Noty.show('Không có stream hợp lệ!');return;}
+
   Lampa.Select.show({
     title:'🧲 '+label+': '+movieTitle+' ('+parsed.length+')',
     items:parsed.map(function(s){
-      return{
-        title:s.displayName,
-        subtitle:(s.seeds?'👤 '+s.seeds+'  ':'')+( s.size?'💾 '+s.size:''),
-        s:s
-      };
+      /* Subtitle: seeds + size + fileName */
+      var parts=[];
+      var meta='';
+      if(s.seeds)meta+='👤 '+s.seeds+'  ';
+      if(s.size) meta+='💾 '+s.size;
+      if(meta)parts.push(meta);
+      if(s.fileName){
+        var fn=s.fileName.length>56?s.fileName.slice(0,53)+'...':s.fileName;
+        parts.push('📁 '+fn);
+      }
+      return{title:s.displayName, subtitle:parts.join('\n'), s:s};
     }),
     onSelect:function(item){
       var s=item.s;
@@ -380,6 +372,18 @@ function showTioMenu(streams,movieTitle,card,season,episode){
   });
 }
 
+function buildTioUrl(type,imdbId,season,episode){
+  var sType=type==='series'?'series':'movie';
+  var id=imdbId;
+  if(type==='series'&&season&&episode)id=imdbId+':'+season+':'+episode;
+  if(getEngine()==='aio'){
+    var base=getAioUrl();
+    return base?base+'/stream/'+sType+'/'+id+'.json':null;
+  }
+  var cfg=getTioConf();
+  return TIO_BASE+(cfg?'/'+cfg:'')+'/stream/'+sType+'/'+id+'.json';
+}
+
 function searchTio(card,season,episode){
   var title=card.title||card.name||'';
   var type=getMediaType(card);
@@ -387,18 +391,15 @@ function searchTio(card,season,episode){
   var label=getEngine()==='aio'?'AIOStreams':'Torrentio';
   var epLabel=(season&&episode)?' S'+pad(season)+'E'+pad(episode):'';
   var movieTitle=title+epLabel;
-
   Lampa.Noty.show(label+': đang tìm...');
-
   function run(id){
     var url=buildTioUrl(type,id,season,episode);
     if(!url){Lampa.Noty.show('Chưa cấu hình '+label+'!');return;}
     reguest(url,
-      function(data){showTioMenu((data&&data.streams)||[],movieTitle,card,season,episode);},
+      function(data){showTioMenu((data&&data.streams)||[],movieTitle,card);},
       function(e){Lampa.Noty.show('Lỗi: '+e);}
     );
   }
-
   if(imdbId){run(imdbId);return;}
   reguest(
     'https://api.themoviedb.org/3/'+(type==='series'?'tv':'movie')+'/'+card.id+'/external_ids?api_key='+TMDB_KEY,
@@ -428,17 +429,13 @@ function searchTioTV(card){
     onBack:function(){Lampa.Controller.toggle('full');}
   });
 }
-
 function getSeasonEpCount(card,season){
-  if(card.seasons){
-    var s=card.seasons.filter(function(x){return x.season_number===season;})[0];
-    if(s&&s.episode_count)return s.episode_count;
-  }
+  if(card.seasons){var s=card.seasons.filter(function(x){return x.season_number===season;})[0];if(s&&s.episode_count)return s.episode_count;}
   return 50;
 }
 
 /* ================================================================
-   JACKETT - v2.5 FIX: Xử lý đầy đủ MagnetUri + Link + hash
+   JACKETT
 ================================================================ */
 function fetchJackett(query,cb){
   var url=getJacUrl(),key=getJacKey();
@@ -448,44 +445,21 @@ function fetchJackett(query,cb){
     +'?apikey='+encodeURIComponent(key)
     +'&Query='+encodeURIComponent(query)
     +'&Category[]=2000&Category[]=5000';
-  console.log('[KKTorrent] Jackett query="'+query+'" url='+apiUrl);
   reguest(apiUrl,
     function(data){
       var d=typeof data==='string'?JSON.parse(data):data;
       var results=((d&&d.Results)||[]).map(function(r){
-        var magnetUri = r.MagnetUri||'';
-        var linkUrl   = r.Link||'';        /* URL download file .torrent */
-        var guid      = r.Guid||r.Url||''; /* Đôi khi có hash trong Guid */
-
-        /* === FIX CHÍNH: Extract hash từ mọi nguồn có thể === */
-        var hash = extractHash(magnetUri, linkUrl, guid);
-
-        /* Nếu có hash nhưng không có magnet → tạo magnet */
-        var magnet = magnetUri || (hash ? makeMagnet(hash, r.Title||'') : '');
-
-        /* Nếu không có magnet VÀ không có hash → dùng link .torrent nếu có */
-        var torrentLink = (!magnet && linkUrl) ? linkUrl : '';
-
-        /* Log để debug */
-        if(!magnet && !torrentLink){
-          console.warn('[KKTorrent] Jackett: bỏ qua item không có magnet/link:', r.Title);
-        }
-
-        /* Bỏ qua nếu hoàn toàn không có gì để play */
-        if(!magnet && !torrentLink) return null;
-
+        var magnetUri=r.MagnetUri||'',linkUrl=r.Link||'',guid=r.Guid||r.Url||'';
+        var hash=extractHash(magnetUri,linkUrl,guid);
+        var magnet=magnetUri||(hash?makeMagnet(hash,r.Title||''):'');
+        var torrentLink=(!magnet&&linkUrl)?linkUrl:'';
+        if(!magnet&&!torrentLink)return null;
         var qm=(r.Title||'').match(/\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HEVC|x265)\b/i);
         return{
-          title      : r.Title||'',
-          seeds      : parseInt(r.Seeders)||0,
-          peers      : parseInt(r.Peers)||0,
-          size       : fmtBytes(parseInt(r.Size)||0),
-          sizeNum    : parseInt(r.Size)||0,
-          tracker    : r.Tracker||r.TrackerId||'Jackett',
-          quality    : qm?qm[1]:'',
-          hash       : hash,
-          magnet     : magnet,
-          torrentLink: torrentLink  /* FIX: lưu link .torrent để fallback */
+          title:r.Title||'',seeds:parseInt(r.Seeders)||0,peers:parseInt(r.Peers)||0,
+          size:fmtBytes(parseInt(r.Size)||0),sizeNum:parseInt(r.Size)||0,
+          tracker:r.Tracker||r.TrackerId||'Jackett',quality:qm?qm[1]:'',
+          hash:hash,magnet:magnet,torrentLink:torrentLink
         };
       }).filter(Boolean)
         .sort(function(a,b){return b.seeds!==a.seeds?b.seeds-a.seeds:b.sizeNum-a.sizeNum;});
@@ -500,121 +474,62 @@ function searchJackett(card){
   var tmdbId=card.id||card.tmdb_id;
   var mediaType=getMediaType(card)==='series'?'tv':'movie';
   var origFromCard=card.original_title||card.original_name||'';
-
-  if(origFromCard){
-    doJackettSearch(origFromCard,displayTitle,card);
-  } else if(tmdbId){
+  if(origFromCard){doJackettSearch(origFromCard,displayTitle,card);}
+  else if(tmdbId){
     Lampa.Noty.show('Jackett: đang lấy tên gốc...');
     getTmdbOriginal(tmdbId,mediaType,function(info){
-      var orig=(info&&info.orig)||displayTitle;
-      doJackettSearch(orig,displayTitle,card);
+      doJackettSearch((info&&info.orig)||displayTitle,displayTitle,card);
     });
-  } else {
-    doJackettSearch(displayTitle,displayTitle,card);
-  }
+  }else{doJackettSearch(displayTitle,displayTitle,card);}
 }
 
 function doJackettSearch(orig,displayTitle,card){
   var year=card.year||(card.release_date||card.first_air_date||'').slice(0,4)||'';
-  if(!year&&_tmdbCache[card.id||card.tmdb_id]){
-    year=_tmdbCache[card.id||card.tmdb_id].year||'';
-  }
-  console.log('[KKTorrent] Jackett search orig="'+orig+'" year='+year+' displayTitle="'+displayTitle+'"');
+  if(!year&&_tmdbCache[card.id||card.tmdb_id])year=_tmdbCache[card.id||card.tmdb_id].year||'';
   Lampa.Noty.show('Jackett: tìm "'+orig+'"...');
-
   fetchJackett(orig+(year?' '+year:''),function(r1){
     if(r1.length){showPackMenu(r1,displayTitle,'Jackett',card);return;}
-    if(year){
-      fetchJackett(orig,function(r2){
-        showPackMenu(r2,displayTitle,'Jackett',card);
-      });
-    }else{
-      showPackMenu([],displayTitle,'Jackett',card);
-    }
+    if(year)fetchJackett(orig,function(r2){showPackMenu(r2,displayTitle,'Jackett',card);});
+    else showPackMenu([],displayTitle,'Jackett',card);
   });
 }
 
-/* ================================================================
-   PACK MENU - v2.5 FIX: Handle cả torrentLink fallback
-================================================================ */
 function showPackMenu(results,movieTitle,label,card){
   if(!results||!results.length){Lampa.Noty.show(label+': Không tìm thấy!');return;}
   var tsUrl=getTsUrl();
-
   Lampa.Select.show({
     title:'🔍 '+label+': '+movieTitle+' ('+results.length+')',
     items:results.map(function(r){
-      var info='['+r.tracker+']'+(r.quality?' '+r.quality:'');
+      var icon=r.magnet?'🧲':(r.torrentLink?'📄':'❌');
       var t2=r.title.length>48?r.title.slice(0,45)+'...':r.title;
-      /* Hiển thị icon để user biết loại link */
-      var linkIcon = r.magnet ? '🧲' : (r.torrentLink ? '📄' : '❌');
       return{
-        title:linkIcon+' '+info+' — '+t2,
+        title:icon+' ['+r.tracker+']'+(r.quality?' '+r.quality:'')+' — '+t2,
         subtitle:'👤 '+r.seeds+(r.peers?'/'+r.peers:'')+'  💾 '+r.size,
         r:r
       };
     }),
     onSelect:function(item){
       var r=item.r;
-      console.log('[KKTorrent] Selected Jackett item:', r.title,
-        '| magnet:', r.magnet?'YES':'NO',
-        '| hash:', r.hash||'(none)',
-        '| torrentLink:', r.torrentLink?'YES':'NO');
-
-      if(!tsUrl){
-        Lampa.Noty.show('Chưa cấu hình TorrServer!');
-        return;
-      }
-
-      /* Case 1: Có magnet → dùng magnet (tốt nhất) */
-      if(r.magnet){
-        tsAddAndPlay(r.magnet, r.hash, movieTitle, card, null);
-        return;
-      }
-
-      /* Case 2: Có torrentLink (file .torrent) → TorrServer hỗ trợ add bằng URL */
-      if(r.torrentLink){
-        console.log('[KKTorrent] Using torrent link:', r.torrentLink);
-        Lampa.Noty.show('Đang thêm file torrent vào TorrServer...');
-        tsAddByLink(r.torrentLink, movieTitle,
-          function(returnedHash){
-            if(!returnedHash){Lampa.Noty.show('TorrServer không trả về hash!');return;}
-            var tries=0;
-            function tryGet(){
-              tries++;
-              tsGetFiles(returnedHash,function(files){
-                if(!files.length&&tries<5){setTimeout(tryGet,2000);return;}
-                if(!files.length){tsPlayFile(returnedHash,0,movieTitle,card);return;}
-                if(files.length===1){tsPlayFile(returnedHash,files[0].id||0,movieTitle,card);return;}
-                showFilePicker(files,returnedHash,movieTitle,card);
-              });
-            }
-            setTimeout(tryGet,2000);
-          },
-          function(err){Lampa.Noty.show('Lỗi thêm torrent: '+(err||'unknown'));}
-        );
-        return;
-      }
-
-      /* Case 3: Không có gì → thông báo rõ ràng */
-      Lampa.Noty.show('Kết quả này không có magnet hoặc link torrent!');
+      if(!tsUrl){Lampa.Noty.show('Chưa cấu hình TorrServer!');return;}
+      if(r.magnet)tsAddAndPlay(r.magnet,r.hash,movieTitle,card,null);
+      else if(r.torrentLink){
+        Lampa.Noty.show('Đang thêm torrent file...');
+        tsAddAndPlay(r.torrentLink,'',movieTitle,card,null);
+      }else Lampa.Noty.show('Không có magnet hoặc link torrent!');
     },
     onBack:function(){Lampa.Controller.toggle('full');}
   });
 }
 
-/* ================================================================
-   SOURCE MENU
-================================================================ */
+/* SOURCE MENU */
 function showSourceMenu(card){
   var isSeries=getMediaType(card)==='series';
   var tioLabel=getEngine()==='aio'?'AIOStreams':'Torrentio';
-  var tsSuffix=getTsUrl()?' → TS':'';
   Lampa.Select.show({
     title:'🎬 '+(card.title||card.name||''),
     items:[
-      {title:'🧲 '+tioLabel+tsSuffix,subtitle:'Stream qua IMDB ID',value:'tio'},
-      {title:'🔍 Jackett'+tsSuffix,subtitle:'Tìm theo tên gốc English',value:'jackett'}
+      {title:'🧲 '+tioLabel+(getTsUrl()?' → TS':''),subtitle:'Stream qua IMDB ID',value:'tio'},
+      {title:'🔍 Jackett'+(getTsUrl()?' → TS':''),subtitle:'Tìm theo tên gốc English',value:'jackett'}
     ],
     onSelect:function(item){
       if(item.value==='tio'){if(isSeries)searchTioTV(card);else searchTio(card,null,null);}
@@ -624,40 +539,30 @@ function showSourceMenu(card){
   });
 }
 
-/* ================================================================
-   SETTINGS
-================================================================ */
+/* SETTINGS */
 function initSettings(){
   if(!Lampa.SettingsApi||!Lampa.SettingsApi.addComponent)return;
-  Lampa.SettingsApi.addComponent({
-    component:'kktorrent',name:'KKTorrent',
-    icon:'<svg viewBox="0 0 24 24" fill="none" width="24" height="24">'
-        +'<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>'
-        +'<polyline points="8 12 12 16 16 12" stroke="currentColor" stroke-width="1.5"/>'
-        +'<line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5"/>'
-        +'</svg>'
+  Lampa.SettingsApi.addComponent({component:'kktorrent',name:'KKTorrent',
+    icon:'<svg viewBox="0 0 24 24" fill="none" width="24" height="24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><polyline points="8 12 12 16 16 12" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5"/></svg>'
   });
   setTimeout(function(){
     addParam('torrserver_url','input','TorrServer URL','VD: 192.168.1.100:8090');
     addParam('torrserver_pass','input','TorrServer Password','Để trống nếu không có');
     addBtn('test_ts','🧪 Test TorrServer','',function(){
       var u=getTsUrl();if(!u){Lampa.Noty.show('Chưa nhập URL!');return;}
-      Lampa.Noty.show('Đang test...');
       $.ajax({url:u+'/echo',type:'GET',timeout:5000,
         success:function(){Lampa.Noty.show('✅ TorrServer OK!');},
-        error:function(xhr){Lampa.Noty.show(xhr.status===200?'✅ OK!':'❌ HTTP '+(xhr.status||'timeout'));}
+        error:function(xhr){Lampa.Noty.show('❌ HTTP '+(xhr.status||'timeout'));}
       });
     });
     addSel('torrent_engine','Torrent Engine','',{torrentio:'Torrentio',aio:'AIOStreams'});
-    addParam('torrentio_config','input','Torrentio Config','URL manifest từ torrentio.strem.fun/configure');
+    addParam('torrentio_config','input','Torrentio Config','URL từ torrentio.strem.fun/configure');
     addParam('aio_url','input','AIOStreams URL','VD: https://aio.yourdomain.com');
     addParam('jackett_url','input','Jackett URL','VD: https://jac.maxvol.pro');
     addParam('jackett_key','input','Jackett API Key','Từ Jackett Dashboard → Settings');
     addBtn('test_jac','🧪 Test Jackett','',function(){
       var u=getJacUrl(),k=getJacKey();
-      if(!u){Lampa.Noty.show('Chưa nhập URL!');return;}
-      if(!k){Lampa.Noty.show('Chưa nhập Key!');return;}
-      Lampa.Noty.show('Đang test...');
+      if(!u||!k){Lampa.Noty.show('Chưa nhập URL hoặc Key!');return;}
       reguest(u+'/api/v2.0/indexers/all/results?apikey='+k+'&Query=test&Category[]=2000',
         function(){Lampa.Noty.show('✅ Jackett OK!');},
         function(e){Lampa.Noty.show('❌ '+e);}
@@ -666,24 +571,19 @@ function initSettings(){
   },200);
 }
 function addParam(key,type,name,desc){
-  Lampa.SettingsApi.addParam({component:'kktorrent',
-    param:{name:STG+key,type:type,values:'',default:''},
+  Lampa.SettingsApi.addParam({component:'kktorrent',param:{name:STG+key,type:type,values:'',default:''},
     field:{name:name,description:desc||''},onChange:function(v){sv(key,v);}});
 }
 function addSel(key,name,desc,values){
-  Lampa.SettingsApi.addParam({component:'kktorrent',
-    param:{name:STG+key,type:'select',values:values,default:'torrentio'},
+  Lampa.SettingsApi.addParam({component:'kktorrent',param:{name:STG+key,type:'select',values:values,default:'torrentio'},
     field:{name:name,description:desc||''},onChange:function(v){sv(key,v);}});
 }
 function addBtn(key,name,desc,fn){
-  Lampa.SettingsApi.addParam({component:'kktorrent',
-    param:{name:STG+key,type:'button',default:''},
+  Lampa.SettingsApi.addParam({component:'kktorrent',param:{name:STG+key,type:'button',default:''},
     field:{name:name,description:desc||''},onChange:fn});
 }
 
-/* ================================================================
-   EXPOSE API
-================================================================ */
+/* EXPOSE API */
 window.__kkphim_torrent={
   buildTorrentBtn:function(mt,tid,title,poster,imdb){
     if(!$('#kkt-btn-css').length){
@@ -692,31 +592,20 @@ window.__kkphim_torrent={
         +'.kk-btn--tor.focus,.kk-btn--tor.selected{border-color:rgba(220,38,38,.9)!important;background:rgba(220,38,38,.22)!important;}'
         +'</style>');
     }
-    if(tid){
-      var mType=mt==='tv'?'tv':'movie';
-      getTmdbOriginal(tid,mType,function(info){
-        console.log('[KKTorrent] Preloaded tmdb orig="'+(info&&info.orig||'')+'" for id='+tid);
-      });
-    }
-    var card={
-      id:tid,title:title,name:title,
-      poster:poster,imdb_id:imdb,
-      type:mt==='tv'?'tv':'movie'
-    };
+    if(tid)getTmdbOriginal(tid,mt==='tv'?'tv':'movie',function(info){
+      console.log('[KKTorrent] Preloaded orig="'+(info&&info.orig||'')+'" id='+tid);
+    });
+    var card={id:tid,title:title,name:title,poster:poster,imdb_id:imdb,type:mt==='tv'?'tv':'movie'};
     var btn=$('<div class="kk-src-btn kk-btn--tor selector" style="width:100%">'
-      +'<div class="kk-sb-main">🧲 Torrent</div>'
-      +'<div class="kk-sb-sub">Torrentio / Jackett</div>'
-      +'</div>');
+      +'<div class="kk-sb-main">🧲 Torrent</div><div class="kk-sb-sub">Torrentio / Jackett</div></div>');
     var sx=0,sy=0,mv=false,tc=false;
     btn.on('touchstart',function(e){var t2=((e.originalEvent||e).touches||[])[0];if(t2){sx=t2.clientX;sy=t2.clientY;mv=false;}});
-    btn.on('touchmove',function(e){var t2=((e.originalEvent||e).touches||[])[0];if(t2&&(Math.abs(t2.clientX-sx)>10||Math.abs(t2.clientY-sy)>10))mv=true;});
-    btn.on('touchend',function(e){if(mv)return;tc=true;e.preventDefault();e.stopPropagation();setTimeout(function(){showSourceMenu(card);},150);setTimeout(function(){tc=false;},500);});
-    btn.on('click',function(e){if(tc||mv)return;e.preventDefault();e.stopPropagation();showSourceMenu(card);});
+    btn.on('touchmove', function(e){var t2=((e.originalEvent||e).touches||[])[0];if(t2&&(Math.abs(t2.clientX-sx)>10||Math.abs(t2.clientY-sy)>10))mv=true;});
+    btn.on('touchend', function(e){if(mv)return;tc=true;e.preventDefault();e.stopPropagation();setTimeout(function(){showSourceMenu(card);},150);setTimeout(function(){tc=false;},500);});
+    btn.on('click',    function(e){if(tc||mv)return;e.preventDefault();e.stopPropagation();showSourceMenu(card);});
     return $('<div style="width:100%"></div>').append(btn);
   },
-
   buildJackettBtn:function(){return$('');},
-
   buildSettings:function(w,mg,mo,mi,si2,comp){
     var s={};try{s=JSON.parse(localStorage.getItem('kkphim_settings')||'{}');}catch(e){}
     var gTS=mg('TorrServer');
@@ -740,12 +629,9 @@ window.__kkphim_torrent={
     gJ.append(mi('API Key','',s.jackett_key?'••••':'(chưa)','Jackett API Key','jackett_key',s));
     w.append(gJ);
   },
-
   playEpTorrent:function(imdbId,sNum,eNum,title,poster){
-    var card={id:0,title:title,name:title,poster:poster,imdb_id:imdbId,type:'tv'};
-    searchTio(card,sNum,eNum);
+    searchTio({id:0,title:title,name:title,poster:poster,imdb_id:imdbId,type:'tv'},sNum,eNum);
   },
-
   showSourceMenu:showSourceMenu,
   getTsUrl:getTsUrl
 };
@@ -758,17 +644,11 @@ Lampa.Listener.follow('full',function(e){
   var $ctx=e.object&&e.object.activity?e.object.activity.render():(e.object&&e.object.render?e.object.render():null);
   if(!$ctx)return;
   if($ctx.find('.view--kktorrent').length)return;
-  var isSeries=getMediaType(card)==='series';
-  function mkBtn(cls,svg,label,fn){
-    var $b=$('<div class="full-start__button selector '+cls+'">'
-      +'<svg viewBox="0 0 24 24" fill="none" width="44" height="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+svg+'</svg>'
-      +'<span>'+label+'</span></div>');
-    $b.on('hover:enter',fn);return $b;
-  }
-  var $tor=mkBtn('view--kktorrent',
-    '<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/>',
-    'Torrent',function(){showSourceMenu(card);}
-  );
+  var $tor=$('<div class="full-start__button selector view--kktorrent">'
+    +'<svg viewBox="0 0 24 24" fill="none" width="44" height="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+    +'<circle cx="12" cy="12" r="10"/><polyline points="8 12 12 16 16 12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>'
+    +'<span>Torrent</span></div>');
+  $tor.on('hover:enter',function(){showSourceMenu(card);});
   var $anchor=$ctx.find('.view--torrent');
   if($anchor.length)$anchor.after($tor);
   else $ctx.find('.full-start__buttons').append($tor);
@@ -776,7 +656,7 @@ Lampa.Listener.follow('full',function(e){
 
 function start(){
   initSettings();
-  console.log('[KKTorrent] v2.5 loaded | engine='+getEngine()+' | ts='+getTsUrl());
+  console.log('[KKTorrent] v2.5.1 | engine='+getEngine()+' | ts='+getTsUrl());
 }
 if(window.appready)start();
 else Lampa.Listener.follow('app',function(e){if(e.type==='ready')start();});
