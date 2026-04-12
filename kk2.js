@@ -95,21 +95,15 @@
         );
     }
 
-    /* ============================================================
-       BUILD QUERY
-    ============================================================ */
     function buildQuery(card) {
         var title   = card.title || card.name || '';
         var orig    = card.original_title || card.original_name || '';
         var year    = (card.release_date || card.first_air_date || '').slice(0, 4);
         var isMovie = getMediaType(card) === 'movie';
-
-        var q1 = (orig || title).trim();
+        var q1      = (orig || title).trim();
         if (isMovie && year) q1 += ' ' + year;
-
         var q2 = (title !== orig && title) ? title.trim() : '';
-
-        return { main: q1, fallback: q2, display: title, year: year, isMovie: isMovie };
+        return { main: q1, fallback: q2, display: title, isMovie: isMovie };
     }
 
     /* ============================================================
@@ -218,7 +212,7 @@
     }
 
     /* ============================================================
-       TORRENT SOURCES
+       SOURCES — chỉ giữ cái hoạt động thật
     ============================================================ */
     function normResult(obj) {
         var hash = (obj.hash || '').toLowerCase()
@@ -264,173 +258,59 @@
         };
     }
 
-    /* ── Knaben ── */
-    function fetchKnaben(query, cb) {
-        var url = 'https://knaben.eu/api/v1' +
-            '?search='             + encodeURIComponent(query) +
-            '&orderBy=seeders&orderDirection=desc&size=50' +
-            '&categories[]=200&categories[]=205&categories[]=207' +
-            '&categories[]=500&categories[]=501';
-        reguest(url, function (data) {
-            var raw  = typeof data === 'string' ? JSON.parse(data) : data;
-            var hits = (raw && raw.hits) ? raw.hits : (Array.isArray(raw) ? raw : []);
-            cb(hits.map(function (h) {
-                var bytes = parseInt(h.bytes || h.size_bytes || 0);
-                return normResult({
-                    title:   h.title || h.name || '',
-                    hash:    h.infohash || h.info_hash || h.hash || '',
-                    seeds:   h.seeders  || h.seeds    || 0,
-                    peers:   h.leechers || h.peers    || 0,
-                    size:    bytes ? fmtBytes(bytes) : (h.size || ''),
-                    sizeNum: bytes,
-                    tracker: 'Knaben'
-                });
-            }).filter(Boolean));
-        }, function (e) { console.warn('[Knaben]', e); cb([]); });
-    }
-
-    /* ── Apibay (TPB) ── */
-    function fetchApibay(query, cb) {
-        reguest('https://apibay.org/q.php?q=' + encodeURIComponent(query) + '&cat=0',
-        function (data) {
-            var raw = typeof data === 'string' ? JSON.parse(data) : data;
-            if (!Array.isArray(raw)) { cb([]); return; }
-            cb(raw.filter(function (r) { return r.id && r.id !== '0' && r.info_hash; })
-                .map(function (r) {
-                    var bytes = parseInt(r.size) || 0;
+    /* ✅ Bitsearch — hoạt động */
+    function fetchBitsearch(query, cb) {
+        reguest(
+            'https://bitsearch.to/api/v1/search?q=' +
+            encodeURIComponent(query) + '&category=1&sort=seeders',
+            function (data) {
+                var raw  = typeof data === 'string' ? JSON.parse(data) : data;
+                var list = (raw && raw.results)
+                    ? raw.results
+                    : (Array.isArray(raw) ? raw : []);
+                cb(list.map(function (r) {
+                    var bytes = parseInt(r.size || 0);
                     return normResult({
-                        title:   r.name || '',
-                        hash:    r.info_hash || '',
-                        seeds:   parseInt(r.seeders)  || 0,
-                        peers:   parseInt(r.leechers) || 0,
+                        title:   r.name  || r.title    || '',
+                        hash:    r.info_hash || r.infohash || r.hash || '',
+                        seeds:   parseInt(r.seeders  || r.seeds   || 0),
+                        peers:   parseInt(r.leechers || r.peers   || 0),
                         size:    bytes ? fmtBytes(bytes) : '',
                         sizeNum: bytes,
-                        tracker: 'TPB'
+                        tracker: 'Bitsearch'
                     });
                 }).filter(Boolean));
-        }, function (e) { console.warn('[Apibay]', e); cb([]); });
+            },
+            function (e) { console.warn('[Bitsearch]', e); cb([]); }
+        );
     }
 
-    /* ── YTS (phim lẻ) ── */
-    function fetchYts(query, cb) {
-        reguest('https://yts.mx/api/v2/list_movies.json?query_term=' +
-            encodeURIComponent(query) + '&sort_by=seeds&limit=20',
-        function (data) {
-            var raw    = typeof data === 'string' ? JSON.parse(data) : data;
-            var movies = (raw && raw.data && raw.data.movies) ? raw.data.movies : [];
-            var out    = [];
-            movies.forEach(function (movie) {
-                (movie.torrents || []).forEach(function (t) {
-                    var bytes = parseInt(t.size_bytes) || 0;
-                    var r = normResult({
-                        title:   movie.title_english + ' (' + movie.year + ') ' +
-                                 (t.quality || '') + ' ' + (t.type || '') + ' [YTS]',
-                        hash:    t.hash || '',
-                        seeds:   parseInt(t.seeds) || 0,
-                        peers:   parseInt(t.peers) || 0,
-                        size:    bytes ? fmtBytes(bytes) : (t.size || ''),
-                        sizeNum: bytes,
-                        tracker: 'YTS'
-                    });
-                    if (r) out.push(r);
-                });
-            });
-            cb(out);
-        }, function (e) { console.warn('[YTS]', e); cb([]); });
-    }
-
-    /* ── TorrentsCSV ── */
+    /* ✅ TorrentsCSV — hoạt động */
     function fetchTorrentsCSV(query, cb) {
-        reguest('https://torrents-csv.com/service/search?q=' +
+        reguest(
+            'https://torrents-csv.com/service/search?q=' +
             encodeURIComponent(query) + '&size=50&page=1',
-        function (data) {
-            var raw  = typeof data === 'string' ? JSON.parse(data) : data;
-            var list = (raw && raw.torrents) ? raw.torrents : [];
-            cb(list.map(function (t) {
-                var bytes = parseInt(t.size_bytes || t.size || 0);
-                return normResult({
-                    title:   t.name || '',
-                    hash:    t.infohash || t.info_hash || '',
-                    seeds:   parseInt(t.seeders)  || 0,
-                    peers:   parseInt(t.leechers) || 0,
-                    size:    bytes ? fmtBytes(bytes) : '',
-                    sizeNum: bytes,
-                    tracker: 'TorrCSV'
-                });
-            }).filter(Boolean));
-        }, function (e) { console.warn('[TorrCSV]', e); cb([]); });
+            function (data) {
+                var raw  = typeof data === 'string' ? JSON.parse(data) : data;
+                var list = (raw && raw.torrents) ? raw.torrents : [];
+                cb(list.map(function (t) {
+                    var bytes = parseInt(t.size_bytes || t.size || 0);
+                    return normResult({
+                        title:   t.name || '',
+                        hash:    t.infohash || t.info_hash || '',
+                        seeds:   parseInt(t.seeders)  || 0,
+                        peers:   parseInt(t.leechers) || 0,
+                        size:    bytes ? fmtBytes(bytes) : '',
+                        sizeNum: bytes,
+                        tracker: 'TorrCSV'
+                    });
+                }).filter(Boolean));
+            },
+            function (e) { console.warn('[TorrCSV]', e); cb([]); }
+        );
     }
 
-    /* ── SolidTorrents ── */
-    function fetchSolidTorrents(query, cb) {
-        reguest('https://solidtorrents.to/api/v1/search?q=' +
-            encodeURIComponent(query) + '&category=Video&sort=seeders',
-        function (data) {
-            var raw     = typeof data === 'string' ? JSON.parse(data) : data;
-            var results = (raw && raw.results) ? raw.results : [];
-            cb(results.map(function (r) {
-                var bytes = parseInt(r.size || 0);
-                /* SolidTorrents trả swarm.seeders */
-                var seeds = (r.swarm && r.swarm.seeders) ? r.swarm.seeders : (r.seeders || 0);
-                var peers = (r.swarm && r.swarm.leechers) ? r.swarm.leechers : (r.leechers || 0);
-                return normResult({
-                    title:   r.title || r.name || '',
-                    hash:    r.infohash || r.hash || '',
-                    seeds:   seeds,
-                    peers:   peers,
-                    size:    bytes ? fmtBytes(bytes) : (r.size || ''),
-                    sizeNum: bytes,
-                    tracker: 'SolidTorr'
-                });
-            }).filter(Boolean));
-        }, function (e) { console.warn('[SolidTorrents]', e); cb([]); });
-    }
-
-    /* ── Bitsearch ── */
-    function fetchBitsearch(query, cb) {
-        reguest('https://bitsearch.to/api/v1/search?q=' +
-            encodeURIComponent(query) + '&category=1&sort=seeders',
-        function (data) {
-            var raw  = typeof data === 'string' ? JSON.parse(data) : data;
-            var list = (raw && raw.results) ? raw.results : (Array.isArray(raw) ? raw : []);
-            cb(list.map(function (r) {
-                var bytes = parseInt(r.size || 0);
-                return normResult({
-                    title:   r.name || r.title || '',
-                    hash:    r.info_hash || r.infohash || r.hash || '',
-                    seeds:   parseInt(r.seeders || r.seeds   || 0),
-                    peers:   parseInt(r.leechers || r.peers  || 0),
-                    size:    bytes ? fmtBytes(bytes) : '',
-                    sizeNum: bytes,
-                    tracker: 'Bitsearch'
-                });
-            }).filter(Boolean));
-        }, function (e) { console.warn('[Bitsearch]', e); cb([]); });
-    }
-
-    /* ── EZTV (series) ── */
-    function fetchEztv(query, cb) {
-        reguest('https://eztv.re/api/get-torrents?keywords=' +
-            encodeURIComponent(query) + '&limit=50',
-        function (data) {
-            var raw   = typeof data === 'string' ? JSON.parse(data) : data;
-            var list  = (raw && raw.torrents) ? raw.torrents : [];
-            cb(list.map(function (r) {
-                var bytes = parseInt(r.size_bytes || 0);
-                return normResult({
-                    title:   r.title || r.filename || '',
-                    hash:    r.hash || '',
-                    seeds:   parseInt(r.seeds  || 0),
-                    peers:   parseInt(r.peers  || 0),
-                    size:    bytes ? fmtBytes(bytes) : '',
-                    sizeNum: bytes,
-                    tracker: 'EZTV'
-                });
-            }).filter(Boolean));
-        }, function (e) { console.warn('[EZTV]', e); cb([]); });
-    }
-
-    /* ── Jackett ── */
+    /* ✅ Jackett — hoạt động (user tự host) */
     function fetchJackett(query, cb) {
         var url = getJackettUrl(), key = getJackettKey();
         if (!url || !key) { cb([]); return; }
@@ -451,29 +331,15 @@
     }
 
     /* ============================================================
-       MULTI SEARCH — song song tất cả nguồn
+       MULTI SEARCH — song song Bitsearch + TorrCSV
     ============================================================ */
     var QUALITY_ORDER = ['2160P','4K','UHD','REMUX','1080P','1080I','720P','480P'];
 
-    function searchAllSources(query, isMovie, onDone) {
+    function searchAllSources(query, onDone) {
         var combined = [], seenHash = {};
-
-        /* Sources luôn dùng */
-        var sources = [
-            fetchKnaben,
-            fetchApibay,
-            fetchTorrentsCSV,
-            fetchSolidTorrents,
-            fetchBitsearch
-        ];
-
-        /* YTS chỉ phim lẻ */
-        if (isMovie) sources.push(fetchYts);
-
-        /* EZTV chỉ series */
-        if (!isMovie) sources.push(fetchEztv);
-
-        var total = sources.length, done = 0;
+        /* Chỉ 2 nguồn xác nhận hoạt động */
+        var sources  = [fetchBitsearch, fetchTorrentsCSV];
+        var total    = sources.length, done = 0;
 
         function finish(results) {
             results.forEach(function (r) {
@@ -530,13 +396,12 @@
             var group = byQ[q];
             items.push({ title: '── ' + q + ' · ' + group.length + ' ──', separator: true });
             group.slice(0, 20).forEach(function (r) {
-                var name     = r.title.length > 60 ? r.title.slice(0, 57) + '…' : r.title;
-                var seedTxt  = r.seeds > 0 ? '👤 ' + r.seeds : '⚠ 0 seed';
-                var peerTxt  = r.peers > 0 ? '/' + r.peers   : '';
-                var sizeTxt  = r.size       ? '  💾 ' + r.size : '';
-                var linkIcon = (r.magnet && r.magnet.startsWith('magnet:')) ? '🧲' : '📄';
+                var name    = r.title.length > 60 ? r.title.slice(0, 57) + '…' : r.title;
+                var seedTxt = r.seeds > 0 ? '👤 ' + r.seeds : '⚠ 0 seed';
+                var peerTxt = r.peers > 0 ? '/' + r.peers   : '';
+                var sizeTxt = r.size       ? '  💾 ' + r.size : '';
                 items.push({
-                    title:    linkIcon + ' [' + r.tracker + '] ' + name,
+                    title:    '🧲 [' + r.tracker + '] ' + name,
                     subtitle: seedTxt + peerTxt + sizeTxt,
                     r:        r
                 });
@@ -564,11 +429,11 @@
     ============================================================ */
     function doSearchMulti(card) {
         var q = buildQuery(card);
-        Lampa.Noty.show('🔍 Đang tìm từ ' + (q.isMovie ? '6' : '6') + ' nguồn...');
-        searchAllSources(q.main, q.isMovie, function (results) {
+        Lampa.Noty.show('🔍 Bitsearch + TorrCSV: ' + q.main);
+        searchAllSources(q.main, function (results) {
             if (!results.length && q.fallback) {
                 Lampa.Noty.show('Thử lại: ' + q.fallback);
-                searchAllSources(q.fallback, q.isMovie, function (r2) {
+                searchAllSources(q.fallback, function (r2) {
                     showTorrentMenu(r2, q.display, card);
                 });
             } else {
@@ -616,7 +481,10 @@
         var params = [
             {
                 name: 'torrserver_url', type: 'input',
-                field: { name: 'TorrServer URL', description: 'Để trống nếu đã cấu hình ở plugin KKPhim' }
+                field: {
+                    name:        'TorrServer URL',
+                    description: 'Để trống nếu đã cấu hình ở plugin KKPhim'
+                }
             },
             {
                 name: 'torrserver_pass', type: 'input',
@@ -655,7 +523,8 @@
                     if (!k) { Lampa.Noty.show('Chưa nhập Key!'); return; }
                     Lampa.Noty.show('Đang test...');
                     reguest(
-                        u + '/api/v2.0/indexers/all/results?apikey=' + k + '&Query=test&Category[]=2000',
+                        u + '/api/v2.0/indexers/all/results?apikey=' + k +
+                        '&Query=test&Category[]=2000',
                         function (data) {
                             var d = typeof data === 'string' ? JSON.parse(data) : data;
                             var n = (d && d.Results) ? d.Results.length : 0;
@@ -740,7 +609,7 @@
     ============================================================ */
     function start() {
         initSettings();
-        console.log('[Torrent+] v1.3 — Knaben|TPB|TorrCSV|SolidTorr|Bitsearch|YTS|EZTV ✅');
+        console.log('[Torrent+] v1.4 — Bitsearch ✅ | TorrCSV ✅ | Jackett ✅');
     }
 
     if (window.appready) start();
