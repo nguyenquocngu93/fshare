@@ -112,7 +112,7 @@
 
     function reguest(url, onOk, onFail) {
         var net = new Lampa.Reguest();
-        net.timeout(15000);
+        net.timeout(20000);
         net.silent(url,
             function (data) { onOk(data); },
             function (a, b) {
@@ -856,50 +856,50 @@
     }
 
     /* ============================================================
-       TORCVS
+       TORRENTS-CSV  ← FIX: đúng API torrents-csv.com
     ============================================================ */
-    function fetchTorcvs(query, isTV, cb) {
-        // Torcvs API: https://torcvs.com/api/search
-        var cat = isTV ? 'tv' : 'movie';
-        var url = 'https://torcvs.com/api/search' +
+    function fetchTorrentsCsv(query, cb) {
+        // API chính thức: https://torrents-csv.com/service/search?q=...&size=30
+        var url = 'https://torrents-csv.com/service/search' +
             '?q=' + encodeURIComponent(query) +
-            '&category=' + cat +
-            '&limit=30';
+            '&size=30' +
+            '&type=torrent';
 
         reguest(url,
             function (data) {
                 var d   = typeof data === 'string' ? JSON.parse(data) : data;
                 var raw = [];
-                if (Array.isArray(d))                              raw = d;
-                else if (d && Array.isArray(d.results))            raw = d.results;
-                else if (d && Array.isArray(d.data))               raw = d.data;
-                else if (d && Array.isArray(d.torrents))           raw = d.torrents;
-                else if (d && d.hits && Array.isArray(d.hits))     raw = d.hits;
+
+                // Cấu trúc response: { torrents: [...] } hoặc mảng trực tiếp
+                if (Array.isArray(d))                           raw = d;
+                else if (d && Array.isArray(d.torrents))        raw = d.torrents;
+                else if (d && Array.isArray(d.results))         raw = d.results;
+                else if (d && d.hits && Array.isArray(d.hits.hits)) {
+                    // Elasticsearch format
+                    raw = d.hits.hits.map(function(h) { return h._source || h; });
+                }
 
                 var results = raw.map(function (r) {
-                    var src    = r._source || r;
-                    var hash   = (src.infoHash || src.info_hash || src.hash || '')
-                                 .toLowerCase();
-                    var title2 = src.title || src.name || '';
-                    var seeds  = parseInt(src.seeders || src.seeds || 0);
-                    var peers  = parseInt(src.leechers || src.peers || 0);
-                    var size   = parseInt(src.size || src.contentLength || src.bytes || 0);
-                    var tracker = src.tracker || src.source || src.indexer || 'Torcvs';
-                    var magnet = src.magnetUrl || src.magnet || src.magnet_url || '';
+                    var hash   = (r.infohash || r.infoHash || r.info_hash || r.hash || '').toLowerCase();
+                    var name   = r.name || r.title || '';
+                    var seeds  = parseInt(r.seeders || r.seeds || 0);
+                    var peers  = parseInt(r.leechers || r.peers || 0);
+                    var size   = parseInt(r.size_bytes || r.size || r.contentLength || 0);
+                    var magnet = r.magnet || r.magnetUrl || r.magnet_url || '';
 
-                    if (!magnet && hash) magnet = makeMagnet(hash, title2);
-                    if (!magnet && !hash) return null;
+                    if (!hash) return null;
+                    if (!magnet) magnet = makeMagnet(hash, name);
 
-                    var qm = title2.match(
+                    var qm = name.match(
                         /\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i
                     );
                     return {
-                        title:   title2,
+                        title:   name,
                         seeds:   seeds,
                         peers:   peers,
-                        size:    size ? fmtBytes(size) : (src.size_string || ''),
+                        size:    size ? fmtBytes(size) : '',
                         sizeNum: size,
-                        tracker: tracker,
+                        tracker: 'Torrents-CSV',
                         quality: qm ? qm[1] : '',
                         hash:    hash,
                         magnet:  magnet
@@ -910,86 +910,119 @@
 
                 cb(results);
             },
-            function (e) { Lampa.Noty.show('Torcvs lỗi: ' + e); cb([]); }
+            function (e) {
+                Lampa.Noty.show('Torrents-CSV lỗi: ' + e);
+                cb([]);
+            }
         );
     }
 
-    function searchTorcvs(card) {
+    function searchTorrentsCsv(card) {
         var title = card.title || card.name || '';
         var orig  = card.original_title || card.original_name || '';
         var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var isTV  = getMediaType(card) === 'series';
         var q1    = (orig || title) + (year ? ' ' + year : '');
         var q2    = (orig && orig !== title)
                     ? title + (year ? ' ' + year : '')
                     : '';
 
-        Lampa.Noty.show('Torcvs: đang tìm...');
-        fetchTorcvs(q1, isTV, function (r) {
+        Lampa.Noty.show('Torrents-CSV: đang tìm...');
+        fetchTorrentsCsv(q1, function (r) {
             if (!r.length && q2) {
-                fetchTorcvs(q2, isTV, function (r2) {
-                    showPackMenu(r2, title, 'Torcvs', card);
+                fetchTorrentsCsv(q2, function (r2) {
+                    // Thử lại không có năm
+                    if (!r2.length) {
+                        fetchTorrentsCsv(orig || title, function (r3) {
+                            showPackMenu(r3, title, 'Torrents-CSV', card);
+                        });
+                    } else {
+                        showPackMenu(r2, title, 'Torrents-CSV', card);
+                    }
                 });
             } else {
-                showPackMenu(r, title, 'Torcvs', card);
+                showPackMenu(r, title, 'Torrents-CSV', card);
             }
         });
     }
 
     /* ============================================================
-       BITSEARCH
+       BITSEARCH — FIX: dùng nhiều fallback API/URL
     ============================================================ */
     function fetchBitsearch(query, isTV, cb) {
-        // Bitsearch API: https://bitsearch.to/api/v1/search
-        var cat = isTV ? '500' : '200';
-        var url = 'https://bitsearch.to/api/v1/search' +
-            '?q=' + encodeURIComponent(query) +
-            '&category=' + cat +
-            '&sort=seeders&p=1';
+        // Bitsearch không có public API, dùng endpoint search HTML
+        // Workaround: dùng proxy hoặc scrape — thử các endpoint khác nhau
+        
+        var endpoints = [
+            // Endpoint 1: API JSON nếu có
+            'https://bitsearch.to/search?q=' + encodeURIComponent(query) +
+                '&cats=' + (isTV ? '1' : '2') + '&sort=seeders&p=1&fmt=json',
+            // Endpoint 2: không có category filter
+            'https://bitsearch.to/search?q=' + encodeURIComponent(query) +
+                '&sort=seeders&p=1&fmt=json'
+        ];
 
-        reguest(url,
-            function (data) {
-                var d   = typeof data === 'string' ? JSON.parse(data) : data;
-                var raw = [];
-                if (Array.isArray(d))                              raw = d;
-                else if (d && Array.isArray(d.data))               raw = d.data;
-                else if (d && Array.isArray(d.results))            raw = d.results;
-                else if (d && Array.isArray(d.torrents))           raw = d.torrents;
+        var tried = 0;
 
-                var results = raw.map(function (r) {
-                    var hash   = (r.infoHash || r.info_hash || r.hash || '').toLowerCase();
-                    var title2 = r.name || r.title || '';
-                    var seeds  = parseInt(r.seeders || r.seeds || 0);
-                    var peers  = parseInt(r.leechers || r.peers || 0);
-                    var size   = parseInt(r.size || r.contentLength || 0);
-                    var tracker = r.tracker || r.source || 'Bitsearch';
-                    var magnet = r.magnet || r.magnetUrl || r.magnet_url || '';
+        function tryNext() {
+            if (tried >= endpoints.length) {
+                // Bitsearch không support API → fallback sang Torrents-CSV
+                Lampa.Noty.show('Bitsearch không khả dụng, thử Torrents-CSV...');
+                fetchTorrentsCsv(query, cb);
+                return;
+            }
 
-                    if (!magnet && hash) magnet = makeMagnet(hash, title2);
-                    if (!magnet && !hash) return null;
+            var url = endpoints[tried];
+            tried++;
 
-                    var qm = title2.match(
-                        /\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i
-                    );
-                    return {
-                        title:   title2,
-                        seeds:   seeds,
-                        peers:   peers,
-                        size:    size ? fmtBytes(size) : '',
-                        sizeNum: size,
-                        tracker: tracker,
-                        quality: qm ? qm[1] : '',
-                        hash:    hash,
-                        magnet:  magnet
-                    };
-                }).filter(Boolean).sort(function (a, b) {
-                    return b.seeds - a.seeds || b.sizeNum - a.sizeNum;
-                });
+            reguest(url,
+                function (data) {
+                    var d   = typeof data === 'string' ? JSON.parse(data) : data;
+                    var raw = [];
 
-                cb(results);
-            },
-            function (e) { Lampa.Noty.show('Bitsearch lỗi: ' + e); cb([]); }
-        );
+                    if (Array.isArray(d))                     raw = d;
+                    else if (d && Array.isArray(d.data))      raw = d.data;
+                    else if (d && Array.isArray(d.results))   raw = d.results;
+                    else if (d && Array.isArray(d.torrents))  raw = d.torrents;
+
+                    if (!raw.length) { tryNext(); return; }
+
+                    var results = raw.map(function (r) {
+                        var hash   = (r.infoHash || r.info_hash || r.hash || '').toLowerCase();
+                        var name   = r.name || r.title || '';
+                        var seeds  = parseInt(r.seeders || r.seeds || 0);
+                        var peers  = parseInt(r.leechers || r.peers || 0);
+                        var size   = parseInt(r.size || r.contentLength || 0);
+                        var magnet = r.magnet || r.magnetUrl || r.magnet_url || '';
+
+                        if (!magnet && hash) magnet = makeMagnet(hash, name);
+                        if (!magnet && !hash) return null;
+
+                        var qm = name.match(
+                            /\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i
+                        );
+                        return {
+                            title:   name,
+                            seeds:   seeds,
+                            peers:   peers,
+                            size:    size ? fmtBytes(size) : '',
+                            sizeNum: size,
+                            tracker: 'Bitsearch',
+                            quality: qm ? qm[1] : '',
+                            hash:    hash,
+                            magnet:  magnet
+                        };
+                    }).filter(Boolean).sort(function (a, b) {
+                        return b.seeds - a.seeds || b.sizeNum - a.sizeNum;
+                    });
+
+                    if (!results.length) { tryNext(); return; }
+                    cb(results);
+                },
+                function () { tryNext(); }
+            );
+        }
+
+        tryNext();
     }
 
     function searchBitsearch(card) {
@@ -1038,7 +1071,7 @@
                     title:    line1 + ' — ' + line2,
                     subtitle: '👤 ' + r.seeds +
                               (r.peers ? '/' + r.peers : '') +
-                              '  💾 ' + r.size,
+                              '  💾 ' + (r.size || '?'),
                     r: r
                 };
             }),
@@ -1532,13 +1565,13 @@
             function () { searchJackett(card); }
         );
 
-        // Torcvs button
-        var $tv = mkBtn('view--kkparser-torcvs',
+        // Torrents-CSV button (thay thế Torcvs)
+        var $tv = mkBtn('view--kkparser-torrentcsv',
             '<path d="M12 2L2 7l10 5 10-5-10-5z"/>' +
             '<path d="M2 17l10 5 10-5"/>' +
             '<path d="M2 12l10 5 10-5"/>',
-            'Torcvs',
-            function () { searchTorcvs(card); }
+            'TorrentCSV',
+            function () { searchTorrentsCsv(card); }
         );
 
         // Bitsearch button
@@ -1561,7 +1594,7 @@
 
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v1.8.4 — Torcvs + Bitsearch ✅');
+        console.log('[KKPhim Parser] v1.9.0 — TorrentCSV fix + Bitsearch fallback ✅');
     }
 
     if (window.appready) start();
