@@ -1,4 +1,4 @@
-/* KKPhim Torrent Extension v2.5.5 - Fix season ep count + flow */
+/* KKPhim Torrent Extension v2.5.6 - Fix fetch total seasons */
 (function(){
 'use strict';
 if(window.__kkphim_torrent_started)return;
@@ -179,7 +179,6 @@ function reguest(url,onOk,onFail){
     function(a,b){var code=(a&&a.status)?a.status:0;(onFail||function(){})(code?'HTTP '+code:(b||'Error'));}
   );
 }
-
 function isLatinScript(str){
   if(!str)return false;
   return!/[\u3000-\u9fff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u0e00-\u0e7f\uff00-\uffef]/.test(str);
@@ -204,6 +203,63 @@ function getTmdbOriginal(tmdbId,mediaType,cb){
       cb(info);
     })
     .catch(function(){cb(null);});
+}
+
+/* ================================================================
+   FETCH TOTAL SEASONS TỪ TMDB
+================================================================ */
+function fetchTotalSeasons(card,cb){
+  var tmdbId=card.id||card.tmdb_id;
+  if(!tmdbId){cb(card.number_of_seasons||1);return;}
+  var type=getMediaType(card);
+  if(type!=='series'){cb(1);return;}
+  Lampa.Noty.show('Đang lấy thông tin season...');
+  fetch('https://api.themoviedb.org/3/tv/'+tmdbId+'?api_key='+TMDB_KEY+'&language=en-US')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      // Lọc bỏ season 0 (Specials)
+      var seasons=(d&&d.seasons||[]).filter(function(s){return s.season_number>0;});
+      var count=seasons.length||d.number_of_seasons||1;
+      console.log('[KKTorrent] Total seasons: '+count);
+      // Cache lại vào card
+      card.number_of_seasons=count;
+      card._tmdb_seasons=seasons;
+      cb(count);
+    })
+    .catch(function(){
+      console.warn('[KKTorrent] Không lấy được season count');
+      cb(card.number_of_seasons||1);
+    });
+}
+
+/* ================================================================
+   FETCH SEASON EP COUNT TỪ TMDB
+================================================================ */
+function fetchSeasonEpCount(card,seasonNum,cb){
+  // Dùng cache từ fetchTotalSeasons nếu có
+  if(card._tmdb_seasons){
+    var s=card._tmdb_seasons.filter(function(x){return x.season_number===seasonNum;})[0];
+    if(s&&s.episode_count){cb(s.episode_count);return;}
+  }
+  // Dùng card.seasons nếu có
+  if(card.seasons){
+    var s=card.seasons.filter(function(x){return x.season_number===seasonNum;})[0];
+    if(s&&s.episode_count){cb(s.episode_count);return;}
+  }
+  var tmdbId=card.id||card.tmdb_id;
+  if(!tmdbId){cb(50);return;}
+  Lampa.Noty.show('Đang lấy số tập...');
+  fetch('https://api.themoviedb.org/3/tv/'+tmdbId+'/season/'+seasonNum+'?api_key='+TMDB_KEY+'&language=en-US')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var count=(d&&d.episodes&&d.episodes.length)||0;
+      console.log('[KKTorrent] Season '+seasonNum+' có '+count+' tập');
+      cb(count||50);
+    })
+    .catch(function(){
+      console.warn('[KKTorrent] Không lấy được số tập, fallback 50');
+      cb(50);
+    });
 }
 
 /* ================================================================
@@ -440,66 +496,48 @@ function searchTio(card,season,episode){
 }
 
 /* ================================================================
-   FETCH SEASON EP COUNT TỪ TMDB
-================================================================ */
-function fetchSeasonEpCount(card,seasonNum,cb){
-  var tmdbId=card.id||card.tmdb_id;
-  if(!tmdbId){cb(50);return;}
-  Lampa.Noty.show('Đang lấy số tập...');
-  fetch('https://api.themoviedb.org/3/tv/'+tmdbId+'/season/'+seasonNum+'?api_key='+TMDB_KEY+'&language=en-US')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      var count=(d&&d.episodes&&d.episodes.length)||0;
-      console.log('[KKTorrent] Season '+seasonNum+' có '+count+' tập');
-      cb(count||50);
-    })
-    .catch(function(){
-      console.warn('[KKTorrent] Không lấy được số tập, fallback 50');
-      cb(50);
-    });
-}
-
-/* ================================================================
-   SEARCH TIO TV - FIX season/ep flow
+   SEARCH TIO TV - Luôn fetch season thật từ TMDB
 ================================================================ */
 function searchTioTV(card){
-  var total=card.number_of_seasons||1;
+  fetchTotalSeasons(card,function(total){
+    console.log('[KKTorrent] searchTioTV total seasons='+total);
 
-  function pickEp(s,totalEps){
-    if(!totalEps){
-      fetchSeasonEpCount(card,s,function(count){
-        pickEp(s,count);
-      });
-      return;
-    }
-    var items=[];
-    for(var e=1;e<=totalEps;e++)
-      items.push({title:'S'+pad(s)+'E'+pad(e),s:s,e:e});
-    showSelect({
-      title:'Season '+s+' — Chọn tập',items:items,
-      onSelect:function(item){
-        searchTio(card,item.s,item.e);
-      },
-      onBack:function(){
-        if(total>1)showSeasonMenu();
-        else restoreController();
+    function pickEp(s,totalEps){
+      if(!totalEps){
+        fetchSeasonEpCount(card,s,function(count){
+          pickEp(s,count);
+        });
+        return;
       }
-    });
-  }
+      var items=[];
+      for(var e=1;e<=totalEps;e++)
+        items.push({title:'S'+pad(s)+'E'+pad(e),s:s,e:e});
+      showSelect({
+        title:'Season '+s+' — Chọn tập',items:items,
+        onSelect:function(item){
+          searchTio(card,item.s,item.e);
+        },
+        onBack:function(){
+          if(total>1)showSeasonMenu();
+          else restoreController();
+        }
+      });
+    }
 
-  function showSeasonMenu(){
-    var ss=[];
-    for(var s=1;s<=total;s++)
-      ss.push({title:'Season '+s,s:s});
-    showSelect({
-      title:'Chọn Season',items:ss,
-      onSelect:function(item){pickEp(item.s,null);},
-      onBack:function(){restoreController();}
-    });
-  }
+    function showSeasonMenu(){
+      var ss=[];
+      for(var s=1;s<=total;s++)
+        ss.push({title:'Season '+s,s:s});
+      showSelect({
+        title:'Chọn Season',items:ss,
+        onSelect:function(item){pickEp(item.s,null);},
+        onBack:function(){restoreController();}
+      });
+    }
 
-  if(total===1)pickEp(1,null);
-  else showSeasonMenu();
+    if(total===1)pickEp(1,null);
+    else showSeasonMenu();
+  });
 }
 
 /* ================================================================
@@ -635,12 +673,10 @@ function showSourceMenu(card){
     ],
     onSelect:function(item){
       if(item.value==='tio'){
-        // Torrentio/AIO: series → season picker → ep picker (số tập thật từ TMDB)
         if(isSeries)searchTioTV(card);
         else searchTio(card,null,null);
       }
       else if(item.value==='jackett'){
-        // Jackett: giữ nguyên search theo tên phim
         searchJackett(card);
       }
     },
@@ -794,7 +830,7 @@ Lampa.Listener.follow('full',function(e){
 
 function start(){
   initSettings();
-  console.log('[KKTorrent] v2.5.5 | engine='+getEngine()+' | sort='+getJacSort());
+  console.log('[KKTorrent] v2.5.6 | engine='+getEngine()+' | sort='+getJacSort());
 }
 if(window.appready)start();
 else Lampa.Listener.follow('app',function(e){if(e.type==='ready')start();});
