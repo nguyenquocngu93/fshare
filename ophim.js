@@ -4,6 +4,46 @@
     if (window.plugin_kkphim_ready) return;
     window.plugin_kkphim_ready = true;
 
+    // ── Polyfills ──────────────────────────────────────────────
+    if (typeof Object.assign !== 'function') {
+        Object.assign = function(target) {
+            if (target == null) throw new TypeError('Cannot convert undefined or null to object');
+            target = Object(target);
+            for (var i = 1; i < arguments.length; i++) {
+                var source = arguments[i];
+                if (source != null) {
+                    for (var key in source) {
+                        if (Object.prototype.hasOwnProperty.call(source, key)) {
+                            target[key] = source[key];
+                        }
+                    }
+                }
+            }
+            return target;
+        };
+    }
+
+    var $jq = window.jQuery || null;
+    if (!$jq) { console.error('[KKPhim] jQuery not found'); return; }
+
+    // ── base64 safe ────────────────────────────────────────────
+    function base64Encode(str) {
+        try { return btoa(str); } catch(e) {
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+            var result = '', i = 0;
+            str = String(str);
+            while (i < str.length) {
+                var a = str.charCodeAt(i++), b = str.charCodeAt(i++), c = str.charCodeAt(i++);
+                var b1 = (a >> 2) & 0x3F;
+                var b2 = ((a & 0x3) << 4) | ((b >> 4) & 0xF);
+                var b3 = isNaN(b) ? 64 : (((b & 0xF) << 2) | ((c >> 6) & 0x3));
+                var b4 = isNaN(c) ? 64 : (c & 0x3F);
+                result += chars[b1] + chars[b2] + chars[b3] + chars[b4];
+            }
+            return result;
+        }
+    }
+
     var SOURCES = {
         kkphim: { name: 'KKPhim', api: 'https://phimapi.com/' },
         ophim:  { name: 'OPhim',  api: 'https://ophim1.com/' }
@@ -167,6 +207,7 @@
         try {
             var lastPct      = -1;
             var saveInterval = null;
+            var destroyed    = false;
 
             function getVideo() {
                 try {
@@ -177,6 +218,7 @@
             }
 
             function doSave() {
+                if (destroyed) return;
                 var vid = getVideo();
                 if (!vid || !vid.duration || vid.duration < 10) return;
                 var pct = Math.round((vid.currentTime / vid.duration) * 100);
@@ -190,7 +232,8 @@
 
             function onEvent(e) {
                 if (['destroy', 'stop', 'end', 'close'].indexOf(e.type) > -1) {
-                    clearInterval(saveInterval);
+                    destroyed = true;
+                    if (saveInterval) { clearInterval(saveInterval); saveInterval = null; }
                     try { Lampa.Player.listener.remove('*', onEvent); } catch(ex) {}
                     doSave();
                     addToHistory(card, season, episode);
@@ -203,7 +246,7 @@
                 var vid = getVideo();
                 if (!vid) return;
                 vid.addEventListener('timeupdate', function () {
-                    if (!vid.duration || vid.duration < 10) return;
+                    if (destroyed || !vid.duration || vid.duration < 10) return;
                     var pct = Math.round((vid.currentTime / vid.duration) * 100);
                     if (Math.abs(pct - lastPct) >= 2) {
                         lastPct = pct;
@@ -212,7 +255,8 @@
                     }
                 });
                 vid.addEventListener('ended', function () {
-                    clearInterval(saveInterval);
+                    destroyed = true;
+                    if (saveInterval) { clearInterval(saveInterval); saveInterval = null; }
                     saveTimecode(card, season, episode, 100, vid.duration || 0);
                     updateTimeline(card, season, episode, 100);
                 });
@@ -259,14 +303,14 @@
     function tsHeaders() {
         var h = { 'Content-Type': 'application/json' };
         var p = getTsPass();
-        if (p) h['Authorization'] = 'Basic ' + btoa('admin:' + p);
+        if (p) h['Authorization'] = 'Basic ' + base64Encode('admin:' + p);
         return h;
     }
 
     function tsAdd(magnet, title, onDone, onFail) {
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
-        jQuery.ajax({
+        $jq.ajax({
             url:      tsUrl + '/torrents',
             type:     'POST',
             headers:  tsHeaders(),
@@ -280,7 +324,7 @@
 
     function tsGetFiles(hash, onDone) {
         var tsUrl = getTsUrl();
-        jQuery.ajax({
+        $jq.ajax({
             url:      tsUrl + '/torrents',
             type:     'POST',
             headers:  tsHeaders(),
@@ -293,7 +337,14 @@
                         return /\.(mp4|mkv|avi|mov|webm|ts|m2ts|wmv|flv)$/i.test(f.path || '');
                     })
                     .sort(function (a, b) {
-                        return (a.path || '').localeCompare(b.path || '', undefined, { numeric: true });
+                        // ← Fix localeCompare với options
+                        var pa = a.path || '', pb = b.path || '';
+                        var na = pa.match(/\d+/g), nb = pb.match(/\d+/g);
+                        if (na && nb) {
+                            var diff = parseInt(na[na.length-1]) - parseInt(nb[nb.length-1]);
+                            if (diff !== 0) return diff;
+                        }
+                        return pa < pb ? -1 : pa > pb ? 1 : 0;
                     });
                 onDone(files, data);
             },
@@ -489,33 +540,33 @@
     function askEpisode(card, onPick) {
         var total = card.number_of_seasons || 1;
 
-        function pickEp(s) {
-            var totalEps = getSeasonEpCount(card, s);
+        function pickEp(seasonNum) {
+            var totalEps = getSeasonEpCount(card, seasonNum);
             var ee = [];
             for (var e = 1; e <= totalEps; e++) {
-                var tc    = loadTimecode(card, s, e);
+                var tc    = loadTimecode(card, seasonNum, e);
                 var badge = tc && tc.percent >= 100 ? ' ✅'
                           : tc && tc.percent > 0    ? ' ▶ ' + tc.percent + '%'
                           : '';
-                ee.push({ title: 'S' + padZero(s) + 'E' + padZero(e) + badge, s: s, e: e });
+                ee.push({ title: 'S' + padZero(seasonNum) + 'E' + padZero(e) + badge, seasonNum: seasonNum, epNum: e });
             }
             Lampa.Select.show({
-                title:    'Season ' + s,
+                title:    'Season ' + seasonNum,
                 items:    ee,
-                onSelect: function (item) { onPick(item.s, item.e); },
+                onSelect: function (item) { onPick(item.seasonNum, item.epNum); },
                 onBack:   function ()     { Lampa.Controller.toggle('full'); }
             });
         }
 
         if (total === 1) { pickEp(1); return; }
         var ss = [];
-        for (var s = 1; s <= total; s++) {
-            ss.push({ title: 'Season ' + s + ' (' + getSeasonEpCount(card, s) + ' tập)', s: s });
+        for (var sIdx = 1; sIdx <= total; sIdx++) {
+            ss.push({ title: 'Season ' + sIdx + ' (' + getSeasonEpCount(card, sIdx) + ' tập)', seasonNum: sIdx });
         }
         Lampa.Select.show({
             title:    'Chọn Season',
             items:    ss,
-            onSelect: function (item) { pickEp(item.s); },
+            onSelect: function (item) { pickEp(item.seasonNum); },
             onBack:   function ()     { Lampa.Controller.toggle('full'); }
         });
     }
@@ -642,8 +693,14 @@
             );
             var best = null, bestS = -1;
 
-            for (var base in groups) {
-                if (!groups.hasOwnProperty(base)) continue;
+            // ← Fix hasOwnProperty loop
+            var groupKeys = [];
+            for (var gk in groups) {
+                if (Object.prototype.hasOwnProperty.call(groups, gk)) groupKeys.push(gk);
+            }
+
+            for (var ki = 0; ki < groupKeys.length; ki++) {
+                var base = groupKeys[ki];
                 var sc = 0, seasons = groups[base];
                 if (base === tSlug) sc = 100;
                 else if (base.indexOf(tSlug) > -1 || tSlug.indexOf(base) > -1) sc = 70;
@@ -872,7 +929,7 @@
                     var u = getTsUrl();
                     if (!u) { Lampa.Noty.show('Chưa nhập URL!'); return; }
                     Lampa.Noty.show('Đang test...');
-                    jQuery.ajax({
+                    $jq.ajax({
                         url: u + '/echo', type: 'GET', timeout: 5000,
                         success: function ()    { Lampa.Noty.show('✅ TorrServer OK!'); },
                         error:   function (xhr) {
@@ -922,14 +979,14 @@
         var $ctx;
         if (e.object && e.object.activity)    $ctx = e.object.activity.render();
         else if (e.object && e.object.render) $ctx = e.object.render();
-        else                                   $ctx = jQuery('body');
+        else                                   $ctx = $jq('body');
 
         if ($ctx.find('.view--kkphim').length) return;
 
         var isSeries = getMediaType(card) === 'series';
 
         function mkBtn(cls, svgIn, label, fn) {
-            var $b = jQuery(
+            var $b = $jq(
                 '<div class="full-start__button selector ' + cls + '">' +
                 '<svg viewBox="0 0 24 24" fill="none" width="44" height="44" ' +
                 'stroke="currentColor" stroke-width="1.5" ' +
@@ -978,7 +1035,7 @@
     ============================================================ */
     function start() {
         initSettings();
-        console.log('[KKPhim Plugin] v3.0 — KKPhim | OPhim | Torrentio/AIO ✅');
+        console.log('[KKPhim Plugin] v3.1 — TV Compatible ✅');
     }
 
     if (window.appready) start();
