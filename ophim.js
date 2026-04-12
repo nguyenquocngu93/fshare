@@ -856,39 +856,39 @@
     }
 
     /* ============================================================
-       KNABEN
+       TORCVS
     ============================================================ */
-    function fetchKnaben(query, isTV, cb) {
-        var cat = isTV ? '300000' : '200000';
-        var url = 'https://knaben.eu/api/v1/' +
-            '?search=' + encodeURIComponent(query) +
-            '&categories[]=' + cat +
-            '&orderBy=seeders&sort=desc&size=30';
+    function fetchTorcvs(query, isTV, cb) {
+        // Torcvs API: https://torcvs.com/api/search
+        var cat = isTV ? 'tv' : 'movie';
+        var url = 'https://torcvs.com/api/search' +
+            '?q=' + encodeURIComponent(query) +
+            '&category=' + cat +
+            '&limit=30';
 
         reguest(url,
             function (data) {
                 var d   = typeof data === 'string' ? JSON.parse(data) : data;
                 var raw = [];
                 if (Array.isArray(d))                              raw = d;
-                else if (d && Array.isArray(d.hits))               raw = d.hits;
-                else if (d && d.hits && Array.isArray(d.hits.hits)) raw = d.hits.hits;
-                else if (d && Array.isArray(d.data))               raw = d.data;
                 else if (d && Array.isArray(d.results))            raw = d.results;
+                else if (d && Array.isArray(d.data))               raw = d.data;
+                else if (d && Array.isArray(d.torrents))           raw = d.torrents;
+                else if (d && d.hits && Array.isArray(d.hits))     raw = d.hits;
 
                 var results = raw.map(function (r) {
-                    var src     = r._source || r;
-                    var hash    = (src.infoHash || src.info_hash || src.hash || '')
-                                  .toLowerCase();
-                    var title2  = src.title || src.name || '';
-                    var seeds   = parseInt(src.seeders || src.seeds || 0);
-                    var peers   = parseInt(src.leechers || src.peers || 0);
-                    var size    = parseInt(src.size || src.contentLength ||
-                                          src.bytes || 0);
-                    var tracker = src.indexer || src.tracker || src.source || 'Knaben';
-                    var magnet  = src.magnetUrl || src.magnet || '';
+                    var src    = r._source || r;
+                    var hash   = (src.infoHash || src.info_hash || src.hash || '')
+                                 .toLowerCase();
+                    var title2 = src.title || src.name || '';
+                    var seeds  = parseInt(src.seeders || src.seeds || 0);
+                    var peers  = parseInt(src.leechers || src.peers || 0);
+                    var size   = parseInt(src.size || src.contentLength || src.bytes || 0);
+                    var tracker = src.tracker || src.source || src.indexer || 'Torcvs';
+                    var magnet = src.magnetUrl || src.magnet || src.magnet_url || '';
 
                     if (!magnet && hash) magnet = makeMagnet(hash, title2);
-                    if (!magnet) return null;
+                    if (!magnet && !hash) return null;
 
                     var qm = title2.match(
                         /\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i
@@ -897,7 +897,7 @@
                         title:   title2,
                         seeds:   seeds,
                         peers:   peers,
-                        size:    fmtBytes(size),
+                        size:    size ? fmtBytes(size) : (src.size_string || ''),
                         sizeNum: size,
                         tracker: tracker,
                         quality: qm ? qm[1] : '',
@@ -905,16 +905,16 @@
                         magnet:  magnet
                     };
                 }).filter(Boolean).sort(function (a, b) {
-                    return b.sizeNum - a.sizeNum;
+                    return b.seeds - a.seeds || b.sizeNum - a.sizeNum;
                 });
 
                 cb(results);
             },
-            function (e) { Lampa.Noty.show('Knaben lỗi: ' + e); cb([]); }
+            function (e) { Lampa.Noty.show('Torcvs lỗi: ' + e); cb([]); }
         );
     }
 
-    function searchKnaben(card) {
+    function searchTorcvs(card) {
         var title = card.title || card.name || '';
         var orig  = card.original_title || card.original_name || '';
         var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
@@ -924,14 +924,92 @@
                     ? title + (year ? ' ' + year : '')
                     : '';
 
-        Lampa.Noty.show('Knaben: đang tìm...');
-        fetchKnaben(q1, isTV, function (r) {
+        Lampa.Noty.show('Torcvs: đang tìm...');
+        fetchTorcvs(q1, isTV, function (r) {
             if (!r.length && q2) {
-                fetchKnaben(q2, isTV, function (r2) {
-                    showPackMenu(r2, title, 'Knaben', card);
+                fetchTorcvs(q2, isTV, function (r2) {
+                    showPackMenu(r2, title, 'Torcvs', card);
                 });
             } else {
-                showPackMenu(r, title, 'Knaben', card);
+                showPackMenu(r, title, 'Torcvs', card);
+            }
+        });
+    }
+
+    /* ============================================================
+       BITSEARCH
+    ============================================================ */
+    function fetchBitsearch(query, isTV, cb) {
+        // Bitsearch API: https://bitsearch.to/api/v1/search
+        var cat = isTV ? '500' : '200';
+        var url = 'https://bitsearch.to/api/v1/search' +
+            '?q=' + encodeURIComponent(query) +
+            '&category=' + cat +
+            '&sort=seeders&p=1';
+
+        reguest(url,
+            function (data) {
+                var d   = typeof data === 'string' ? JSON.parse(data) : data;
+                var raw = [];
+                if (Array.isArray(d))                              raw = d;
+                else if (d && Array.isArray(d.data))               raw = d.data;
+                else if (d && Array.isArray(d.results))            raw = d.results;
+                else if (d && Array.isArray(d.torrents))           raw = d.torrents;
+
+                var results = raw.map(function (r) {
+                    var hash   = (r.infoHash || r.info_hash || r.hash || '').toLowerCase();
+                    var title2 = r.name || r.title || '';
+                    var seeds  = parseInt(r.seeders || r.seeds || 0);
+                    var peers  = parseInt(r.leechers || r.peers || 0);
+                    var size   = parseInt(r.size || r.contentLength || 0);
+                    var tracker = r.tracker || r.source || 'Bitsearch';
+                    var magnet = r.magnet || r.magnetUrl || r.magnet_url || '';
+
+                    if (!magnet && hash) magnet = makeMagnet(hash, title2);
+                    if (!magnet && !hash) return null;
+
+                    var qm = title2.match(
+                        /\b(2160p|4K|UHD|1080p|720p|480p|BluRay|WEB-?DL|HDRip|HDTV)\b/i
+                    );
+                    return {
+                        title:   title2,
+                        seeds:   seeds,
+                        peers:   peers,
+                        size:    size ? fmtBytes(size) : '',
+                        sizeNum: size,
+                        tracker: tracker,
+                        quality: qm ? qm[1] : '',
+                        hash:    hash,
+                        magnet:  magnet
+                    };
+                }).filter(Boolean).sort(function (a, b) {
+                    return b.seeds - a.seeds || b.sizeNum - a.sizeNum;
+                });
+
+                cb(results);
+            },
+            function (e) { Lampa.Noty.show('Bitsearch lỗi: ' + e); cb([]); }
+        );
+    }
+
+    function searchBitsearch(card) {
+        var title = card.title || card.name || '';
+        var orig  = card.original_title || card.original_name || '';
+        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
+        var isTV  = getMediaType(card) === 'series';
+        var q1    = (orig || title) + (year ? ' ' + year : '');
+        var q2    = (orig && orig !== title)
+                    ? title + (year ? ' ' + year : '')
+                    : '';
+
+        Lampa.Noty.show('Bitsearch: đang tìm...');
+        fetchBitsearch(q1, isTV, function (r) {
+            if (!r.length && q2) {
+                fetchBitsearch(q2, isTV, function (r2) {
+                    showPackMenu(r2, title, 'Bitsearch', card);
+                });
+            } else {
+                showPackMenu(r, title, 'Bitsearch', card);
             }
         });
     }
@@ -1180,10 +1258,9 @@
     }
 
     /* ============================================================
-       SETTINGS — FIX: Storage key sync + proper registration
+       SETTINGS
     ============================================================ */
     function initSettings() {
-        // Đăng ký component trước
         if (Lampa.SettingsApi && Lampa.SettingsApi.addComponent) {
             Lampa.SettingsApi.addComponent({
                 component: 'kkparser',
@@ -1195,17 +1272,12 @@
                       '</svg>'
             });
 
-            // Đợi component render xong rồi thêm params
             setTimeout(function () { buildSettings(); }, 100);
         }
     }
 
     function buildSettings() {
         if (!Lampa.SettingsApi) return;
-
-        // FIX CHÍNH: param.name phải trùng với key trong Storage
-        // getSetting('torrserver_url') → Lampa.Storage.get('kkparser_torrserver_url')
-        // Nên param.name = 'kkparser_torrserver_url' để Lampa UI đọc đúng
 
         Lampa.SettingsApi.addParam({
             component: 'kkparser',
@@ -1424,6 +1496,7 @@
             return $b;
         }
 
+        // KKPhim button
         var $kk = mkBtn('view--kkphim',
             '<rect x="2" y="2" width="20" height="20" rx="3"/>' +
             '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor" stroke="none"/>',
@@ -1431,6 +1504,7 @@
             function () { searchAndPlay('kkphim', card); }
         );
 
+        // OPhim button
         var $op = mkBtn('view--ophim',
             '<circle cx="12" cy="12" r="10"/>' +
             '<path d="M9.5 8.5L16 12L9.5 15.5V8.5Z" fill="currentColor" stroke="none"/>',
@@ -1438,6 +1512,7 @@
             function () { searchAndPlay('ophim', card); }
         );
 
+        // Torrentio / AIO button
         var $tr = mkBtn('view--kkparser-torrent',
             '<circle cx="12" cy="12" r="10"/>' +
             '<polyline points="8 12 12 16 16 12"/>' +
@@ -1449,6 +1524,7 @@
             }
         );
 
+        // Jackett button
         var $jk = mkBtn('view--kkparser-jackett',
             '<circle cx="11" cy="11" r="8"/>' +
             '<line x1="21" y1="21" x2="16.65" y2="16.65"/>',
@@ -1456,26 +1532,36 @@
             function () { searchJackett(card); }
         );
 
-        var $kn = mkBtn('view--kkparser-knaben',
-            '<path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>' +
-            '<path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 ' +
-            'a15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
-            'Knaben',
-            function () { searchKnaben(card); }
+        // Torcvs button
+        var $tv = mkBtn('view--kkparser-torcvs',
+            '<path d="M12 2L2 7l10 5 10-5-10-5z"/>' +
+            '<path d="M2 17l10 5 10-5"/>' +
+            '<path d="M2 12l10 5 10-5"/>',
+            'Torcvs',
+            function () { searchTorcvs(card); }
+        );
+
+        // Bitsearch button
+        var $bs = mkBtn('view--kkparser-bitsearch',
+            '<circle cx="11" cy="11" r="8"/>' +
+            '<line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
+            '<path d="M11 8v6M8 11h6"/>',
+            'Bitsearch',
+            function () { searchBitsearch(card); }
         );
 
         var $anchor = $ctx.find('.view--torrent');
         if ($anchor.length) {
-            $anchor.after($kn).after($jk).after($tr).after($op).after($kk);
+            $anchor.after($bs).after($tv).after($jk).after($tr).after($op).after($kk);
         } else {
             $ctx.find('.full-start__buttons')
-                .append($kk).append($op).append($tr).append($jk).append($kn);
+                .append($kk).append($op).append($tr).append($jk).append($tv).append($bs);
         }
     });
 
     function start() {
         initSettings();
-        console.log('[KKPhim Parser] v1.8.3 — Storage key sync fix ✅');
+        console.log('[KKPhim Parser] v1.8.4 — Torcvs + Bitsearch ✅');
     }
 
     if (window.appready) start();
