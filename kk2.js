@@ -1,7 +1,3 @@
-/* ============================================================
-   Plugin 2 — torrentplus.js (FIXED)
-   Knaben + TPB + TorrCSV + YTS + Jackett
-============================================================ */
 (function () {
     'use strict';
 
@@ -41,8 +37,6 @@
     /* ============================================================
        HELPERS
     ============================================================ */
-    function padZero(n) { return (n < 10 ? '0' : '') + n; }
-
     function makeMagnet(hash, name) {
         return 'magnet:?xt=urn:btih:' + hash.toLowerCase() +
             '&dn=' + encodeURIComponent(name || '') +
@@ -102,6 +96,25 @@
     }
 
     /* ============================================================
+       BUILD QUERY — chỉ dùng tên, không season/episode
+    ============================================================ */
+    function buildQuery(card) {
+        var title   = card.title || card.name || '';
+        var orig    = card.original_title || card.original_name || '';
+        var year    = (card.release_date || card.first_air_date || '').slice(0, 4);
+        var isMovie = getMediaType(card) === 'movie';
+
+        /* Query chính: tên gốc + năm (chỉ phim lẻ) */
+        var q1 = (orig || title).trim();
+        if (isMovie && year) q1 += ' ' + year;
+
+        /* Query phụ: tên tiếng Việt (nếu khác) */
+        var q2 = (title !== orig && title) ? title.trim() : '';
+
+        return { main: q1, fallback: q2, display: title };
+    }
+
+    /* ============================================================
        TORRSERVER
     ============================================================ */
     function tsHeaders() {
@@ -111,14 +124,19 @@
         return h;
     }
 
-    function tsAdd(magnet, title, onDone, onFail) {
+    function tsAdd(link, title, onDone, onFail) {
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
         jQuery.ajax({
             url:      tsUrl + '/torrents',
             type:     'POST',
             headers:  tsHeaders(),
-            data:     JSON.stringify({ action: 'add', link: magnet, title: title || '', save_to_db: false }),
+            data:     JSON.stringify({
+                action:     'add',
+                link:       link,
+                title:      title || '',
+                save_to_db: false
+            }),
             dataType: 'json',
             timeout:  15000,
             success:  function (d)  { onDone((d && d.hash) || ''); },
@@ -143,9 +161,9 @@
                     .sort(function (a, b) {
                         return (a.path || '').localeCompare(b.path || '', undefined, { numeric: true });
                     });
-                onDone(files, data);
+                onDone(files);
             },
-            error: function () { onDone([], null); }
+            error: function () { onDone([]); }
         });
     }
 
@@ -159,21 +177,29 @@
         } catch(e) {}
     }
 
-    function tsAddAndPickFile(magnet, hash, torrentTitle, playTitle, card) {
+    function tsAddAndPlay(sendLink, hash, torrentTitle, playTitle, card) {
         var tsUrl = getTsUrl();
         if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
+
         Lampa.Noty.show('Đang thêm vào TorrServer...');
-        tsAdd(magnet, torrentTitle, function (retHash) {
+        tsAdd(sendLink, torrentTitle, function (retHash) {
             var h = retHash || hash;
             if (!h) { Lampa.Noty.show('Không lấy được hash'); return; }
+
             Lampa.Noty.show('Đang lấy danh sách file...');
             var tries = 0;
             function tryGet() {
                 tries++;
                 tsGetFiles(h, function (files) {
                     if (!files.length && tries < 6) { setTimeout(tryGet, 2000); return; }
-                    if (!files.length) { tsPlayFile(h, 0, playTitle, card); return; }
-                    if (files.length === 1) { tsPlayFile(h, files[0].id || 0, playTitle, card); return; }
+                    if (!files.length) {
+                        tsPlayFile(h, 0, playTitle, card);
+                        return;
+                    }
+                    if (files.length === 1) {
+                        tsPlayFile(h, files[0].id || 0, playTitle, card);
+                        return;
+                    }
                     showFileList(files, h, playTitle, card);
                 });
             }
@@ -197,9 +223,12 @@
                 };
             }),
             onSelect: function (item) {
-                tsPlayFile(hash, item.file.id || 0,
+                tsPlayFile(
+                    hash,
+                    item.file.id || 0,
                     playTitle + ' — ' + (item.file.path || '').split('/').pop(),
-                    card);
+                    card
+                );
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
@@ -209,10 +238,7 @@
        TORRENT SOURCES
     ============================================================ */
 
-    /*
-     * normResult dùng cho Knaben/TPB/YTS/TorrCSV
-     * Yêu cầu hash hợp lệ 40 hoặc 32 ký tự hex
-     */
+    /* normResult — cho Knaben/TPB/YTS/TorrCSV (cần hash hợp lệ) */
     function normResult(obj) {
         var hash = (obj.hash || '').toLowerCase()
             .replace(/^urn:btih:/i, '')
@@ -229,52 +255,33 @@
             quality: getQuality(obj.title),
             hash:    hash,
             magnet:  obj.magnet || makeMagnet(hash, obj.title),
-            link:    obj.link   || ''   // .torrent URL fallback
+            link:    obj.link   || ''
         };
     }
 
-    /*
-     * normJackett — KHÔNG lọc hash
-     * Jackett có thể trả về MagnetUri HOẶC Link (.torrent)
-     * TorrServer chấp nhận cả magnet lẫn .torrent URL
-     */
+    /* normJackett — không lọc hash, chấp nhận .torrent URL */
     function normJackett(r) {
         if (!r.Title || !String(r.Title).trim()) return null;
-
-        var magnetUri  = r.MagnetUri  || '';
-        var torrentUrl = r.Link       || r.Details || '';
-        var guid       = r.Guid       || '';
-
-        /* Ưu tiên MagnetUri, fallback Link (.torrent), fallback Guid */
-        var link = magnetUri || torrentUrl || guid;
+        var magnetUri  = r.MagnetUri || '';
+        var torrentUrl = r.Link      || '';
+        var link       = magnetUri   || torrentUrl;
         if (!link) return null;
 
-        /* Extract hash từ magnet nếu có */
         var hash = '';
         var hm   = link.match(/btih:([a-f0-9]{32,40})/i);
         if (hm) hash = hm[1].toLowerCase();
 
-        /* Nếu không có hash từ magnet, thử parse từ Guid hoặc Details */
-        if (!hash) {
-            var gm = (guid + ' ' + torrentUrl).match(/([a-f0-9]{40})/i);
-            if (gm) hash = gm[1].toLowerCase();
-        }
-
         var sb = parseInt(r.Size || 0);
         return {
             title:   String(r.Title).trim(),
-            seeds:   parseInt(r.Seeders  || r.Seeds   || 0),
-            peers:   parseInt(r.Leechers || r.Peers   || 0),
+            seeds:   parseInt(r.Seeders  || 0),
+            peers:   parseInt(r.Leechers || 0),
             size:    sb ? fmtBytes(sb) : '',
             sizeNum: sb,
             tracker: r.Tracker || r.TrackerId || 'Jackett',
             quality: getQuality(r.Title),
             hash:    hash,
-            /* 
-             * magnet: dùng khi có hash
-             * link:   .torrent URL — TorrServer add được trực tiếp
-             */
-            magnet:  magnetUri  || (hash ? makeMagnet(hash, r.Title) : ''),
+            magnet:  magnetUri || (hash ? makeMagnet(hash, r.Title) : ''),
             link:    torrentUrl || magnetUri
         };
     }
@@ -295,7 +302,7 @@
         reguest(url, function (data) {
             var raw  = typeof data === 'string' ? JSON.parse(data) : data;
             var hits = (raw && raw.hits) ? raw.hits : (Array.isArray(raw) ? raw : []);
-            var results = hits.map(function (h) {
+            var out  = hits.map(function (h) {
                 var bytes = parseInt(h.bytes || h.size_bytes || 0);
                 return normResult({
                     title:   h.title || h.name || '',
@@ -307,7 +314,7 @@
                     tracker: 'Knaben'
                 });
             }).filter(Boolean);
-            cb(results);
+            cb(out);
         }, function (e) { console.warn('[Knaben]', e); cb([]); });
     }
 
@@ -317,7 +324,7 @@
         reguest(url, function (data) {
             var raw = typeof data === 'string' ? JSON.parse(data) : data;
             if (!Array.isArray(raw)) { cb([]); return; }
-            var results = raw
+            var out = raw
                 .filter(function (r) { return r.id && r.id !== '0' && r.info_hash; })
                 .map(function (r) {
                     var bytes = parseInt(r.size) || 0;
@@ -331,7 +338,7 @@
                         tracker: 'TPB'
                     });
                 }).filter(Boolean);
-            cb(results);
+            cb(out);
         }, function (e) { console.warn('[Apibay]', e); cb([]); });
     }
 
@@ -342,7 +349,7 @@
         reguest(url, function (data) {
             var raw    = typeof data === 'string' ? JSON.parse(data) : data;
             var movies = (raw && raw.data && raw.data.movies) ? raw.data.movies : [];
-            var results = [];
+            var out    = [];
             movies.forEach(function (movie) {
                 (movie.torrents || []).forEach(function (t) {
                     var bytes = parseInt(t.size_bytes) || 0;
@@ -356,10 +363,10 @@
                         sizeNum: bytes,
                         tracker: 'YTS'
                     });
-                    if (r) results.push(r);
+                    if (r) out.push(r);
                 });
             });
-            cb(results);
+            cb(out);
         }, function (e) { console.warn('[YTS]', e); cb([]); });
     }
 
@@ -370,7 +377,7 @@
         reguest(url, function (data) {
             var raw  = typeof data === 'string' ? JSON.parse(data) : data;
             var list = (raw && raw.torrents) ? raw.torrents : [];
-            var results = list.map(function (t) {
+            var out  = list.map(function (t) {
                 var bytes = parseInt(t.size_bytes || t.size || 0);
                 return normResult({
                     title:   t.name || '',
@@ -382,50 +389,37 @@
                     tracker: 'TorrCSV'
                 });
             }).filter(Boolean);
-            cb(results);
+            cb(out);
         }, function (e) { console.warn('[TorrCSV]', e); cb([]); });
     }
 
-    /* ============================================================
-       JACKETT — FIXED
-       - Dùng normJackett thay normResult (không lọc hash)
-       - Hỗ trợ cả MagnetUri lẫn .torrent Link
-       - Hiển thị đúng tên tracker từng indexer
-    ============================================================ */
+    /* JACKETT */
     function fetchJackett(query, cb) {
         var url = getJackettUrl(), key = getJackettKey();
         if (!url || !key) { cb([]); return; }
 
-        var apiUrl = url + '/api/v2.0/indexers/all/results' +
-            '?apikey='        + encodeURIComponent(key) +
-            '&Query='         + encodeURIComponent(query) +
+        reguest(
+            url + '/api/v2.0/indexers/all/results' +
+            '?apikey='         + encodeURIComponent(key) +
+            '&Query='          + encodeURIComponent(query) +
             '&Category[]=2000' +
-            '&Category[]=5000' +
-            '&Category[]=100008';  // extra: thêm cat Nga hay dùng
-
-        reguest(apiUrl, function (data) {
-            var d       = typeof data === 'string' ? JSON.parse(data) : data;
-            var raw     = (d && d.Results) ? d.Results : (Array.isArray(d) ? d : []);
-
-            console.log('[Jackett] raw results:', raw.length);
-
-            var results = raw.map(function (r) {
-                return normJackett(r);
-            }).filter(function (r) {
-                /* Chỉ lọc những cái không có link nào hết */
-                return r && (r.magnet || r.link);
-            });
-
-            console.log('[Jackett] valid results:', results.length);
-            cb(results);
-        }, function (e) {
-            console.warn('[Jackett]', e);
-            cb([]);
-        });
+            '&Category[]=5000',
+            function (data) {
+                var d   = typeof data === 'string' ? JSON.parse(data) : data;
+                var raw = (d && d.Results) ? d.Results : [];
+                var out = raw.map(function (r) {
+                    return normJackett(r);
+                }).filter(function (r) {
+                    return r && (r.magnet || r.link);
+                });
+                cb(out);
+            },
+            function (e) { console.warn('[Jackett]', e); cb([]); }
+        );
     }
 
     /* ============================================================
-       MULTI SEARCH (Knaben + TPB + TorrCSV + YTS)
+       MULTI SEARCH — Knaben + TPB + TorrCSV + YTS(phim lẻ)
     ============================================================ */
     var QUALITY_ORDER = ['2160P','4K','UHD','REMUX','1080P','1080I','720P','480P'];
 
@@ -438,12 +432,8 @@
 
         function finish(results) {
             results.forEach(function (r) {
-                /* Deduplicate theo hash nếu có, không thì cứ add */
                 if (r.hash) {
-                    if (!seenHash[r.hash]) {
-                        seenHash[r.hash] = true;
-                        combined.push(r);
-                    }
+                    if (!seenHash[r.hash]) { seenHash[r.hash] = true; combined.push(r); }
                 } else {
                     combined.push(r);
                 }
@@ -465,15 +455,14 @@
     }
 
     /* ============================================================
-       HIỂN THỊ KẾT QUẢ
+       HIỂN THỊ KẾT QUẢ — gom nhóm theo quality
     ============================================================ */
-    function showTorrentMenu(results, movieTitle, card) {
+    function showTorrentMenu(results, displayTitle, card) {
         if (!results || !results.length) {
-            Lampa.Noty.show('Không tìm thấy torrent nào');
+            Lampa.Noty.show('Không tìm thấy kết quả nào');
             return;
         }
 
-        /* Gom nhóm theo quality */
         var byQ = {}, allQ = [];
         results.forEach(function (r) {
             var q = r.quality || 'OTHER';
@@ -493,12 +482,11 @@
             var group = byQ[q];
             items.push({ title: '── ' + q + ' · ' + group.length + ' ──', separator: true });
             group.slice(0, 20).forEach(function (r) {
-                var name    = r.title.length > 60 ? r.title.slice(0, 57) + '…' : r.title;
-                var seedTxt = r.seeds > 0 ? '👤 ' + r.seeds : '⚠ 0 seed';
-                var peerTxt = r.peers > 0 ? '/' + r.peers   : '';
-                var sizeTxt = r.size       ? '  💾 ' + r.size : '';
-                /* Hiện icon magnet hoặc .torrent */
-                var linkIcon = r.magnet && r.magnet.startsWith('magnet:') ? '🧲' : '📄';
+                var name     = r.title.length > 60 ? r.title.slice(0, 57) + '…' : r.title;
+                var seedTxt  = r.seeds > 0 ? '👤 ' + r.seeds : '⚠ 0 seed';
+                var peerTxt  = r.peers > 0 ? '/' + r.peers   : '';
+                var sizeTxt  = r.size       ? '  💾 ' + r.size : '';
+                var linkIcon = (r.magnet && r.magnet.startsWith('magnet:')) ? '🧲' : '📄';
                 items.push({
                     title:    linkIcon + ' [' + r.tracker + '] ' + name,
                     subtitle: seedTxt + peerTxt + sizeTxt,
@@ -508,154 +496,57 @@
         });
 
         Lampa.Select.show({
-            title: '🔍 ' + movieTitle + ' (' + results.length + ')',
+            title: '🔍 ' + displayTitle + ' (' + results.length + ')',
             items: items,
             onSelect: function (item) {
                 if (item.separator) return;
                 var r     = item.r;
                 var tsUrl = getTsUrl();
                 if (!tsUrl) { Lampa.Noty.show('Chưa cấu hình TorrServer!'); return; }
-
-                /* Lấy link tốt nhất để gửi TorrServer */
                 var sendLink = r.magnet || r.link;
-                var sendHash = r.hash   || '';
-
                 if (!sendLink) { Lampa.Noty.show('Không có link'); return; }
-
-                tsAddAndPickFile(sendLink, sendHash, r.title, movieTitle, card);
+                tsAddAndPlay(sendLink, r.hash, r.title, displayTitle, card);
             },
             onBack: function () { Lampa.Controller.toggle('full'); }
         });
     }
 
     /* ============================================================
-       ENTRY POINTS
+       ENTRY POINTS — chỉ search tên, không hỏi season/episode
     ============================================================ */
-    function searchTorrentMulti(card) {
-        var title   = card.title || card.name || '';
-        var orig    = card.original_title || card.original_name || title;
-        var year    = (card.release_date || card.first_air_date || '').slice(0, 4);
+    function doSearchMulti(card) {
+        var q       = buildQuery(card);
         var isMovie = getMediaType(card) === 'movie';
-        var query   = (orig || title) + (isMovie && year ? ' ' + year : '');
 
-        Lampa.Noty.show('🔍 Đang tìm: ' + query);
-        searchAllSources(query, isMovie, function (results) {
-            if (!results.length && orig !== title) {
-                var q2 = title + (isMovie && year ? ' ' + year : '');
-                Lampa.Noty.show('Thử lại: ' + q2);
-                searchAllSources(q2, isMovie, function (r2) {
-                    showTorrentMenu(r2, title, card);
+        Lampa.Noty.show('🔍 Đang tìm: ' + q.main);
+        searchAllSources(q.main, isMovie, function (results) {
+            /* Nếu không có kết quả và có query phụ thì thử lại */
+            if (!results.length && q.fallback) {
+                Lampa.Noty.show('Thử lại: ' + q.fallback);
+                searchAllSources(q.fallback, isMovie, function (r2) {
+                    showTorrentMenu(r2, q.display, card);
                 });
             } else {
-                showTorrentMenu(results, title, card);
+                showTorrentMenu(results, q.display, card);
             }
         });
     }
 
-    function searchJackett(card) {
-        var title = card.title || card.name || '';
-        var orig  = card.original_title || card.original_name || '';
-        var year  = (card.release_date || card.first_air_date || '').slice(0, 4);
-        var query = (orig || title) + (year ? ' ' + year : '');
-
+    function doSearchJackett(card) {
+        var q   = buildQuery(card);
         var url = getJackettUrl(), key = getJackettKey();
         if (!url || !key) { Lampa.Noty.show('Vào Settings → cấu hình Jackett!'); return; }
 
-        Lampa.Noty.show('Jackett: đang tìm "' + query + '"...');
-        fetchJackett(query, function (results) {
-            /* Thử lại với title nếu orig không có kết quả */
-            if (!results.length && orig && orig !== title) {
-                var q2 = title + (year ? ' ' + year : '');
-                Lampa.Noty.show('Jackett: thử lại "' + q2 + '"...');
-                fetchJackett(q2, function (r2) {
-                    showTorrentMenu(r2, title, card);
+        Lampa.Noty.show('Jackett: đang tìm "' + q.main + '"...');
+        fetchJackett(q.main, function (results) {
+            if (!results.length && q.fallback) {
+                Lampa.Noty.show('Jackett: thử lại "' + q.fallback + '"...');
+                fetchJackett(q.fallback, function (r2) {
+                    showTorrentMenu(r2, q.display, card);
                 });
             } else {
-                showTorrentMenu(results, title, card);
+                showTorrentMenu(results, q.display, card);
             }
-        });
-    }
-
-    function getSeasonEpCount(card, s) {
-        if (card.seasons) {
-            var f = card.seasons.filter(function (x) { return x.season_number === s; })[0];
-            if (f && f.episode_count) return f.episode_count;
-        }
-        return 50;
-    }
-
-    function askEpisodeThenSearch(card, onPick) {
-        var total = card.number_of_seasons || 1;
-
-        function pickEp(s) {
-            var totalEps = getSeasonEpCount(card, s);
-            var ee = [];
-            for (var e = 1; e <= totalEps; e++) {
-                ee.push({ title: 'S' + padZero(s) + 'E' + padZero(e), s: s, e: e });
-            }
-            Lampa.Select.show({
-                title:    'Season ' + s + ' — Chọn tập',
-                items:    ee,
-                onSelect: function (item) { onPick(item.s, item.e); },
-                onBack:   function ()     { Lampa.Controller.toggle('full'); }
-            });
-        }
-
-        if (total === 1) { pickEp(1); return; }
-        var ss = [];
-        for (var s = 1; s <= total; s++) {
-            ss.push({ title: 'Season ' + s + ' (' + getSeasonEpCount(card, s) + ' tập)', s: s });
-        }
-        Lampa.Select.show({
-            title:    'Chọn Season',
-            items:    ss,
-            onSelect: function (item) { pickEp(item.s); },
-            onBack:   function ()     { Lampa.Controller.toggle('full'); }
-        });
-    }
-
-    function searchSeriesMulti(card) {
-        askEpisodeThenSearch(card, function (s, ep) {
-            var title   = card.title || card.name || '';
-            var orig    = card.original_title || card.original_name || title;
-            var epStr   = 'S' + padZero(s) + 'E' + padZero(ep);
-            var query   = (orig || title) + ' ' + epStr;
-            var display = title + ' ' + epStr;
-
-            Lampa.Noty.show('🔍 Đang tìm: ' + query);
-            searchAllSources(query, false, function (results) {
-                if (!results.length && orig !== title) {
-                    searchAllSources(title + ' ' + epStr, false, function (r2) {
-                        showTorrentMenu(r2, display, card);
-                    });
-                } else {
-                    showTorrentMenu(results, display, card);
-                }
-            });
-        });
-    }
-
-    function searchSeriesJackett(card) {
-        askEpisodeThenSearch(card, function (s, ep) {
-            var title   = card.title || card.name || '';
-            var orig    = card.original_title || card.original_name || '';
-            var epStr   = 'S' + padZero(s) + 'E' + padZero(ep);
-            var query   = (orig || title) + ' ' + epStr;
-            var display = title + ' ' + epStr;
-
-            var url = getJackettUrl(), key = getJackettKey();
-            if (!url || !key) { Lampa.Noty.show('Vào Settings → cấu hình Jackett!'); return; }
-
-            Lampa.Noty.show('Jackett: đang tìm "' + query + '"...');
-            fetchJackett(query, function (results) {
-                if (!results.length && orig && orig !== title) {
-                    fetchJackett(title + ' ' + epStr, function (r2) {
-                        showTorrentMenu(r2, display, card);
-                    });
-                } else {
-                    showTorrentMenu(results, display, card);
-                }
-            });
         });
     }
 
@@ -681,7 +572,10 @@
         var params = [
             {
                 name: 'torrserver_url', type: 'input',
-                field: { name: 'TorrServer URL', description: 'Để trống nếu đã cấu hình ở plugin KKPhim' }
+                field: {
+                    name:        'TorrServer URL',
+                    description: 'Để trống nếu đã cấu hình ở plugin KKPhim'
+                }
             },
             {
                 name: 'torrserver_pass', type: 'input',
@@ -709,11 +603,11 @@
             },
             {
                 name: 'jackett_key', type: 'input',
-                field: { name: 'Jackett API Key', description: 'API Key từ tài khoản Jackett' }
+                field: { name: 'Jackett API Key', description: 'API Key từ tài khoản' }
             },
             {
                 name: 'test_jack', type: 'button',
-                field: { name: '🧪 Test Jackett', description: 'Kiểm tra và xem số indexer' },
+                field: { name: '🧪 Test Jackett', description: 'Kiểm tra kết nối' },
                 onChange: function () {
                     var u = getJackettUrl(), k = getJackettKey();
                     if (!u) { Lampa.Noty.show('Chưa nhập URL!'); return; }
@@ -724,7 +618,7 @@
                         function (data) {
                             var d = typeof data === 'string' ? JSON.parse(data) : data;
                             var n = (d && d.Results) ? d.Results.length : 0;
-                            Lampa.Noty.show('✅ Jackett OK! ' + n + ' kết quả test');
+                            Lampa.Noty.show('✅ Jackett OK! ' + n + ' kết quả');
                         },
                         function (e) { Lampa.Noty.show('❌ ' + e); }
                     );
@@ -742,7 +636,9 @@
                     default: p.default || ''
                 },
                 field:    p.field,
-                onChange: p.onChange || function (v) { Lampa.Storage.set(STG_PREFIX + p.name, v); }
+                onChange: p.onChange || function (v) {
+                    Lampa.Storage.set(STG_PREFIX + p.name, v);
+                }
             });
         });
     }
@@ -762,8 +658,6 @@
 
         if ($ctx.find('.view--tplus-multi').length) return;
 
-        var isSeries = getMediaType(card) === 'series';
-
         function mkBtn(cls, svgIn, label, fn) {
             var $b = jQuery(
                 '<div class="full-start__button selector ' + cls + '">' +
@@ -776,26 +670,22 @@
             return $b;
         }
 
+        /* Torrent+ — search tên phim, không hỏi gì thêm */
         var $mt = mkBtn('view--tplus-multi',
             '<circle cx="11" cy="11" r="8"/>' +
             '<line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
             '<line x1="11" y1="8"  x2="11" y2="14"/>' +
             '<line x1="8"  y1="11" x2="14" y2="11"/>',
             'Torrent+',
-            function () {
-                if (isSeries) searchSeriesMulti(card);
-                else searchTorrentMulti(card);
-            }
+            function () { doSearchMulti(card); }
         );
 
+        /* Jackett — search tên phim, không hỏi gì thêm */
         var $jk = mkBtn('view--tplus-jackett',
             '<circle cx="11" cy="11" r="8"/>' +
             '<line x1="21" y1="21" x2="16.65" y2="16.65"/>',
             'Jackett',
-            function () {
-                if (isSeries) searchSeriesJackett(card);
-                else searchJackett(card);
-            }
+            function () { doSearchJackett(card); }
         );
 
         var $anchor = $ctx.find('.view--torrent');
@@ -811,7 +701,7 @@
     ============================================================ */
     function start() {
         initSettings();
-        console.log('[Torrent+] v1.1 — Knaben|TPB|TorrCSV|YTS|Jackett(fixed) ✅');
+        console.log('[Torrent+] v1.2 — search by name only ✅');
     }
 
     if (window.appready) start();
