@@ -1,4 +1,4 @@
-/* KKPhim Torrent Extension v2.5.4 - Fix controller + UI */
+/* KKPhim Torrent Extension v2.5.5 - Fix season ep count + flow */
 (function(){
 'use strict';
 if(window.__kkphim_torrent_started)return;
@@ -83,12 +83,11 @@ var TIO_BASE='https://torrentio.strem.fun';
 var TMDB_KEY='4ef0d7355d9ffb5151e987764708ce96';
 
 /* ================================================================
-   FIX CONTROLLER: Restore về content sau khi đóng Select/modal
+   FIX CONTROLLER
 ================================================================ */
 function restoreController(){
   setTimeout(function(){
     try{
-      /* Thử toggle về content trước */
       if(Lampa.Controller.enabled()==='content'){return;}
       Lampa.Controller.toggle('content');
     }catch(e){
@@ -97,18 +96,15 @@ function restoreController(){
   },150);
 }
 
-/* Wrap Lampa.Select.show để tự động fix onBack */
 function showSelect(params){
   var origBack=params.onBack;
   params.onBack=function(){
     try{if(origBack)origBack();}catch(e){}
     restoreController();
   };
-  /* Cũng wrap onSelect để restore sau khi chọn (trừ khi mở Select khác) */
   var origSelect=params.onSelect;
   params.onSelect=function(item){
     try{if(origSelect)origSelect(item);}catch(e){}
-    /* Không restore ngay vì onSelect có thể mở Select mới */
   };
   try{
     Lampa.Select.show(params);
@@ -247,7 +243,6 @@ function tsGetFiles(hash,onDone){
 function tsPlayFile(hash,fileId,movieTitle,card){
   var tsUrl=getTsUrl();
   var url=tsUrl+'/stream/'+encodeURIComponent(movieTitle||'video')+'?link='+hash+'&index='+fileId+'&play';
-  /* FIX: Restore controller trước khi play */
   restoreController();
   setTimeout(function(){
     Lampa.Player.play({title:movieTitle,url:url,movie:card||{}});
@@ -360,7 +355,7 @@ function parseStream(st){
 }
 
 /* ================================================================
-   SHOW TIO MENU - FIX onBack/onSelect controller
+   SHOW TIO MENU
 ================================================================ */
 function showTioMenu(streams,movieTitle,card){
   if(!streams||!streams.length){Lampa.Noty.show('Không tìm thấy stream!');restoreController();return;}
@@ -443,34 +438,72 @@ function searchTio(card,season,episode){
     function(){Lampa.Noty.show('Lỗi lấy IMDB ID');restoreController();}
   );
 }
-function searchTioTV(card){
-  var total=card.number_of_seasons||1;
-  function pickEp(s){
-    var totalEps=getSeasonEpCount(card,s);
-    var items=[];
-    for(var e=1;e<=totalEps;e++)items.push({title:'S'+pad(s)+'E'+pad(e),s:s,e:e});
-    showSelect({
-      title:'Season '+s+' — Chọn tập',items:items,
-      onSelect:function(item){searchTio(card,item.s,item.e);},
-      onBack:function(){restoreController();}
+
+/* ================================================================
+   FETCH SEASON EP COUNT TỪ TMDB
+================================================================ */
+function fetchSeasonEpCount(card,seasonNum,cb){
+  var tmdbId=card.id||card.tmdb_id;
+  if(!tmdbId){cb(50);return;}
+  Lampa.Noty.show('Đang lấy số tập...');
+  fetch('https://api.themoviedb.org/3/tv/'+tmdbId+'/season/'+seasonNum+'?api_key='+TMDB_KEY+'&language=en-US')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var count=(d&&d.episodes&&d.episodes.length)||0;
+      console.log('[KKTorrent] Season '+seasonNum+' có '+count+' tập');
+      cb(count||50);
+    })
+    .catch(function(){
+      console.warn('[KKTorrent] Không lấy được số tập, fallback 50');
+      cb(50);
     });
-  }
-  if(total===1){pickEp(1);return;}
-  var ss=[];
-  for(var s=1;s<=total;s++)ss.push({title:'Season '+s+' ('+getSeasonEpCount(card,s)+' tập)',s:s});
-  showSelect({
-    title:'Chọn Season',items:ss,
-    onSelect:function(item){pickEp(item.s);},
-    onBack:function(){restoreController();}
-  });
-}
-function getSeasonEpCount(card,season){
-  if(card.seasons){var s=card.seasons.filter(function(x){return x.season_number===season;})[0];if(s&&s.episode_count)return s.episode_count;}
-  return 50;
 }
 
 /* ================================================================
-   JACKETT
+   SEARCH TIO TV - FIX season/ep flow
+================================================================ */
+function searchTioTV(card){
+  var total=card.number_of_seasons||1;
+
+  function pickEp(s,totalEps){
+    if(!totalEps){
+      fetchSeasonEpCount(card,s,function(count){
+        pickEp(s,count);
+      });
+      return;
+    }
+    var items=[];
+    for(var e=1;e<=totalEps;e++)
+      items.push({title:'S'+pad(s)+'E'+pad(e),s:s,e:e});
+    showSelect({
+      title:'Season '+s+' — Chọn tập',items:items,
+      onSelect:function(item){
+        searchTio(card,item.s,item.e);
+      },
+      onBack:function(){
+        if(total>1)showSeasonMenu();
+        else restoreController();
+      }
+    });
+  }
+
+  function showSeasonMenu(){
+    var ss=[];
+    for(var s=1;s<=total;s++)
+      ss.push({title:'Season '+s,s:s});
+    showSelect({
+      title:'Chọn Season',items:ss,
+      onSelect:function(item){pickEp(item.s,null);},
+      onBack:function(){restoreController();}
+    });
+  }
+
+  if(total===1)pickEp(1,null);
+  else showSeasonMenu();
+}
+
+/* ================================================================
+   JACKETT - Giữ nguyên search theo tên
 ================================================================ */
 var QUALITY_ORDER={'2160P':4,'1080P':3,'720P':2,'480P':1};
 function qualityScore(q){return QUALITY_ORDER[(q||'').toUpperCase()]||0;}
@@ -589,7 +622,7 @@ function showPackMenu(results,movieTitle,label,card){
 }
 
 /* ================================================================
-   SOURCE MENU - FIX controller
+   SOURCE MENU
 ================================================================ */
 function showSourceMenu(card){
   var isSeries=getMediaType(card)==='series';
@@ -601,8 +634,15 @@ function showSourceMenu(card){
       {title:'🔍 Jackett'+(getTsUrl()?' → TS':''),subtitle:'Sort: '+getJacSort(),value:'jackett'}
     ],
     onSelect:function(item){
-      if(item.value==='tio'){if(isSeries)searchTioTV(card);else searchTio(card,null,null);}
-      else if(item.value==='jackett')searchJackett(card);
+      if(item.value==='tio'){
+        // Torrentio/AIO: series → season picker → ep picker (số tập thật từ TMDB)
+        if(isSeries)searchTioTV(card);
+        else searchTio(card,null,null);
+      }
+      else if(item.value==='jackett'){
+        // Jackett: giữ nguyên search theo tên phim
+        searchJackett(card);
+      }
     },
     onBack:function(){restoreController();}
   });
@@ -664,7 +704,7 @@ function addBtn(key,name,desc,fn){
 }
 
 /* ================================================================
-   EXPOSE API - Button size nhỏ hơn
+   EXPOSE API
 ================================================================ */
 window.__kkphim_torrent={
   buildTorrentBtn:function(mt,tid,title,poster,imdb){
@@ -754,7 +794,7 @@ Lampa.Listener.follow('full',function(e){
 
 function start(){
   initSettings();
-  console.log('[KKTorrent] v2.5.4 | engine='+getEngine()+' | sort='+getJacSort());
+  console.log('[KKTorrent] v2.5.5 | engine='+getEngine()+' | sort='+getJacSort());
 }
 if(window.appready)start();
 else Lampa.Listener.follow('app',function(e){if(e.type==='ready')start();});
