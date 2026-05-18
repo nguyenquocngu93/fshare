@@ -11,6 +11,9 @@
   var TORRENTIO_BASE = 'https://torrentio.strem.fun';
   var TMDB_API_KEY = '4ef0d7355d9ffb5151e987764708ce96';
   var STG_PREFIX = 'kkparser_';
+  
+  // ✅ CORS Proxy cho Knaben/Magnetz
+  var CORS_PROXY = 'https://corsproxy.io/?';
   var KNABEN_BASE_URL = 'https://knaben.org/search/';
   var MAGNETZ_BASE_URL = 'https://magnetz.eu/search';
 
@@ -120,12 +123,16 @@
   }
 
   /* ============================================================
-     HTML PARSER - Dùng DOMParser
+     HTML PARSER - Regex fallback
      ============================================================ */
   function parseHTML(html) {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(html, 'text/html');
-    return doc;
+    try {
+      var parser = new DOMParser();
+      return parser.parseFromString(html, 'text/html');
+    } catch (e) {
+      console.error('[DOMParser Error]', e);
+      return null;
+    }
   }
 
   function getText(element) {
@@ -263,7 +270,7 @@
   }
 
   /* ============================================================
-     KKPHIM / OPHIM
+     KKPHIM / OPHIM (giữ nguyên code cũ)
      ============================================================ */
   function extractSeasonNumber(name, slug) {
     var text = (name || '') + ' ' + (slug || '');
@@ -536,38 +543,25 @@
   }
 
   /* ============================================================
-     KNABEN - Parser với DOMParser
+     KNABEN - Regex parser với CORS proxy
      ============================================================ */
-  function parseKnabenHTML(html) {
+  function parseKnabenRegex(html) {
     var results = [];
-    try {
-      var doc = parseHTML(html);
-      var rows = doc.querySelectorAll('table tbody tr');
+    // Regex lấy magnet + title + size + seeds
+    var pattern = /<tr[^>]*>[\s\S]*?href="(magnet:\?xt=urn:btih:([a-fA-F0-9]{40})[^"]*)"[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*><\/td>[\s\S]*?<td[^>]*>(\d+)<\/td>/gi;
+    
+    var match;
+    while ((match = pattern.exec(html)) !== null) {
+      var magnet = match[1].replace(/&amp;/g, '&');
+      var hash = match[2];
+      var title = match[3].trim();
+      var sizeStr = match[4].trim();
+      var seeds = parseInt(match[5]) || 0;
       
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var cells = row.querySelectorAll('td');
-        if (cells.length < 6) continue;
-        
-        // Tìm magnet link
-        var magnetLink = row.querySelector('a[href^="magnet:"]');
-        if (!magnetLink) continue;
-        
-        var magnet = getAttr(magnetLink, 'href');
-        if (!magnet) continue;
-        
-        var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
-        if (!hashMatch) continue;
-        
-        var title = getText(cells[1]);
-        if (!title) continue;
-        
-        var sizeStr = getText(cells[2]);
-        var seeds = parseInt(getText(cells[4])) || 0;
-        
+      if (title && hash) {
         results.push({
           title: title,
-          hash: hashMatch[1],
+          hash: hash,
           seeds: seeds,
           peers: 0,
           size: sizeStr,
@@ -576,25 +570,76 @@
           magnet: magnet
         });
       }
-    } catch (e) {
-      console.error('[Knaben Parser Error]', e);
     }
     
     return results;
   }
 
   function fetchKnaben(query, cb) {
-    var url = KNABEN_BASE_URL + encodeURIComponent(query) + '/0/1/bytes';
+    var url = CORS_PROXY + encodeURIComponent(KNABEN_BASE_URL + encodeURIComponent(query) + '/0/1/bytes');
+    
+    console.log('[Knaben] Fetching:', url);
+    
     reguest(url, function (html) {
-      var parsed = parseKnabenHTML(html);
+      console.log('[Knaben] HTML received, length:', html.length);
+      
+      // Thử DOMParser trước
+      var doc = parseHTML(html);
+      var results = [];
+      
+      if (doc) {
+        var rows = doc.querySelectorAll('table tbody tr');
+        console.log('[Knaben] Found rows:', rows.length);
+        
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var magnetLink = row.querySelector('a[href^="magnet:"]');
+          if (!magnetLink) continue;
+          
+          var magnet = getAttr(magnetLink, 'href');
+          var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
+          if (!hashMatch) continue;
+          
+          var cells = row.querySelectorAll('td');
+          if (cells.length < 6) continue;
+          
+          var title = getText(cells[1]);
+          var sizeStr = getText(cells[2]);
+          var seeds = parseInt(getText(cells[4])) || 0;
+          
+          if (title) {
+            results.push({
+              title: title,
+              hash: hashMatch[1],
+              seeds: seeds,
+              peers: 0,
+              size: sizeStr,
+              sizeNum: parseSize(sizeStr),
+              tracker: 'Knaben',
+              magnet: magnet
+            });
+          }
+        }
+      }
+      
+      // Fallback regex nếu DOMParser fail
+      if (results.length === 0) {
+        console.log('[Knaben] Trying regex parser...');
+        results = parseKnabenRegex(html);
+      }
+      
+      console.log('[Knaben] Parsed results:', results.length);
+      
       var normalized = [];
-      for (var i = 0; i < parsed.length; i++) {
-        var norm = normResult(parsed[i]);
+      for (var i = 0; i < results.length; i++) {
+        var norm = normResult(results[i]);
         if (norm) normalized.push(norm);
       }
+      
       cb(normalized);
     }, function (e) { 
-      console.error('[Knaben Fetch Error]', e);
+      console.error('[Knaben Error]', e);
+      Lampa.Noty.show('Knaben lỗi: ' + e);
       cb([]); 
     });
   }
@@ -605,10 +650,14 @@
     var year = (card.release_date || card.first_air_date || '').slice(0, 4);
     var q = (orig || title) + (year ? ' ' + year : '');
     var q2 = (orig && orig !== title) ? title + (year ? ' ' + year : '') : '';
+    
     Lampa.Noty.show('Knaben: đang tìm...');
+    
     fetchKnaben(q, function (r) {
       if (!r.length && q2) {
-        fetchKnaben(q2, function (r2) { showPackMenu(r2, title, 'Knaben', card); });
+        fetchKnaben(q2, function (r2) { 
+          showPackMenu(r2.length ? r2 : r, title, 'Knaben', card); 
+        });
       } else {
         showPackMenu(r, title, 'Knaben', card);
       }
@@ -616,70 +665,112 @@
   }
 
   /* ============================================================
-     MAGNETZ - Parser với DOMParser
+     MAGNETZ - Regex parser với CORS proxy
      ============================================================ */
-  function parseMagnetzHTML(html) {
+  function parseMagnetzRegex(html) {
     var results = [];
-    try {
-      var doc = parseHTML(html);
-      var cards = doc.querySelectorAll('article.result-card');
+    // Regex lấy data-magnet + title
+    var pattern = /<article[^>]*class="[^"]*result-card[^"]*"[^>]*>[\s\S]*?<a[^>]*class="[^"]*result-card__name[^"]*"[^>]*>([^<]+)<\/a>[\s\S]*?data-magnet="([^"]+)"[\s\S]*?<\/article>/gi;
+    
+    var match;
+    while ((match = pattern.exec(html)) !== null) {
+      var title = match[1].trim();
+      var magnet = match[2].replace(/&amp;/g, '&');
       
-      for (var i = 0; i < cards.length; i++) {
-        var card = cards[i];
-        
-        // Lấy title
-        var titleEl = card.querySelector('.result-card__name a');
-        if (!titleEl) continue;
-        var title = getText(titleEl);
-        if (!title) continue;
-        
-        // Lấy magnet button
-        var magnetBtn = card.querySelector('button[data-magnet]');
-        if (!magnetBtn) continue;
-        var magnet = getAttr(magnetBtn, 'data-magnet');
-        if (!magnet) continue;
-        
-        var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
-        if (!hashMatch) continue;
-        
-        // Lấy size và seeds từ text
-        var cardText = getText(card);
-        var sizeMatch = cardText.match(/([\d.]+)\s*(GB|MB|TB|KB)/i);
-        var sizeStr = sizeMatch ? sizeMatch[0] : '';
-        
-        var seedMatch = cardText.match(/([\d,]+)\s*(?:seed|seeder)/i);
-        var seeds = seedMatch ? parseInt(seedMatch[1].replace(/,/g, '')) : 0;
-        
-        results.push({
-          title: title,
-          hash: hashMatch[1],
-          seeds: seeds,
-          peers: 0,
-          size: sizeStr,
-          sizeNum: parseSize(sizeStr),
-          tracker: 'Magnetz',
-          magnet: magnet
-        });
-      }
-    } catch (e) {
-      console.error('[Magnetz Parser Error]', e);
+      var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
+      if (!hashMatch) continue;
+      
+      // Tìm size và seeds trong article block
+      var articleBlock = match[0];
+      var sizeMatch = articleBlock.match(/([\d.]+)\s*(GB|MB|TB|KB)/i);
+      var sizeStr = sizeMatch ? sizeMatch[0] : '';
+      
+      var seedMatch = articleBlock.match(/([\d,]+)\s*(?:seed|seeder)/i);
+      var seeds = seedMatch ? parseInt(seedMatch[1].replace(/,/g, '')) : 0;
+      
+      results.push({
+        title: title,
+        hash: hashMatch[1],
+        seeds: seeds,
+        peers: 0,
+        size: sizeStr,
+        sizeNum: parseSize(sizeStr),
+        tracker: 'Magnetz',
+        magnet: magnet
+      });
     }
     
     return results;
   }
 
   function fetchMagnetz(query, cb) {
-    var url = MAGNETZ_BASE_URL + '?query=' + encodeURIComponent(query) + '&sort=size';
+    var url = CORS_PROXY + encodeURIComponent(MAGNETZ_BASE_URL + '?query=' + encodeURIComponent(query) + '&sort=size');
+    
+    console.log('[Magnetz] Fetching:', url);
+    
     reguest(url, function (html) {
-      var parsed = parseMagnetzHTML(html);
+      console.log('[Magnetz] HTML received, length:', html.length);
+      
+      var doc = parseHTML(html);
+      var results = [];
+      
+      if (doc) {
+        var cards = doc.querySelectorAll('article.result-card');
+        console.log('[Magnetz] Found cards:', cards.length);
+        
+        for (var i = 0; i < cards.length; i++) {
+          var card = cards[i];
+          
+          var titleEl = card.querySelector('.result-card__name a');
+          if (!titleEl) continue;
+          var title = getText(titleEl);
+          
+          var magnetBtn = card.querySelector('button[data-magnet]');
+          if (!magnetBtn) continue;
+          var magnet = getAttr(magnetBtn, 'data-magnet');
+          
+          var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
+          if (!hashMatch) continue;
+          
+          var cardText = getText(card);
+          var sizeMatch = cardText.match(/([\d.]+)\s*(GB|MB|TB|KB)/i);
+          var sizeStr = sizeMatch ? sizeMatch[0] : '';
+          
+          var seedMatch = cardText.match(/([\d,]+)\s*(?:seed|seeder)/i);
+          var seeds = seedMatch ? parseInt(seedMatch[1].replace(/,/g, '')) : 0;
+          
+          if (title) {
+            results.push({
+              title: title,
+              hash: hashMatch[1],
+              seeds: seeds,
+              peers: 0,
+              size: sizeStr,
+              sizeNum: parseSize(sizeStr),
+              tracker: 'Magnetz',
+              magnet: magnet
+            });
+          }
+        }
+      }
+      
+      if (results.length === 0) {
+        console.log('[Magnetz] Trying regex parser...');
+        results = parseMagnetzRegex(html);
+      }
+      
+      console.log('[Magnetz] Parsed results:', results.length);
+      
       var normalized = [];
-      for (var i = 0; i < parsed.length; i++) {
-        var norm = normResult(parsed[i]);
+      for (var i = 0; i < results.length; i++) {
+        var norm = normResult(results[i]);
         if (norm) normalized.push(norm);
       }
+      
       cb(normalized);
     }, function (e) { 
-      console.error('[Magnetz Fetch Error]', e);
+      console.error('[Magnetz Error]', e);
+      Lampa.Noty.show('Magnetz lỗi: ' + e);
       cb([]); 
     });
   }
@@ -690,12 +781,16 @@
     var year = (card.release_date || card.first_air_date || '').slice(0, 4);
     var q1 = (orig || title) + (year ? ' ' + year : '');
     var q2 = (orig && orig !== title) ? title + (year ? ' ' + year : '') : '';
+    
     Lampa.Noty.show('Magnetz: đang tìm...');
+    
     fetchMagnetz(q1, function (r) {
       if (!r.length && q2) {
         fetchMagnetz(q2, function (r2) {
           if (!r2.length) {
-            fetchMagnetz(orig || title, function (r3) { showPackMenu(r3, title, 'Magnetz', card); });
+            fetchMagnetz(orig || title, function (r3) { 
+              showPackMenu(r3.length ? r3 : r, title, 'Magnetz', card); 
+            });
           } else {
             showPackMenu(r2, title, 'Magnetz', card);
           }
@@ -763,7 +858,7 @@
   }
 
   /* ============================================================
-     TORRENTIO
+     TORRENTIO (giữ nguyên)
      ============================================================ */
   function buildStreamUrl(type, imdbId, season, episode) {
     var sType = type === 'series' ? 'series' : 'movie';
@@ -1014,7 +1109,7 @@
      ============================================================ */
   function start() {
     initSettings();
-    console.log('[KKPhim Parser] v2.2 — DOMParser ✅ | Knaben ✅ | Magnetz ✅');
+    console.log('[KKPhim Parser] v2.3 — CORS Proxy ✅ | Regex fallback ✅');
   }
   if (window.appready) start();
   else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
