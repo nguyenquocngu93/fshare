@@ -120,6 +120,23 @@
   }
 
   /* ============================================================
+     HTML PARSER - Dùng DOMParser
+     ============================================================ */
+  function parseHTML(html) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    return doc;
+  }
+
+  function getText(element) {
+    return (element && element.textContent) ? element.textContent.trim() : '';
+  }
+
+  function getAttr(element, attr) {
+    return (element && element.getAttribute) ? (element.getAttribute(attr) || '') : '';
+  }
+
+  /* ============================================================
      NORMALIZE TORRENT RESULT
      ============================================================ */
   function normResult(obj) {
@@ -519,55 +536,48 @@
   }
 
   /* ============================================================
-     KNABEN - Parser thủ công
+     KNABEN - Parser với DOMParser
      ============================================================ */
   function parseKnabenHTML(html) {
     var results = [];
-    // Tìm tất cả các row trong table: <tr>...</tr>
-    var rowPattern = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    var rows = html.match(rowPattern) || [];
-    
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
+    try {
+      var doc = parseHTML(html);
+      var rows = doc.querySelectorAll('table tbody tr');
       
-      // Lấy magnet link
-      var magnetMatch = row.match(/href="(magnet:\?xt=urn:btih:[a-fA-F0-9]{40}[^"]*)"/i);
-      if (!magnetMatch) continue;
-      var magnet = magnetMatch[1].replace(/&amp;/g, '&');
-      
-      // Lấy hash
-      var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
-      if (!hashMatch) continue;
-      var hash = hashMatch[1];
-      
-      // Lấy tất cả <td>
-      var tdPattern = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      var cells = row.match(tdPattern) || [];
-      if (cells.length < 6) continue;
-      
-      // Cell 1: Title
-      var titleMatch = cells[1].match(/>([^<]+)</);
-      var title = titleMatch ? titleMatch[1].trim() : '';
-      if (!title) continue;
-      
-      // Cell 2: Size
-      var sizeMatch = cells[2].match(/>([^<]+)</);
-      var sizeStr = sizeMatch ? sizeMatch[1].trim() : '';
-      
-      // Cell 4: Seeds
-      var seedsMatch = cells[4].match(/>(\d+)</);
-      var seeds = seedsMatch ? parseInt(seedsMatch[1]) : 0;
-      
-      results.push({
-        title: title,
-        hash: hash,
-        seeds: seeds,
-        peers: 0,
-        size: sizeStr,
-        sizeNum: parseSize(sizeStr),
-        tracker: 'Knaben',
-        magnet: magnet
-      });
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var cells = row.querySelectorAll('td');
+        if (cells.length < 6) continue;
+        
+        // Tìm magnet link
+        var magnetLink = row.querySelector('a[href^="magnet:"]');
+        if (!magnetLink) continue;
+        
+        var magnet = getAttr(magnetLink, 'href');
+        if (!magnet) continue;
+        
+        var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
+        if (!hashMatch) continue;
+        
+        var title = getText(cells[1]);
+        if (!title) continue;
+        
+        var sizeStr = getText(cells[2]);
+        var seeds = parseInt(getText(cells[4])) || 0;
+        
+        results.push({
+          title: title,
+          hash: hashMatch[1],
+          seeds: seeds,
+          peers: 0,
+          size: sizeStr,
+          sizeNum: parseSize(sizeStr),
+          tracker: 'Knaben',
+          magnet: magnet
+        });
+      }
+    } catch (e) {
+      console.error('[Knaben Parser Error]', e);
     }
     
     return results;
@@ -583,7 +593,10 @@
         if (norm) normalized.push(norm);
       }
       cb(normalized);
-    }, function () { cb([]); });
+    }, function (e) { 
+      console.error('[Knaben Fetch Error]', e);
+      cb([]); 
+    });
   }
 
   function searchKnaben(card) {
@@ -603,50 +616,53 @@
   }
 
   /* ============================================================
-     MAGNETZ - Parser thủ công
+     MAGNETZ - Parser với DOMParser
      ============================================================ */
   function parseMagnetzHTML(html) {
     var results = [];
-    // Tìm các article.result-card
-    var cardPattern = /<article[^>]*class="[^"]*result-card[^"]*"[^>]*>([\s\S]*?)<\/article>/gi;
-    var cards = html.match(cardPattern) || [];
-    
-    for (var i = 0; i < cards.length; i++) {
-      var card = cards[i];
+    try {
+      var doc = parseHTML(html);
+      var cards = doc.querySelectorAll('article.result-card');
       
-      // Lấy title từ <a class="result-card__name">
-      var titleMatch = card.match(/<a[^>]*class="[^"]*result-card__name[^"]*"[^>]*>([^<]+)<\/a>/i);
-      var title = titleMatch ? titleMatch[1].trim() : '';
-      if (!title) continue;
-      
-      // Lấy magnet từ button data-magnet
-      var magnetMatch = card.match(/data-magnet="([^"]+)"/i);
-      if (!magnetMatch) continue;
-      var magnet = magnetMatch[1].replace(/&amp;/g, '&');
-      
-      // Lấy hash
-      var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
-      if (!hashMatch) continue;
-      var hash = hashMatch[1];
-      
-      // Lấy size từ text content
-      var sizeMatch = card.match(/([\d.]+)\s*(GB|MB|TB|KB)/i);
-      var sizeStr = sizeMatch ? sizeMatch[0] : '';
-      
-      // Lấy seeds
-      var seedMatch = card.match(/([\d,]+)\s*(?:seed|seeder)/i);
-      var seeds = seedMatch ? parseInt(seedMatch[1].replace(/,/g, '')) : 0;
-      
-      results.push({
-        title: title,
-        hash: hash,
-        seeds: seeds,
-        peers: 0,
-        size: sizeStr,
-        sizeNum: parseSize(sizeStr),
-        tracker: 'Magnetz',
-        magnet: magnet
-      });
+      for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        
+        // Lấy title
+        var titleEl = card.querySelector('.result-card__name a');
+        if (!titleEl) continue;
+        var title = getText(titleEl);
+        if (!title) continue;
+        
+        // Lấy magnet button
+        var magnetBtn = card.querySelector('button[data-magnet]');
+        if (!magnetBtn) continue;
+        var magnet = getAttr(magnetBtn, 'data-magnet');
+        if (!magnet) continue;
+        
+        var hashMatch = magnet.match(/btih:([a-fA-F0-9]{40})/i);
+        if (!hashMatch) continue;
+        
+        // Lấy size và seeds từ text
+        var cardText = getText(card);
+        var sizeMatch = cardText.match(/([\d.]+)\s*(GB|MB|TB|KB)/i);
+        var sizeStr = sizeMatch ? sizeMatch[0] : '';
+        
+        var seedMatch = cardText.match(/([\d,]+)\s*(?:seed|seeder)/i);
+        var seeds = seedMatch ? parseInt(seedMatch[1].replace(/,/g, '')) : 0;
+        
+        results.push({
+          title: title,
+          hash: hashMatch[1],
+          seeds: seeds,
+          peers: 0,
+          size: sizeStr,
+          sizeNum: parseSize(sizeStr),
+          tracker: 'Magnetz',
+          magnet: magnet
+        });
+      }
+    } catch (e) {
+      console.error('[Magnetz Parser Error]', e);
     }
     
     return results;
@@ -662,7 +678,10 @@
         if (norm) normalized.push(norm);
       }
       cb(normalized);
-    }, function () { cb([]); });
+    }, function (e) { 
+      console.error('[Magnetz Fetch Error]', e);
+      cb([]); 
+    });
   }
 
   function searchMagnetz(card) {
@@ -995,7 +1014,7 @@
      ============================================================ */
   function start() {
     initSettings();
-    console.log('[KKPhim Parser] v2.1 — Knaben ✅ | Magnetz ✅ | Jacred URL ✅ | Parser thủ công ✅');
+    console.log('[KKPhim Parser] v2.2 — DOMParser ✅ | Knaben ✅ | Magnetz ✅');
   }
   if (window.appready) start();
   else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
