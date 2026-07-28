@@ -149,10 +149,11 @@ function applyFontScale(){
     +'.kk-prod-name{font-size:'+g(FS_SM)+';}'
     +'.kk-prod-country{font-size:'+g(FS_XS)+';}'
     +'.kk-prod-logo-empty{font-size:'+g(FS_MD)+';}'
-    +'.kk-coll-name{font-size:'+g(FS_MD)+';}'
+    +'.kk-coll-name{font-size:'+g(FS_LG)+';}'
+    +'.kk-coll-desc{font-size:'+g(FS_BASE)+';line-height:1.55;}'
     +'.kk-coll-label{font-size:'+g(FS_XS)+';}'
-    +'.kk-season-name{font-size:'+g(FS_SM)+';}'
-    +'.kk-season-meta{font-size:'+g(FS_XS)+';}'
+    +'.kk-season-name{font-size:'+g(FS_BASE)+';}'
+    +'.kk-season-meta{font-size:'+g(FS_SM)+';}'
     +'.kk-season-poster-empty{font-size:'+g(FS_SM)+';}'
     +'.kk-page-header-name{font-size:'+g(FS_MD)+';}'
     +'.kk-page-header-meta{font-size:'+g(FS_SM)+';}'
@@ -674,7 +675,7 @@ function mkCollectionSection(collection){
   html+='<div class="kk-coll-inner">';
   if(ps)html+='<div class="kk-coll-poster"><img src="'+ps+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;"></div>';
   html+='<div class="kk-coll-info"><div class="kk-coll-label">Bộ sưu tập</div><div class="kk-coll-name">'+E(collection.name||'')+'</div>';
-  if(collection.overview)html+='<div style="font-size:0.78em;color:rgba(255,255,255,0.55);margin-top:0.3em;line-height:1.4;">'+E(collection.overview)+'</div>';
+  if(collection.overview)html+='<div class="kk-coll-desc">'+E(collection.overview)+'</div>';
   html+='</div></div>';
   card.html(html);
   bE(card,function(){Lampa.Activity.push({url:'',title:collection.name||'',component:'kkphim_collection',collection_id:collection.id,page_num:1});});

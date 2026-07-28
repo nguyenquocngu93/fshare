@@ -1781,3 +1781,34 @@
 }
 .kk-main-wrapper{}
 .kk-tab-content{padding-top:0.5em;}
+
+/* ===== KKPHIM / OPHIM REDESIGN ===== */
+.kk-actions { gap: .7em; padding-top: 1.25em; }
+.kk-src-btn {
+    position: relative; min-height: 5.5em; padding: 1.05em 1.35em;
+    border: 1px solid rgba(255,255,255,.16); border-radius: 1.15em;
+    box-shadow: 0 8px 22px rgba(0,0,0,.18); overflow: hidden;
+    transition: transform .18s, filter .18s, box-shadow .18s;
+}
+.kk-src-btn::before { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(110deg,rgba(255,255,255,.18),transparent 42%); }
+.kk-src-btn .kk-sb-main,.kk-src-btn .kk-sb-sub { position:relative; }
+.kk-src-btn .kk-sb-main { font-size: 1.35em; letter-spacing:.01em; }
+.kk-src-btn .kk-sb-sub { font-size: .92em; margin-top:.38em; }
+.kk-src-btn--kkphim { background:linear-gradient(115deg,#f97316,#ea580c 58%,#c2410c); }
+.kk-src-btn--ophim { background:linear-gradient(115deg,#2563eb,#0891b2 58%,#0e7490); }
+.kk-src-btn.kk-btn--tor { background:linear-gradient(115deg,#7c3aed,#4f46e5 58%,#3730a3)!important; border-color:rgba(196,181,253,.45)!important; }
+.kk-src-btn.focus,.kk-src-btn.selected { transform:translateY(-2px) scale(1.012); filter:brightness(1.12); box-shadow:0 10px 28px rgba(0,0,0,.3),0 0 0 2px rgba(255,255,255,.35); }
+.kk-ep-box { margin-top:.45em; padding:.35em; border:1px solid rgba(255,255,255,.13); border-radius:1em; background:linear-gradient(145deg,rgba(10,15,28,.98),rgba(25,27,40,.96)); }
+.kk-sv-hd { padding:.8em .8em .5em; color:#a5b4fc; font-size:1em; }
+.kk-ep-chips { grid-template-columns:repeat(auto-fill,minmax(4.5em,1fr)); gap:.5em; padding:.45em .55em .75em; }
+.kk-ep-c { min-height:2.9em; border:1px solid rgba(255,255,255,.1); border-radius:.7em; background:rgba(255,255,255,.07); font-size:1.05em; font-weight:750; }
+.kk-ep-c.focus,.kk-ep-c.selected { background:linear-gradient(135deg,#0ea5e9,#2563eb); border-color:#7dd3fc; box-shadow:0 3px 10px rgba(14,165,233,.3); }
+.kk-sn-it { margin:.35em; padding:.85em 1em; border:1px solid rgba(255,255,255,.1); border-radius:.75em; background:rgba(255,255,255,.055); }
+.kk-sn-it.focus,.kk-sn-it.selected { background:linear-gradient(100deg,rgba(124,58,237,.7),rgba(37,99,235,.6)); border-color:rgba(196,181,253,.7); }
+.kk-sn-nm { font-size:1.12em; font-weight:750; }
+.kk-sn-bd { background:rgba(255,255,255,.14); color:#e0e7ff; font-size:.9em; }
+.kk-season-card { width:11.5em; border:1px solid rgba(255,255,255,.1); box-shadow:0 6px 18px rgba(0,0,0,.2); }
+.kk-season-card.focus,.kk-season-card.selected { border-color:#38bdf8; box-shadow:0 0 0 2px rgba(56,189,248,.55),0 10px 24px rgba(0,0,0,.3); }
+.kk-season-name { font-size:.98em; font-weight:750; }
+.kk-season-meta { font-size:.82em; color:rgba(255,255,255,.62); }
+.kk-coll-info > .kk-coll-desc { font-size:1.08em; line-height:1.55; color:rgba(255,255,255,.78); margin-top:.45em; }
