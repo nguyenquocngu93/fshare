@@ -66,71 +66,121 @@ function getItemType(item){
 function getTypeLabel(item){var t=getItemType(item);return t==='tv'?'TV':'Phim';}
 
 /* ---- FONT SCALE ---- */
+/* Thang 7 bac (da +10% cho TV). Scale TUYEN TINH: container dat %,
+   con trong container dung em thuan (khong nhan r) de tranh binh phuong. */
+var FS_XS=0.94,FS_SM=1.05,FS_BASE=1.16,FS_MD=1.32,FS_LG=1.54,FS_XL=1.93,FS_XXL=2.42;
+
 function applyFontScale(){
   var id='kkphim-font-scale';
   $('#'+id).remove();
   var fs=fontScale();
   var r=fs/100;
+  function g(v){return (Math.round(v*r*1000)/1000)+'em!important';}  /* ngoai card: nhan r */
+  function c(v){return (Math.round(v*1000)/1000)+'em!important';}    /* trong card: em thuan */
+
   var css=''
+    /* ===== CONTAINER CARD - diem neo scale ===== */
     +'.kk-card,.kk-card-h,.kk-pfc{font-size:'+fs+'%!important;}'
-    +'.kk-card-name{font-size:'+(1.05*r)+'em!important;font-weight:700!important;}'
-    +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+(0.95*r)+'em!important;}'
-    +'.kk-card-year{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-card-q{font-size:'+(0.85*r)+'em!important;}'
-    +'.kk-card-ep{font-size:'+(0.8*r)+'em!important;}'
-    +'.kk-hm-year{font-size:'+(1.25*r)+'em!important;}'
-    +'.kk-hm-country{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-hm-origin{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-hm-tagline{font-size:'+(1.3*r)+'em!important;}'
-    +'.kk-hm-vote{font-size:'+(2.0*r)+'em!important;}'
-    +'.kk-hm-vote small{font-size:'+(0.5*r)+'em!important;}'
-    +'.kk-hm-badge{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-hm-rt,.kk-hm-genres{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-title{font-size:'+(1.6*r)+'em!important;font-weight:800!important;}'
-    +'.kk-body-genres .kk-genre{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-tag-chip{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-crew-name{font-size:'+(1.6*r)+'em!important;}'
-    +'.kk-crew-label{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-crew-role{font-size:'+(0.85*r)+'em!important;}'
-    +'.kk-body-desc-text{font-size:'+(1.3*r)+'em!important;line-height:1.85!important;}'
-    +'.kk-body-desc-label{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-sb-main{font-size:'+(0.92*r)+'em!important;}'
-    +'.kk-sb-sub{font-size:'+(0.75*r)+'em!important;}'
-    +'.kk-ep-c{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-sv-hd{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-cast-name{font-size:'+(1.35*r)+'em!important;}'
-    +'.kk-cast-role{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-stg-group-title{font-size:'+(1.4*r)+'em!important;}'
-    +'.kk-stg-label-name{font-size:'+(1.05*r)+'em!important;}'
-    +'.kk-stg-label-desc{font-size:'+(0.88*r)+'em!important;}'
-    +'.kk-stg-value{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-sd-title{font-size:'+(1.7*r)+'em!important;}'
-    +'.kk-sd-meta{font-size:'+(0.92*r)+'em!important;}'
-    +'.kk-sd-overview{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-netflix-ep-title{font-size:'+(1.35*r)+'em!important;font-weight:700!important;}'
-    +'.kk-netflix-ep-desc{font-size:'+(0.85*r)+'em!important;}'
-    +'.kk-block-title{font-size:'+(1.3*r)+'em!important;}'
-    +'.kk-type-tab{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-prod-name{font-size:'+(0.88*r)+'em!important;}'
-    +'.kk-prod-country{font-size:'+(0.78*r)+'em!important;}'
-    +'.kk-coll-name{font-size:'+(1.1*r)+'em!important;}'
-    +'.kk-coll-label{font-size:'+(0.8*r)+'em!important;}'
-    +'.kk-season-name{font-size:'+(0.88*r)+'em!important;}'
-    +'.kk-season-meta{font-size:'+(0.78*r)+'em!important;}'
-    +'.kk-page-header-name{font-size:'+(1.3*r)+'em!important;}'
-    +'.kk-page-header-meta{font-size:'+(0.95*r)+'em!important;}'
-    +'.kk-keyword-header-badge{font-size:'+(1.2*r)+'em!important;}'
-    +'.kk-row-title{font-size:'+(1.15*r)+'em!important;}'
-    +'.kk-row-more{font-size:'+(0.9*r)+'em!important;}'
-    +'.kk-grid-title{font-size:'+(1.3*r)+'em!important;}'
-    +'.kk-topbar-title{font-size:'+(1.4*r)+'em!important;}'
-    +'.kk-btn{font-size:'+(0.95*r)+'em!important;}'
-    +'.kk-person-name{font-size:'+(1.5*r)+'em!important;}'
-    +'.kk-person-meta{font-size:'+(0.95*r)+'em!important;}'
-    +'.kk-person-bio{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-sn-nm{font-size:'+(1.0*r)+'em!important;}'
-    +'.kk-sn-bd{font-size:'+(0.88*r)+'em!important;}'
-    +'.kk-no-plugin-note{font-size:'+(0.92*r)+'em!important;}';
+
+    /* ===== TRONG CARD (em thuan) ===== */
+    +'.kk-card-name,.kk-card-h .kk-card-name{font-size:'+c(FS_BASE)+';font-weight:700!important;}'
+    +'.kk-card-origin,.kk-card-h .kk-card-origin{font-size:'+c(FS_SM)+';}'
+    +'.kk-card-overview,.kk-card-h .kk-card-overview{font-size:'+c(FS_SM)+';}'
+    +'.kk-card-noposter,.kk-card-h .kk-card-h-noposter{font-size:'+c(FS_SM)+';}'
+    +'.kk-card-year,.kk-card-h .kk-card-year{font-size:'+c(FS_XS)+';}'
+    +'.kk-card-lang,.kk-card-h .kk-card-lang{font-size:'+c(FS_XS)+';}'
+    +'.kk-card-q,.kk-card-h .kk-card-q{font-size:'+c(FS_XS)+';}'
+    +'.kk-card-ep,.kk-card-h .kk-card-ep{font-size:'+c(FS_XS)+';}'
+    +'.kk-card-time,.kk-card-eps,.kk-card-cats{font-size:'+c(FS_XS)+';}'
+    /* card poster (pfc) - truoc day khong he scale */
+    +'.kk-pfc-title{font-size:'+c(FS_MD)+';font-weight:700!important;}'
+    +'.kk-pfc-origin,.kk-pfc-desc{font-size:'+c(FS_SM)+';}'
+    +'.kk-pfc-vote{font-size:'+c(FS_SM)+';}'
+    +'.kk-pfc-year,.kk-pfc-lang,.kk-pfc-qual,.kk-pfc-eps,.kk-pfc-q,.kk-pfc-ep,.kk-pfc-badge{font-size:'+c(FS_XS)+';}'
+
+    /* ===== HERO / DETAIL ===== */
+    +'.kk-title{font-size:'+g(FS_XL)+';font-weight:800!important;}'
+    +'.kk-hm-vote{font-size:'+g(FS_XXL)+';}'
+    +'.kk-hm-vote small{font-size:0.5em!important;}'
+    +'.kk-hm-tagline{font-size:'+g(FS_MD)+';}'
+    +'.kk-hm-year,.kk-hm-country{font-size:'+g(FS_MD)+';}'
+    +'.kk-hm-origin{font-size:'+g(FS_BASE)+';}'
+    +'.kk-hm-badge{font-size:'+g(FS_BASE)+';}'
+    +'.kk-hm-rt,.kk-hm-rtg,.kk-hm-genres{font-size:'+g(FS_BASE)+';}'
+    +'.kk-origin{font-size:'+g(FS_BASE)+';}'
+    +'.kk-body-desc-text{font-size:'+g(FS_MD)+';line-height:1.85!important;}'
+    +'.kk-body-desc-label{font-size:'+g(FS_BASE)+';}'
+    +'.kk-body-genres .kk-genre,.kk-genre{font-size:'+g(FS_BASE)+';}'
+    +'.kk-genre-chip{font-size:'+g(FS_BASE)+';}'
+    +'.kk-tag-chip{font-size:'+g(FS_SM)+';}'
+    +'.kk-country-tag{font-size:'+g(FS_SM)+';}'
+    +'.kk-no-plugin-note{font-size:'+g(FS_SM)+';}'
+
+    /* ===== CAST / CREW ===== */
+    +'.kk-crew-name{font-size:'+g(FS_XL)+';}'
+    +'.kk-crew-rest-name{font-size:'+g(FS_BASE)+';}'
+    +'.kk-crew-label{font-size:'+g(FS_SM)+';}'
+    +'.kk-crew-role{font-size:'+g(FS_SM)+';}'
+    +'.kk-cast-name{font-size:'+g(FS_MD)+';}'
+    +'.kk-cast-role{font-size:'+g(FS_SM)+';}'
+
+    /* ===== NUT NGUON / TAP ===== */
+    +'.kk-src-btn .kk-sb-main,.kk-sb-main{font-size:'+g(FS_BASE)+';}'
+    +'.kk-src-btn .kk-sb-sub,.kk-sb-sub{font-size:'+g(FS_XS)+';}'
+    +'.kk-src-btn .kk-arrow{font-size:'+g(FS_XS)+';}'
+    +'.kk-srcbtn{font-size:'+g(FS_SM)+';}'
+    +'.kk-ep-c{font-size:'+g(FS_BASE)+';}'
+    +'.kk-ep-bk,.kk-ep-er,.kk-ep-ld{font-size:'+g(FS_SM)+';}'
+    +'.kk-sv-hd{font-size:'+g(FS_BASE)+';}'
+    +'.kk-sn-nm{font-size:'+g(FS_BASE)+';}'
+    +'.kk-sn-bd{font-size:'+g(FS_XS)+';}'
+
+    /* ===== HANG / LUOI / TOPBAR ===== */
+    +'.kk-topbar-title{font-size:'+g(FS_LG)+';}'
+    +'.kk-btn{font-size:'+g(FS_SM)+';}'
+    +'.kk-type-tab{font-size:'+g(FS_SM)+';}'
+    +'.kk-row-title{font-size:'+g(FS_MD)+';}'
+    +'.kk-row-more{font-size:'+g(FS_SM)+';}'
+    +'.kk-grid-title{font-size:'+g(FS_LG)+';}'
+    +'.kk-block-title{font-size:'+g(FS_MD)+';}'
+    +'.kk-loadmore{font-size:'+g(FS_SM)+';}'
+
+    /* ===== SECTION PHU ===== */
+    +'.kk-prod-name{font-size:'+g(FS_SM)+';}'
+    +'.kk-prod-country{font-size:'+g(FS_XS)+';}'
+    +'.kk-prod-logo-empty{font-size:'+g(FS_MD)+';}'
+    +'.kk-coll-name{font-size:'+g(FS_MD)+';}'
+    +'.kk-coll-label{font-size:'+g(FS_XS)+';}'
+    +'.kk-season-name{font-size:'+g(FS_SM)+';}'
+    +'.kk-season-meta{font-size:'+g(FS_XS)+';}'
+    +'.kk-season-poster-empty{font-size:'+g(FS_SM)+';}'
+    +'.kk-page-header-name{font-size:'+g(FS_MD)+';}'
+    +'.kk-page-header-meta{font-size:'+g(FS_SM)+';}'
+    +'.kk-page-header-logo-empty{font-size:'+g(FS_LG)+';}'
+    +'.kk-keyword-header-badge{font-size:'+g(FS_BASE)+';}'
+
+    /* ===== SEASON DETAIL / EPISODE ===== */
+    +'.kk-sd-title{font-size:'+g(FS_XL)+';}'
+    +'.kk-sd-meta{font-size:'+g(FS_SM)+';}'
+    +'.kk-sd-overview{font-size:'+g(FS_SM)+';}'
+    +'.kk-netflix-ep-title{font-size:'+g(FS_BASE)+';font-weight:700!important;}'
+    +'.kk-netflix-ep-desc{font-size:'+g(FS_SM)+';}'
+
+    /* ===== PERSON ===== */
+    +'.kk-person-name{font-size:'+g(FS_XL)+';}'
+    +'.kk-person-meta{font-size:'+g(FS_SM)+';}'
+    +'.kk-person-bio{font-size:'+g(FS_BASE)+';}'
+
+    /* ===== SETTINGS ===== */
+    +'.kk-stg-title{font-size:'+g(FS_XL)+';}'
+    +'.kk-stg-group-title{font-size:'+g(FS_MD)+';}'
+    +'.kk-stg-label-name{font-size:'+g(FS_BASE)+';}'
+    +'.kk-stg-label-desc{font-size:'+g(FS_SM)+';}'
+    +'.kk-stg-value{font-size:'+g(FS_SM)+';}'
+    +'.kk-stg-ver{font-size:'+g(FS_XS)+';}'
+    +'.kk-stg-status{font-size:'+g(FS_XS)+';}'
+    +'.kk-action-pill .sub{font-size:'+g(FS_XS)+';}';
+
   $('head').append('<style id="'+id+'">'+css+'</style>');
 }
 
@@ -727,14 +777,14 @@ function injectExtraCSS(){
     +'.kk-season-name{font-size:0.78em;font-weight:600;color:rgba(255,255,255,0.88);}'
     +'.kk-season-meta{font-size:0.68em;color:rgba(255,255,255,0.4);margin-top:0.1em;}'
     +'.kk-ep-chips{display:flex;flex-wrap:wrap;gap:0.4em;padding:0.4em 0 0.6em;}'
-    +'.kk-sv-hd{font-size:0.88em;font-weight:600;color:rgba(255,255,255,0.7);padding:0.5em 0 0.2em;}'
-    +'.kk-ep-c{font-size:0.9em;padding:0.35em 0.75em;background:rgba(255,255,255,0.07);border-radius:0.4em;cursor:pointer;color:rgba(255,255,255,0.85);transition:all 0.15s;}'
+    +'.kk-sv-hd{font-weight:600;color:rgba(255,255,255,0.7);padding:0.5em 0 0.2em;}'
+    +'.kk-ep-c{padding:0.35em 0.75em;background:rgba(255,255,255,0.07);border-radius:0.4em;cursor:pointer;color:rgba(255,255,255,0.85);transition:all 0.15s;}'
     +'.kk-ep-c:hover,.kk-ep-c.focus,.kk-ep-c.selected{background:rgba(1,180,228,0.25);color:#fff;}'
     +'.kk-ep-c.off{opacity:0.35;cursor:default;}'
     +'.kk-sn-it{display:flex;justify-content:space-between;align-items:center;padding:0.5em 0.8em;border-radius:0.4em;cursor:pointer;background:rgba(255,255,255,0.04);margin-bottom:0.3em;transition:background 0.15s;}'
     +'.kk-sn-it:hover,.kk-sn-it.focus,.kk-sn-it.selected{background:rgba(255,255,255,0.1);}'
-    +'.kk-sn-nm{color:rgba(255,255,255,0.85);font-size:0.9em;}'
-    +'.kk-sn-bd{font-size:0.8em;color:rgba(255,255,255,0.4);}'
+    +'.kk-sn-nm{color:rgba(255,255,255,0.85);}'
+    +'.kk-sn-bd{color:rgba(255,255,255,0.4);}'
     +'.kk-sd-header{padding:1.5em 1.5em 0.8em;display:flex;gap:1em;align-items:flex-start;}'
     +'.kk-sd-poster{width:6.5em;flex-shrink:0;border-radius:0.5em;overflow:hidden;aspect-ratio:2/3;background:rgba(255,255,255,0.05);}'
     +'.kk-sd-poster img{width:100%;height:100%;object-fit:cover;}'
@@ -746,6 +796,7 @@ function injectExtraCSS(){
     +'.kk-netflix-ep{display:flex;border-radius:0.5em;overflow:hidden;margin-bottom:0.5em;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);}'
     +'.kk-netflix-ep:hover,.kk-netflix-ep.focus,.kk-netflix-ep.selected{background:rgba(255,255,255,0.1);}'
     +'.kk-netflix-ep-still{width:10em;min-width:10em;aspect-ratio:16/9;overflow:hidden;position:relative;background:rgba(255,255,255,0.04);flex-shrink:0;}'
+    +'.kk-netflix-ep-still-empty{width:10em;min-width:10em;aspect-ratio:16/9;flex-shrink:0;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.25);}'
     +'.kk-netflix-ep-still img{width:100%;height:100%;object-fit:cover;}'
     +'.kk-netflix-ep-body{flex:1;padding:0.55em 0.7em;display:flex;flex-direction:column;justify-content:center;min-width:0;}'
     +'.kk-netflix-ep-title{font-size:0.9em;font-weight:600;color:rgba(255,255,255,0.92);margin-bottom:0.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
@@ -764,10 +815,14 @@ function injectExtraCSS(){
 }
 
 function inCSS(){
-  if($('#kk-css').length)return;
-  var l=document.createElement('link');
-  l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;
-  document.head.appendChild(l);
+  /* Moi buoc kiem tra DOC LAP - khong buoc nao duoc chan buoc sau.
+     Truoc day: neu #kk-css da ton tai (vd ban plugin cu con nap) thi ham
+     return som => injectExtraCSS() khong bao gio chay => mat CSS tab/layout. */
+  if(!$('#kk-css').length){
+    var l=document.createElement('link');
+    l.id='kk-css';l.rel='stylesheet';l.href=CSS_URL;
+    document.head.appendChild(l);
+  }
   var fixId='kk-hgrid-fix';
   if(!$('#'+fixId).length){
     $('head').append('<style id="'+fixId+'">.kk-grid--cat-h{display:grid!important;grid-template-columns:repeat('+hgridCols()+',minmax(0,1fr))!important;}</style>');
