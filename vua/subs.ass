@@ -1,0 +1,61 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,DejaVu Sans,100,&H00FFFFFF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,7,4,2,60,60,470,1
+Style: Title,DejaVu Sans,96,&H0000E8FF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.40,Title,,0,0,0,,{\an8\pos(540,290)\fad(180,200)}VỊ VUA TIN MÌNH\NLÀM BẰNG THỦY TINH
+Dialogue: 0,0:00:00.10,0:00:01.02,Sub,,0,0,0,,{\fad(80,80)}Vị vua này tin
+Dialogue: 0,0:00:01.02,0:00:02.07,Sub,,0,0,0,,{\fad(80,80)}rằng cơ thể mình
+Dialogue: 0,0:00:02.07,0:00:03.32,Sub,,0,0,0,,{\fad(80,80)}làm bằng thủy tinh.
+Dialogue: 0,0:00:03.32,0:00:04.37,Sub,,0,0,0,,{\fad(80,80)}Và cả triều đình
+Dialogue: 0,0:00:04.37,0:00:05.58,Sub,,0,0,0,,{\fad(80,80)}phải chiều theo.
+Dialogue: 0,0:00:05.78,0:00:07.23,Sub,,0,0,0,,{\fad(80,80)}Charles VI của Pháp
+Dialogue: 0,0:00:07.23,0:00:08.38,Sub,,0,0,0,,{\fad(80,80)}lên ngôi năm 11
+Dialogue: 0,0:00:08.38,0:00:09.68,Sub,,0,0,0,,{\fad(80,80)}tuổi. Ban đầu ông
+Dialogue: 0,0:00:09.68,0:00:11.14,Sub,,0,0,0,,{\fad(80,80)}được gọi là Charles
+Dialogue: 0,0:00:11.14,0:00:12.75,Sub,,0,0,0,,{\fad(80,80)}Người Được Yêu Mến.
+Dialogue: 0,0:00:12.95,0:00:13.84,Sub,,0,0,0,,{\fad(80,80)}Nhưng năm 1392,
+Dialogue: 0,0:00:13.84,0:00:14.92,Sub,,0,0,0,,{\fad(80,80)}khi đang cưỡi ngựa
+Dialogue: 0,0:00:14.92,0:00:15.69,Sub,,0,0,0,,{\fad(80,80)}qua khu rừng,
+Dialogue: 0,0:00:15.69,0:00:16.65,Sub,,0,0,0,,{\fad(80,80)}ông đột ngột mất
+Dialogue: 0,0:00:16.65,0:00:17.54,Sub,,0,0,0,,{\fad(80,80)}trí và tấn công
+Dialogue: 0,0:00:17.54,0:00:18.55,Sub,,0,0,0,,{\fad(80,80)}chính các hiệp sĩ
+Dialogue: 0,0:00:18.55,0:00:19.25,Sub,,0,0,0,,{\fad(80,80)}của mình.
+Dialogue: 0,0:00:19.45,0:00:19.87,Sub,,0,0,0,,{\fad(80,80)}Từ đó,
+Dialogue: 0,0:00:19.87,0:00:21.36,Sub,,0,0,0,,{\fad(80,80)}những cơn hoang tưởng
+Dialogue: 0,0:00:21.36,0:00:21.92,Sub,,0,0,0,,{\fad(80,80)}kéo đến.
+Dialogue: 0,0:00:21.92,0:00:22.98,Sub,,0,0,0,,{\fad(80,80)}Có lúc ông quên
+Dialogue: 0,0:00:22.98,0:00:24.04,Sub,,0,0,0,,{\fad(80,80)}mất mình là ai,
+Dialogue: 0,0:00:24.04,0:00:25.17,Sub,,0,0,0,,{\fad(80,80)}không nhận ra cả
+Dialogue: 0,0:00:25.17,0:00:25.82,Sub,,0,0,0,,{\fad(80,80)}vợ con.
+Dialogue: 0,0:00:26.02,0:00:26.87,Sub,,0,0,0,,{\fad(80,80)}Kỳ lạ nhất là
+Dialogue: 0,0:00:26.87,0:00:27.78,Sub,,0,0,0,,{\fad(80,80)}ông tin cơ thể
+Dialogue: 0,0:00:27.78,0:00:29.09,Sub,,0,0,0,,{\fad(80,80)}mình bằng thủy tinh.
+Dialogue: 0,0:00:29.09,0:00:30.01,Sub,,0,0,0,,{\fad(80,80)}Ai chạm vào là
+Dialogue: 0,0:00:30.01,0:00:30.85,Sub,,0,0,0,,{\fad(80,80)}ông sẽ vỡ tan
+Dialogue: 0,0:00:30.85,0:00:32.06,Sub,,0,0,0,,{\fad(80,80)}thành từng mảnh.
+Dialogue: 0,0:00:32.26,0:00:33.32,Sub,,0,0,0,,{\fad(80,80)}Triều đình đành cho
+Dialogue: 0,0:00:33.32,0:00:34.44,Sub,,0,0,0,,{\fad(80,80)}khâu những thanh sắt
+Dialogue: 0,0:00:34.44,0:00:35.28,Sub,,0,0,0,,{\fad(80,80)}vào áo của vua,
+Dialogue: 0,0:00:35.28,0:00:36.07,Sub,,0,0,0,,{\fad(80,80)}để giữ cho ông
+Dialogue: 0,0:00:36.07,0:00:36.51,Sub,,0,0,0,,{\fad(80,80)}khỏi vỡ.
+Dialogue: 0,0:00:36.51,0:00:37.52,Sub,,0,0,0,,{\fad(80,80)}Không ai được phép
+Dialogue: 0,0:00:37.52,0:00:38.13,Sub,,0,0,0,,{\fad(80,80)}lại gần.
+Dialogue: 0,0:00:38.33,0:00:39.44,Sub,,0,0,0,,{\fad(80,80)}Ông trị vì suốt
+Dialogue: 0,0:00:39.44,0:00:40.70,Sub,,0,0,0,,{\fad(80,80)}42 năm trong tình
+Dialogue: 0,0:00:40.70,0:00:41.37,Sub,,0,0,0,,{\fad(80,80)}trạng đó,
+Dialogue: 0,0:00:41.37,0:00:42.41,Sub,,0,0,0,,{\fad(80,80)}và lịch sử gọi
+Dialogue: 0,0:00:42.41,0:00:44.27,Sub,,0,0,0,,{\fad(80,80)}ông là Charles Kẻ Điên.
+Dialogue: 0,0:00:44.47,0:00:45.35,Sub,,0,0,0,,{\fad(80,80)}Theo dõi mình để
+Dialogue: 0,0:00:45.35,0:00:46.35,Sub,,0,0,0,,{\fad(80,80)}nghe tiếp những vị
+Dialogue: 0,0:00:46.35,0:00:47.12,Sub,,0,0,0,,{\fad(80,80)}vua kỳ lạ nhất
+Dialogue: 0,0:00:47.12,0:00:47.94,Sub,,0,0,0,,{\fad(80,80)}lịch sử nha!
