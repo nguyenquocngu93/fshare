@@ -1,0 +1,57 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,DejaVu Sans,100,&H00FFFFFF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,7,4,2,60,60,470,1
+Style: Title,DejaVu Sans,100,&H0000E8FF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.20,Title,,0,0,0,,{\an8\pos(540,290)\fad(180,200)}VÌ SAO MUỖI CHỈ\NĐỐT MỘT SỐ NGƯỜI?
+Dialogue: 0,0:00:00.10,0:00:01.28,Sub,,0,0,0,,{\fad(80,80)}Cùng ngồi một chỗ,
+Dialogue: 0,0:00:01.28,0:00:02.32,Sub,,0,0,0,,{\fad(80,80)}có người bị muỗi
+Dialogue: 0,0:00:02.32,0:00:03.17,Sub,,0,0,0,,{\fad(80,80)}đốt chi chít,
+Dialogue: 0,0:00:03.17,0:00:04.42,Sub,,0,0,0,,{\fad(80,80)}người kia thì không
+Dialogue: 0,0:00:04.42,0:00:04.94,Sub,,0,0,0,,{\fad(80,80)}con nào.
+Dialogue: 0,0:00:04.94,0:00:05.83,Sub,,0,0,0,,{\fad(80,80)}Vì sao vậy?
+Dialogue: 0,0:00:06.04,0:00:07.19,Sub,,0,0,0,,{\fad(80,80)}Muỗi tìm bạn từ
+Dialogue: 0,0:00:07.19,0:00:07.96,Sub,,0,0,0,,{\fad(80,80)}xa 15 mét,
+Dialogue: 0,0:00:07.96,0:00:09.34,Sub,,0,0,0,,{\fad(80,80)}bằng khí CO2 trong
+Dialogue: 0,0:00:09.34,0:00:09.95,Sub,,0,0,0,,{\fad(80,80)}hơi thở.
+Dialogue: 0,0:00:09.95,0:00:11.10,Sub,,0,0,0,,{\fad(80,80)}Ai thở ra nhiều
+Dialogue: 0,0:00:11.10,0:00:12.18,Sub,,0,0,0,,{\fad(80,80)}hơn sẽ bị phát
+Dialogue: 0,0:00:12.18,0:00:13.19,Sub,,0,0,0,,{\fad(80,80)}hiện trước.
+Dialogue: 0,0:00:13.40,0:00:14.52,Sub,,0,0,0,,{\fad(80,80)}Nên người to con,
+Dialogue: 0,0:00:14.52,0:00:15.57,Sub,,0,0,0,,{\fad(80,80)}phụ nữ mang thai
+Dialogue: 0,0:00:15.57,0:00:16.50,Sub,,0,0,0,,{\fad(80,80)}hay ai vừa tập
+Dialogue: 0,0:00:16.50,0:00:17.55,Sub,,0,0,0,,{\fad(80,80)}thể dục xong đều
+Dialogue: 0,0:00:17.55,0:00:18.97,Sub,,0,0,0,,{\fad(80,80)}là mục tiêu số một.
+Dialogue: 0,0:00:19.18,0:00:20.09,Sub,,0,0,0,,{\fad(80,80)}Lại gần hơn,
+Dialogue: 0,0:00:20.09,0:00:21.30,Sub,,0,0,0,,{\fad(80,80)}muỗi ngửi mùi da
+Dialogue: 0,0:00:21.30,0:00:22.67,Sub,,0,0,0,,{\fad(80,80)}bạn. Vi khuẩn trên
+Dialogue: 0,0:00:22.67,0:00:23.73,Sub,,0,0,0,,{\fad(80,80)}da tạo ra axit
+Dialogue: 0,0:00:23.73,0:00:25.09,Sub,,0,0,0,,{\fad(80,80)}lactic và amoniac,
+Dialogue: 0,0:00:25.09,0:00:26.23,Sub,,0,0,0,,{\fad(80,80)}và mỗi người có
+Dialogue: 0,0:00:26.23,0:00:27.46,Sub,,0,0,0,,{\fad(80,80)}một mùi riêng.
+Dialogue: 0,0:00:27.67,0:00:28.74,Sub,,0,0,0,,{\fad(80,80)}Nghiên cứu còn cho
+Dialogue: 0,0:00:28.74,0:00:29.87,Sub,,0,0,0,,{\fad(80,80)}thấy người nhóm máu
+Dialogue: 0,0:00:29.87,0:00:30.71,Sub,,0,0,0,,{\fad(80,80)}O bị đốt nhiều
+Dialogue: 0,0:00:30.71,0:00:32.01,Sub,,0,0,0,,{\fad(80,80)}gấp đôi nhóm máu A.
+Dialogue: 0,0:00:32.22,0:00:33.45,Sub,,0,0,0,,{\fad(80,80)}Và muỗi cực thích
+Dialogue: 0,0:00:33.45,0:00:34.61,Sub,,0,0,0,,{\fad(80,80)}màu tối như đen,
+Dialogue: 0,0:00:34.61,0:00:35.70,Sub,,0,0,0,,{\fad(80,80)}đỏ, xanh dương.
+Dialogue: 0,0:00:35.70,0:00:36.86,Sub,,0,0,0,,{\fad(80,80)}Mặc áo sáng màu,
+Dialogue: 0,0:00:36.86,0:00:37.73,Sub,,0,0,0,,{\fad(80,80)}bạn sẽ ít bị
+Dialogue: 0,0:00:37.73,0:00:38.77,Sub,,0,0,0,,{\fad(80,80)}đốt hơn hẳn.
+Dialogue: 0,0:00:38.98,0:00:39.56,Sub,,0,0,0,,{\fad(80,80)}Tóm lại,
+Dialogue: 0,0:00:39.56,0:00:40.87,Sub,,0,0,0,,{\fad(80,80)}không phải máu bạn
+Dialogue: 0,0:00:40.87,0:00:41.53,Sub,,0,0,0,,{\fad(80,80)}ngọt hơn.
+Dialogue: 0,0:00:41.53,0:00:42.54,Sub,,0,0,0,,{\fad(80,80)}Đó là hơi thở,
+Dialogue: 0,0:00:42.54,0:00:43.49,Sub,,0,0,0,,{\fad(80,80)}mùi da và màu
+Dialogue: 0,0:00:43.49,0:00:44.80,Sub,,0,0,0,,{\fad(80,80)}áo. Bạn thuộc nhóm
+Dialogue: 0,0:00:44.80,0:00:46.06,Sub,,0,0,0,,{\fad(80,80)}hay bị đốt chứ?
