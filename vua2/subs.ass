@@ -1,0 +1,54 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,DejaVu Sans,100,&H00FFFFFF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,7,4,2,60,60,470,1
+Style: Title,DejaVu Sans,96,&H0000E8FF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.00,Title,,0,0,0,,{\an8\pos(540,290)\fad(180,200)}VỊ VUA BẮT TAY\NVỚI MỘT CÁI CÂY
+Dialogue: 0,0:00:00.08,0:00:00.96,Sub,,0,0,0,,{\fad(70,70)}Vị vua này từng
+Dialogue: 0,0:00:00.96,0:00:01.85,Sub,,0,0,0,,{\fad(70,70)}bắt tay với một
+Dialogue: 0,0:00:01.85,0:00:02.32,Sub,,0,0,0,,{\fad(70,70)}cái cây,
+Dialogue: 0,0:00:02.32,0:00:03.14,Sub,,0,0,0,,{\fad(70,70)}vì tưởng đó là
+Dialogue: 0,0:00:03.14,0:00:04.03,Sub,,0,0,0,,{\fad(70,70)}vua nước Phổ.
+Dialogue: 0,0:00:04.19,0:00:05.75,Sub,,0,0,0,,{\fad(70,70)}George III của Anh
+Dialogue: 0,0:00:05.75,0:00:06.88,Sub,,0,0,0,,{\fad(70,70)}trị vì gần 60
+Dialogue: 0,0:00:06.88,0:00:08.61,Sub,,0,0,0,,{\fad(70,70)}năm. Nhưng năm 1788,
+Dialogue: 0,0:00:08.61,0:00:09.82,Sub,,0,0,0,,{\fad(70,70)}ông bắt đầu cư
+Dialogue: 0,0:00:09.82,0:00:10.81,Sub,,0,0,0,,{\fad(70,70)}xử rất lạ.
+Dialogue: 0,0:00:10.97,0:00:11.96,Sub,,0,0,0,,{\fad(70,70)}Người hầu bắt gặp
+Dialogue: 0,0:00:11.96,0:00:13.00,Sub,,0,0,0,,{\fad(70,70)}vua đang trồng một
+Dialogue: 0,0:00:13.00,0:00:14.10,Sub,,0,0,0,,{\fad(70,70)}miếng bít tết xuống
+Dialogue: 0,0:00:14.10,0:00:15.09,Sub,,0,0,0,,{\fad(70,70)}đất. Ông tin rằng
+Dialogue: 0,0:00:15.09,0:00:15.85,Sub,,0,0,0,,{\fad(70,70)}nó sẽ mọc lên
+Dialogue: 0,0:00:15.85,0:00:17.01,Sub,,0,0,0,,{\fad(70,70)}thành cây thịt bò.
+Dialogue: 0,0:00:17.17,0:00:18.33,Sub,,0,0,0,,{\fad(70,70)}Rồi trong khuôn viên
+Dialogue: 0,0:00:18.33,0:00:19.27,Sub,,0,0,0,,{\fad(70,70)}lâu đài Windsor,
+Dialogue: 0,0:00:19.27,0:00:20.20,Sub,,0,0,0,,{\fad(70,70)}ông bước tới một
+Dialogue: 0,0:00:20.20,0:00:20.66,Sub,,0,0,0,,{\fad(70,70)}cây sồi,
+Dialogue: 0,0:00:20.66,0:00:21.54,Sub,,0,0,0,,{\fad(70,70)}nắm lấy cành và
+Dialogue: 0,0:00:21.54,0:00:23.11,Sub,,0,0,0,,{\fad(70,70)}bắt tay thật trịnh trọng.
+Dialogue: 0,0:00:23.27,0:00:24.29,Sub,,0,0,0,,{\fad(70,70)}Ông tưởng đó là
+Dialogue: 0,0:00:24.29,0:00:25.66,Sub,,0,0,0,,{\fad(70,70)}vua Frederick Đại Đế
+Dialogue: 0,0:00:25.66,0:00:26.21,Sub,,0,0,0,,{\fad(70,70)}của Phổ.
+Dialogue: 0,0:00:26.21,0:00:27.16,Sub,,0,0,0,,{\fad(70,70)}Trớ trêu thay,
+Dialogue: 0,0:00:27.16,0:00:28.05,Sub,,0,0,0,,{\fad(70,70)}vị vua kia đã
+Dialogue: 0,0:00:28.05,0:00:28.87,Sub,,0,0,0,,{\fad(70,70)}qua đời từ 2
+Dialogue: 0,0:00:28.87,0:00:29.67,Sub,,0,0,0,,{\fad(70,70)}năm trước.
+Dialogue: 0,0:00:29.83,0:00:30.66,Sub,,0,0,0,,{\fad(70,70)}Ngày nay các nhà
+Dialogue: 0,0:00:30.66,0:00:31.53,Sub,,0,0,0,,{\fad(70,70)}khoa học cho rằng
+Dialogue: 0,0:00:31.53,0:00:32.36,Sub,,0,0,0,,{\fad(70,70)}ông mắc rối loạn
+Dialogue: 0,0:00:32.36,0:00:32.88,Sub,,0,0,0,,{\fad(70,70)}lưỡng cực,
+Dialogue: 0,0:00:32.88,0:00:33.75,Sub,,0,0,0,,{\fad(70,70)}hoặc bị nhiễm độc
+Dialogue: 0,0:00:33.75,0:00:34.68,Sub,,0,0,0,,{\fad(70,70)}thạch tín từ chính
+Dialogue: 0,0:00:34.68,0:00:35.63,Sub,,0,0,0,,{\fad(70,70)}thuốc chữa bệnh.
+Dialogue: 0,0:00:35.79,0:00:36.74,Sub,,0,0,0,,{\fad(70,70)}Theo dõi để xem
+Dialogue: 0,0:00:36.74,0:00:37.81,Sub,,0,0,0,,{\fad(70,70)}tập tiếp theo của
+Dialogue: 0,0:00:37.81,0:00:39.26,Sub,,0,0,0,,{\fad(70,70)}series Vua Kỳ Lạ nha!
