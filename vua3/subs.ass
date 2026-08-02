@@ -1,0 +1,54 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,DejaVu Sans,100,&H00FFFFFF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,7,4,2,60,60,470,1
+Style: Title,DejaVu Sans,96,&H0000E8FF,&H000000FF,&H00101010,&HB0000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.00,Title,,0,0,0,,{\an8\pos(540,290)\fad(180,200)}HOÀNG ĐẾ PHONG\NCON NGỰA LÀM QUAN
+Dialogue: 0,0:00:00.08,0:00:01.11,Sub,,0,0,0,,{\fad(70,70)}Hoàng đế này định
+Dialogue: 0,0:00:01.11,0:00:02.21,Sub,,0,0,0,,{\fad(70,70)}phong con ngựa của
+Dialogue: 0,0:00:02.21,0:00:03.30,Sub,,0,0,0,,{\fad(70,70)}mình làm quan chấp
+Dialogue: 0,0:00:03.30,0:00:04.15,Sub,,0,0,0,,{\fad(70,70)}chính La Mã.
+Dialogue: 0,0:00:04.31,0:00:05.96,Sub,,0,0,0,,{\fad(70,70)}Con ngựa tên Incitatus,
+Dialogue: 0,0:00:05.96,0:00:07.04,Sub,,0,0,0,,{\fad(70,70)}là ngựa đua yêu
+Dialogue: 0,0:00:07.04,0:00:08.34,Sub,,0,0,0,,{\fad(70,70)}quý nhất của hoàng
+Dialogue: 0,0:00:08.34,0:00:09.32,Sub,,0,0,0,,{\fad(70,70)}đế Caligula.
+Dialogue: 0,0:00:09.48,0:00:10.75,Sub,,0,0,0,,{\fad(70,70)}Nó sống trong chuồng
+Dialogue: 0,0:00:10.75,0:00:11.89,Sub,,0,0,0,,{\fad(70,70)}bằng đá cẩm thạch,
+Dialogue: 0,0:00:11.89,0:00:12.97,Sub,,0,0,0,,{\fad(70,70)}ăn trong máng ngà
+Dialogue: 0,0:00:12.97,0:00:13.98,Sub,,0,0,0,,{\fad(70,70)}voi, và đeo vòng
+Dialogue: 0,0:00:13.98,0:00:14.99,Sub,,0,0,0,,{\fad(70,70)}cổ nạm đá quý.
+Dialogue: 0,0:00:15.15,0:00:16.32,Sub,,0,0,0,,{\fad(70,70)}18 người hầu chăm
+Dialogue: 0,0:00:16.32,0:00:17.48,Sub,,0,0,0,,{\fad(70,70)}sóc riêng cho nó.
+Dialogue: 0,0:00:17.48,0:00:18.44,Sub,,0,0,0,,{\fad(70,70)}Thức ăn là yến
+Dialogue: 0,0:00:18.44,0:00:20.21,Sub,,0,0,0,,{\fad(70,70)}mạch trộn vảy vàng thật.
+Dialogue: 0,0:00:20.37,0:00:21.49,Sub,,0,0,0,,{\fad(70,70)}Con ngựa còn có
+Dialogue: 0,0:00:21.49,0:00:22.24,Sub,,0,0,0,,{\fad(70,70)}nhà riêng,
+Dialogue: 0,0:00:22.24,0:00:22.91,Sub,,0,0,0,,{\fad(70,70)}có nô lệ,
+Dialogue: 0,0:00:22.91,0:00:23.96,Sub,,0,0,0,,{\fad(70,70)}và tự đứng tên
+Dialogue: 0,0:00:23.96,0:00:25.23,Sub,,0,0,0,,{\fad(70,70)}mời khách quý tới
+Dialogue: 0,0:00:25.23,0:00:25.95,Sub,,0,0,0,,{\fad(70,70)}dự tiệc.
+Dialogue: 0,0:00:26.11,0:00:27.50,Sub,,0,0,0,,{\fad(70,70)}Nhưng con ngựa chưa
+Dialogue: 0,0:00:27.50,0:00:28.52,Sub,,0,0,0,,{\fad(70,70)}kịp nhậm chức.
+Dialogue: 0,0:00:28.52,0:00:29.84,Sub,,0,0,0,,{\fad(70,70)}Caligula bị ám sát
+Dialogue: 0,0:00:29.84,0:00:30.50,Sub,,0,0,0,,{\fad(70,70)}trước đó,
+Dialogue: 0,0:00:30.50,0:00:31.79,Sub,,0,0,0,,{\fad(70,70)}khi mới 28 tuổi.
+Dialogue: 0,0:00:31.95,0:00:33.08,Sub,,0,0,0,,{\fad(70,70)}Nhiều sử gia tin
+Dialogue: 0,0:00:33.08,0:00:34.27,Sub,,0,0,0,,{\fad(70,70)}đây không phải sự
+Dialogue: 0,0:00:34.27,0:00:34.84,Sub,,0,0,0,,{\fad(70,70)}điên rồ,
+Dialogue: 0,0:00:34.84,0:00:35.75,Sub,,0,0,0,,{\fad(70,70)}mà là cách sỉ
+Dialogue: 0,0:00:35.75,0:00:37.23,Sub,,0,0,0,,{\fad(70,70)}nhục Viện Nguyên Lão.
+Dialogue: 0,0:00:37.23,0:00:38.00,Sub,,0,0,0,,{\fad(70,70)}Ý ông là ai
+Dialogue: 0,0:00:38.00,0:00:39.34,Sub,,0,0,0,,{\fad(70,70)}cũng làm quan được,
+Dialogue: 0,0:00:39.34,0:00:40.80,Sub,,0,0,0,,{\fad(70,70)}kể cả một con ngựa.
+Dialogue: 0,0:00:40.96,0:00:41.93,Sub,,0,0,0,,{\fad(70,70)}Theo dõi để xem
+Dialogue: 0,0:00:41.93,0:00:43.02,Sub,,0,0,0,,{\fad(70,70)}tập tiếp theo của
+Dialogue: 0,0:00:43.02,0:00:44.50,Sub,,0,0,0,,{\fad(70,70)}series Vua Kỳ Lạ nha!
