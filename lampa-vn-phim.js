@@ -57,17 +57,37 @@
             .trim();
     }
 
+    // Inject Styles for Visual Poster Grid & Movie Info Page
     function injectStyles() {
         if ($('#vn-phim-styles').length > 0) return;
         var css = 
             '<style id="vn-phim-styles">' +
-            '.vn-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.95); z-index: 1000; display: flex; flex-direction: column; color: #fff; font-family: sans-serif; overflow: hidden; animation: vnFadeIn 0.3s ease; }' +
-            '@keyframes vnFadeIn { from { opacity: 0; } to { opacity: 1; } }' +
-            '.vn-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; background: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }' +
-            '.vn-modal-title { font-size: 1.4em; font-weight: bold; color: #e50914; display: flex; align-items: center; gap: 10px; }' +
-            '.vn-modal-close { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 1em; }' +
-            '.vn-modal-close:focus, .vn-modal-close:hover { background: #e50914; color: #fff; }' +
+            '.vn-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 14, 23, 0.96); z-index: 1000; display: flex; flex-direction: column; color: #fff; font-family: sans-serif; overflow: hidden; animation: vnFadeIn 0.25s ease; }' +
+            '@keyframes vnFadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }' +
+            '.vn-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 28px; background: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }' +
+            '.vn-modal-title { font-size: 1.3em; font-weight: bold; color: #e50914; display: flex; align-items: center; gap: 10px; }' +
+            '.vn-modal-close { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 1em; }' +
+            '.vn-modal-close:focus, .vn-modal-close:hover { background: #e50914; color: #fff; outline: 2px solid #fff; }' +
             '.vn-modal-body { flex: 1; overflow-y: auto; padding: 24px 28px; }' +
+            
+            '/* VISUAL POSTER GRID STYLES */' +
+            '.vn-grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; padding-bottom: 30px; }' +
+            '.vn-poster-card { position: relative; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; display: flex; flex-direction: column; }' +
+            '.vn-poster-card:focus, .vn-poster-card:hover { transform: translateY(-6px) scale(1.04); border-color: #e50914; box-shadow: 0 8px 24px rgba(229,9,20,0.4); outline: none; }' +
+            '.vn-poster-img-wrapper { position: relative; width: 100%; aspect-ratio: 2/3; overflow: hidden; background: #1a1e29; }' +
+            '.vn-poster-img { width: 100%; height: 100%; object-fit: cover; }' +
+            '.vn-poster-badge { position: absolute; top: 8px; right: 8px; background: rgba(229,9,20,0.9); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; }' +
+            '.vn-poster-quality { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.75); color: #ffc107; padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold; border: 1px solid rgba(255,193,7,0.4); }' +
+            '.vn-poster-info { padding: 10px; display: flex; flex-direction: column; gap: 4px; }' +
+            '.vn-poster-title { font-size: 0.9em; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+            '.vn-poster-sub { font-size: 0.78em; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+            
+            '/* PAGINATION & BUTTONS */' +
+            '.vn-pagination-bar { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; }' +
+            '.vn-page-btn { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 0.95em; }' +
+            '.vn-page-btn:focus, .vn-page-btn:hover { background: #e50914; border-color: #e50914; }' +
+
+            '/* MOVIE INFO DETAIL MODAL STYLES */' +
             '.vn-info-container { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 24px; }' +
             '.vn-info-poster { width: 220px; height: 320px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 24px rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.1); }' +
             '.vn-info-details { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }' +
@@ -154,7 +174,7 @@
                     if (item.isSearch) {
                         self.promptSearch();
                     } else {
-                        self.loadCategoryList(item.cat, item.title, 1);
+                        self.loadCategoryGrid(item.cat, item.title, 1);
                     }
                 },
                 onBack: function () {
@@ -191,34 +211,22 @@
                     return;
                 }
 
-                var selectItems = items.map(function (it) {
-                    var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
-                    return {
-                        title: it.name,
-                        subtitle: (it.origin_name ? it.origin_name + ' | ' : '') + (it.year ? 'Năm: ' + it.year : ''),
-                        image: poster,
-                        slug: it.slug,
-                        raw: it
-                    };
+                self.renderVisualPosterGrid('Kết quả tìm kiếm: "' + keyword + '"', items, function (pageNav) {
+                    // Search pagination if available
+                }, function () {
+                    self.showCategoryMenu();
                 });
 
-                Lampa.Select.show({
-                    title: 'Kết quả tìm kiếm: "' + keyword + '"',
-                    items: selectItems,
-                    onSelect: function (selected) {
-                        self.openMovieInfoPage(selected.slug, CONFIG.kkphim);
-                    },
-                    onBack: function () {
-                        self.showCategoryMenu();
-                    }
-                });
             }, function (err) {
                 Lampa.Loading.stop();
                 Lampa.Noty.show('Lỗi tìm kiếm: ' + err);
             });
         };
 
-        this.loadCategoryList = function (cat, catTitle, page) {
+        /**
+         * Load Category List & Render Visual Poster Grid
+         */
+        this.loadCategoryGrid = function (cat, catTitle, page) {
             var self = this;
             Lampa.Loading.start();
 
@@ -227,54 +235,127 @@
             fetchJson(url, function (res) {
                 Lampa.Loading.stop();
 
-                var rawItems = (res && res.data && res.data.items) ? res.data.items : [];
-                if (rawItems.length === 0) {
+                var items = (res && res.data && res.data.items) ? res.data.items : [];
+                if (items.length === 0) {
                     Lampa.Noty.show('Không có danh sách phim!');
                     return;
                 }
 
-                var selectItems = rawItems.map(function (it) {
-                    var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
-                    return {
-                        title: it.name,
-                        subtitle: (it.origin_name ? it.origin_name + ' | ' : '') + (it.year ? 'Năm: ' + it.year + ' | ' : '') + (it.episode_current || ''),
-                        image: poster,
-                        slug: it.slug,
-                        raw: it
-                    };
-                });
-
                 var pagination = res.data && res.data.params && res.data.params.pagination;
                 var totalPages = pagination ? Math.ceil(pagination.totalItems / pagination.totalItemsPerPage) : 10;
 
-                if (page < totalPages) {
-                    selectItems.push({
-                        title: '➡️ Trang Tiếp theo (' + (page + 1) + ')',
-                        subtitle: 'Xem thêm phim trang sau...',
-                        isNext: true
-                    });
-                }
-
-                Lampa.Select.show({
-                    title: catTitle + ' - Trang ' + page,
-                    items: selectItems,
-                    onSelect: function (selected) {
-                        if (selected.isNext) {
-                            self.loadCategoryList(cat, catTitle, page + 1);
-                        } else {
-                            self.openMovieInfoPage(selected.slug, CONFIG.kkphim);
-                        }
-                    },
-                    onBack: function () {
-                        self.showCategoryMenu();
+                self.renderVisualPosterGrid(catTitle + ' (Trang ' + page + '/' + totalPages + ')', items, function (direction) {
+                    if (direction === 'next' && page < totalPages) {
+                        self.loadCategoryGrid(cat, catTitle, page + 1);
+                    } else if (direction === 'prev' && page > 1) {
+                        self.loadCategoryGrid(cat, catTitle, page - 1);
                     }
-                });
+                }, function () {
+                    self.showCategoryMenu();
+                }, page, totalPages);
+
             }, function (err) {
                 Lampa.Loading.stop();
                 Lampa.Noty.show('Lỗi tải danh mục: ' + err);
             });
         };
 
+        /**
+         * Render REAL VISUAL POSTER GRID OVERLAY
+         */
+        this.renderVisualPosterGrid = function (title, items, onPageChange, onBack, page, totalPages) {
+            var self = this;
+            $('.vn-modal-overlay').remove();
+
+            var gridHtml = 
+                '<div class="vn-modal-overlay">' +
+                    '<div class="vn-modal-header">' +
+                        '<div class="vn-modal-title">' +
+                            '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>' +
+                            '<span>' + title + '</span>' +
+                        '</div>' +
+                        '<button class="vn-modal-close selector">✕ Đóng</button>' +
+                    '</div>' +
+                    '<div class="vn-modal-body">' +
+                        '<div class="vn-grid-container"></div>' +
+                        (totalPages ? 
+                            '<div class="vn-pagination-bar">' +
+                                (page > 1 ? '<button class="vn-page-btn vn-prev-btn selector">⬅️ Trang Trước (' + (page - 1) + ')</button>' : '') +
+                                (page < totalPages ? '<button class="vn-page-btn vn-next-btn selector">➡️ Trang Tiếp (' + (page + 1) + ')</button>' : '') +
+                            '</div>' : ''
+                        ) +
+                    '</div>' +
+                '</div>';
+
+            var $modal = $(gridHtml);
+            var $container = $modal.find('.vn-grid-container');
+
+            items.forEach(function (it) {
+                var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
+                var epBadge = it.episode_current || '';
+                var quality = it.quality || 'HD';
+                var name = it.name || it.title || '';
+                var orig = it.origin_name || it.year || '';
+
+                var cardHtml = 
+                    '<div class="vn-poster-card selector" data-slug="' + it.slug + '">' +
+                        '<div class="vn-poster-img-wrapper">' +
+                            '<img class="vn-poster-img" src="' + poster + '" alt="' + name + '" />' +
+                            (epBadge ? '<span class="vn-poster-badge">' + epBadge + '</span>' : '') +
+                            (quality ? '<span class="vn-poster-quality">' + quality + '</span>' : '') +
+                        '</div>' +
+                        '<div class="vn-poster-info">' +
+                            '<div class="vn-poster-title">' + name + '</div>' +
+                            '<div class="vn-poster-sub">' + orig + '</div>' +
+                        '</div>' +
+                    '</div>';
+
+                var $card = $(cardHtml);
+                $card.on('hover:enter click', function () {
+                    $modal.remove();
+                    self.openMovieInfoPage(it.slug, CONFIG.kkphim);
+                });
+
+                $container.append($card);
+            });
+
+            $('body').append($modal);
+
+            $modal.find('.vn-modal-close').on('hover:enter click', function () {
+                $modal.remove();
+                if (onBack) onBack();
+            });
+
+            $modal.find('.vn-prev-btn').on('hover:enter click', function () {
+                $modal.remove();
+                if (onPageChange) onPageChange('prev');
+            });
+
+            $modal.find('.vn-next-btn').on('hover:enter click', function () {
+                $modal.remove();
+                if (onPageChange) onPageChange('next');
+            });
+
+            var handleBack = function(e) {
+                if (e.keyCode === 27 || e.keyCode === 8 || e.code === 'BackSpace') {
+                    $modal.remove();
+                    $(document).off('keydown', handleBack);
+                    if (onBack) onBack();
+                }
+            };
+            $(document).on('keydown', handleBack);
+
+            setTimeout(function () {
+                var $firstCard = $modal.find('.selector').first();
+                if ($firstCard.length && Lampa.Controller) {
+                    Lampa.Controller.focus($firstCard);
+                }
+            }, 200);
+        };
+
+        /**
+         * Open Detailed Movie Info Page (PAGE INFO PHIM)
+         */
         this.openMovieInfoPage = function (slug, cfg) {
             var self = this;
             cfg = cfg || CONFIG.kkphim;
