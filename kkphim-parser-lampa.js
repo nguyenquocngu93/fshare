@@ -241,14 +241,48 @@
      SOURCE METHODS - theo chuẩn Lampa.Api.sources
   ============================================================ */
   function main(params, oncomplite) {
-    // Lampa gọi khi user vào "Home" với source này
-    // Trả về menu items
-    oncomplite([]);
+    oncomplite([
+      {
+        title: 'Phim Mới Cập Nhật',
+        url: 'phim-moi-cap-nhat',
+        component: 'category_full',
+        source: SOURCE_NAME
+      },
+      {
+        title: 'Phim Bộ',
+        url: 'phim-bo',
+        component: 'category_full',
+        source: SOURCE_NAME
+      },
+      {
+        title: 'Phim Lẻ',
+        url: 'phim-le',
+        component: 'category_full',
+        source: SOURCE_NAME
+      },
+      {
+        title: 'Hoạt Hình',
+        url: 'hoat-hinh',
+        component: 'category_full',
+        source: SOURCE_NAME
+      },
+      {
+        title: 'TV Shows',
+        url: 'tv-shows',
+        component: 'category_full',
+        source: SOURCE_NAME
+      }
+    ]);
   }
 
   function menu(params, oncomplite) {
-    // Menu filter cho source
-    oncomplite([]);
+    oncomplite([
+      { title: 'Phim Mới Cập Nhật', url: 'phim-moi-cap-nhat' },
+      { title: 'Phim Bộ', url: 'phim-bo' },
+      { title: 'Phim Lẻ', url: 'phim-le' },
+      { title: 'Hoạt Hình', url: 'hoat-hinh' },
+      { title: 'TV Shows', url: 'tv-shows' }
+    ]);
   }
 
   function list(params, oncomplite) {
