@@ -57,7 +57,6 @@
             .trim();
     }
 
-    // Inject Custom Styles for Movie Info Modal & Grid Cards
     function injectStyles() {
         if ($('#vn-phim-styles').length > 0) return;
         var css = 
@@ -96,9 +95,6 @@
             this.injectSidebarMenu();
         };
 
-        /**
-         * Sidebar Menu Item
-         */
         this.injectSidebarMenu = function () {
             var self = this;
             var addMenuItem = function () {
@@ -132,9 +128,6 @@
             setTimeout(addMenuItem, 1000);
         };
 
-        /**
-         * Category Menu Picker
-         */
         this.showCategoryMenu = function () {
             var self = this;
             var categories = [
@@ -170,9 +163,6 @@
             });
         };
 
-        /**
-         * Prompt Search
-         */
         this.promptSearch = function () {
             var self = this;
             Lampa.Input.edit({
@@ -186,9 +176,6 @@
             });
         };
 
-        /**
-         * Execute Search
-         */
         this.executeSearch = function (keyword, page) {
             var self = this;
             Lampa.Loading.start();
@@ -204,8 +191,26 @@
                     return;
                 }
 
-                self.displayMovieGrid('Kết quả tìm kiếm: "' + keyword + '"', items, function (selectedMovie) {
-                    self.openMovieInfoPage(selectedMovie.slug, CONFIG.kkphim);
+                var selectItems = items.map(function (it) {
+                    var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
+                    return {
+                        title: it.name,
+                        subtitle: (it.origin_name ? it.origin_name + ' | ' : '') + (it.year ? 'Năm: ' + it.year : ''),
+                        image: poster,
+                        slug: it.slug,
+                        raw: it
+                    };
+                });
+
+                Lampa.Select.show({
+                    title: 'Kết quả tìm kiếm: "' + keyword + '"',
+                    items: selectItems,
+                    onSelect: function (selected) {
+                        self.openMovieInfoPage(selected.slug, CONFIG.kkphim);
+                    },
+                    onBack: function () {
+                        self.showCategoryMenu();
+                    }
                 });
             }, function (err) {
                 Lampa.Loading.stop();
@@ -213,9 +218,6 @@
             });
         };
 
-        /**
-         * Load Category List with Posters
-         */
         this.loadCategoryList = function (cat, catTitle, page) {
             var self = this;
             Lampa.Loading.start();
@@ -273,9 +275,6 @@
             });
         };
 
-        /**
-         * Open Detailed Movie Info Page (PAGE INFO PHIM + POSTER + EPISODES)
-         */
         this.openMovieInfoPage = function (slug, cfg) {
             var self = this;
             cfg = cfg || CONFIG.kkphim;
@@ -303,9 +302,6 @@
             });
         };
 
-        /**
-         * Render Movie Info Modal Overlay with Full Info & Episode Selector
-         */
         this.renderInfoModal = function (movie, episodes, cfg) {
             var self = this;
             $('.vn-modal-overlay').remove();
@@ -357,12 +353,10 @@
             var $modal = $(modalHtml);
             $('body').append($modal);
 
-            // Close button listener
             $modal.find('.vn-modal-close').on('hover:enter click', function () {
                 $modal.remove();
             });
 
-            // ESC / Back button listener
             var handleBack = function(e) {
                 if (e.keyCode === 27 || e.keyCode === 8 || e.code === 'BackSpace') {
                     $modal.remove();
@@ -371,7 +365,6 @@
             };
             $(document).on('keydown', handleBack);
 
-            // Render Servers & Episodes
             if (!episodes || episodes.length === 0) {
                 $modal.find('.vn-episodes-grid').html('<div style="color:#aaa;">Chưa có tập phim nào được cập nhật!</div>');
                 return;
@@ -379,8 +372,6 @@
 
             var $serversContainer = $modal.find('.vn-servers-container');
             var $episodesGrid = $modal.find('.vn-episodes-grid');
-
-            var currentServerIndex = 0;
 
             function renderEpisodesForServer(serverIndex) {
                 var server = episodes[serverIndex];
@@ -418,7 +409,6 @@
 
             renderEpisodesForServer(0);
 
-            // Focus on first episode button
             setTimeout(function () {
                 var $firstBtn = $modal.find('.selector').first();
                 if ($firstBtn.length && Lampa.Controller) {
@@ -427,9 +417,6 @@
             }, 200);
         };
 
-        /**
-         * Play Selected Stream
-         */
         this.playVideoStream = function (ep, allEpisodes, startIndex, movieDetail) {
             var streamUrl = ep.link_m3u8;
 
@@ -449,9 +436,6 @@
             Lampa.Player.playlist(playlist);
         };
 
-        /**
-         * Movie Detail button handler on Lampa Full Card
-         */
         this.onFullLoaded = function (e) {
             var self = this;
             if (e.type === 'complite') {
