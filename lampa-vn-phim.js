@@ -50,6 +50,19 @@
             .trim();
     }
 
+    // Inject CSS Fix to remove Lampa default red card background and force poster visibility
+    function injectStyles() {
+        if ($('#vn-phim-styles').length > 0) return;
+        var css = 
+            '<style id="vn-phim-styles">' +
+            '.card__view { background: #141824 !important; position: relative !important; overflow: hidden !important; border-radius: 8px !important; }' +
+            '.card__view::before, .card__view::after { display: none !important; content: none !important; background: transparent !important; }' +
+            '.card__view img, .card__img { opacity: 1 !important; visibility: visible !important; display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: 1 !important; }' +
+            '.card__quality { z-index: 5 !important; }' +
+            '</style>';
+        $('head').append(css);
+    }
+
     /**
      * Create Lampa Native Card Element with direct Poster Image Tag
      */
@@ -61,14 +74,14 @@
         var epBadge = item.episode_current || '';
 
         var imgHtml = poster 
-            ? '<img src="' + poster + '" class="card__img" loading="lazy" style="object-fit:cover; width:100%; height:100%;" />'
+            ? '<img src="' + poster + '" class="card__img" loading="lazy" />'
             : '<div class="card__img-empty" style="background:#222; display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:#aaa; font-size:0.8em;">Không có ảnh</div>';
 
         var cardHtml = 
             '<div class="card selector card--category">' +
                 '<div class="card__view">' +
                     imgHtml +
-                    (epBadge ? '<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold; z-index:2;">' + epBadge + '</div>' : '') +
+                    (epBadge ? '<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold; z-index:5;">' + epBadge + '</div>' : '') +
                 '</div>' +
                 '<div class="card__title">' + title + '</div>' +
                 (orig ? '<div class="card__age" style="color:#aaa; font-size:0.8em;">' + orig + (year ? ' (' + year + ')' : '') + '</div>' : '') +
@@ -98,6 +111,7 @@
         var lastFocus = null;
 
         this.create = function () {
+            injectStyles();
             try {
                 if (comp.activity && comp.activity.loader) comp.activity.loader(true);
             } catch(e){}
@@ -231,6 +245,7 @@
         VNPhimPluginInstance = this;
 
         this.init = function () {
+            injectStyles();
             Lampa.Listener.follow('full', this.onFullLoaded.bind(this));
             this.injectSidebarMenu();
         };
