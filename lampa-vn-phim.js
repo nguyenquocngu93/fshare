@@ -51,32 +51,40 @@
     }
 
     /**
-     * Convert KKPhim API item into Lampa Card Object
+     * Create Lampa Native Card Element with direct Poster Image Tag
      */
-    function convertToLampaCard(it) {
-        var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
-        var year = parseInt(it.year, 10) || 0;
-        var title = it.name || it.title || '';
-        var orig = it.origin_name || it.original_name || '';
+    function createLampaNativeCard(item, onEnter, onFocus) {
+        var poster = fixImgUrl(item.poster_url || item.thumb_url, CONFIG.kkphim.img);
+        var title = item.name || item.title || '';
+        var orig = item.origin_name || item.original_name || '';
+        var year = item.year || '';
+        var epBadge = item.episode_current || '';
 
-        return {
-            id: 'vn_' + (it.slug || Math.random()),
-            title: title,
-            name: title,
-            original_title: orig,
-            original_name: orig,
-            img: poster,
-            poster_path: poster,
-            background_image: poster,
-            year: year,
-            release_date: year ? (year + '-01-01') : '',
-            vote_average: parseFloat(it.tmdb?.vote_average) || 0,
-            overview: it.content || it.description || '',
-            type: (it.type === 'series' || it.type === 'tvshows') ? 'tv' : 'movie',
-            slug: it.slug,
-            episode_current: it.episode_current || '',
-            quality: it.quality || 'HD'
-        };
+        var imgHtml = poster 
+            ? '<img src="' + poster + '" class="card__img" loading="lazy" style="object-fit:cover; width:100%; height:100%;" />'
+            : '<div class="card__img-empty" style="background:#222; display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:#aaa; font-size:0.8em;">Không có ảnh</div>';
+
+        var cardHtml = 
+            '<div class="card selector card--category">' +
+                '<div class="card__view">' +
+                    imgHtml +
+                    (epBadge ? '<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold; z-index:2;">' + epBadge + '</div>' : '') +
+                '</div>' +
+                '<div class="card__title">' + title + '</div>' +
+                (orig ? '<div class="card__age" style="color:#aaa; font-size:0.8em;">' + orig + (year ? ' (' + year + ')' : '') + '</div>' : '') +
+            '</div>';
+
+        var $card = $(cardHtml);
+
+        $card.on('hover:focus focus', function () {
+            if (onFocus) onFocus(this);
+        });
+
+        $card.on('hover:enter click', function () {
+            if (onEnter) onEnter();
+        });
+
+        return $card;
     }
 
     /**
@@ -124,30 +132,14 @@
 
                 rawItems.forEach(function (rawIt) {
                     try {
-                        var cardData = convertToLampaCard(rawIt);
-                        var card = new Lampa.Card(cardData, {
-                            card_small: false,
-                            card_category: true
-                        });
-
-                        card.create();
-                        card.visible();
-
-                        var $cardRender = card.render();
-                        if (cardData.episode_current) {
-                            $cardRender.append('<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold;">' + cardData.episode_current + '</div>');
-                        }
-
-                        card.onFocus = function (target) {
+                        var $card = createLampaNativeCard(rawIt, function () {
+                            comp.openMovieDetail(rawIt.slug);
+                        }, function (target) {
                             lastFocus = target;
                             scroll.update($(target));
-                        };
+                        });
 
-                        card.onEnter = function () {
-                            comp.openMovieDetail(rawIt.slug);
-                        };
-
-                        wrap.append($cardRender);
+                        wrap.append($card);
                     } catch(e) {
                         console.error('[VNPhim] Error creating card', e);
                     }
