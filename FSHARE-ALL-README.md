@@ -92,9 +92,10 @@ fshare-all.js (1482 dòng)
 ## 🐛 Troubleshooting
 
 ### Plugin không hiện trong menu
-- Mở DevTools (F12) → Console xem log `[FShare All]`
-- Kiểm tra Lampa.Listener có fire 'ready' không
-- Refresh Lampa
+- Plugin tự thêm mục **"FShare All"** vào cuối menu chính (sidebar trái) ngay khi Lampa ready.
+- Nếu không thấy: mở DevTools (F12) → Console xem log `[FShare All]` — phải thấy `[FShare All] v1.0.0 ready` và `Đã thêm mục menu "FShare All"`.
+- Sau khi cập nhật file trên GitHub, **xoá plugin cũ trong Settings → Plugin rồi thêm lại URL** (Lampa có cache plugin, không tự lấy bản mới).
+- Nếu dùng Lampa bản mới, plugin cũng hiện trong danh sách Extensions/Plugin đã cài.
 
 ### KKPhim/OPhim không có kết quả
 - API có thể đã đổi URL. Mở https://phimapi.com/ kiểm tra

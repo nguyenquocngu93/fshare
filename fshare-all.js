@@ -230,7 +230,7 @@ function detailKKPhimLike(source, slug){
 
 function listKKPhimLike(source, catSlug, page){
   page=page||1;
-  return fetchFromKKLike(source,source.endpoints.list,{
+  return fetchFromKKLike(source,source.endpoints.list+(catSlug||''),{
     page:page,limit:30
   });
 }
@@ -762,8 +762,20 @@ function showItemsPage(title, items, opts, callbacks){
   };
   Lampa.Activity.push(activity);
 
-  // Bind card click
-  $view.find('.fs-card').on('click hover:enter',function(){
+  // Bind card + fav
+  bindCardHandlers($view);
+  // Load more
+  if(opts.hasMore&&callbacks.onLoadMore){
+    $view.find('#fs-loadmore').on('click hover:enter',function(){
+      $(this).text('Đang tải...');
+      callbacks.onLoadMore();
+    });
+  }
+  return $view;
+}
+
+function bindCardHandlers($view){
+  $view.find('.fs-card').off('click hover:enter').on('click hover:enter',function(){
     var $c=$(this);
     var slug=$c.attr('data-slug');
     var sourceKey=$c.attr('data-source');
@@ -775,8 +787,7 @@ function showItemsPage(title, items, opts, callbacks){
       type:$c.attr('data-type')
     });
   });
-  // Bind fav
-  $view.find('.fs-fav-btn').on('click',function(e){
+  $view.find('.fs-fav-btn').off('click').on('click',function(e){
     e.stopPropagation();e.preventDefault();
     var $c=$(this).closest('.fs-card');
     var item={
@@ -786,43 +797,29 @@ function showItemsPage(title, items, opts, callbacks){
       source:$c.attr('data-source'),
       year:$c.attr('data-year'),
       origin_name:$c.attr('data-origin'),
-      poster:$c.find('.fs-poster').css('background-image').replace(/^url\(["']?/, '').replace(/["']?\)$/, '')
+      poster:$c.find('.fs-poster').css('background-image').replace(/^url\([\"']?/, '').replace(/[\"']?\)$/, '')
     };
     var on=toggleFav(item);
     $(this).toggleClass('on').text(on?'❤':'♡');
   });
-  // Load more
-  if(opts.hasMore&&callbacks.onLoadMore){
-    $view.find('#fs-loadmore').on('click hover:enter',function(){
-      $(this).text('Đang tải...');
-      callbacks.onLoadMore();
-    });
-  }
-  return $view;
 }
 
-function appendItems($view, moreItems, append){
+/* Append thêm kết quả trang sau vào grid hiện tại (thay vì mở Activity mới) */
+function appendItems($view, moreItems, keepLoadMore){
   var $grid=$view.find('.fs-grid');
   var html='';
   moreItems.forEach(function(it){
     html+=renderItemCard(it,{});
   });
-  if(append){
-    $grid.append(html);
-    // Re-bind new cards
-    $grid.find('.fs-card').off('click hover:enter').on('click hover:enter',function(){
-      var $c=$(this);
-      openMovie($c.attr('data-slug'),$c.attr('data-source'),$c.attr('data-title'),{
-        id:$c.attr('data-id'),
-        year:$c.attr('data-year'),
-        origin_name:$c.attr('data-origin'),
-        type:$c.attr('data-type')
-      });
-    });
-  }else{
-    $view.find('.fs-loadmore').remove();
-  }
+  $grid.append(html);
+  bindCardHandlers($view);
+  if(!keepLoadMore)$view.find('.fs-loadmore').remove();
+  var $sub=$view.find('.fs-sub').first();
+  if($sub.length)$sub.text($grid.find('.fs-card').length+' kết quả');
 }
+
+var searchView=null;
+var catView=null;
 
 /* --- Tìm kiếm --- */
 function doSearch(keyword, page){
@@ -831,13 +828,18 @@ function doSearch(keyword, page){
   showLoading(true);
   searchAll(keyword,page).then(function(items){
     showLoading(false);
+    // Trang sau -> append vào grid hiện tại
+    if(page>1&&searchView){
+      appendItems(searchView,items,items.length>=20);
+      return;
+    }
     if(!items.length){
       noty('Không tìm thấy');
       // Vẫn show trang trống
-      showItemsPage('Tìm: '+keyword,[],{hasMore:false});
+      searchView=showItemsPage('Tìm: '+keyword,[],{hasMore:false});
       return;
     }
-    var $view=showItemsPage('Tìm: '+keyword+' ('+items.length+')',items,{hasMore:items.length>=20},{
+    searchView=showItemsPage('Tìm: '+keyword,items,{hasMore:items.length>=20},{
       onLoadMore:function(){doSearch(keyword,page+1);}
     });
   });
@@ -1088,7 +1090,12 @@ function showCategoryPage(catSlug, catName, page){
   showLoading(true);
   listCategoryAny(catSlug,page).then(function(items){
     showLoading(false);
-    showItemsPage(catName+(page>1?' (trang '+page+')':''),items,{hasMore:items.length>=20},{
+    // Trang sau -> append vào grid hiện tại
+    if(page>1&&catView){
+      appendItems(catView,items,items.length>=20);
+      return;
+    }
+    catView=showItemsPage(catName,items,{hasMore:items.length>=20},{
       onLoadMore:function(){showCategoryPage(catSlug,catName,page+1);}
     });
   });
@@ -1338,15 +1345,32 @@ function openSettings(){
  * ============================================================================ */
 
 function injectToMenu(){
-  if(!Lampa.Menu||!Lampa.Menu.show)return;
-  try{
-    Lampa.Menu.add({
-      id:'fshare_all',
-      title:'FShare All',
-      icon:'<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v3H4zm0 5h16v3H4zm0 5h16v3H4z"/></svg>',
-      onClick:openHome
-    });
-  }catch(e){console.warn('[FShare] Menu.add failed:',e);}
+  // Lưu ý: Lampa KHÔNG có API Lampa.Menu.add() / Lampa.Menu.show().
+  // Cách đúng (giống plugin Collections chính thức của Lampa):
+  // tự build <li class="menu__item selector"> rồi append vào .menu .menu__list.
+  if(!window.$)return;
+  var added=false;
+  var tryAdd=function(){
+    var $list=$('.menu .menu__list').eq(0);
+    if(!$list||!$list.length)return false;
+    if($('#fshare-menu-item').length)return true;
+    var btn=$('<li class="menu__item selector" id="fshare-menu-item">'
+      +'<div class="menu__ico"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 4h16v3H4zm0 5h16v3H4zm0 5h16v3H4z"/></svg></div>'
+      +'<div class="menu__text">FShare All</div></li>');
+    btn.on('hover:enter',function(){try{openHome();}catch(e){}});
+    $list.append(btn);
+    added=true;
+    console.log('[FShare All] Đã thêm mục menu "FShare All"');
+    return true;
+  };
+  if(tryAdd())return;
+  // Menu có thể render trễ (vài phiên bản Lampa) -> thử lại vài lần
+  var tries=0;
+  var iv=setInterval(function(){
+    tries++;
+    if(added||tries>10){clearInterval(iv);return;}
+    tryAdd();
+  },500);
 }
 
 function injectToMoviePage(){
@@ -1436,9 +1460,21 @@ function scoreMatchItem(it, title, orig, year){
 function start(){
   if(window.__fshare_all_started)return;
   window.__fshare_all_started=true;
+  // Đăng ký manifest để plugin hiện trong danh sách Extensions/Plugin của Lampa (nếu có)
+  try{
+    if(Lampa.Manifest&&!Lampa.Manifest.plugins){
+      Lampa.Manifest.plugins={
+        type:'video',
+        version:VERSION,
+        name:'FShare All',
+        description:'KKPhim + OPhim + Torrentio + Magnetz',
+        component:'fshare_all'
+      };
+    }
+  }catch(e){}
   injectCSS();
-  try{injectToMenu();}catch(e){}
-  try{injectToMoviePage();}catch(e){}
+  try{injectToMenu();}catch(e){console.warn('[FShare All] injectToMenu failed:',e);}
+  try{injectToMoviePage();}catch(e){console.warn('[FShare All] injectToMoviePage failed:',e);}
   console.log('[FShare All] v'+VERSION+' ready');
 }
 
