@@ -51,7 +51,7 @@
     }
 
     /**
-     * Convert KKPhim API item into Lampa Native Movie Object
+     * Convert KKPhim API item into Lampa Card Object
      */
     function convertToLampaCard(it) {
         var poster = fixImgUrl(it.poster_url || it.thumb_url, CONFIG.kkphim.img);
@@ -80,78 +80,82 @@
     }
 
     /**
-     * Define Native Lampa Catalog Component
+     * Native Lampa Catalog Component
      */
     function VNPhimCatalogComponent(object) {
-        var comp = this;
         var scroll = new Lampa.Scroll({ mask: true, over: true });
-        var html = $('<div></div>');
-        var body = $('<div class="category-full"></div>');
+        var comp = this;
+        var page = object.page || 1;
+        var wrap = $('<div class="category-full"></div>');
         var lastFocus = null;
 
         this.create = function () {
-            return html;
-        };
+            try {
+                if (comp.activity && comp.activity.loader) comp.activity.loader(true);
+            } catch(e){}
 
-        this.start = function () {
             scroll.render().addClass('scroll--style');
-            html.append(scroll.render());
-            scroll.append(body);
+            scroll.append(wrap);
 
             this.loadData();
         };
 
         this.loadData = function () {
-            Lampa.Loading.start();
-
             var url = '';
             if (object.isSearch) {
-                url = CONFIG.kkphim.search + encodeURIComponent(object.keyword || '') + '&page=' + (object.page || 1);
+                url = CONFIG.kkphim.search + encodeURIComponent(object.keyword || '') + '&page=' + page;
             } else {
-                url = CONFIG.kkphim.list + (object.cat || 'phim-moi-cap-nhat') + '?page=' + (object.page || 1);
+                url = CONFIG.kkphim.list + (object.cat || 'phim-moi-cap-nhat') + '?page=' + page;
             }
 
             fetchJson(url, function (res) {
-                Lampa.Loading.stop();
+                try {
+                    if (comp.activity && comp.activity.loader) comp.activity.loader(false);
+                } catch(e){}
 
                 var rawItems = (res && res.data && res.data.items) ? res.data.items : [];
                 if (rawItems.length === 0) {
-                    body.html('<div class="empty__title" style="padding:40px; text-align:center;">Không tìm thấy phim!</div>');
+                    wrap.html('<div class="empty__title" style="padding:40px; text-align:center;">Không tìm thấy phim!</div>');
+                    comp.start();
                     return;
                 }
 
-                body.empty();
+                wrap.empty();
 
                 rawItems.forEach(function (rawIt) {
-                    var cardData = convertToLampaCard(rawIt);
-                    var card = new Lampa.Card(cardData, {
-                        card_small: false,
-                        card_category: true
-                    });
+                    try {
+                        var cardData = convertToLampaCard(rawIt);
+                        var card = new Lampa.Card(cardData, {
+                            card_small: false,
+                            card_category: true
+                        });
 
-                    card.create();
+                        card.create();
+                        card.visible();
 
-                    var $cardRender = card.render();
-                    if (cardData.episode_current) {
-                        $cardRender.append('<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold;">' + cardData.episode_current + '</div>');
+                        var $cardRender = card.render();
+                        if (cardData.episode_current) {
+                            $cardRender.append('<div class="card__quality" style="position:absolute; top:6px; right:6px; background:#e50914; color:#fff; padding:2px 6px; border-radius:4px; font-size:0.75em; font-weight:bold;">' + cardData.episode_current + '</div>');
+                        }
+
+                        card.onFocus = function (target) {
+                            lastFocus = target;
+                            scroll.update($(target));
+                        };
+
+                        card.onEnter = function () {
+                            comp.openMovieDetail(rawIt.slug);
+                        };
+
+                        wrap.append($cardRender);
+                    } catch(e) {
+                        console.error('[VNPhim] Error creating card', e);
                     }
-
-                    card.onFocus = function (target) {
-                        lastFocus = target;
-                        scroll.update($(target));
-                    };
-
-                    card.onEnter = function () {
-                        comp.openMovieDetail(rawIt.slug);
-                    };
-
-                    body.append($cardRender);
                 });
 
                 // Next Page Button
                 var pagination = res.data && res.data.params && res.data.params.pagination;
                 var totalPages = pagination ? Math.ceil(pagination.totalItems / pagination.totalItemsPerPage) : 10;
-                var page = object.page || 1;
 
                 if (page < totalPages) {
                     var nextBtn = $('<div class="category-full__more selector" style="width:100%; text-align:center; padding:16px; margin-top:20px; background:rgba(255,255,255,0.08); border-radius:8px; cursor:pointer; font-weight:bold;">➡️ Trang Tiếp theo (' + (page + 1) + '/' + totalPages + ')</div>');
@@ -166,12 +170,14 @@
                             page: page + 1
                         });
                     });
-                    body.append(nextBtn);
+                    wrap.append(nextBtn);
                 }
 
-                Lampa.Controller.enable('content');
+                comp.start();
             }, function (err) {
-                Lampa.Loading.stop();
+                try {
+                    if (comp.activity && comp.activity.loader) comp.activity.loader(false);
+                } catch(e){}
                 Lampa.Noty.show('Lỗi tải dữ liệu: ' + err);
             });
         };
@@ -195,15 +201,36 @@
             });
         };
 
+        this.start = function () {
+            try {
+                Lampa.Controller.add('content', {
+                    toggle: function () {
+                        var selectors = scroll.render().find('.selector');
+                        Lampa.Controller.collectionSet(selectors);
+                        Lampa.Controller.collectionFocus(lastFocus || selectors.eq(0)[0], scroll.render());
+                    },
+                    left: function () {
+                        Lampa.Controller.toggle('menu');
+                    },
+                    up: function () {
+                        Lampa.Controller.toggle('head');
+                    }
+                });
+                Lampa.Controller.toggle('content');
+            } catch(e) {}
+        };
+
         this.pause = function () {};
         this.stop = function () {};
+        this.render = function () {
+            return scroll.render();
+        };
         this.destroy = function () {
             scroll.destroy();
-            html.remove();
         };
     }
 
-    // Register Native Component
+    // Register Component
     Lampa.Component.add('vn_phim_catalog', VNPhimCatalogComponent);
 
     var VNPhimPluginInstance = null;
