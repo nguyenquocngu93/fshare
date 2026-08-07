@@ -1,0 +1,54 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,DejaVu Sans,98,&H00FFFFFF,&H000000FF,&H006B3A8A,&HB0000000,-1,0,0,0,102,102,1,0,1,8,3,2,60,60,470,1
+Style: Title,DejaVu Sans,90,&H009BF0FF,&H000000FF,&H005A2D7A,&HB0000000,-1,0,0,0,104,104,2,0,1,9,4,2,60,60,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:04.00,Title,,0,0,0,,{\an8\pos(540,290)\fad(180,200)}TA LÀ HOÀNG ĐẾ\NVÀ TA MUỐN BÁNH BAO!
+Dialogue: 0,0:00:00.08,0:00:01.02,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Vị hoàng đế này
+Dialogue: 0,0:00:01.02,0:00:02.03,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}từng hét lên: Ta
+Dialogue: 0,0:00:02.03,0:00:02.91,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}là hoàng đế và
+Dialogue: 0,0:00:02.91,0:00:04.10,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}ta muốn bánh bao!
+Dialogue: 0,0:00:04.26,0:00:05.39,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Ferdinand I của Áo
+Dialogue: 0,0:00:05.39,0:00:06.20,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}là một vị vua
+Dialogue: 0,0:00:06.20,0:00:07.08,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}rất hiền lành,
+Dialogue: 0,0:00:07.08,0:00:08.21,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}nhưng sức khỏe lại
+Dialogue: 0,0:00:08.21,0:00:08.96,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}không tốt.
+Dialogue: 0,0:00:09.12,0:00:10.03,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Ông trị vì nước
+Dialogue: 0,0:00:10.03,0:00:10.95,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Áo suốt 13 năm,
+Dialogue: 0,0:00:10.95,0:00:12.05,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}nhưng hầu hết việc
+Dialogue: 0,0:00:12.05,0:00:13.14,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}triều chính đều do
+Dialogue: 0,0:00:13.14,0:00:14.42,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}người khác lo giúp.
+Dialogue: 0,0:00:14.58,0:00:15.07,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Một hôm,
+Dialogue: 0,0:00:15.07,0:00:16.12,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}ông thèm món bánh
+Dialogue: 0,0:00:16.12,0:00:16.86,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}bao nhân mơ,
+Dialogue: 0,0:00:16.86,0:00:17.84,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}đặc sản trứ danh
+Dialogue: 0,0:00:17.84,0:00:18.70,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}của nước Áo.
+Dialogue: 0,0:00:18.86,0:00:19.93,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Nhưng đầu bếp thưa
+Dialogue: 0,0:00:19.93,0:00:20.88,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}rằng: Bẩm bệ hạ,
+Dialogue: 0,0:00:20.88,0:00:21.71,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}mùa này hết mơ
+Dialogue: 0,0:00:21.71,0:00:22.07,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}rồi ạ,
+Dialogue: 0,0:00:22.07,0:00:23.32,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}không làm được đâu.
+Dialogue: 0,0:00:23.48,0:00:24.42,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Thế là vị hoàng
+Dialogue: 0,0:00:24.42,0:00:25.48,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}đế quyền lực nhất
+Dialogue: 0,0:00:25.48,0:00:26.35,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}châu Âu bật ra
+Dialogue: 0,0:00:26.35,0:00:27.29,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}câu nói để đời:
+Dialogue: 0,0:00:27.29,0:00:28.22,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Ta là hoàng đế,
+Dialogue: 0,0:00:28.22,0:00:29.59,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}và ta muốn bánh bao!
+Dialogue: 0,0:00:29.75,0:00:30.58,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Và kết cục là
+Dialogue: 0,0:00:30.58,0:00:31.72,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}ông vẫn không được
+Dialogue: 0,0:00:31.72,0:00:32.49,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}ăn bánh bao.
+Dialogue: 0,0:00:32.49,0:00:33.70,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Quyền lực tuyệt đối
+Dialogue: 0,0:00:33.70,0:00:34.72,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}cũng thua mùa vụ
+Dialogue: 0,0:00:34.72,0:00:35.41,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}trái cây.
+Dialogue: 0,0:00:35.57,0:00:36.46,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Theo dõi để xem
+Dialogue: 0,0:00:36.46,0:00:37.53,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}tiếp series Vua Kỳ
+Dialogue: 0,0:00:37.53,0:00:38.06,Sub,,0,0,0,,{\fad(60,60)\t(0,140,\fscx104\fscy104)\t(140,260,\fscx100\fscy100)}Lạ nha!
