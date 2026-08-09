@@ -1,0 +1,15 @@
+{
+  "name": "torr-shelf",
+  "version": "0.13.0",
+  "private": true,
+  "type": "module",
+  "description": "CineWave-inspired Cinema and Magnet Search Desk for TorrServer",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test test/server.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
