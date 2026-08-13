@@ -36,3 +36,13 @@ npm start
 ```
 
 Mã nguồn giải nén nằm trong [`torr-shelf/`](./torr-shelf/).
+
+## Guide chọn mức backdrop
+
+Sau khi cài, mở đường dẫn sau trên máy chạy TorrShelf để xem **đúng ảnh từ Cinemeta/Stremio**, không chỉnh brightness:
+
+```text
+http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html
+```
+
+Guide vẽ các cặp gạch dọc cho crop ở mức `1.00`, `1.05`, `1.10`, `1.15`; bấm từng mốc hoặc kéo slider rồi gửi lại mốc bạn muốn dùng.

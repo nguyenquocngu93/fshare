@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Avengers: Infinity War · Cinemeta crop guide</title>
+  <style>
+    :root { color-scheme: dark; --bg: #08090c; --panel: #14161c; --text: #f6f7fb; --muted: #a5abb8; --cyan: #22d3ee; }
+    * { box-sizing: border-box; }
+    body { max-width: 1200px; margin: 0 auto; padding: 24px; background: var(--bg); color: var(--text); font: 16px/1.5 Inter, system-ui, sans-serif; }
+    h1 { margin: 0; font-size: clamp(24px, 5vw, 42px); letter-spacing: -.04em; }
+    p { color: var(--muted); }
+    code { padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,.08); color: #fff; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0 14px; }
+    .toolbar button { min-height: 42px; padding: 0 15px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: var(--panel); color: var(--text); font-weight: 800; cursor: pointer; }
+    .toolbar button.active { border-color: var(--cyan); background: rgba(34,211,238,.15); color: var(--cyan); }
+    .toolbar label { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 13px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: var(--panel); color: var(--muted); }
+    input { accent-color: var(--cyan); }
+    output { min-width: 42px; color: #fff; font-weight: 900; }
+    .art { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid rgba(255,255,255,.14); background: #000; box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+    .art > img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; /* No filter, opacity, mask or dark overlay: brightness stays original. */ }
+    .guide-line { position: absolute; z-index: 2; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--line-color); pointer-events: none; }
+    .guide-line.center { border-left-style: dashed; border-left-color: rgba(255,255,255,.8); }
+    .guide-line.current { z-index: 3; border-left-width: 4px; filter: drop-shadow(0 0 3px #000); }
+    .guide-line span { position: absolute; top: 8px; left: 7px; padding: 3px 6px; border-radius: 5px; background: rgba(0,0,0,.78); color: var(--line-color); font-size: 11px; font-weight: 900; white-space: nowrap; }
+    .guide-line.right span { right: 7px; left: auto; }
+    .legend { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 8px; margin-top: 14px; }
+    .legend div { display: flex; gap: 8px; align-items: center; padding: 9px 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 9px; color: var(--muted); font-size: 13px; }
+    .legend i { width: 16px; height: 3px; flex: 0 0 16px; background: var(--line-color); }
+    .note { margin: 18px 0 0; padding: 13px; border-left: 3px solid var(--cyan); background: rgba(34,211,238,.06); color: #cfeff5; }
+    .error { padding: 28px; color: #fca5a5; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Avengers: Infinity War · Cinemeta backdrop guide</h1>
+  <p>Guide này giả lập đúng đường đi của TorrShelf: <code>/api/tmdb/search</code> → detail TMDB → <code>/api/cinemeta/background</code>. Ảnh cuối cùng luôn đi qua proxy Cinemeta/MetaHub của chính web bạn. Không áp filter, overlay tối hoặc chỉnh brightness; chỉ có các gạch dọc hướng dẫn crop.</p>
+  <p id="sourceStatus" aria-live="polite">Đang giả lập tìm kiếm Avengers: Infinity War…</p>
+
+  <div class="toolbar" aria-label="Chọn mức zoom backdrop">
+    <button type="button" data-preset="1">1.00 · không thu</button>
+    <button type="button" data-preset="1.05">1.05</button>
+    <button type="button" data-preset="1.10">1.10</button>
+    <button type="button" data-preset="1.15">1.15 · hiện tại</button>
+    <label>Tuỳ chỉnh <input id="scale" type="range" min="1" max="1.20" step="0.01" value="1" /><output id="scaleValue">1.00</output></label>
+  </div>
+
+  <div id="art" class="art" aria-label="Cinemeta backdrop crop guide">
+    <img id="backdrop" alt="Avengers: Infinity War backdrop from Cinemeta" />
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <p class="note">Hai gạch cùng màu là mép trái/phải của phần ảnh nhìn thấy trong hero có tỷ lệ <strong>32 / 20.69</strong>. Chọn <strong>1.00</strong> để xem “không thu”; các mức cao hơn cắt vào hai mép nhiều hơn. Gạch trắng đứt là tâm ảnh.</p>
+
+  <script>
+    const heroRatio = 32 / 20.69;
+    const presets = [
+      { scale: 1.00, color: '#22d3ee', label: '1.00 · không thu' },
+      { scale: 1.05, color: '#a78bfa', label: '1.05' },
+      { scale: 1.10, color: '#fbbf24', label: '1.10' },
+      { scale: 1.15, color: '#fb7185', label: '1.15 · hiện tại' },
+    ];
+    const art = document.querySelector('#art');
+    const image = document.querySelector('#backdrop');
+    const legend = document.querySelector('#legend');
+    const slider = document.querySelector('#scale');
+    const output = document.querySelector('#scaleValue');
+    const sourceStatus = document.querySelector('#sourceStatus');
+    const knownImdbId = 'tt4154756';
+    let imageRatio = 16 / 9;
+    let selectedScale = 1;
+
+    function cropInset(scale) {
+      return Math.max(0, Math.min(50, ((1 - heroRatio / (imageRatio * scale)) / 2) * 100));
+    }
+
+    function addLine(position, color, label, side, current = false) {
+      const line = document.createElement('i');
+      line.className = `guide-line ${side}${current ? ' current' : ''}`;
+      line.style.left = `${position}%`;
+      line.style.setProperty('--line-color', color);
+      const text = document.createElement('span');
+      text.textContent = label;
+      line.append(text);
+      art.append(line);
+    }
+
+    function render() {
+      art.querySelectorAll('.guide-line').forEach((line) => line.remove());
+      addLine(50, '#ffffff', 'tâm', 'center');
+      presets.forEach(({ scale, color, label }) => {
+        const inset = cropInset(scale);
+        addLine(inset, color, label, 'left', Math.abs(scale - selectedScale) < .001);
+        addLine(100 - inset, color, label, 'right', Math.abs(scale - selectedScale) < .001);
+      });
+      legend.innerHTML = presets.map(({ scale, color, label }) => `<div style="--line-color:${color}"><i></i><span>${label} · cắt ${cropInset(scale).toFixed(1)}% mỗi mép</span></div>`).join('');
+      output.textContent = selectedScale.toFixed(2);
+      document.querySelectorAll('[data-preset]').forEach((button) => button.classList.toggle('active', Number(button.dataset.preset) === selectedScale));
+    }
+
+    image.addEventListener('load', () => {
+      imageRatio = image.naturalWidth / image.naturalHeight || imageRatio;
+      art.style.aspectRatio = String(imageRatio);
+      render();
+    });
+    image.addEventListener('error', () => {
+      art.innerHTML = '<div class="error">Không tải được Cinemeta backdrop. Kiểm tra kết nối tới images.metahub.space.</div>';
+    });
+
+    async function simulateTorrShelfSearch() {
+      let imdbId = knownImdbId;
+      try {
+        const searchResponse = await fetch('/api/tmdb/search?q=Avengers%20Infinity%20War&page=1');
+        if (!searchResponse.ok) throw new Error('TMDB search unavailable');
+        const search = await searchResponse.json();
+        const match = (search.items || []).find((item) => Number(item.id) === 299536)
+          || (search.items || []).find((item) => /infinity war/i.test(item.title || item.originalTitle || ''));
+        if (!match) throw new Error('Movie not found');
+        const detailResponse = await fetch(`/api/tmdb/${match.mediaType || 'movie'}/${match.id}`);
+        if (!detailResponse.ok) throw new Error('TMDB detail unavailable');
+        const detail = await detailResponse.json();
+        if (/^tt\d{5,12}$/.test(detail.data?.imdbId || '')) imdbId = detail.data.imdbId;
+        sourceStatus.textContent = `Đã tìm thấy ${detail.data?.title || 'Avengers: Infinity War'} · Cinemeta ${imdbId}`;
+      } catch {
+        sourceStatus.textContent = `TMDB search không khả dụng — dùng IMDb Cinemeta đã biết: ${knownImdbId}`;
+      }
+      image.src = `/api/cinemeta/background?imdb=${encodeURIComponent(imdbId)}`;
+    }
+
+    slider.addEventListener('input', () => { selectedScale = Number(slider.value); render(); });
+    document.querySelectorAll('[data-preset]').forEach((button) => button.addEventListener('click', () => { selectedScale = Number(button.dataset.preset); slider.value = String(selectedScale); render(); }));
+    render();
+    simulateTorrShelfSearch();
+  </script>
+</body>
+</html>

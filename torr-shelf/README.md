@@ -294,3 +294,7 @@ Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng th�
 - khi bắt đầu cuộn, zoom backdrop từ `1.15` về `1.0`; logo đi theo toàn bộ hero và chỉ merge sang header khi chạm vùng header;
 - làm lại dòng metadata: thời lượng · năm · điểm · IMDb;
 - tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích.
+
+### Guide chọn crop Cinemeta
+
+Mở `http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html` để xem backdrop Avengers: Infinity War trực tiếp từ Cinemeta, cùng các gạch dọc crop cho `1.00` đến `1.15`. Guide không áp brightness, filter hoặc overlay lên ảnh.

@@ -762,6 +762,16 @@ describe("HTTP app", () => {
     assert.doesNotMatch(html, /Thử nhanh|Ubuntu 26\.04|Big Buck Bunny/);
     assert.match(htmlResponse.headers.get("cache-control"), /no-store/);
 
+    const cropGuideResponse = await fetch(`${baseUrl}/avengers-infinity-war-cinemeta-guide.html`);
+    assert.equal(cropGuideResponse.status, 200);
+    const cropGuide = await cropGuideResponse.text();
+    assert.match(cropGuide, /simulateTorrShelfSearch/);
+    assert.match(cropGuide, /\/api\/tmdb\/search\?q=Avengers%20Infinity%20War/);
+    assert.match(cropGuide, /\/api\/cinemeta\/background\?imdb=\$\{encodeURIComponent\(imdbId\)\}/);
+    assert.match(cropGuide, /32 \/ 20\.69/);
+    assert.match(cropGuide, /1\.00 · không thu/);
+    assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
+
     const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.6`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
