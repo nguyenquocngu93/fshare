@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#06b6d4" />
+  <meta name="color-scheme" content="dark" />
+  <title>TorrShelf</title>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/cinewave-clone.css?v=1.6.6" />
+  <script type="module" src="/cinewave-app.js?v=1.6.6"></script>
+</head>
+<body>
+  <header class="cw-header">
+    <div class="cw-header-inner">
+      <button class="cw-brand" data-go="home" type="button" aria-label="TorrShelf trang chủ">
+        <span class="cw-brand-mark"><svg viewBox="0 0 32 32"><path d="M7 8.5h18M9.5 14.5h13M12 20.5h8M15 26.5h2"/><circle cx="25" cy="8.5" r="2.4"/><circle cx="22.5" cy="14.5" r="2.4"/><circle cx="20" cy="20.5" r="2.4"/></svg></span>
+        <strong>TORRSHELF</strong>
+      </button>
+      <div id="detailHeaderIdentity" class="cw-detail-header-identity" aria-hidden="true">
+        <button id="detailHeaderBack" class="cw-detail-header-back" type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="cw-detail-header-brand"><img id="detailHeaderLogo" alt="" /><strong id="detailHeaderTitle"></strong></div>
+        <div class="cw-detail-header-actions">
+          <button id="detailHeaderShare" type="button" aria-label="Share"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.5-4.4M8.2 13.2l7.5 4.4"/></svg></button>
+          <a id="detailHeaderTrailer" href="#" target="_blank" rel="noreferrer" aria-label="Trailer"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></a>
+          <button id="detailHeaderLibrary" type="button" aria-label="Add to library"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 2v6M16 2v6M8 13h8M12 9v8"/></svg></button>
+        </div>
+      </div>
+      <nav class="cw-desktop-nav" aria-label="Desktop navigation">
+        <button data-go="home" type="button">Home</button>
+        <button data-go="discover" type="button">Discover</button>
+        <button data-go="library" type="button">Library</button>
+        <button data-go="torrent" type="button">Torrents</button>
+        <button data-go="settings" type="button">Settings</button>
+      </nav>
+      <form id="globalSearchForm" class="cw-header-search" autocomplete="off">
+        <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+        <input id="globalSearchInput" type="search" minlength="2" maxlength="160" placeholder="Search..." aria-label="Tìm trên TMDB" />
+      </form>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="homeView" class="view">
+      <div id="homeSkeleton" class="cw-hero-skeleton"></div>
+      <div id="homeContent" class="hidden">
+        <section id="hero" class="cw-hero"></section>
+        <section class="cw-home-torrent-promo" aria-label="Tìm torrent cho phim đang xem">
+          <div class="cw-home-torrent-copy">
+            <span>PHIM ĐÃ CHỌN, TỪ KHÓA ĐÃ SẴN</span>
+            <h2>Có phim rồi.<br><em>Giờ chọn đúng bản.</em></h2>
+            <p>TorrShelf giữ sẵn tên gốc và năm phát hành để bạn chuyển từ khám phá sang tìm bản torrent mà không phải nhập lại.</p>
+          </div>
+          <div class="cw-home-torrent-action">
+            <div class="cw-home-torrent-flow"><i>TMDB</i><b>→</b><i>TORRENT</i><b>→</b><i>TS</i></div>
+            <button data-go="torrent" type="button">Đi tìm bản phát <b>›</b></button>
+          </div>
+        </section>
+        <div id="homeRows" class="cw-home-rows"></div>
+      </div>
+      <div id="tmdbSetup" class="cw-empty hidden">
+        <span class="cw-empty-icon">TMDB</span>
+        <h1>Cần TMDB API Token</h1>
+        <p>Thêm <code>TMDB_API_TOKEN</code> hoặc <code>TMDB_API_KEY</code> vào file <code>.env</code>, sau đó khởi động lại TorrShelf.</p>
+      </div>
+    </section>
+
+    <section id="discoverView" class="view hidden">
+      <div class="cw-mobile-tabs">
+        <button class="active" data-discover-tab="hub" type="button">Hub</button>
+        <button data-discover-tab="movies" type="button">Movies</button>
+        <button data-discover-tab="tv" type="button">Shows</button>
+      </div>
+      <header class="cw-page-head">
+        <h1 id="discoverTitle">Discovery Hub</h1>
+        <div id="discoverSort" class="cw-sort hidden"><button class="active" data-sort="popular" type="button">Popular</button><button data-sort="latest" type="button">Latest</button></div>
+      </header>
+      <div id="discoverControls">
+        <section class="cw-discovery-block">
+          <h2>Phim theo tâm trạng</h2>
+          <div class="cw-moods">
+            <button class="active" data-mood="28,53" data-label="Adrenaline" type="button"><i><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7z"/></svg></i><span>Adrenaline</span></button>
+            <button data-mood="35,10751" data-label="Cozy" type="button"><i><svg viewBox="0 0 24 24"><path d="M4 8h12v7a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM16 10h2a3 3 0 0 1 0 6h-2M7 3v2M11 3v2"/></svg></i><span>Cozy</span></button>
+            <button data-mood="27,9648" data-label="Spooky" type="button"><i><svg viewBox="0 0 24 24"><path d="M5 20V10a7 7 0 0 1 14 0v10l-3-2-2 2-2-2-2 2-2-2z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg></i><span>Spooky</span></button>
+            <button data-mood="18,10749" data-label="Emotional" type="button"><i><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6z"/></svg></i><span>Emotional</span></button>
+            <button data-mood="12,878" data-label="Epic" type="button"><i><svg viewBox="0 0 24 24"><path d="M12 22c4 0 7-3 7-7 0-3-1.5-5.5-4-8 .2 3-1.2 4.3-2.2 5.2C12.4 8.2 10 5 7 2c.3 4-2 6.3-2 10 0 5 3 10 7 10z"/></svg></i><span>Epic</span></button>
+            <button data-mood="35" data-label="Happy" type="button"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></i><span>Happy</span></button>
+            <button data-mood="878,9648" data-label="Mind-Bending" type="button"><i><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9M12 7a5 5 0 1 0 5 5M12 11a1 1 0 1 0 1 1"/></svg></i><span>Mind-Bending</span></button>
+            <button data-mood="80,53" data-label="Dark" type="button"><i><svg viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5z"/></svg></i><span>Dark</span></button>
+            <button data-mood="14,16" data-label="Dreamy" type="button"><i><svg viewBox="0 0 24 24"><path d="M7 17h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 10.5 3.5 3.5 0 0 0 7 17zM6 3v2M3 6h2M19 3v2M21 6h-2"/></svg></i><span>Dreamy</span></button>
+            <button data-mood="10751,16" data-label="Family Night" type="button"><i><svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3z"/><circle cx="9" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg></i><span>Family Night</span></button>
+            <button data-mood="53,9648" data-label="Intense" type="button"><i><svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg></i><span>Intense</span></button>
+            <button data-mood="36,10751" data-label="Nostalgic" type="button"><i><svg viewBox="0 0 24 24"><path d="M4 8V4m0 0h4M4 4l3 3a8 8 0 1 1-2 8M12 8v5l3 2"/></svg></i><span>Nostalgic</span></button>
+          </div>
+        </section>
+        <section class="cw-discovery-block">
+          <h2>Hoặc chọn thể loại</h2>
+          <div class="cw-categories">
+            <button data-genre="28" data-label="Action" type="button"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7z"/></svg><span>Action</span></button>
+            <button data-genre="878" data-label="Sci-Fi" type="button"><svg viewBox="0 0 24 24"><path d="M14 4c3-1 5-1 6-1 0 1 0 3-1 6l-7 7-5-5zM9 14l-4 1-2 4 6-2M16 12l1 5-4 4-1-6"/><circle cx="15.5" cy="7.5" r="1.5"/></svg><span>Sci-Fi</span></button>
+            <button data-genre="27" data-label="Horror" type="button"><svg viewBox="0 0 24 24"><path d="M5 20V10a7 7 0 0 1 14 0v10l-3-2-2 2-2-2-2 2-2-2z"/></svg><span>Horror</span></button>
+            <button data-genre="35" data-label="Comedy" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg><span>Comedy</span></button>
+            <button data-genre="10749" data-label="Romance" type="button"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 1 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6z"/></svg><span>Romance</span></button>
+            <button data-genre="99" data-label="Documentary" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>Doc</span></button>
+            <button data-genre="10402" data-label="Music" type="button"><svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13M9 9l10-2"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>Music</span></button>
+            <button data-genre="80" data-label="Crime" type="button"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3 8 8 10 5-2 8-5 8-10V6zM9 11h6M12 8v6"/></svg><span>Crime</span></button>
+            <button data-genre="12" data-label="Adventure" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg><span>Adventure</span></button>
+            <button data-genre="16" data-label="Animation" type="button"><svg viewBox="0 0 24 24"><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5zM19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z"/></svg><span>Animation</span></button>
+            <button data-genre="10751" data-label="Family" type="button"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2.5-7 6-7s6 3 6 7M14 14c3 0 5 2.3 5 6"/></svg><span>Family</span></button>
+            <button data-genre="18" data-label="Drama" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h7v8c0 4-3.5 6-3.5 6S4 16 4 12zM13 4h7v8c0 4-3.5 6-3.5 6S13 16 13 12zM6 8h3M15 9h3M6 13s1.5-1 3 0M15 13s1.5 1 3 0"/></svg><span>Drama</span></button>
+            <button data-genre="14" data-label="Fantasy" type="button"><svg viewBox="0 0 24 24"><path d="m4 20 11-11M13 5l2-2 6 6-2 2zM6 5l.7 2.3L9 8l-2.3.7L6 11l-.7-2.3L3 8l2.3-.7zM16 16l.7 2.3L19 19l-2.3.7L16 22l-.7-2.3L13 19l2.3-.7z"/></svg><span>Fantasy</span></button>
+            <button data-genre="9648" data-label="Mystery" type="button"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5M9 9a2 2 0 1 1 3 1.7c-.8.4-1 1-1 1.8M11 15h.01"/></svg><span>Mystery</span></button>
+            <button data-genre="53" data-label="Thriller" type="button"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><span>Thriller</span></button>
+            <button data-genre="36" data-label="History" type="button"><svg viewBox="0 0 24 24"><path d="M4 9h16M5 20h14M6 9v9M10 9v9M14 9v9M18 9v9M3 7l9-4 9 4z"/></svg><span>History</span></button>
+            <button data-genre="10752" data-label="War" type="button"><svg viewBox="0 0 24 24"><path d="m5 4 14 16M19 4 5 20M7 6l-3-3M17 6l3-3M7 18l-3 3M17 18l3 3"/></svg><span>War</span></button>
+            <button data-genre="37" data-label="Western" type="button"><svg viewBox="0 0 24 24"><path d="M6 14c1-5 3-8 6-8s5 3 6 8M3 14c2 3 5 4 9 4s7-1 9-4c-3 1-6 1-9 1s-6 0-9-1zM9 10h6"/></svg><span>Western</span></button>
+          </div>
+        </section>
+      </div>
+      <section class="cw-discovery-results">
+        <h2 id="discoverResultsTitle">Adrenaline Hits</h2>
+        <div id="discoverGrid" class="cw-poster-grid"></div>
+        <div id="discoverSentinel" class="cw-infinite-sentinel"><span id="discoverLoader">Cuộn để tải thêm</span></div>
+      </section>
+    </section>
+
+    <section id="browseView" class="view hidden">
+      <button class="cw-back" data-back type="button">← Back</button>
+      <header class="cw-page-head"><div><h1 id="browseTitle">Results</h1><p id="browseSubtitle"></p></div></header>
+      <div id="peopleResults" class="hidden"><h2 class="cw-section-title">People</h2><div id="peopleGrid" class="cw-person-row"></div></div>
+      <div id="browseGrid" class="cw-poster-grid"></div>
+      <div class="cw-pagination"><button id="browsePrev" type="button">Previous</button><span id="browsePage">1</span><button id="browseNext" type="button">Next</button></div>
+    </section>
+
+    <section id="detailView" class="view hidden">
+      <button class="cw-back" data-back type="button">← Back</button>
+      <div id="detailContent"></div>
+    </section>
+
+    <section id="personView" class="view hidden">
+      <button class="cw-back" data-back type="button">← Back</button>
+      <div id="personContent"></div>
+    </section>
+
+    <section id="torrentView" class="view hidden ts-torrent-view">
+      <header class="ts-torrent-intro">
+        <span class="ts-torrent-kicker">MAGNET SEARCH, GỌN TRONG MỘT TAB</span>
+        <h1>Tìm đúng bản.<br><em>Đẩy một chạm.</em></h1>
+        <p>Gộp kết quả từ Magnetz và Knaben, lọc dung lượng <strong>không giới hạn</strong> và thêm thủ công vào TorrServer để kiểm tra nguồn.</p>
+      </header>
+
+      <form id="torrentSearchForm" class="ts-torrent-search" autocomplete="off">
+        <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+        <input id="torrentQuery" type="search" minlength="2" maxlength="160" placeholder="Tên phim, bản phát…" />
+        <kbd>/</kbd>
+        <button type="submit"><span>Tìm kiếm</span><b>›</b></button>
+      </form>
+
+      <section class="ts-filter-panel" aria-label="Bộ lọc torrent">
+        <div class="ts-filter-heading"><span>Tùy chỉnh kết quả</span><small>Chọn nguồn và độ ưu tiên</small></div>
+        <div class="ts-source-tabs">
+          <button class="active" data-source="all" type="button"><span class="ts-source-icon">⌘</span>Tất cả</button>
+          <button data-source="magnetz" type="button"><span class="ts-source-icon">M</span>Magnetz</button>
+          <button data-source="knaben" type="button"><span class="ts-source-icon">K</span>Knaben</button>
+        </div>
+        <div class="ts-filters">
+          <label class="ts-field"><span>Tối đa</span><input id="maxSize" type="number" min="1" placeholder="∞ GB" /></label>
+          <label class="ts-field"><span>Seed ≥</span><input id="minSeeds" type="number" min="0" value="1" /></label>
+          <label class="ts-field ts-field-wide"><span>Sắp xếp</span><select id="torrentSort"><option value="seeders">Nhiều seed</option><option value="newest">Mới nhất</option><option value="size-desc">Nặng trước</option><option value="size-asc">Nhẹ trước</option></select></label>
+          <label class="ts-toggle"><input id="hideAdult" type="checkbox" checked /><span class="ts-toggle-mark"></span><span>Ẩn XXX trên Knaben</span></label>
+        </div>
+      </section>
+
+      <div class="ts-results-head">
+        <div><span id="torrentCount" class="ts-results-count">Chưa tìm kiếm</span><h2 id="torrentResultTitle">Kết quả</h2></div>
+        <span id="torrentMeta"></span>
+      </div>
+      <div id="torrentNotice" class="cw-notice hidden"></div>
+      <div id="torrentResults" class="ts-torrent-list"></div>
+      <div class="cw-pagination"><button id="torrentPrev" type="button">Trước</button><span id="torrentPage">1</span><button id="torrentNext" type="button">Sau</button></div>
+    </section>
+
+    <section id="libraryView" class="view hidden">
+      <header class="cw-page-head"><div><h1>Library</h1><p>Đồng bộ thư viện và tiến độ từ web, TorrShelf Player và mpv.</p></div></header>
+      <section id="continueWatchingSection" class="cw-library-block hidden"><h2>Tiếp tục xem</h2><div id="continueWatchingGrid" class="cw-poster-grid"></div></section>
+      <section class="cw-library-block"><h2>Đã lưu</h2><div id="libraryGrid" class="cw-poster-grid"></div><p id="libraryEmpty" class="cw-addon-empty hidden">Thư viện chưa có phim nào.</p></section>
+    </section>
+
+    <section id="settingsView" class="view hidden">
+      <header class="cw-page-head"><div><h1>Settings</h1><p>Local service information</p></div></header>
+      <div class="cw-settings-grid">
+        <article><span>TS</span><div><small>Application</small><h2>TorrShelf</h2><p>Version 1.6.6</p></div></article>
+        <article><span id="settingsServerDot">●</span><div><small>TorrServer</small><h2 id="settingsServerVersion">Checking…</h2><p id="settingsServerUrl">http://127.0.0.1:8090</p></div></article>
+        <article><span>DB</span><div><small>Data sources</small><h2>TMDB · Magnetz · Knaben</h2><p id="settingsTmdb">Checking…</p></div></article>
+      </div>
+      <form id="torrServerSettingsForm" class="cw-torrserver-config" autocomplete="off">
+        <div class="cw-torrserver-config-head"><div><small>ACTIVE TORRSERVER</small><h2>Địa chỉ máy chủ</h2></div><span id="torrServerConfigBadge">LOCAL</span></div>
+        <label for="torrServerUrlInput">URL hoặc IP:PORT</label>
+        <div class="cw-torrserver-input-row"><input id="torrServerUrlInput" type="text" inputmode="url" placeholder="http://62.60.153.226:12345/" spellcheck="false" /><button type="submit">Lưu & kiểm tra</button></div>
+        <p id="torrServerConfigStatus">TorrShelf sẽ chuẩn bị stream qua máy chủ này rồi mở bằng ứng dụng phát video bên ngoài.</p>
+        <button id="useLocalTorrServer" class="cw-use-local" type="button">Dùng lại TorrServer local</button>
+      </form>
+      <section class="cw-player-settings">
+        <div class="cw-player-settings-head"><div><small>PLAYBACK</small><h2>Trình phát mặc định</h2></div><span>PLAYER</span></div>
+        <label for="playerPreference">Mở nguồn bằng</label>
+        <select id="playerPreference">
+          <option value="torrshelf">TorrShelf Player</option>
+          <option value="mpv">mpv-android · tự nạp phụ đề</option>
+          <option value="mx">MX Player · sync tiến độ</option>
+          <option value="external">Trình phát ngoài / Android chooser</option>
+        </select>
+        <p id="playerPreferenceNote">TorrShelf Player nhận play session, HTTP headers và phụ đề theo đúng IMDb/tập phim.</p>
+        <a class="cw-player-download" href="https://github.com/mpv-android/mpv-android/releases/download/2026-04-25/app-default-arm64-v8a-release.apk" target="_blank" rel="noreferrer">Tải mpv-android arm64 chính chủ ↗</a>
+      </section>
+      <section class="cw-display-settings">
+        <div class="cw-player-settings-head"><div><small>DISPLAY</small><h2>Bố cục poster</h2></div><span>GRID</span></div>
+        <label for="posterColumns">Số cột trên điện thoại</label>
+        <select id="posterColumns"><option value="3">3 cột · giống Stremio</option><option value="2">2 cột · poster lớn</option></select>
+        <p>Áp dụng cho Discover và Library. Home giữ rail 128px, poster 2:3 và khoảng hở đúng CineWave.</p>
+      </section>
+      <section class="cw-native-settings">
+        <div class="cw-native-settings-head"><div><small>TORRSHELF NATIVE PROVIDERS</small><h2>Hybrid tích hợp</h2></div><span>NATIVE</span></div>
+        <form id="nativeProviderForm" autocomplete="off">
+          <label class="cw-native-master"><input name="enabled" type="checkbox"><span><b>Bật nguồn tích hợp</b><small>Thay Hybrid addon ngoài bằng provider chạy trong TorrShelf.</small></span></label>
+          <div class="cw-native-source-grid">
+            <label><input name="torrentioEnabled" type="checkbox"><span>Torrentio</span></label>
+            <label><input name="jacredEnabled" type="checkbox"><span>Jacred</span></label>
+            <label><input name="knabenEnabled" type="checkbox"><span>Knaben</span></label>
+            <label><input name="magnetzEnabled" type="checkbox"><span>Magnetz</span></label>
+          </div>
+          <div class="cw-native-quality"><span>Web scrapers / directories · thử nghiệm · mặc định tắt</span><label><input name="fourKhdHubEnabled" type="checkbox"><span>4KHDHub · HTTP</span></label><label><input name="moviesDriveEnabled" type="checkbox"><span>MoviesDrive · HTTP</span></label><label><input name="hdHub4uEnabled" type="checkbox"><span>HDHub4u · HTTP</span></label><label><input name="vadapavEnabled" type="checkbox"><span>Vadapav · Open directory</span></label><label><input name="uhdMoviesEnabled" type="checkbox"><span>UHDMovies · HTTP</span></label><label><input name="hubCloudSearchEnabled" type="checkbox"><span>HubCloud Search · Directory</span></label></div>
+          <div class="cw-native-fields">
+            <label><span>Jacred domain</span><select name="jacredDomain"><option value="jac.red">jac.red</option><option value="jac-red.ru">jac-red.ru</option><option value="jr.maxvol.pro">jr.maxvol.pro</option><option value="ru.jacred.pro">ru.jacred.pro</option><option value="jacred.stream">jacred.stream</option></select></label>
+            <label><span>Sắp xếp</span><select name="commonSortBy"><option value="size">Dung lượng</option><option value="seeds">Seed</option><option value="date">Mới nhất</option></select></label>
+            <label><span>Kết quả mỗi nguồn</span><input name="maxResults" type="number" min="5" max="200" step="1"></label>
+            <label><span>Nhỏ nhất (GB)</span><input name="sizeMinGB" type="number" min="0" max="1000" step="0.5"></label>
+            <label><span>Lớn nhất (GB)</span><input name="sizeMaxGB" type="number" min="0" max="1000" step="0.5"></label>
+          </div>
+          <label class="cw-native-wide"><span>Torrentio manifest</span><input name="torrentioManifestUrl" type="text" inputmode="url" spellcheck="false"></label>
+          <div class="cw-native-quality"><span>Ẩn chất lượng</span><label><input name="quality" value="480p" type="checkbox">480p</label><label><input name="quality" value="720p" type="checkbox">720p</label><label><input name="quality" value="1080p" type="checkbox">1080p</label><label><input name="quality" value="4K" type="checkbox">4K</label></div>
+          <div class="cw-native-options"><label><input name="preferPack" type="checkbox"><span>Ưu tiên pack</span></label><label><input name="animeMode" type="checkbox"><span>Anime mode</span></label></div>
+          <p>4KHDHub, MoviesDrive, HDHub4u, Vadapav, UHDMovies và HubCloud Search bật/tắt độc lập; lỗi một nguồn không làm gián đoạn nguồn khác. MoviesDrive/HDHub4u hỗ trợ cả trang multi-season và chọn đúng file SxxEyy.</p>
+          <button type="submit">Lưu cấu hình native</button>
+        </form>
+      </section>
+      <section class="cw-addon-settings">
+        <div class="cw-addon-settings-head"><div><small>STREMIO ADDONS</small><h2>Streams & subtitles</h2></div><span id="stremioAddonCount">0</span></div>
+        <form id="stremioAddonForm" autocomplete="off"><input id="stremioAddonUrl" type="text" inputmode="url" placeholder="https://addon.example/config/manifest.json" spellcheck="false" /><button type="submit">Import addon</button></form>
+        <p>Dán manifest URL của stream hoặc subtitle addon. OpenSubtitles v3 đã được tích hợp sẵn; SubSense có thể import thêm sau khi cấu hình ngôn ngữ.</p>
+        <a class="cw-addon-config-link" href="https://subsense.nepiraw.com/" target="_blank" rel="noreferrer">Mở SubSense để tạo manifest ↗</a>
+        <div id="stremioAddonList" class="cw-addon-list"></div>
+      </section>
+      <section class="cw-cloudstream-settings hidden" aria-disabled="true">
+        <div class="cw-addon-settings-head"><div><small>CLOUDSTREAM · BRIDGE MODE</small><h2>CloudStream plugins</h2></div><span id="cloudStreamStatusBadge">ALPHA</span></div>
+        <p class="cw-cloudstream-note">File <code>.cs3</code> cần Android CloudStream runtime. TorrShelf import repository để nhận diện plugin, còn CNCVerse Bridge chạy StreamPlay và xuất nguồn qua Stremio protocol.</p>
+        <form id="cloudStreamRepoForm" autocomplete="off"><input id="cloudStreamRepoUrl" type="text" inputmode="url" value="https://raw.githubusercontent.com/phisher98/cloudstream-extensions-phisher/builds/repo.json" spellcheck="false" /><button type="submit">Import repo</button></form>
+        <div id="cloudStreamPluginList" class="cw-cloudstream-plugin-list"></div>
+        <div class="cw-cloudstream-bridge">
+          <label for="cloudStreamBridgeUrl">CNCVerse Bridge manifest</label>
+          <form id="cloudStreamBridgeForm" autocomplete="off"><input id="cloudStreamBridgeUrl" type="text" inputmode="url" placeholder="http://127.0.0.1:8080/manifest.json" spellcheck="false" /><button type="submit">Kết nối Bridge</button></form>
+          <p id="cloudStreamBridgeStatus">Cài StreamPlay trong Bridge, bật local server rồi dán manifest URL hiển thị trong Bridge.</p>
+          <a href="https://github.com/NivinCNC/CNCVerse-Bridge/releases" target="_blank" rel="noreferrer">Tải CNCVerse Bridge chính chủ ↗</a>
+        </div>
+      </section>
+      <div class="cw-settings-actions"><a id="openTorrServer" href="http://127.0.0.1:8090" target="_blank" rel="noreferrer">Open TorrServer</a><button id="checkConnection" type="button">Check connection</button></div>
+    </section>
+  </main>
+
+  <nav class="cw-mobile-dock" aria-label="Mobile navigation">
+    <button class="active" data-go="home" type="button"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4z"/></svg><span>Home</span></button>
+    <button data-go="discover" type="button"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>Discover</span></button>
+    <button data-go="library" type="button"><svg viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Library</span></button>
+    <button data-go="torrent" type="button"><svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7z"/></svg><span>Torrents</span></button>
+    <button data-go="settings" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.5 1A7 7 0 0 0 15 6l-.4-2.7h-4L10 6a7 7 0 0 0-1.5 1L6 6 4 9.5 6 11a7 7 0 0 0 0 2l-2 1.5L6 18l2.5-1A7 7 0 0 0 10 18l.5 2.7h4L15 18a7 7 0 0 0 1.5-1l2.5 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg><span>Settings</span></button>
+  </nav>
+
+  <div id="toast" class="cw-toast hidden"></div>
+  <div class="cw-attribution"><img src="/tmdb-logo.svg" alt="TMDB" /><span>This product uses the TMDB API but is not endorsed or certified by TMDB.</span></div>
+</body>
+</html>
