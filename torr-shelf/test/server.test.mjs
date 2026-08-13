@@ -525,7 +525,7 @@ describe("HTTP app", () => {
             genres: [{ id: 28, name: "Hành động" }],
             credits: {
               cast: [{ id: 10, name: "Actor One", character: "Hero", profile_path: "/actor.jpg" }],
-              crew: [{ id: 11, name: "Director One", job: "Director", department: "Directing", profile_path: "/director.jpg" }, { id: 12, name: "Writer One", job: "Screenplay", department: "Writing", profile_path: "/writer.jpg" }],
+              crew: [{ id: 11, name: "Director One", job: "Director", department: "Directing", profile_path: "/director.jpg" }],
             },
             keywords: { keywords: [{ id: 1, name: "adventure" }] },
             images: {
@@ -790,33 +790,43 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-stream-badges>span\{[^}]*color:inherit[^}]*font:inherit/);
     assert.match(css, /\.cw-stream-addon-tabs\{/);
     assert.match(css, /\.cw-season-tabs\{/);
-    assert.match(css, /--cw-detail-mobile-height: clamp\(248px, 74vw, 360px\)/);
-    assert.match(css, /\.cw-detail-hero\s*\{[^}]*height: var\(--cw-detail-mobile-height\)[^}]*aspect-ratio: auto/);
-    assert.match(css, /\.cw-detail-bg > img\s*\{[^}]*object-fit: cover[^}]*scale\(1\.04\)/);
-    assert.match(css, /\.cw-detail-shell\s*\{[^}]*padding: max\(64px/);
-    assert.match(css, /\.cw-detail-title-visual\s*\{[^}]*margin-bottom: 26px/);
-    assert.match(css, /\.cw-detail-logo\s*\{[^}]*max-width: min\(58vw, 320px\)/);
-    assert.match(css, /\.cw-detail-body\s*\{[^}]*padding: 12px var\(--cw-detail-gutter\) 80px/);
-    assert.match(css, /\.cw-detail-body > \.cw-overview-info\s*\{[^}]*margin-top: 12px/);
-    assert.match(css, /\.cw-detail-meta-actions\s*\{[^}]*gap: 12px/);
-    assert.match(css, /\.cw-imdb-badge\s*\{/);
-    assert.match(css, /\.cw-stremio-credits\s*\{[^}]*margin-top: 13px/);
-    assert.match(css, /\.cw-stremio-credit-pill\s*\{[^}]*min-height: 34px/);
-    assert.match(css, /body\.cw-detail-open \.cw-header\s*\{/);
-    assert.match(css, /body\.cw-detail-open \.cw-header\.cw-detail-header-active\s*\{/);
-    assert.match(css, /\.cw-detail-hero-back\s*\{[^}]*width: 44px[^}]*height: 44px/);
-    assert.match(css, /\.cw-detail-icon\s*\{[^}]*width: 40px !important[^}]*height: 40px !important/);
-    assert.match(css, /\.cw-detail-body-genres button\s*\{[^}]*font-size: 15px/);
-    assert.match(css, /@media \(orientation: landscape\) and \(min-width: 640px\)\s*\{[\s\S]*?\.cw-detail-hero\s*\{[\s\S]*?min-height: min\(680px, 66vh\)/);
+    assert.match(css, /\.cw-detail-logo\{[^}]*transform:translateY\(0\)/);
+    assert.doesNotMatch(css, /\.cw-detail-copy\{[^}]*transform/);
+    assert.match(css, /\.cw-detail-copy\{[^}]*padding-bottom:0/);
+    assert.match(css, /\.cw-detail-shell\{[^}]*padding:70px 20px 0/);
+    assert.match(css, /\.cw-detail-meta\{[^}]*margin:0/);
+    assert.match(css, /\.cw-detail-hero:after\{[^}]*height:3px[^}]*background:#05070a/);
+    assert.match(css, /\.cw-detail-body\{[^}]*margin:-2px auto 0[^}]*padding:104px 20px 80px[^}]*background:#05070a/);
+    assert.match(css, /\.cw-detail-body>\.cw-overview-info\{margin-top:32px/);
     assert.match(css, /\.cw-info-streams\{[^}]*--cw-stream-font-size:14px/);
     assert.match(css, /\.cw-stream-row-copy\{[^}]*color:var\(--zinc-300\)[^}]*font-size:var\(--cw-stream-font-size\);font-weight:600;line-height:20px/);
     assert.match(css, /\.cw-stream-loading b,[^{]+\{font-size:var\(--cw-stream-font-size\);font-weight:600;line-height:20px\}/);
     assert.doesNotMatch(css, /\.cw-stream-(?:provider|row-meta)/);
     assert.doesNotMatch(css, /\.cw-stream-row-copy>(?:strong|small)/);
+    assert.match(css, /\.cw-detail-hero\{[^}]*min-height:0[^}]*aspect-ratio:32\/20\.69[^}]*overflow:visible/);
+    assert.match(css, /\.cw-detail-bg\{[^}]*overflow:hidden/);
+    assert.match(css, /\.cw-detail-shell\{[^}]*z-index:5[^}]*height:100%[^}]*min-height:0/);
+    assert.match(css, /\.cw-detail-bg>img\{[^}]*object-fit:cover[^}]*transform:translateY\(0\) scale\(1\.15\)[^}]*transform-origin:center top/);
+    assert.match(css, /#detailView\{[^}]*margin:0/);
+    assert.doesNotMatch(css, /\.cw-header\.cw-detail-context\{/);
+    assert.match(css, /\.cw-header\.cw-detail-header-active \.cw-brand[^}]+opacity:0/);
+    assert.match(css, /\.cw-detail-header-identity\{[^}]*display:grid[^}]*opacity:0/);
+    assert.match(css, /\.cw-detail-hero-back\{[^}]*width:42px[^}]*height:42px/);
+    assert.match(css, /\.cw-detail-secondary\{[^}]*gap:0[^}]*padding:3px 6px/);
+    assert.match(css, /\.cw-detail-icon\{[^}]*width:38px!important[^}]*height:38px!important/);
+    assert.match(css, /\.cw-detail-gradient\{background:linear-gradient\(to bottom,rgba\(5,7,10,\.02\) 0%,rgba\(5,7,10,\.06\) 36%,rgba\(5,7,10,\.30\) 60%,rgba\(5,7,10,\.78\) 82%,#05070a 100%\)/);
+    assert.match(css, /\.cw-detail-title-visual\{margin-bottom:16px\}/);
+    assert.match(css, /\.cw-detail-logo\{max-width:min\(48vw,420px\);max-height:56px\}/);
+    assert.match(css, /\.cw-detail-meta-facts,\.cw-detail-meta-actions\{display:flex;align-items:center\}/);
+    assert.match(css, /\.cw-imdb-badge\{/);
+    assert.match(css, /\.cw-detail-meta-icon\{display:grid;width:38px;height:38px/);
+    assert.match(css, /@media\(hover:hover\) and \(pointer:fine\)\{\.cw-poster/);
+    assert.match(css, /\.cw-detail-body-genres\{/);
     assert.doesNotMatch(css, /\.cw-streams-head\{/);
     assert.doesNotMatch(css, /\.cw-stream-row\{[^}]*border-bottom/);
     assert.doesNotMatch(css, /\.cw-episode\{[^}]*border-bottom/);
     assert.doesNotMatch(css, /\.cw-episodes-toolbar\{[^}]*border-bottom/);
+    assert.match(css, /@media\(orientation:landscape\)[^{]*\{[^}]*\.cw-detail-hero\{[^}]*aspect-ratio:auto/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
     assert.match(css, /\.cw-poster-row\{[^}]*grid-auto-columns:128px[^}]*gap:16px[^}]*padding:24px 20px[^}]*scrollbar-color:#1a1d23 #05070a/);
     assert.match(css, /\.cw-poster-row \.cw-poster\{aspect-ratio:2\/3\}/);
@@ -898,9 +908,10 @@ describe("HTTP app", () => {
     assert.match(js, /backdropProgress=Math\.min\(1,progress\/\.5\)/);
     assert.match(js, /logoProgress=Math\.max\(0,Math\.min\(1,\(progress-\.5\)\/\.5\)\)/);
     assert.match(js, /reveal=Math\.max\(0,Math\.min\(1,\(logoProgress-\.18\)\/\.72\)\)/);
-    assert.match(js, /backdropScale=1\.04-\.04\*backdropProgress,backdropY=-8\*logoProgress,logoY=-64\*logoProgress/);
+    assert.match(js, /backdropScale=1\.15-\.15\*backdropProgress,backdropY=-10\*logoProgress,logoY=-58\*logoProgress/);
+    assert.match(js, /heroLogo\.style\.transform=`translateY\(\$\{logoY\}px\) scale\(\$\{1-logoProgress\*\.2\}\)/);
     assert.match(js, /backdrop\.style\.transform=`translateY\(\$\{backdropY\}px\) scale\(\$\{backdropScale\}\)`/);
-    assert.match(js, /document\.body\.classList\.toggle\('cw-detail-open',name==='detail'\)/);
+    assert.doesNotMatch(js, /cw-detail-open|cw-stremio-credit/);
     assert.match(js, /classList\.add\('cw-detail-context'\)/);
     assert.match(js, /classList\.toggle\('cw-detail-header-active',reveal>\.62\)/);
     assert.doesNotMatch(js, /addEventListener\('touchstart'|addEventListener\('touchmove'|detailTouch|readDetailScrollOffset/);
@@ -915,9 +926,7 @@ describe("HTTP app", () => {
     assert.match(js, /\/api\/cinemeta\/logo\?imdb=/);
     assert.match(js, /data-logo-fallback/);
     assert.match(js, /const episodeSection=item\.mediaType===/);
-    assert.match(js, /cw-detail-body-genres[^`]+\$\{stremioCredits\}\$\{episodeSection\}<section id="infoStreams"/);
-    assert.match(js, /cw-stremio-credit-pill/);
-    assert.match(js, /item\.writers/);
+    assert.match(js, /cw-detail-body-genres[^`]+\$\{episodeSection\}<section id="infoStreams"/);
     assert.match(js, /data-like-current/);
     assert.match(js, /torrshelf:liked-media/);
     assert.match(js, /seasonCache: new Map\(\), seasonRequests: new Map\(\)/);
@@ -1396,7 +1405,6 @@ describe("HTTP app", () => {
     assert.equal(payload.data.imdbId, "tt1234567");
     assert.equal(payload.data.directors[0].name, "Director One");
     assert.equal(payload.data.directors[0].profilePath, "/director.jpg");
-    assert.equal(payload.data.writers[0].name, "Writer One");
     assert.equal(payload.data.cast[0].character, "Hero");
     assert.deepEqual(payload.data.keywords[0], { id: 1, name: "adventure" });
     assert.equal(payload.data.posterPath, "/poster-vi.jpg");

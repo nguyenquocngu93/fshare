@@ -411,20 +411,15 @@ export function normalizeTmdbDetail(payload, mediaType = "movie", region = "VN")
   const crewDirectors = (payload?.credits?.crew || []).filter(
     (person) => person.job === "Director" || person.department === "Directing" && person.job === "Series Director",
   );
-  const peopleCard = (person, fallbackJob = "") => ({
-    id: person.id,
-    name: cleanText(person.name, 160),
-    job: cleanText(person.job || fallbackJob, 80),
-    profilePath: /^\/[A-Za-z0-9_.-]+$/.test(person.profile_path || "") ? person.profile_path : "",
-  });
   const directors = uniquePeople([
     ...(payload?.created_by || []),
     ...crewDirectors,
-  ]).slice(0, 8).map((person) => peopleCard(person, mediaType === "tv" ? "Creator" : "Director"));
-  const writerJobs = new Set(["Writer", "Screenplay", "Story", "Teleplay", "Author", "Novel", "Characters"]);
-  const writers = uniquePeople((payload?.credits?.crew || []).filter(
-    (person) => writerJobs.has(person.job) || person.department === "Writing",
-  )).slice(0, 8).map((person) => peopleCard(person, "Writer"));
+  ]).slice(0, 8).map((person) => ({
+    id: person.id,
+    name: cleanText(person.name, 160),
+    job: cleanText(person.job || (mediaType === "tv" ? "Creator" : "Director"), 80),
+    profilePath: /^\/[A-Za-z0-9_.-]+$/.test(person.profile_path || "") ? person.profile_path : "",
+  }));
   const cast = uniquePeople(payload?.credits?.cast || []).slice(0, 18).map((person) => ({
     id: person.id,
     name: cleanText(person.name, 160),
@@ -487,7 +482,6 @@ export function normalizeTmdbDetail(payload, mediaType = "movie", region = "VN")
     genres: (payload?.genres || []).map((genre) => ({ id: genre.id, name: cleanText(genre.name, 100) })),
     keywords,
     directors,
-    writers,
     cast,
     certification,
     logoPath: logos[0]?.file_path || "",

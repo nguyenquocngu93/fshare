@@ -285,13 +285,7 @@ TMDB cho phép API miễn phí cho mục đích phi thương mại khi có attri
 
 Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787`, vì vậy máy khác trong mạng không truy cập được. Nếu đổi `HOST=0.0.0.0` hoặc publish ra LAN/Internet, nên thêm reverse proxy có xác thực. Không commit `.env` chứa TMDB token hoặc mật khẩu TorrServer.
 
+
 ## Ghi chú giao diện 1.6.6
 
-Trang chi tiết phim trên điện thoại dùng hero theo nhịp tỉ lệ của Stremio:
-
-- backdrop cao `clamp(248px, 74vw, 360px)`, logo chốt cách phần fade 26px;
-- metadata nằm ngay dưới hero thay vì bị cách bởi một thẻ nổi;
-- thanh công cụ trong suốt, ảnh chạm mép trên và header chỉ hiện lại khi cuộn;
-- runtime, năm, điểm/IMDb, thể loại và các credit Director/Cast/Writer được ưu tiên trước nội dung dài.
-
-Các nút thích và yêu thích trong hàng metadata hoạt động độc lập: thích lưu cục bộ trên thiết bị, còn yêu thích đồng bộ vào thư viện TorrShelf như trước.
+Bản này giữ nguyên header, tỉ lệ backdrop và hiệu ứng thu nhỏ/reveal của v1.6.5. Chỉ tinh chỉnh vùng fade tối, vị trí/kích thước logo theo video Stremio tham chiếu và làm lại dòng metadata (thời lượng · năm · điểm · IMDb).
