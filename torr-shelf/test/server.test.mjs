@@ -928,11 +928,16 @@ describe("HTTP app", () => {
     assert.match(js, /package=app\.torrshelf\.player/);
     assert.match(js, /episodeSection/);
     assert.doesNotMatch(js, /episodeCount/);
-    assert.match(js, /progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,hero\.offsetHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=Math\.min\(1,progress\/zoomEnd\),heroLogo=/);
+    assert.match(js, /normalHeight=Number\(hero\.dataset\.normalHeight\)\|\|0/);
+    assert.match(js, /progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,normalHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=Math\.min\(1,progress\/zoomEnd\),sourceRatio=/);
+    assert.match(js, /fullHeight=width\/sourceRatio,frameHeight=normalHeight\+\(fullHeight-normalHeight\)\*zoomOut/);
+    assert.match(js, /hero\.style\.height=zoomOut\?`\$\{frameHeight\}px`:''/);
+    assert.match(js, /if\(zoomOut>\.998\)\{backdrop\.style\.maskImage='none';backdrop\.style\.webkitMaskImage='none';\}/);
+    assert.match(js, /if\(shade\)shade\.style\.opacity=String\(1-zoomOut\)/);
     assert.match(js, /titleBox=heroLogo\.getBoundingClientRect\(\),headerBox=els\.header\.getBoundingClientRect\(\),mergeDistance=Math\.max\(56,titleBox\.height\+24\)/);
     assert.match(js, /heroLogo\.style\.transform=merge\?`translateY\(\$\{-12\*merge\}px\) scale\(\$\{1-merge\*\.12\}\)`:''/);
     assert.match(js, /els\.detailHeaderIdentity\.style\.opacity=String\(merge\)/);
-    assert.match(js, /if\(backdrop\)backdrop\.style\.transform=`translateY\(0\) scale\(\$\{1\.15-\.15\*zoomOut\}\)`/);
+    assert.match(js, /if\(backdrop\)\{backdrop\.style\.transform=`translateY\(0\) scale\(\$\{1\.15-\.15\*zoomOut\}\)`/);
     assert.doesNotMatch(js, /logoProgress|backdropY|logoY/);
     assert.doesNotMatch(js, /cw-detail-open|cw-stremio-credit/);
     assert.match(js, /classList\.add\('cw-detail-context'\)/);

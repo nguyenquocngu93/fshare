@@ -99,7 +99,7 @@ async function clearBackendStremioCache(){try{await api('/api/stremio/cache/clea
 function resetScroll(){history.scrollRestoration='manual';window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;requestAnimationFrame(()=>window.scrollTo(0,0));}
 function resetDetailHeaderMotion(){
   els.header.classList.remove('cw-detail-context','cw-detail-header-active');els.detailHeaderIdentity.style.opacity='0';els.detailHeaderIdentity.style.transform='translate(-50%,-35%) scale(.82)';
-  const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img');if(heroLogo){heroLogo.style.transform='';heroLogo.style.opacity='';}if(backdrop)backdrop.style.transform='';
+  const hero=$('.cw-detail-hero'),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient');if(heroLogo){heroLogo.style.transform='';heroLogo.style.opacity='';}if(backdrop){backdrop.style.transform='';backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}if(shade)shade.style.opacity='';if(hero){hero.style.height='';delete hero.dataset.normalHeight;delete hero.dataset.normalWidth;}
 }
 function setDetailHeader(item){
   const logoSource=detailLogoUrl(item),logoFallback=item.logoPath?image(item.logoPath):'';els.header.classList.add('cw-detail-context');els.detailHeaderTitle.textContent=item.title||'';
@@ -108,12 +108,19 @@ function setDetailHeader(item){
 }
 function updateDetailHeaderMotion(){
   if(state.view!=='detail')return;const hero=$('.cw-detail-hero');if(!hero)return;
-  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,hero.offsetHeight*.92))),zoomEnd=.20,zoomOut=Math.min(1,progress/zoomEnd),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img');
+  const backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient'),width=Math.round(hero.clientWidth||0);let normalHeight=Number(hero.dataset.normalHeight)||0;
+  if(!normalHeight||hero.dataset.normalWidth!==String(width)){hero.style.height='';normalHeight=hero.getBoundingClientRect().height;hero.dataset.normalHeight=String(normalHeight);hero.dataset.normalWidth=String(width);}
+  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,normalHeight*.92))),zoomEnd=.20,zoomOut=Math.min(1,progress/zoomEnd),sourceRatio=backdrop?.naturalWidth&&backdrop?.naturalHeight?backdrop.naturalWidth/backdrop.naturalHeight:0;
+  /* At zoom-out=1 the hero matches Cinemeta's natural aspect ratio: the full
+     image fills the frame, with no crop, letterbox, dark mask or overlay. */
+  if(sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut;hero.style.height=zoomOut?`${frameHeight}px`:'';}
+  if(backdrop){backdrop.style.transform=`translateY(0) scale(${1.15-.15*zoomOut})`;if(zoomOut>.998){backdrop.style.maskImage='none';backdrop.style.webkitMaskImage='none';}else if(zoomOut>.001){const solid=66+34*zoomOut,soft=78+22*zoomOut,tail=91+9*zoomOut,mask=`linear-gradient(to bottom,#000 0%,#000 ${solid}%,rgba(0,0,0,.97)${soft}%,rgba(0,0,0,.68)${tail}%,transparent 100%)`;backdrop.style.maskImage=mask;backdrop.style.webkitMaskImage=mask;}else{backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}}
+  if(shade)shade.style.opacity=String(1-zoomOut);
+  const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1');
   /* The page scrolls as one unit. Only when the original logo naturally reaches
      the fixed header do we cross-fade it into the compact header identity. */
   let merge=0;if(heroLogo){const titleBox=heroLogo.getBoundingClientRect(),headerBox=els.header.getBoundingClientRect(),mergeDistance=Math.max(56,titleBox.height+24);merge=Math.max(0,Math.min(1,(headerBox.bottom+10-titleBox.top)/mergeDistance));heroLogo.style.transform=merge?`translateY(${-12*merge}px) scale(${1-merge*.12})`:'';heroLogo.style.opacity=merge?String(1-merge*.94):'';}
   els.detailHeaderIdentity.style.opacity=String(merge);els.detailHeaderIdentity.style.transform=`translate(-50%,-50%) translateY(${(1-merge)*14}px) scale(${.82+merge*.18})`;els.header.classList.toggle('cw-detail-header-active',merge>.62);
-  if(backdrop)backdrop.style.transform=`translateY(0) scale(${1.15-.15*zoomOut})`;
 }
 function route(params={},replace=false){const url=new URL(location.origin+location.pathname);Object.entries(params).forEach(([k,v])=>{if(v!==''&&v!=null)url.searchParams.set(k,String(v))});history[replace?'replaceState':'pushState']({cw:true},'',url);}
 function showView(name){if(name!=='detail')resetDetailHeaderMotion();state.view=name;els.views.forEach(v=>v.classList.toggle('hidden',v.id!==`${name}View`));$$('[data-go]').forEach(b=>b.classList.toggle('active',b.dataset.go===name));if(name!=='home')clearInterval(state.heroTimer);else startHero();resetScroll();if(name==='detail')requestAnimationFrame(updateDetailHeaderMotion);}
@@ -544,7 +551,7 @@ function handleDetailArtworkError(e){
   const backdrop=e.target.closest?.('img[data-backdrop-fallback]');if(backdrop){const fallback=backdrop.dataset.backdropFallback;delete backdrop.dataset.backdropFallback;if(fallback&&backdrop.src!==new URL(fallback,location.origin).href)backdrop.src=fallback;return;}
   const logo=e.target.closest?.('img.cw-detail-logo,img#detailHeaderLogo');if(!logo)return;const fallback=logo.dataset.logoFallback;delete logo.dataset.logoFallback;if(fallback&&logo.src!==new URL(fallback,location.origin).href){logo.src=fallback;return;}logo.classList.add('hidden');if(logo.id==='detailHeaderLogo')els.detailHeaderTitle.classList.remove('hidden');else logo.parentElement?.querySelector('.cw-logo-title-fallback')?.classList.remove('hidden');
 }
-els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);
+els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img'))requestAnimationFrame(updateDetailHeaderMotion);},true);
 els.detailContent.addEventListener('click',e=>{
   const detailBack=e.target.closest('[data-detail-back]');if(detailBack)return handleDetailBack();
   const library=e.target.closest('[data-library-current]');if(library)return toggleCurrentLibrary();
