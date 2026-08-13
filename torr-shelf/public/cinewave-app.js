@@ -273,7 +273,30 @@ function detailMarkup(item){
   const detailMeta=`<div class="cw-detail-meta"><div class="cw-detail-meta-facts">${metaFacts.map((fact,index)=>`${index?'<i aria-hidden="true">•</i>':''}${fact}`).join('')}</div><div class="cw-detail-meta-actions">${like}${heart}</div></div>`;
   const relatedSkeleton=Array.from({length:12},()=>'<span class="cw-card-skeleton"></span>').join('');
   const episodeSection=item.mediaType==='tv'&&item.seasons?.length?`<section id="episodeSection" class="cw-info cw-episode-section"><h2>Episodes</h2><div class="cw-episode-browser"><div class="cw-episodes-toolbar"><div class="cw-season-tabs">${item.seasons.map(s=>`<button data-season="${s.seasonNumber}" type="button">${esc(s.name||`Season ${s.seasonNumber}`)}</button>`).join('')}</div></div><div id="episodeList" class="cw-episode-list"></div></div></section>`:'';
-  return `<section class="cw-detail-hero"><button class="cw-detail-hero-back" data-detail-back type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><div id="detailBackdrop" class="cw-detail-bg">${backdropSource?`<img src="${esc(backdropSource)}"${backdropFallback?` data-backdrop-fallback="${esc(backdropFallback)}"`:''} alt="">`:''}<div class="cw-detail-gradient"></div></div><div class="cw-detail-shell"><div class="cw-detail-layout">${posterImage}<div class="cw-detail-copy"><div id="detailTitleVisual" class="cw-detail-title-visual">${titleVisual}</div><div class="cw-detail-actions"><div class="cw-detail-secondary">${share}${trailer}${library}</div></div></div></div></div></section><div class="cw-detail-body">${detailMeta}<section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section><section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section><div class="cw-detail-body-genres">${genrePills}</div>${episodeSection}<section id="infoStreams" class="cw-info-streams hidden"></section><section class="cw-info"><h2>Top Cast</h2><div class="cw-cast-row">${cast||'<p>No cast information.</p>'}</div></section><section class="cw-info"><h2>Director & Crew</h2><div class="cw-cast-row">${directors||'<p>No crew information.</p>'}</div></section><section class="cw-related-section"><h2>Related Content</h2><div id="relatedRow" class="cw-poster-grid">${relatedSkeleton}</div></section></div>`;
+  return `
+    <section class="cw-detail-hero">
+      <button class="cw-detail-hero-back" data-detail-back type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div id="detailBackdrop" class="cw-detail-bg">${backdropSource?`<img src="${esc(backdropSource)}"${backdropFallback?` data-backdrop-fallback="${esc(backdropFallback)}"`:''} alt="">`:''}<div class="cw-detail-gradient"></div></div>
+      <div class="cw-detail-shell"><div class="cw-detail-layout">${posterImage}<div class="cw-detail-copy"><div id="detailTitleVisual" class="cw-detail-title-visual">${titleVisual}</div><div class="cw-detail-actions"><div class="cw-detail-secondary">${share}${trailer}${library}</div></div></div></div></div>
+    </section>
+    <div class="cw-detail-body">
+      <main class="cw-detail-content">
+        ${detailMeta}
+        <section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section>
+        <section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section>
+        <div class="cw-detail-body-genres">${genrePills}</div>
+        ${episodeSection}
+      </main>
+      <aside id="detailLinksColumn" class="cw-detail-links-column">
+        <div class="cw-detail-links-head"><small>STREAMS & LINKS</small><h2>Link phát</h2></div>
+        <section id="infoStreams" class="cw-info-streams hidden"></section>
+      </aside>
+      <div class="cw-detail-supporting">
+        <section class="cw-info"><h2>Top Cast</h2><div class="cw-cast-row">${cast||'<p>No cast information.</p>'}</div></section>
+        <section class="cw-info"><h2>Director & Crew</h2><div class="cw-cast-row">${directors||'<p>No crew information.</p>'}</div></section>
+        <section class="cw-related-section"><h2>Related Content</h2><div id="relatedRow" class="cw-poster-grid">${relatedSkeleton}</div></section>
+      </div>
+    </div>`;
 }
 
 function libraryKey(item){return item?`${item.mediaType}:${item.id}`:'';}
@@ -317,7 +340,7 @@ async function loadSeason(id,season){
 
 function resetEpisodeHero(){
   state.selectedEpisode=null;els.detail.classList.remove('episode-selected');const info=$('#detailEpisodeInfo');if(info)info.classList.add('hidden');const backdrop=$('#detailBackdrop img');if(backdrop&&state.selected){const fallback=image(state.selected.backdropPath,'w1280');if(fallback)backdrop.dataset.backdropFallback=fallback;backdrop.src=detailBackdropUrl(state.selected)||fallback;}
-  const panel=$('#infoStreams'),genres=$('.cw-detail-body-genres');if(panel&&genres)genres.after(panel);clearInfoStreamState();
+  const panel=$('#infoStreams'),links=$('#detailLinksColumn');if(panel&&links)links.append(panel);clearInfoStreamState();
 }
 function handleDetailBack(){
   if(state.view==='detail'&&state.selectedEpisode){resetEpisodeHero();requestAnimationFrame(()=>$('#episodeSection')?.scrollIntoView({behavior:'smooth',block:'start'}));return;}back();
@@ -327,7 +350,7 @@ function selectEpisode(episode){
   if(episode.stillPath&&backdrop)backdrop.src=image(episode.stillPath,'w1280');
   if(title)title.textContent=`S${String(state.selectedSeason).padStart(2,'0')}E${String(episode.episodeNumber).padStart(2,'0')} – ${episode.name}`;
   if(overview)overview.textContent=episode.overview||'';info?.classList.remove('hidden');
-  const panel=$('#infoStreams');if(info&&panel)info.after(panel);
+  const panel=$('#infoStreams'),links=$('#detailLinksColumn');if(panel&&links)links.append(panel);
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'smooth'}));
   loadInfoStreams({season:state.selectedSeason,episode:Number(episode.episodeNumber),scroll:false});
 }

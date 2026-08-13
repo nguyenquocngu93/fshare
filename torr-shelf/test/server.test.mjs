@@ -957,7 +957,10 @@ describe("HTTP app", () => {
     assert.match(js, /\/api\/cinemeta\/logo\?imdb=/);
     assert.match(js, /data-logo-fallback/);
     assert.match(js, /const episodeSection=item\.mediaType===/);
-    assert.match(js, /cw-detail-body-genres[^`]+\$\{episodeSection\}<section id="infoStreams"/);
+    assert.match(js, /class="cw-detail-content"[^`]+cw-detail-body-genres[^`]+\$\{episodeSection\}/);
+    assert.match(js, /id="detailLinksColumn" class="cw-detail-links-column"/);
+    assert.match(js, /id="infoStreams" class="cw-info-streams hidden"/);
+    assert.match(js, /links=\$\('#detailLinksColumn'\);if\(panel&&links\)links\.append\(panel\)/);
     assert.match(js, /data-like-current/);
     assert.match(js, /torrshelf:liked-media/);
     assert.match(js, /function readLikedMedia\(\)/);
@@ -987,7 +990,9 @@ describe("HTTP app", () => {
     assert.match(js, /toggleCurrentLibrary/);
     assert.match(js, /selectEpisode/);
     assert.match(js, /const detailMeta=/);
-    assert.match(js, /<\/section><div class="cw-detail-body">\$\{detailMeta\}<section id="detailEpisodeInfo"/);
+    assert.match(js, /<div class="cw-detail-body">\s*<main class="cw-detail-content">\s*\$\{detailMeta\}/);
+    assert.match(js, /<aside id="detailLinksColumn" class="cw-detail-links-column">/);
+    assert.match(js, /<div class="cw-detail-supporting">/);
     assert.doesNotMatch(js, /data-show-streams/);
     assert.match(js, /torrshelf:stremio-addons/);
     assert.match(js, /torrshelf:cloudstream/);
