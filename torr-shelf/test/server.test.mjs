@@ -822,11 +822,11 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-detail-hero-back\{[^}]*width:42px[^}]*height:42px/);
     assert.match(css, /\.cw-detail-secondary\{[^}]*gap:0[^}]*padding:3px 6px/);
     assert.match(css, /\.cw-detail-icon\{[^}]*width:38px!important[^}]*height:38px!important/);
-    assert.match(css, /\.cw-detail-bg>img\{-webkit-mask-image:linear-gradient\(to bottom,#000 0%,#000 48%,rgba\(0,0,0,\.94\)62%,rgba\(0,0,0,\.58\)78%,transparent 100%\)/);
-    assert.match(css, /\.cw-detail-gradient\{background:linear-gradient\(to bottom,rgba\(5,7,10,\.01\) 0%,rgba\(5,7,10,\.04\) 40%,rgba\(5,7,10,\.22\) 61%,rgba\(5,7,10,\.74\) 84%,#05070a 100%\)/);
+    assert.match(css, /\.cw-detail-bg>img\{-webkit-mask-image:linear-gradient\(to bottom,#000 0%,#000 66%,rgba\(0,0,0,\.97\)78%,rgba\(0,0,0,\.68\)91%,transparent 100%\)/);
+    assert.match(css, /\.cw-detail-gradient\{background:linear-gradient\(to bottom,rgba\(5,7,10,\.01\) 0%,rgba\(5,7,10,\.03\) 54%,rgba\(5,7,10,\.10\) 72%,rgba\(5,7,10,\.48\) 90%,#05070a 100%\)/);
     assert.match(css, /\.cw-detail-hero:after\{display:none\}/);
-    assert.match(css, /\.cw-detail-title-visual\{margin-bottom:0\}/);
-    assert.match(css, /\.cw-detail-logo\{max-width:min\(52vw,420px\);max-height:62px\}/);
+    assert.match(css, /\.cw-detail-title-visual\{margin-bottom:-20px\}/);
+    assert.match(css, /\.cw-detail-logo\{max-width:min\(56vw,440px\);max-height:68px\}/);
     assert.match(css, /\.cw-detail-body\{margin-top:0;padding-top:52px\}/);
     assert.match(css, /\.cw-detail-meta-facts,\.cw-detail-meta-actions\{display:flex;align-items:center\}/);
     assert.match(css, /\.cw-imdb-badge\{/);

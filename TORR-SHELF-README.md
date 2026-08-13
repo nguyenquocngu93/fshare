@@ -10,7 +10,7 @@ Bản này **giữ nguyên layout v1.6.5 của bạn**:
 Các thay đổi ở trang movie detail:
 
 1. Dòng metadata: `thời lượng · năm · điểm · IMDb`, cùng nút thích và yêu thích.
-2. Backdrop dùng mask + fade nhiều tầng để chuyển tối–sáng liên tục, không tạo đường cắt ngang ở đáy hero.
+2. Backdrop dùng mask + fade nhiều tầng bắt đầu muộn hơn để giữ lại chi tiết backdrop, không tạo đường cắt ngang ở đáy hero.
 3. Logo vẫn đi theo toàn bộ hero/nội dung khi trang cuộn. Chỉ khi logo thật chạm header, nó mới fade/merge sang logo nhỏ trên header.
 4. Khi vừa cuộn, backdrop zoom từ `1.15` về `1.0` để thấy khung ảnh đầy đủ; logo không bị kéo lên sớm.
 
