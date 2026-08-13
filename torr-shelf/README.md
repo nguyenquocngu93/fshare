@@ -290,7 +290,7 @@ Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787
 
 Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng thời:
 
-- tinh chỉnh vùng fade tối và vị trí logo theo video Stremio tham chiếu;
-- khi bắt đầu cuộn, zoom backdrop từ `1.15` về `1.0`, giữ nhanh để xem khung ảnh đầy đủ rồi mới bắt đầu logo/header reveal;
+- backdrop dùng mask/fade nhiều tầng để chuyển tối–sáng liền mạch theo video Stremio tham chiếu;
+- khi bắt đầu cuộn, zoom backdrop từ `1.15` về `1.0`; logo đi theo toàn bộ hero và chỉ merge sang header khi chạm vùng header;
 - làm lại dòng metadata: thời lượng · năm · điểm · IMDb;
 - tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích.

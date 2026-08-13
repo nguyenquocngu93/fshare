@@ -10,9 +10,9 @@ Bản này **giữ nguyên layout v1.6.5 của bạn**:
 Các thay đổi ở trang movie detail:
 
 1. Dòng metadata: `thời lượng · năm · điểm · IMDb`, cùng nút thích và yêu thích.
-2. Vùng tối của backdrop fade dần từ khoảng 63% ảnh và đen hẳn ở đáy, dựa trên video Stremio `Peter Pan`.
-3. Logo được neo sát đáy hero để nằm đúng vùng fade như Stremio.
-4. Khi vừa cuộn, backdrop zoom từ `1.15` về `1.0` để thấy khung ảnh đầy đủ; giữ ngắn ở trạng thái đó rồi mới bắt đầu logo/header reveal.
+2. Backdrop dùng mask + fade nhiều tầng để chuyển tối–sáng liên tục, không tạo đường cắt ngang ở đáy hero.
+3. Logo vẫn đi theo toàn bộ hero/nội dung khi trang cuộn. Chỉ khi logo thật chạm header, nó mới fade/merge sang logo nhỏ trên header.
+4. Khi vừa cuộn, backdrop zoom từ `1.15` về `1.0` để thấy khung ảnh đầy đủ; logo không bị kéo lên sớm.
 
 Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **Đã thích** (lưu cục bộ). Tab Đã thích có thêm hàng gợi ý **“Vì bạn đã thích …”** từ TMDB.
 

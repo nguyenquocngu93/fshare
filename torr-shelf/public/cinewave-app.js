@@ -108,9 +108,12 @@ function setDetailHeader(item){
 }
 function updateDetailHeaderMotion(){
   if(state.view!=='detail')return;const hero=$('.cw-detail-hero');if(!hero)return;
-  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,hero.offsetHeight*.92))),zoomEnd=.20,holdEnd=.34,zoomOut=Math.min(1,progress/zoomEnd),motion=Math.max(0,Math.min(1,(progress-holdEnd)/(1-holdEnd))),logoProgress=Math.max(0,Math.min(1,(motion-.18)/.82)),reveal=Math.max(0,Math.min(1,(logoProgress-.18)/.72));
-  els.detailHeaderIdentity.style.opacity=String(reveal);els.detailHeaderIdentity.style.transform=`translate(-50%,-50%) translateY(${(1-reveal)*14}px) scale(${.82+reveal*.18})`;els.header.classList.toggle('cw-detail-header-active',reveal>.62);
-  const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),backdropScale=1.15-.15*zoomOut,backdropY=-10*logoProgress,logoY=-58*logoProgress;if(heroLogo){heroLogo.style.transform=`translateY(${logoY}px) scale(${1-logoProgress*.2})`;heroLogo.style.opacity=String(1-reveal*.88);}if(backdrop)backdrop.style.transform=`translateY(${backdropY}px) scale(${backdropScale})`;
+  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,hero.offsetHeight*.92))),zoomEnd=.20,zoomOut=Math.min(1,progress/zoomEnd),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img');
+  /* The page scrolls as one unit. Only when the original logo naturally reaches
+     the fixed header do we cross-fade it into the compact header identity. */
+  let merge=0;if(heroLogo){const titleBox=heroLogo.getBoundingClientRect(),headerBox=els.header.getBoundingClientRect(),mergeDistance=Math.max(56,titleBox.height+24);merge=Math.max(0,Math.min(1,(headerBox.bottom+10-titleBox.top)/mergeDistance));heroLogo.style.transform=merge?`translateY(${-12*merge}px) scale(${1-merge*.12})`:'';heroLogo.style.opacity=merge?String(1-merge*.94):'';}
+  els.detailHeaderIdentity.style.opacity=String(merge);els.detailHeaderIdentity.style.transform=`translate(-50%,-50%) translateY(${(1-merge)*14}px) scale(${.82+merge*.18})`;els.header.classList.toggle('cw-detail-header-active',merge>.62);
+  if(backdrop)backdrop.style.transform=`translateY(0) scale(${1.15-.15*zoomOut})`;
 }
 function route(params={},replace=false){const url=new URL(location.origin+location.pathname);Object.entries(params).forEach(([k,v])=>{if(v!==''&&v!=null)url.searchParams.set(k,String(v))});history[replace?'replaceState':'pushState']({cw:true},'',url);}
 function showView(name){if(name!=='detail')resetDetailHeaderMotion();state.view=name;els.views.forEach(v=>v.classList.toggle('hidden',v.id!==`${name}View`));$$('[data-go]').forEach(b=>b.classList.toggle('active',b.dataset.go===name));if(name!=='home')clearInterval(state.heroTimer);else startHero();resetScroll();if(name==='detail')requestAnimationFrame(updateDetailHeaderMotion);}
