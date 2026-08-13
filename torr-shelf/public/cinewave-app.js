@@ -99,7 +99,7 @@ async function clearBackendStremioCache(){try{await api('/api/stremio/cache/clea
 function resetScroll(){history.scrollRestoration='manual';window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;requestAnimationFrame(()=>window.scrollTo(0,0));}
 function resetDetailHeaderMotion(){
   els.header.classList.remove('cw-detail-context','cw-detail-header-active');els.detailHeaderIdentity.style.opacity='0';els.detailHeaderIdentity.style.transform='translate(-50%,-35%) scale(.82)';
-  const hero=$('.cw-detail-hero'),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient');if(heroLogo){heroLogo.style.transform='';heroLogo.style.opacity='';}if(backdrop){backdrop.style.transform='';backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}if(shade)shade.style.opacity='';if(hero){hero.style.height='';delete hero.dataset.normalHeight;delete hero.dataset.normalWidth;}
+  const hero=$('.cw-detail-hero'),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient');if(heroLogo){heroLogo.style.transform='';heroLogo.style.opacity='';}if(backdrop){backdrop.style.transform='';backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}if(shade)shade.style.opacity='';if(hero){hero.style.height='';delete hero.dataset.normalHeight;delete hero.dataset.normalWidth;delete hero.dataset.frameHeight;}
 }
 function setDetailHeader(item){
   const logoSource=detailLogoUrl(item),logoFallback=item.logoPath?image(item.logoPath):'';els.header.classList.add('cw-detail-context');els.detailHeaderTitle.textContent=item.title||'';
@@ -112,13 +112,14 @@ function updateDetailHeaderMotion(){
   if(!normalHeight||hero.dataset.normalWidth!==String(width)){hero.style.height='';normalHeight=hero.getBoundingClientRect().height;hero.dataset.normalHeight=String(normalHeight);hero.dataset.normalWidth=String(width);}
   const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,normalHeight*.92))),zoomEnd=.20,zoomOut=Math.min(1,progress/zoomEnd),sourceRatio=backdrop?.naturalWidth&&backdrop?.naturalHeight?backdrop.naturalWidth/backdrop.naturalHeight:0;
   /* At zoom-out=1 the hero matches Cinemeta's natural aspect ratio: the full
-     image fills the frame, with no crop, letterbox, dark mask or overlay. */
-  if(sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut;hero.style.height=zoomOut?`${frameHeight}px`:'';}
-  /* Normal state uses the user's 16:9 Cinemeta crop at scale 1. Zoom-out
+     image fills the frame with no crop or letterbox. The visual dim layer stays
+     intentionally, matching the Stremio luminance rather than altering geometry. */
+  if(sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut,previousHeight=Number(hero.dataset.frameHeight)||0;if(Math.abs(previousHeight-frameHeight)>.1){hero.style.height=`${frameHeight}px`;hero.dataset.frameHeight=String(frameHeight);}}
+  /* Normal state uses the user's 16:11 Cinemeta crop at scale 1. Zoom-out
      expands only the frame to the source's native aspect ratio, so the full
-     image becomes visible without changing its brightness or adding edges. */
+     image becomes visible without adding crop or edges. */
   if(backdrop){backdrop.style.transform='translateY(0) scale(1)';backdrop.style.maskImage='none';backdrop.style.webkitMaskImage='none';}
-  if(shade)shade.style.opacity='0';
+  if(shade)shade.style.opacity='';
   const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1');
   /* The page scrolls as one unit. Only when the original logo naturally reaches
      the fixed header do we cross-fade it into the compact header identity. */

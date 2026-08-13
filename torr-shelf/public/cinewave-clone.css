@@ -498,11 +498,12 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 
 /* v1.6.6: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
-.cw-detail-hero{aspect-ratio:16/11}
+.cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}
 .cw-detail-bg>img{-webkit-mask-image:none;mask-image:none}
-.cw-detail-gradient,.cw-detail-hero:after{display:none}
-.cw-detail-title-visual{margin-bottom:-20px}
+.cw-detail-gradient{display:block;background:linear-gradient(to bottom,rgba(5,7,10,.10) 0%,rgba(5,7,10,.12) 43%,rgba(5,7,10,.34) 63%,rgba(5,7,10,.72) 84%,#05070a 100%),linear-gradient(to right,rgba(5,7,10,.16),transparent 70%);transition:opacity .18s linear}
+.cw-detail-hero:after{display:none}
+.cw-detail-title-visual{margin-bottom:-8px}
 .cw-detail-logo{max-width:min(56vw,440px);max-height:68px}
 .cw-detail-body{margin-top:0;padding-top:52px}
 .cw-detail-meta{display:flex;width:100%;min-height:40px;align-items:center;justify-content:space-between;gap:16px;margin:0;color:var(--zinc-300);font-size:15px;font-weight:800}

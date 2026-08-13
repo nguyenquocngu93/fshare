@@ -832,10 +832,11 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-detail-hero-back\{[^}]*width:42px[^}]*height:42px/);
     assert.match(css, /\.cw-detail-secondary\{[^}]*gap:0[^}]*padding:3px 6px/);
     assert.match(css, /\.cw-detail-icon\{[^}]*width:38px!important[^}]*height:38px!important/);
-    assert.match(css, /\.cw-detail-hero\{aspect-ratio:16\/11\}/);
+    assert.match(css, /\.cw-detail-hero\{aspect-ratio:16\/11[^}]*\}/);
     assert.match(css, /\.cw-detail-bg>img\{-webkit-mask-image:none;mask-image:none\}/);
-    assert.match(css, /\.cw-detail-gradient,\.cw-detail-hero:after\{display:none\}/);
-    assert.match(css, /\.cw-detail-title-visual\{margin-bottom:-20px\}/);
+    assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(to bottom,rgba\(5,7,10,\.10\) 0%,rgba\(5,7,10,\.12\) 43%,rgba\(5,7,10,\.34\) 63%,rgba\(5,7,10,\.72\) 84%,#05070a 100%\)/);
+    assert.match(css, /\.cw-detail-hero:after\{display:none\}/);
+    assert.match(css, /\.cw-detail-title-visual\{margin-bottom:-8px\}/);
     assert.match(css, /\.cw-detail-logo\{max-width:min\(56vw,440px\);max-height:68px\}/);
     assert.match(css, /\.cw-detail-body\{margin-top:0;padding-top:52px\}/);
     assert.match(css, /\.cw-detail-meta-facts,\.cw-detail-meta-actions\{display:flex;align-items:center\}/);
@@ -931,9 +932,9 @@ describe("HTTP app", () => {
     assert.match(js, /normalHeight=Number\(hero\.dataset\.normalHeight\)\|\|0/);
     assert.match(js, /progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,normalHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=Math\.min\(1,progress\/zoomEnd\),sourceRatio=/);
     assert.match(js, /fullHeight=width\/sourceRatio,frameHeight=normalHeight\+\(fullHeight-normalHeight\)\*zoomOut/);
-    assert.match(js, /hero\.style\.height=zoomOut\?`\$\{frameHeight\}px`:''/);
+    assert.match(js, /previousHeight=Number\(hero\.dataset\.frameHeight\)\|\|0;if\(Math\.abs\(previousHeight-frameHeight\)>.1\)\{hero\.style\.height=`\$\{frameHeight\}px`;hero\.dataset\.frameHeight=String\(frameHeight\);\}/);
     assert.match(js, /if\(backdrop\)\{backdrop\.style\.transform='translateY\(0\) scale\(1\)';backdrop\.style\.maskImage='none';backdrop\.style\.webkitMaskImage='none';\}/);
-    assert.match(js, /if\(shade\)shade\.style\.opacity='0'/);
+    assert.match(js, /if\(shade\)shade\.style\.opacity=''/);
     assert.match(js, /titleBox=heroLogo\.getBoundingClientRect\(\),headerBox=els\.header\.getBoundingClientRect\(\),mergeDistance=Math\.max\(56,titleBox\.height\+24\)/);
     assert.match(js, /heroLogo\.style\.transform=merge\?`translateY\(\$\{-12\*merge\}px\) scale\(\$\{1-merge\*\.12\}\)`:''/);
     assert.match(js, /els\.detailHeaderIdentity\.style\.opacity=String\(merge\)/);
