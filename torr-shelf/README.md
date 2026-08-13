@@ -304,3 +304,7 @@ Mở `http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html` để xem
 Ở `orientation: landscape` từ `640px`, detail dùng backdrop stage rộng, poster trái + logo/copy trái, gradient ngang bảo vệ text, metadata canh theo cột copy và tắt bottom dock. Zoom crop điện thoại không chạy ở layout này để tránh giật khi xoay màn hình.
 
 Landscape detail tách thành hai cột: nội dung bên trái và Link phát/Streams bên phải (sticky); Cast/Crew/Related tiếp tục ở hàng dưới.
+
+### Links và font
+
+Portrait có divider mỏng trước nguồn, addon tab active tự cuộn vào giữa, nút ⚙ mở thẳng Stremio Addons. Settings lưu lựa chọn font Inter / System / Outfit và áp dụng đồng đều UI.

@@ -723,6 +723,9 @@ describe("HTTP app", () => {
     assert.match(html, /id="torrServerSettingsForm"/);
     assert.match(html, /id="playerPreference"/);
     assert.match(html, /id="posterColumns"/);
+    assert.match(html, /id="fontPreference"/);
+    assert.match(html, /value="inter">Inter · đồng đều/);
+    assert.match(html, /id="stremioAddonSettings"/);
     assert.match(html, /value="3">3 cột · giống Stremio/);
     assert.match(html, /value="torrshelf">TorrShelf Player/);
     assert.match(html, /value="mpv">mpv-android · tự nạp phụ đề/);
@@ -807,6 +810,9 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-stream-tracker\{[^}]*color:var\(--cyan-light\)[^}]*font:inherit/);
     assert.match(css, /\.cw-stream-badges>span\{[^}]*color:inherit[^}]*font:inherit/);
     assert.match(css, /\.cw-stream-addon-tabs\{/);
+    assert.match(css, /\.cw-stream-addon-bar\{display:grid/);
+    assert.match(css, /\.cw-stream-settings-button\{display:grid/);
+    assert.match(css, /body\[data-font="outfit"\]/);
     assert.match(css, /\.cw-season-tabs\{/);
     assert.match(css, /\.cw-detail-logo\{[^}]*transform:translateY\(0\)/);
     assert.doesNotMatch(css, /\.cw-detail-copy\{[^}]*transform/);
@@ -978,6 +984,13 @@ describe("HTTP app", () => {
     assert.doesNotMatch(js, /await loadSeason\([^;]+;requestAnimationFrame\(\(\)=>\$\('#episodeSection'\)/);
     assert.match(js, /data-backdrop-fallback/);
     assert.match(js, /data-stream-addon/);
+    assert.match(js, /function revealActiveStreamAddon/);
+    assert.match(js, /cw-stream-addon-bar/);
+    assert.match(js, /data-open-addon-settings/);
+    assert.match(js, /stremioAddonSettings/);
+    assert.match(js, /function readFontPreference\(\)/);
+    assert.match(js, /function applyFontPreference\(\)/);
+    assert.match(js, /torrshelf:font/);
     assert.match(js, /updateDetailHeaderMotion/);
     assert.match(js, /classList\.remove\('cw-detail-context','cw-detail-header-active'\)/);
     assert.match(js, /torrshelf:library/);

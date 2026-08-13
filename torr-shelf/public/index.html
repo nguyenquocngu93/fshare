@@ -224,10 +224,12 @@
         <a class="cw-player-download" href="https://github.com/mpv-android/mpv-android/releases/download/2026-04-25/app-default-arm64-v8a-release.apk" target="_blank" rel="noreferrer">Tải mpv-android arm64 chính chủ ↗</a>
       </section>
       <section class="cw-display-settings">
-        <div class="cw-player-settings-head"><div><small>DISPLAY</small><h2>Bố cục poster</h2></div><span>GRID</span></div>
+        <div class="cw-player-settings-head"><div><small>DISPLAY</small><h2>Bố cục & phông chữ</h2></div><span>UI</span></div>
         <label for="posterColumns">Số cột trên điện thoại</label>
         <select id="posterColumns"><option value="3">3 cột · giống Stremio</option><option value="2">2 cột · poster lớn</option></select>
-        <p>Áp dụng cho Discover và Library. Home giữ rail 128px, poster 2:3 và khoảng hở đúng CineWave.</p>
+        <label for="fontPreference">Phông chữ giao diện</label>
+        <select id="fontPreference"><option value="inter">Inter · đồng đều</option><option value="system">System · dễ đọc</option><option value="outfit">Outfit · đậm</option></select>
+        <p>Áp dụng cho toàn bộ chữ giao diện. Home giữ rail 128px, poster 2:3 và khoảng hở đúng CineWave.</p>
       </section>
       <section class="cw-native-settings">
         <div class="cw-native-settings-head"><div><small>TORRSHELF NATIVE PROVIDERS</small><h2>Hybrid tích hợp</h2></div><span>NATIVE</span></div>
@@ -254,7 +256,7 @@
           <button type="submit">Lưu cấu hình native</button>
         </form>
       </section>
-      <section class="cw-addon-settings">
+      <section id="stremioAddonSettings" class="cw-addon-settings">
         <div class="cw-addon-settings-head"><div><small>STREMIO ADDONS</small><h2>Streams & subtitles</h2></div><span id="stremioAddonCount">0</span></div>
         <form id="stremioAddonForm" autocomplete="off"><input id="stremioAddonUrl" type="text" inputmode="url" placeholder="https://addon.example/config/manifest.json" spellcheck="false" /><button type="submit">Import addon</button></form>
         <p>Dán manifest URL của stream hoặc subtitle addon. OpenSubtitles v3 đã được tích hợp sẵn; SubSense có thể import thêm sau khi cấu hình ngôn ngữ.</p>

@@ -4,11 +4,11 @@
 @font-face{font-family:Outfit;font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/outfit-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 @font-face{font-family:Outfit;font-style:normal;font-weight:700 900;font-display:swap;src:url('/fonts/outfit-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 
-:root{color-scheme:dark;--bg:#05070a;--cyan:#06b6d4;--cyan-light:#22d3ee;--line:rgba(255,255,255,.05);--line-strong:rgba(255,255,255,.1);--zinc-300:#d4d4d8;--zinc-400:#a1a1aa;--zinc-500:#71717a;--zinc-600:#52525b;--yellow:#eab308}
+:root{color-scheme:dark;--bg:#05070a;--cyan:#06b6d4;--cyan-light:#22d3ee;--line:rgba(255,255,255,.05);--line-strong:rgba(255,255,255,.1);--zinc-300:#d4d4d8;--zinc-400:#a1a1aa;--zinc-500:#71717a;--zinc-600:#52525b;--yellow:#eab308;--ui-font:Inter,system-ui,-apple-system,sans-serif;--heading-font:Inter,system-ui,-apple-system,sans-serif}
 *{box-sizing:border-box}
 html{min-width:320px;background:var(--bg);scroll-behavior:auto}
-body{min-height:100vh;margin:0;padding:64px 0 112px;overflow-x:hidden;background:var(--bg);color:#fff;font-family:Inter,system-ui,-apple-system,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-h1,h2,h3,.cw-brand strong{font-family:Outfit,sans-serif}
+body{min-height:100vh;margin:0;padding:64px 0 112px;overflow-x:hidden;background:var(--bg);color:#fff;font-family:var(--ui-font);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3,.cw-brand strong{font-family:var(--heading-font)}
 button,input,select{font:inherit}
 button{cursor:pointer}
 a{color:inherit}
@@ -577,6 +577,23 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-links-head h2{font-size:19px}
   .cw-detail-links-column .cw-stream-row{padding:12px}
 }
+
+/* Portrait streams are visually separated without repeating the desktop links title. */
+@media (orientation:portrait), (max-width:639px){
+  .cw-detail-links-column{margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09)}
+  .cw-detail-links-column .cw-info-streams{margin:0 0 42px}
+}
+/* Source switcher: active provider is centered after every click, and the
+   settings shortcut stays outside the horizontal scroll strip. */
+.cw-stream-addon-bar{display:grid;grid-template-columns:minmax(0,1fr) 38px;align-items:center;gap:8px;margin:0 0 16px}
+.cw-stream-addon-bar .cw-stream-addon-tabs{max-width:100%;margin:0;padding:0 0 6px}
+.cw-stream-settings-button{display:grid;width:38px;height:38px;place-items:center;padding:0;border:1px solid var(--line-strong);border-radius:11px;background:rgba(255,255,255,.04);color:var(--cyan-light);font-size:17px;font-weight:900}
+.cw-stream-settings-button:hover{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.12)}
+/* One selected font is applied consistently to body copy, controls and stream rows. */
+body[data-font="system"]{--ui-font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--heading-font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body[data-font="outfit"]{--ui-font:Outfit,Inter,system-ui,sans-serif;--heading-font:Outfit,Inter,system-ui,sans-serif}
+body[data-font] h1,body[data-font] h2,body[data-font] h3,body[data-font] .cw-brand strong,body[data-font] .cw-detail-header-brand strong{font-family:var(--heading-font)}
+body[data-font] button,body[data-font] input,body[data-font] select,body[data-font] textarea,body[data-font] .cw-stream-row-copy,body[data-font] .cw-stream-tracker,body[data-font] .cw-stream-title,body[data-font] .cw-stream-details{font-family:var(--ui-font)}
 
 h2{font-size:25px}
 }

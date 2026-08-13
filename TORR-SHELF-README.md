@@ -52,3 +52,7 @@ Guide vẽ các cặp gạch dọc cho crop ở mức `1.00`, `1.05`, `1.10`, `1
 Từ `640px` ở chiều ngang, trang detail dùng stage mô phỏng Stremio web: backdrop phủ ngang, poster ở trái, logo/copy nằm trong vùng gradient an toàn, metadata được canh theo cột thông tin và bottom dock được ẩn. Hiệu ứng zoom của điện thoại được tắt ở layout ngang để hero ổn định khi cuộn hoặc xoay màn hình.
 
 Ở landscape, detail được tách hai cột thật: **nội dung/meta/genre ở trái** và **Link phát / Streams ở phải**. Cột links sticky khi cuộn; Cast/Crew/Related nằm hàng dưới cả hai cột.
+
+## Links và chữ giao diện
+
+Ở màn dọc, genre và nguồn được ngăn bằng divider mỏng; tiêu đề `Link phát` chỉ hiện ở landscape. Tab nguồn active tự canh giữa thanh cuộn. Nút ⚙ cạnh tab nguồn mở thẳng **Stremio Addons** trong Settings. Settings có chọn phông Inter, System hoặc Outfit và lựa chọn được lưu trên máy.
