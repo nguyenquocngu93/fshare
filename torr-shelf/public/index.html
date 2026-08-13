@@ -182,9 +182,19 @@
     </section>
 
     <section id="libraryView" class="view hidden">
-      <header class="cw-page-head"><div><h1>Library</h1><p>Đồng bộ thư viện và tiến độ từ web, TorrShelf Player và mpv.</p></div></header>
-      <section id="continueWatchingSection" class="cw-library-block hidden"><h2>Tiếp tục xem</h2><div id="continueWatchingGrid" class="cw-poster-grid"></div></section>
-      <section class="cw-library-block"><h2>Đã lưu</h2><div id="libraryGrid" class="cw-poster-grid"></div><p id="libraryEmpty" class="cw-addon-empty hidden">Thư viện chưa có phim nào.</p></section>
+      <header class="cw-page-head"><div><h1>Library</h1><p>Đồng bộ thư viện, yêu thích và tiến độ từ web, TorrShelf Player và mpv.</p></div></header>
+      <div id="libraryTabs" class="cw-library-tabs" role="tablist" aria-label="Bộ lọc thư viện">
+        <button class="active" data-library-tab="added" role="tab" aria-selected="true" type="button">Đã thêm <b id="libraryAddedCount">0</b></button>
+        <button data-library-tab="liked" role="tab" aria-selected="false" type="button">Đã thích <b id="libraryLikedCount">0</b></button>
+      </div>
+      <div id="libraryAddedPanel" class="cw-library-panel" role="tabpanel">
+        <section id="continueWatchingSection" class="cw-library-block hidden"><h2>Tiếp tục xem</h2><div id="continueWatchingGrid" class="cw-poster-grid"></div></section>
+        <section class="cw-library-block"><h2>Đã thêm</h2><div id="libraryGrid" class="cw-poster-grid"></div><p id="libraryEmpty" class="cw-addon-empty hidden">Bạn chưa thêm phim nào vào thư viện.</p></section>
+      </div>
+      <div id="libraryLikedPanel" class="cw-library-panel hidden" role="tabpanel">
+        <section class="cw-library-block"><h2>Đã thích</h2><div id="likedGrid" class="cw-poster-grid"></div><p id="likedEmpty" class="cw-addon-empty hidden">Bấm nút thích ở trang phim để lưu video tại đây.</p></section>
+        <section id="likedRecommendationSection" class="cw-library-block cw-liked-recommendations hidden"><div class="cw-library-recommendation-head"><div><small>KHÁM PHÁ THÊM</small><h2 id="likedRecommendationTitle">Vì bạn đã thích video</h2></div></div><div id="likedRecommendationGrid" class="cw-poster-grid"></div></section>
+      </div>
     </section>
 
     <section id="settingsView" class="view hidden">

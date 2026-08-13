@@ -8,7 +8,7 @@ const els = {
   home: $('#homeView'), homeSkeleton: $('#homeSkeleton'), homeContent: $('#homeContent'), hero: $('#hero'), homeRows: $('#homeRows'), tmdbSetup: $('#tmdbSetup'),
   discover: $('#discoverView'), discoverTitle: $('#discoverTitle'), discoverControls: $('#discoverControls'), discoverSort: $('#discoverSort'), discoverResultsTitle: $('#discoverResultsTitle'), discoverGrid: $('#discoverGrid'), discoverSentinel: $('#discoverSentinel'), discoverLoader: $('#discoverLoader'),
   browse: $('#browseView'), browseTitle: $('#browseTitle'), browseSubtitle: $('#browseSubtitle'), browseGrid: $('#browseGrid'), peopleResults: $('#peopleResults'), peopleGrid: $('#peopleGrid'), browsePrev: $('#browsePrev'), browseNext: $('#browseNext'), browsePage: $('#browsePage'),
-  library: $('#libraryView'), libraryGrid: $('#libraryGrid'), libraryEmpty: $('#libraryEmpty'), continueWatchingSection: $('#continueWatchingSection'), continueWatchingGrid: $('#continueWatchingGrid'),
+  library: $('#libraryView'), libraryTabs: $('#libraryTabs'), libraryAddedPanel: $('#libraryAddedPanel'), libraryLikedPanel: $('#libraryLikedPanel'), libraryAddedCount: $('#libraryAddedCount'), libraryLikedCount: $('#libraryLikedCount'), libraryGrid: $('#libraryGrid'), libraryEmpty: $('#libraryEmpty'), continueWatchingSection: $('#continueWatchingSection'), continueWatchingGrid: $('#continueWatchingGrid'), likedGrid: $('#likedGrid'), likedEmpty: $('#likedEmpty'), likedRecommendationSection: $('#likedRecommendationSection'), likedRecommendationTitle: $('#likedRecommendationTitle'), likedRecommendationGrid: $('#likedRecommendationGrid'),
   detail: $('#detailView'), detailContent: $('#detailContent'),
   person: $('#personView'), personContent: $('#personContent'),
   torrent: $('#torrentView'), torrentForm: $('#torrentSearchForm'), torrentQuery: $('#torrentQuery'), maxSize: $('#maxSize'), minSeeds: $('#minSeeds'), torrentSort: $('#torrentSort'), hideAdult: $('#hideAdult'), torrentResults: $('#torrentResults'), torrentCount: $('#torrentCount'), torrentTitle: $('#torrentResultTitle'), torrentMeta: $('#torrentMeta'), torrentNotice: $('#torrentNotice'), torrentPrev: $('#torrentPrev'), torrentNext: $('#torrentNext'), torrentPage: $('#torrentPage'),
@@ -20,7 +20,19 @@ const els = {
 function readStoredAddons(){try{const value=JSON.parse(localStorage.getItem('torrshelf:stremio-addons')||'[]');return Array.isArray(value)?value:[];}catch{return[];}}
 function readCloudStreamState(){try{return JSON.parse(localStorage.getItem('torrshelf:cloudstream')||'null')||{repo:null,plugins:[]};}catch{return{repo:null,plugins:[]};}}
 function readLibrary(){try{const items=JSON.parse(localStorage.getItem('torrshelf:library')||'[]');return Array.isArray(items)?items:[];}catch{return[];}}
-function readLikedMedia(){try{const items=JSON.parse(localStorage.getItem('torrshelf:liked-media')||'[]');return new Set(Array.isArray(items)?items:[]);}catch{return new Set();}}
+function readLikedMedia(){
+  try{
+    const items=JSON.parse(localStorage.getItem('torrshelf:liked-media')||'[]'),liked=new Map();
+    (Array.isArray(items)?items:[]).forEach(entry=>{
+      if(typeof entry==='string'){
+        const match=entry.match(/^(movie|tv):(\d+)$/);if(match)liked.set(entry,{id:Number(match[2]),mediaType:match[1],title:'Đã thích',originalTitle:'',year:'',posterPath:'',backdropPath:'',logoPath:'',likedAt:0});
+      }else if(entry&&Number(entry.id)){
+        const mediaType=entry.mediaType==='tv'?'tv':'movie',key=`${mediaType}:${Number(entry.id)}`;liked.set(key,{id:Number(entry.id),mediaType,title:String(entry.title||entry.originalTitle||'Đã thích'),originalTitle:String(entry.originalTitle||entry.title||''),year:String(entry.year||''),posterPath:String(entry.posterPath||''),backdropPath:String(entry.backdropPath||''),logoPath:String(entry.logoPath||''),imdbId:String(entry.imdbId||''),rating:Number(entry.rating)||0,likedAt:Number(entry.likedAt)||0});
+      }
+    });
+    return liked;
+  }catch{return new Map();}
+}
 function readPlayerPreference(){const value=localStorage.getItem('torrshelf:player')||'torrshelf';return['torrshelf','mpv','mx','external'].includes(value)?value:'torrshelf';}
 function readPosterColumns(){return localStorage.getItem('torrshelf:poster-columns')==='2'?2:3;}
 const NATIVE_PROVIDER_DEFAULT={enabled:true,torrentioEnabled:true,jacredEnabled:true,knabenEnabled:true,magnetzEnabled:true,fourKhdHubEnabled:false,moviesDriveEnabled:false,hdHub4uEnabled:false,vadapavEnabled:false,uhdMoviesEnabled:false,hubCloudSearchEnabled:false,jacredDomain:'jac.red',torrentioManifestUrl:'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json',commonSortBy:'size',commonQualityFilter:[],maxResults:30,sizeMinGB:0,sizeMaxGB:1000,preferPack:true,animeMode:false};
@@ -50,6 +62,7 @@ const state = {
   selected: null, selectedSeason: null, selectedEpisode: null, seasonEpisodes: new Map(), seasonCache: new Map(), seasonRequests: new Map(), selectedPerson: null, detailRequestId: 0,
   streamGroups: new Map(), selectedStreamAddon: '', streamPanelMeta: null, streamRequestId: 0, forceFreshStreams: false,
   torrentQuery: '', torrentSource: 'all', torrentPage: 1, torrentPages: 1, torrentContext: null, addedTorrents: new Set(),
+  libraryTab: localStorage.getItem('torrshelf:library-tab')==='liked'?'liked':'added', likedRecommendationKey: '', likedRecommendations: null, likedRecommendationRequestId: 0,
 };
 
 const esc = (value) => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
@@ -94,9 +107,10 @@ function setDetailHeader(item){
   if(item.trailerUrl){els.detailHeaderTrailer.href=item.trailerUrl;els.detailHeaderTrailer.classList.remove('hidden')}else els.detailHeaderTrailer.classList.add('hidden');updateLibraryButtons();updateLikeButtons();updateDetailHeaderMotion();
 }
 function updateDetailHeaderMotion(){
-  if(state.view!=='detail')return;const hero=$('.cw-detail-hero');if(!hero)return;const progress=Math.max(0,Math.min(1,scrollY/Math.max(180,hero.offsetHeight*.72))),backdropProgress=Math.min(1,progress/.5),logoProgress=Math.max(0,Math.min(1,(progress-.5)/.5)),reveal=Math.max(0,Math.min(1,(logoProgress-.18)/.72));
+  if(state.view!=='detail')return;const hero=$('.cw-detail-hero');if(!hero)return;
+  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,hero.offsetHeight*.92))),zoomEnd=.20,holdEnd=.34,zoomOut=Math.min(1,progress/zoomEnd),motion=Math.max(0,Math.min(1,(progress-holdEnd)/(1-holdEnd))),logoProgress=Math.max(0,Math.min(1,(motion-.18)/.82)),reveal=Math.max(0,Math.min(1,(logoProgress-.18)/.72));
   els.detailHeaderIdentity.style.opacity=String(reveal);els.detailHeaderIdentity.style.transform=`translate(-50%,-50%) translateY(${(1-reveal)*14}px) scale(${.82+reveal*.18})`;els.header.classList.toggle('cw-detail-header-active',reveal>.62);
-  const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),backdropScale=1.15-.15*backdropProgress,backdropY=-10*logoProgress,logoY=-58*logoProgress;if(heroLogo){heroLogo.style.transform=`translateY(${logoY}px) scale(${1-logoProgress*.2})`;heroLogo.style.opacity=String(1-reveal*.88);}if(backdrop)backdrop.style.transform=`translateY(${backdropY}px) scale(${backdropScale})`;
+  const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),backdropScale=1.15-.15*zoomOut,backdropY=-10*logoProgress,logoY=-58*logoProgress;if(heroLogo){heroLogo.style.transform=`translateY(${logoY}px) scale(${1-logoProgress*.2})`;heroLogo.style.opacity=String(1-reveal*.88);}if(backdrop)backdrop.style.transform=`translateY(${backdropY}px) scale(${backdropScale})`;
 }
 function route(params={},replace=false){const url=new URL(location.origin+location.pathname);Object.entries(params).forEach(([k,v])=>{if(v!==''&&v!=null)url.searchParams.set(k,String(v))});history[replace?'replaceState':'pushState']({cw:true},'',url);}
 function showView(name){if(name!=='detail')resetDetailHeaderMotion();state.view=name;els.views.forEach(v=>v.classList.toggle('hidden',v.id!==`${name}View`));$$('[data-go]').forEach(b=>b.classList.toggle('active',b.dataset.go===name));if(name!=='home')clearInterval(state.heroTimer);else startHero();resetScroll();if(name==='detail')requestAnimationFrame(updateDetailHeaderMotion);}
@@ -127,13 +141,35 @@ function row(title,items,key='default',showProgress=false){return `<section clas
 function syncRecordItem(record){return record&&Number(record.tmdbId)?{id:Number(record.tmdbId),mediaType:record.mediaType==='tv'?'tv':'movie',title:record.title||record.originalTitle||'TorrShelf',originalTitle:record.originalTitle||record.title||'',year:record.year||'',posterPath:record.posterPath||'',backdropPath:record.backdropPath||'',logoPath:record.logoPath||'',imdbId:record.imdbId||''}:null;}
 function continueWatchingItems(){const seen=new Set(),items=[];for(const record of state.progressRecords){if(record.completed||Number(record.percent)<=0)continue;const item=syncRecordItem(record),key=syncMediaKey(item);if(!item||seen.has(key))continue;seen.add(key);items.push(item);}return items;}
 function renderHomeRows(){if(!state.homeLoaded)return;const continuing=continueWatchingItems();els.homeRows.innerHTML=(continuing.length?row('Tiếp tục xem',continuing,'nowPlaying',true):'')+state.homeRails.map(r=>row(r.title,r.items,r.key,false)).join('');}
+function likedItems(){return[...state.likedMedia.values()].filter(item=>Number(item?.id)).sort((a,b)=>(Number(b.likedAt)||0)-(Number(a.likedAt)||0));}
+function persistLikedMedia(){localStorage.setItem('torrshelf:liked-media',JSON.stringify([...state.likedMedia.values()]));}
+function likedMediaSnapshot(item){return{id:Number(item.id),mediaType:item.mediaType==='tv'?'tv':'movie',title:item.title||item.originalTitle||'Đã thích',originalTitle:item.originalTitle||item.title||'',year:item.year||'',posterPath:item.posterPath||'',backdropPath:item.backdropPath||'',logoPath:item.logoPath||'',imdbId:item.imdbId||'',rating:Number(item.rating)||0,likedAt:Date.now()};}
+function setLibraryTab(tab){state.libraryTab=tab==='liked'?'liked':'added';localStorage.setItem('torrshelf:library-tab',state.libraryTab);renderLibrary();}
 function renderLibrary(){
-  if(!els.libraryGrid)return;const continuing=continueWatchingItems();els.continueWatchingSection.classList.toggle('hidden',!continuing.length);els.continueWatchingGrid.innerHTML=continuing.map(item=>poster(item,true)).join('');
+  if(!els.libraryGrid)return;const continuing=continueWatchingItems(),liked=likedItems(),isLiked=state.libraryTab==='liked';
+  els.libraryAddedPanel.classList.toggle('hidden',isLiked);els.libraryLikedPanel.classList.toggle('hidden',!isLiked);
+  els.libraryTabs?.querySelectorAll('[data-library-tab]').forEach(button=>{const active=button.dataset.libraryTab===state.libraryTab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
+  if(els.libraryAddedCount)els.libraryAddedCount.textContent=String(state.library.length);if(els.libraryLikedCount)els.libraryLikedCount.textContent=String(liked.length);
+  els.continueWatchingSection.classList.toggle('hidden',!continuing.length);els.continueWatchingGrid.innerHTML=continuing.map(item=>poster(item,true)).join('');
   els.libraryGrid.innerHTML=state.library.map(item=>poster(item,false)).join('');els.libraryEmpty.classList.toggle('hidden',Boolean(state.library.length));
+  if(els.likedGrid){els.likedGrid.innerHTML=liked.map(item=>poster(item,false)).join('');els.likedEmpty.classList.toggle('hidden',Boolean(liked.length));}
+  if(isLiked&&state.view==='library')void loadLikedRecommendations(liked);
+}
+async function loadLikedRecommendations(liked=likedItems()){
+  if(!els.likedRecommendationSection||state.libraryTab!=='liked')return;
+  const seed=liked.find(item=>item.title&&item.title!=='Đã thích')||liked[0];
+  if(!seed){els.likedRecommendationSection.classList.add('hidden');return;}
+  const key=mediaKey(seed);els.likedRecommendationSection.classList.remove('hidden');els.likedRecommendationTitle.textContent=`Vì bạn đã thích ${seed.title||'video này'}`;
+  if(state.likedRecommendationKey===key&&Array.isArray(state.likedRecommendations)){els.likedRecommendationGrid.innerHTML=state.likedRecommendations.map(item=>poster(item,false)).join('')||'<p class="cw-addon-empty">Chưa có gợi ý phù hợp.</p>';return;}
+  const requestId=++state.likedRecommendationRequestId;state.likedRecommendationKey=key;state.likedRecommendations=null;els.likedRecommendationGrid.innerHTML=Array.from({length:6},()=>'<span class="cw-card-skeleton"></span>').join('');
+  try{
+    const data=await api(`/api/tmdb/recommendations?media=${seed.mediaType}&id=${seed.id}`);if(requestId!==state.likedRecommendationRequestId||state.libraryTab!=='liked'||state.likedRecommendationKey!==key)return;
+    const excluded=new Set([...liked.map(mediaKey),...state.library.map(mediaKey)]);state.likedRecommendations=(data.items||[]).filter(item=>!excluded.has(mediaKey(item))).slice(0,12);els.likedRecommendationGrid.innerHTML=state.likedRecommendations.map(item=>poster(item,false)).join('')||'<p class="cw-addon-empty">Chưa có gợi ý phù hợp.</p>';
+  }catch(error){if(requestId!==state.likedRecommendationRequestId||state.libraryTab!=='liked')return;els.likedRecommendationGrid.innerHTML='<p class="cw-addon-empty">Chưa tải được gợi ý lúc này.</p>';}
 }
 function applySyncState(data){
   if(!data)return;state.library=Array.isArray(data.library)?data.library:[];state.progressRecords=Array.isArray(data.progress)?data.progress:[];state.progressByMedia.clear();
-  state.progressRecords.forEach(record=>{if(record.mediaKey&&!state.progressByMedia.has(record.mediaKey))state.progressByMedia.set(record.mediaKey,record)});state.syncLoaded=true;localStorage.setItem('torrshelf:library',JSON.stringify(state.library));renderLibrary();renderHomeRows();updateLibraryButtons();
+  state.progressRecords.forEach(record=>{if(record.mediaKey&&!state.progressByMedia.has(record.mediaKey))state.progressByMedia.set(record.mediaKey,record)});state.syncLoaded=true;localStorage.setItem('torrshelf:library',JSON.stringify(state.library));renderLibrary();renderHomeRows();updateLibraryButtons();updateLikeButtons();
 }
 async function loadSyncState(){
   const localLibrary=[...state.library];try{let data=await api('/api/sync/state');if(!(data.library||[]).length&&localLibrary.length){await Promise.allSettled(localLibrary.map(media=>api('/api/sync/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({media,inLibrary:true})})));data=await api('/api/sync/state');}applySyncState(data);}catch{renderLibrary();}
@@ -231,7 +267,7 @@ function isInLibrary(item=state.selected){const key=libraryKey(item);return Bool
 function updateLibraryButtons(){const active=isInLibrary();$$('[data-library-current]').forEach(button=>{button.classList.toggle('active',active);button.setAttribute('aria-label',active?'Remove from library':'Add to library');button.setAttribute('aria-pressed',String(active));});els.detailHeaderLibrary.classList.toggle('active',active);els.detailHeaderLibrary.setAttribute('aria-label',active?'Remove from library':'Add to library');}
 function isCurrentLiked(){return Boolean(state.selected&&state.likedMedia.has(libraryKey(state.selected)));}
 function updateLikeButtons(){const active=isCurrentLiked();$$('[data-like-current]').forEach(button=>{button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});}
-function toggleCurrentLike(){const key=libraryKey(state.selected);if(!key)return;if(state.likedMedia.has(key)){state.likedMedia.delete(key);notify('Đã bỏ thích');}else{state.likedMedia.add(key);notify('Đã thích');}localStorage.setItem('torrshelf:liked-media',JSON.stringify([...state.likedMedia]));updateLikeButtons();}
+function toggleCurrentLike(){const item=state.selected,key=libraryKey(item);if(!key||!item)return;if(state.likedMedia.has(key)){state.likedMedia.delete(key);notify('Đã bỏ thích');}else{state.likedMedia.set(key,likedMediaSnapshot(item));notify('Đã thích');}state.likedRecommendationKey='';state.likedRecommendations=null;persistLikedMedia();updateLikeButtons();renderLibrary();}
 async function toggleCurrentLibrary(){
   const item=state.selected;if(!item)return;const exists=isInLibrary(item),media={id:item.id,mediaType:item.mediaType,title:item.title,originalTitle:item.originalTitle,year:item.year,imdbId:item.imdbId,posterPath:item.posterPath,backdropPath:item.backdropPath,logoPath:item.logoPath};
   try{const result=await api('/api/sync/library',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({media,inLibrary:!exists})});applySyncState(result.state);notify(exists?'Đã xóa khỏi thư viện':'Đã thêm vào thư viện');}
@@ -498,8 +534,7 @@ els.hero.addEventListener('click',e=>{const slide=e.target.closest('[data-slide]
 els.homeRows.addEventListener('click',e=>{const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
 els.discoverGrid.addEventListener('click',e=>{const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
 els.browseGrid.addEventListener('click',e=>{const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
-els.libraryGrid.addEventListener('click',e=>{const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
-els.continueWatchingGrid.addEventListener('click',e=>{const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
+els.library.addEventListener('click',e=>{const tab=e.target.closest('[data-library-tab]');if(tab)return setLibraryTab(tab.dataset.libraryTab);const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
 els.peopleGrid.addEventListener('click',e=>{const b=e.target.closest('[data-person]');if(b)openPerson(Number(b.dataset.person))});
 els.personContent.addEventListener('click',e=>{const share=e.target.closest('[data-share-person]');if(share)return sharePersonProfile();const bio=e.target.closest('[data-person-bio]');if(bio){bio.classList.toggle('expanded');return;}const b=e.target.closest('[data-media]');if(b)handleMediaClick(b)});
 function handleDetailArtworkError(e){
