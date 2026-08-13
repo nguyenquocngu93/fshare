@@ -522,9 +522,18 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 
 /* The mobile order remains content → links → supporting sections. */
 .cw-detail-content,.cw-detail-supporting{min-width:0}
-.cw-detail-links-column{margin-top:42px}
-.cw-detail-links-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
+.cw-detail-links-column{margin-top:18px}
+.cw-detail-links-head{display:none;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
+.cw-detail-content>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
 #detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-supporting{display:none}
+@media (orientation:portrait), (max-width:639px){
+  .cw-detail-body{padding-top:28px}
+  .cw-detail-content>.cw-overview-info{margin-top:28px}
+  .cw-detail-content>.cw-detail-body-genres{margin-top:18px}
+  .cw-detail-links-column{margin-top:18px}
+  .cw-detail-links-head{display:none}
+  .cw-detail-links-column .cw-info-streams{margin:0 0 46px}
+}
 
 /* Wide Stremio-inspired detail stage: narrative on the left, playable links
    on the right. The links column stays visible as the user reads the detail. */
@@ -547,7 +556,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);grid-template-areas:"content links" "secondary secondary";align-items:start;gap:34px clamp(28px,5vw,72px);width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
   .cw-detail-content{grid-area:content;min-width:0}
   .cw-detail-links-column{grid-area:links;position:sticky;top:96px;min-width:0;margin:0;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
-  .cw-detail-links-head{margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
+  .cw-detail-links-head{display:flex;margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
   .cw-detail-links-column .cw-info-streams{margin:0;max-width:none;min-width:0;scroll-margin-top:112px}
   .cw-detail-links-column .cw-stream-addon-tabs{max-width:none;margin:0 0 14px;padding:0 0 6px}
   .cw-detail-links-column .cw-stream-results{gap:9px}
