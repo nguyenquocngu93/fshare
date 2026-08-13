@@ -852,6 +852,9 @@ describe("HTTP app", () => {
     assert.doesNotMatch(css, /\.cw-episode\{[^}]*border-bottom/);
     assert.doesNotMatch(css, /\.cw-episodes-toolbar\{[^}]*border-bottom/);
     assert.match(css, /@media\(orientation:landscape\)[^{]*\{[^}]*\.cw-detail-hero\{[^}]*aspect-ratio:auto/);
+    assert.match(css, /@media \(orientation:landscape\) and \(min-width:640px\)\{[\s\S]*?\.cw-detail-layout\{display:grid/);
+    assert.match(css, /\.cw-mobile-dock\{display:none\}/);
+    assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(90deg,#05070a/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
     assert.match(css, /\.cw-poster-row\{[^}]*grid-auto-columns:128px[^}]*gap:16px[^}]*padding:24px 20px[^}]*scrollbar-color:#1a1d23 #05070a/);
     assert.match(css, /\.cw-poster-row \.cw-poster\{aspect-ratio:2\/3\}/);
@@ -930,7 +933,7 @@ describe("HTTP app", () => {
     assert.match(js, /episodeSection/);
     assert.doesNotMatch(js, /episodeCount/);
     assert.match(js, /normalHeight=Number\(hero\.dataset\.normalHeight\)\|\|0/);
-    assert.match(js, /progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,normalHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=Math\.min\(1,progress\/zoomEnd\),sourceRatio=/);
+    assert.match(js, /landscape=matchMedia\('\(orientation: landscape\) and \(min-width: 640px\)'\)\.matches,progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,normalHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=landscape\?0:Math\.min\(1,progress\/zoomEnd\),sourceRatio=/);
     assert.match(js, /fullHeight=width\/sourceRatio,frameHeight=normalHeight\+\(fullHeight-normalHeight\)\*zoomOut/);
     assert.match(js, /previousHeight=Number\(hero\.dataset\.frameHeight\)\|\|0;if\(Math\.abs\(previousHeight-frameHeight\)>.1\)\{hero\.style\.height=`\$\{frameHeight\}px`;hero\.dataset\.frameHeight=String\(frameHeight\);\}/);
     assert.match(js, /if\(backdrop\)\{backdrop\.style\.transform='translateY\(0\) scale\(1\)';backdrop\.style\.maskImage='none';backdrop\.style\.webkitMaskImage='none';\}/);

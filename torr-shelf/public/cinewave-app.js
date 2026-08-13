@@ -110,11 +110,11 @@ function updateDetailHeaderMotion(){
   if(state.view!=='detail')return;const hero=$('.cw-detail-hero');if(!hero)return;
   const backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient'),width=Math.round(hero.clientWidth||0);let normalHeight=Number(hero.dataset.normalHeight)||0;
   if(!normalHeight||hero.dataset.normalWidth!==String(width)){hero.style.height='';normalHeight=hero.getBoundingClientRect().height;hero.dataset.normalHeight=String(normalHeight);hero.dataset.normalWidth=String(width);}
-  const progress=Math.max(0,Math.min(1,scrollY/Math.max(220,normalHeight*.92))),zoomEnd=.20,zoomOut=Math.min(1,progress/zoomEnd),sourceRatio=backdrop?.naturalWidth&&backdrop?.naturalHeight?backdrop.naturalWidth/backdrop.naturalHeight:0;
+  const landscape=matchMedia('(orientation: landscape) and (min-width: 640px)').matches,progress=Math.max(0,Math.min(1,scrollY/Math.max(220,normalHeight*.92))),zoomEnd=.20,zoomOut=landscape?0:Math.min(1,progress/zoomEnd),sourceRatio=backdrop?.naturalWidth&&backdrop?.naturalHeight?backdrop.naturalWidth/backdrop.naturalHeight:0;
   /* At zoom-out=1 the hero matches Cinemeta's natural aspect ratio: the full
-     image fills the frame with no crop or letterbox. The visual dim layer stays
-     intentionally, matching the Stremio luminance rather than altering geometry. */
-  if(sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut,previousHeight=Number(hero.dataset.frameHeight)||0;if(Math.abs(previousHeight-frameHeight)>.1){hero.style.height=`${frameHeight}px`;hero.dataset.frameHeight=String(frameHeight);}}
+     image fills the frame with no crop or letterbox. Landscape uses its own
+     stable Stremio-like stage rather than applying the phone zoom animation. */
+  if(!landscape&&sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut,previousHeight=Number(hero.dataset.frameHeight)||0;if(Math.abs(previousHeight-frameHeight)>.1){hero.style.height=`${frameHeight}px`;hero.dataset.frameHeight=String(frameHeight);}}else if(landscape&&hero.dataset.frameHeight){hero.style.height='';delete hero.dataset.frameHeight;}
   /* Normal state uses the user's 16:11 Cinemeta crop at scale 1. Zoom-out
      expands only the frame to the source's native aspect ratio, so the full
      image becomes visible without adding crop or edges. */

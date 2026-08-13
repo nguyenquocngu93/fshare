@@ -46,3 +46,7 @@ http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html
 ```
 
 Guide vẽ các cặp gạch dọc cho crop ở mức `1.00`, `1.05`, `1.10`, `1.15`; bấm từng mốc hoặc kéo slider rồi gửi lại mốc bạn muốn dùng.
+
+## Layout ngang
+
+Từ `640px` ở chiều ngang, trang detail dùng stage mô phỏng Stremio web: backdrop phủ ngang, poster ở trái, logo/copy nằm trong vùng gradient an toàn, metadata được canh theo cột thông tin và bottom dock được ẩn. Hiệu ứng zoom của điện thoại được tắt ở layout ngang để hero ổn định khi cuộn hoặc xoay màn hình.

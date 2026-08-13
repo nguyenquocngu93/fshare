@@ -298,3 +298,7 @@ Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng th�
 ### Guide chọn crop Cinemeta
 
 Mở `http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html` để xem backdrop Avengers: Infinity War trực tiếp từ Cinemeta, cùng các gạch dọc crop cho `1.00` đến `1.15`. Guide không áp brightness, filter hoặc overlay lên ảnh.
+
+### Layout ngang kiểu Stremio web
+
+Ở `orientation: landscape` từ `640px`, detail dùng backdrop stage rộng, poster trái + logo/copy trái, gradient ngang bảo vệ text, metadata canh theo cột copy và tắt bottom dock. Zoom crop điện thoại không chạy ở layout này để tránh giật khi xoay màn hình.
