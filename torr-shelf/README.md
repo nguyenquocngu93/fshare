@@ -291,7 +291,7 @@ Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787
 Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng thời:
 
 - backdrop dùng mask/fade nhiều tầng muộn hơn để giữ chi tiết ảnh theo video Stremio tham chiếu;
-- khi zoom-out hoàn tất, hero dùng đúng aspect ratio tự nhiên của ảnh Cinemeta để ảnh fill đủ 100%, không crop, viền hoặc dark overlay; logo vẫn merge sang header khi chạm vùng header;
+- khung bình thường dùng crop giữa `16:11`; khi zoom-out hoàn tất, hero thu về aspect ratio tự nhiên của Cinemeta (ảnh full, thường là `16:9`) để ảnh fill đủ 100%, không crop, viền hoặc dark overlay; logo vẫn merge sang header khi chạm vùng header;
 - làm lại dòng metadata: thời lượng · năm · điểm · IMDb;
 - tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích.
 

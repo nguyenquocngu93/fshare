@@ -114,8 +114,11 @@ function updateDetailHeaderMotion(){
   /* At zoom-out=1 the hero matches Cinemeta's natural aspect ratio: the full
      image fills the frame, with no crop, letterbox, dark mask or overlay. */
   if(sourceRatio&&width){const fullHeight=width/sourceRatio,frameHeight=normalHeight+(fullHeight-normalHeight)*zoomOut;hero.style.height=zoomOut?`${frameHeight}px`:'';}
-  if(backdrop){backdrop.style.transform=`translateY(0) scale(${1.15-.15*zoomOut})`;if(zoomOut>.998){backdrop.style.maskImage='none';backdrop.style.webkitMaskImage='none';}else if(zoomOut>.001){const solid=66+34*zoomOut,soft=78+22*zoomOut,tail=91+9*zoomOut,mask=`linear-gradient(to bottom,#000 0%,#000 ${solid}%,rgba(0,0,0,.97)${soft}%,rgba(0,0,0,.68)${tail}%,transparent 100%)`;backdrop.style.maskImage=mask;backdrop.style.webkitMaskImage=mask;}else{backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}}
-  if(shade)shade.style.opacity=String(1-zoomOut);
+  /* Normal state uses the user's 16:9 Cinemeta crop at scale 1. Zoom-out
+     expands only the frame to the source's native aspect ratio, so the full
+     image becomes visible without changing its brightness or adding edges. */
+  if(backdrop){backdrop.style.transform='translateY(0) scale(1)';backdrop.style.maskImage='none';backdrop.style.webkitMaskImage='none';}
+  if(shade)shade.style.opacity='0';
   const heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1');
   /* The page scrolls as one unit. Only when the original logo naturally reaches
      the fixed header do we cross-fade it into the compact header identity. */

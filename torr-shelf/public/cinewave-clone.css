@@ -496,13 +496,12 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.6: the header and hero ratio stay intact. The Stremio recordings
-   only inform the lower fade, logo anchor, information gap and first-scroll
-   reveal sequence (the staged motion lives in cinewave-app.js). */
+/* v1.6.6: normal view is the requested 16:9 Cinemeta crop at scale 1.
+   The scroll code expands this frame to the natural source ratio at zoom-out. */
+.cw-detail-hero{aspect-ratio:16/11}
 .cw-detail-bg{background:#05070a}
-.cw-detail-bg>img{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 66%,rgba(0,0,0,.97)78%,rgba(0,0,0,.68)91%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 66%,rgba(0,0,0,.97)78%,rgba(0,0,0,.68)91%,transparent 100%)}
-.cw-detail-gradient{background:linear-gradient(to bottom,rgba(5,7,10,.01) 0%,rgba(5,7,10,.03) 54%,rgba(5,7,10,.10) 72%,rgba(5,7,10,.48) 90%,#05070a 100%),linear-gradient(to right,rgba(5,7,10,.34),transparent 70%)}
-.cw-detail-hero:after{display:none}
+.cw-detail-bg>img{-webkit-mask-image:none;mask-image:none}
+.cw-detail-gradient,.cw-detail-hero:after{display:none}
 .cw-detail-title-visual{margin-bottom:-20px}
 .cw-detail-logo{max-width:min(56vw,440px);max-height:68px}
 .cw-detail-body{margin-top:0;padding-top:52px}

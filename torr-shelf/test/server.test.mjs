@@ -768,7 +768,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /simulateTorrShelfSearch/);
     assert.match(cropGuide, /\/api\/tmdb\/search\?q=Avengers%20Infinity%20War/);
     assert.match(cropGuide, /\/api\/cinemeta\/background\?imdb=\$\{encodeURIComponent\(imdbId\)\}/);
-    assert.match(cropGuide, /32 \/ 20\.69/);
+    assert.match(cropGuide, /16 \/ 11/);
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
@@ -832,9 +832,9 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-detail-hero-back\{[^}]*width:42px[^}]*height:42px/);
     assert.match(css, /\.cw-detail-secondary\{[^}]*gap:0[^}]*padding:3px 6px/);
     assert.match(css, /\.cw-detail-icon\{[^}]*width:38px!important[^}]*height:38px!important/);
-    assert.match(css, /\.cw-detail-bg>img\{-webkit-mask-image:linear-gradient\(to bottom,#000 0%,#000 66%,rgba\(0,0,0,\.97\)78%,rgba\(0,0,0,\.68\)91%,transparent 100%\)/);
-    assert.match(css, /\.cw-detail-gradient\{background:linear-gradient\(to bottom,rgba\(5,7,10,\.01\) 0%,rgba\(5,7,10,\.03\) 54%,rgba\(5,7,10,\.10\) 72%,rgba\(5,7,10,\.48\) 90%,#05070a 100%\)/);
-    assert.match(css, /\.cw-detail-hero:after\{display:none\}/);
+    assert.match(css, /\.cw-detail-hero\{aspect-ratio:16\/11\}/);
+    assert.match(css, /\.cw-detail-bg>img\{-webkit-mask-image:none;mask-image:none\}/);
+    assert.match(css, /\.cw-detail-gradient,\.cw-detail-hero:after\{display:none\}/);
     assert.match(css, /\.cw-detail-title-visual\{margin-bottom:-20px\}/);
     assert.match(css, /\.cw-detail-logo\{max-width:min\(56vw,440px\);max-height:68px\}/);
     assert.match(css, /\.cw-detail-body\{margin-top:0;padding-top:52px\}/);
@@ -932,12 +932,11 @@ describe("HTTP app", () => {
     assert.match(js, /progress=Math\.max\(0,Math\.min\(1,scrollY\/Math\.max\(220,normalHeight\*\.92\)\)\),zoomEnd=\.20,zoomOut=Math\.min\(1,progress\/zoomEnd\),sourceRatio=/);
     assert.match(js, /fullHeight=width\/sourceRatio,frameHeight=normalHeight\+\(fullHeight-normalHeight\)\*zoomOut/);
     assert.match(js, /hero\.style\.height=zoomOut\?`\$\{frameHeight\}px`:''/);
-    assert.match(js, /if\(zoomOut>\.998\)\{backdrop\.style\.maskImage='none';backdrop\.style\.webkitMaskImage='none';\}/);
-    assert.match(js, /if\(shade\)shade\.style\.opacity=String\(1-zoomOut\)/);
+    assert.match(js, /if\(backdrop\)\{backdrop\.style\.transform='translateY\(0\) scale\(1\)';backdrop\.style\.maskImage='none';backdrop\.style\.webkitMaskImage='none';\}/);
+    assert.match(js, /if\(shade\)shade\.style\.opacity='0'/);
     assert.match(js, /titleBox=heroLogo\.getBoundingClientRect\(\),headerBox=els\.header\.getBoundingClientRect\(\),mergeDistance=Math\.max\(56,titleBox\.height\+24\)/);
     assert.match(js, /heroLogo\.style\.transform=merge\?`translateY\(\$\{-12\*merge\}px\) scale\(\$\{1-merge\*\.12\}\)`:''/);
     assert.match(js, /els\.detailHeaderIdentity\.style\.opacity=String\(merge\)/);
-    assert.match(js, /if\(backdrop\)\{backdrop\.style\.transform=`translateY\(0\) scale\(\$\{1\.15-\.15\*zoomOut\}\)`/);
     assert.doesNotMatch(js, /logoProgress|backdropY|logoY/);
     assert.doesNotMatch(js, /cw-detail-open|cw-stremio-credit/);
     assert.match(js, /classList\.add\('cw-detail-context'\)/);
