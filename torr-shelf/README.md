@@ -305,6 +305,6 @@ Mở `http://127.0.0.1:8787/avengers-infinity-war-cinemeta-guide.html` để xem
 
 Landscape detail tách thành hai cột: nội dung bên trái và Link phát/Streams bên phải (sticky); Cast/Crew/Related tiếp tục ở hàng dưới.
 
-### Links và font
+### Links và typography
 
-Portrait có divider mỏng trước nguồn, addon tab active tự cuộn vào giữa, nút ⚙ mở thẳng Stremio Addons. Settings dùng hệ chữ Inter và type scale đồng đều cho heading, label, input và mô tả.
+Portrait có divider mỏng trước nguồn, addon tab active giữ nguyên vị trí cuộn. Nút ⚙ trên từng card Stremio Addon mở `/configure` của chính addon đó. Settings dùng hệ chữ Inter và type scale đồng đều cho heading, label, input và mô tả.

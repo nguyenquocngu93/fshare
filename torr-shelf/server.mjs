@@ -1777,6 +1777,9 @@ export function createTorrShelf(options = {}) {
       idPrefixes: (payload.idPrefixes || []).map((prefix) => cleanText(prefix, 40)).filter(Boolean).slice(0, 20),
       manifestUrl: manifestUrl.toString(),
       baseUrl: base.toString().replace(/\/$/, ""),
+      configurable: Boolean(payload?.behaviorHints?.configurable),
+      configurationRequired: Boolean(payload?.behaviorHints?.configurationRequired),
+      configUrl: `${base.toString().replace(/\/$/, "")}/configure`,
     };
     stremioManifestCache.set(key, { data, expiresAt: Date.now() + 30 * 60_000 });
     return data;

@@ -482,9 +482,11 @@ async function playInfoStream(key,button){
 }
 
 function saveStremioAddons(){localStorage.setItem('torrshelf:stremio-addons',JSON.stringify(state.stremioAddons));renderStremioAddons();}
+function addonConfigUrl(addon){try{const base=new URL(addon.configUrl||addon.baseUrl||addon.manifestUrl);if(addon.configUrl)return base.href;base.pathname=base.pathname.replace(/\/$/, '')+'/configure';base.search='';base.hash='';return base.href;}catch{return'';}}
+function openAddonConfig(value){try{const url=new URL(value);if(!['http:','https:'].includes(url.protocol))throw new Error('invalid');const popup=window.open(url.href,'_blank','noopener,noreferrer');if(!popup)location.href=url.href;}catch{notify('Addon này không có link configure hợp lệ','error');}}
 function renderStremioAddons(){
   const addons=activeStreamAddons();els.stremioAddonCount.textContent=String(addons.length);
-  els.stremioAddonList.innerHTML=addons.map(addon=>{const replaced=state.nativeProviderConfig.enabled&&/hybrid/i.test(`${addon.id} ${addon.name}`);return`<article><span>＋</span><div><strong>${esc(addon.name)}</strong><small>${esc(`${addon.version?`v${addon.version} · `:''}${addon.id}${addon.resources?.length?` · ${addon.resources.join(' + ')}`:''}${replaced?' · Native đang thay thế':''}`)}</small><p>${esc(addon.manifestUrl)}</p></div><button data-remove-addon="${esc(addon.manifestUrl)}" type="button" aria-label="Remove addon">×</button></article>`}).join('')||'<p class="cw-addon-empty">Chưa import addon nào.</p>';
+  els.stremioAddonList.innerHTML=addons.map(addon=>{const replaced=state.nativeProviderConfig.enabled&&/hybrid/i.test(`${addon.id} ${addon.name}`),configUrl=addon.configurable===false?'':addonConfigUrl(addon);return`<article><span>＋</span><div><strong>${esc(addon.name)}</strong><small>${esc(`${addon.version?`v${addon.version} · `:''}${addon.id}${addon.resources?.length?` · ${addon.resources.join(' + ')}`:''}${replaced?' · Native đang thay thế':''}`)}</small><p>${esc(addon.manifestUrl)}</p></div>${configUrl?`<button class="cw-addon-config" data-config-addon="${esc(configUrl)}" type="button" title="Configure ${esc(addon.name)}" aria-label="Configure ${esc(addon.name)}">⚙</button>`:''}<button data-remove-addon="${esc(addon.manifestUrl)}" type="button" aria-label="Remove addon">×</button></article>`}).join('')||'<p class="cw-addon-empty">Chưa import addon nào.</p>';
 }
 async function importStremioAddon(value){
   const submit=els.stremioAddonForm.querySelector('button[type="submit"]'),original=submit.textContent;submit.disabled=true;submit.textContent='Đang import…';markStremioAddonsChanged();
@@ -612,7 +614,7 @@ els.posterColumns?.addEventListener('change',()=>{state.posterColumns=els.poster
 els.nativeProviderForm.addEventListener('submit',e=>{e.preventDefault();const config=readNativeProviderForm();if(config.sizeMaxGB&&config.sizeMaxGB<config.sizeMinGB)config.sizeMaxGB=config.sizeMinGB;state.nativeProviderConfig=config;localStorage.setItem('torrshelf:native-provider',JSON.stringify(config));state.forceFreshStreams=true;clearInfoStreamState();renderNativeProviderSettings();renderStremioAddons();notify('Đã lưu Hybrid tích hợp')});
 els.checkConnection.addEventListener('click',()=>state.customTorrServerUrl?checkTorrServerTarget(state.customTorrServerUrl,{notifyUser:true}):checkHealth());
 els.stremioAddonForm.addEventListener('submit',e=>{e.preventDefault();importStremioAddon(els.stremioAddonUrl.value)});
-els.stremioAddonList.addEventListener('click',e=>{const remove=e.target.closest('[data-remove-addon]');if(remove)removeStremioAddon(remove.dataset.removeAddon)});
+els.stremioAddonList.addEventListener('click',e=>{const config=e.target.closest('[data-config-addon]');if(config)return openAddonConfig(config.dataset.configAddon);const remove=e.target.closest('[data-remove-addon]');if(remove)removeStremioAddon(remove.dataset.removeAddon)});
 els.cloudStreamRepoForm.addEventListener('submit',e=>{e.preventDefault();importCloudStreamRepo(els.cloudStreamRepoUrl.value)});
 els.cloudStreamBridgeForm.addEventListener('submit',e=>{e.preventDefault();connectCloudStreamBridge(els.cloudStreamBridgeUrl.value)});
 renderStremioAddons();renderCloudStream();updatePlayerPreferenceUI();applyPosterLayout();renderNativeProviderSettings();

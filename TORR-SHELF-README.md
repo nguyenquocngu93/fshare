@@ -55,4 +55,4 @@ Từ `640px` ở chiều ngang, trang detail dùng stage mô phỏng Stremio web
 
 ## Links và chữ giao diện
 
-Ở màn dọc, genre và nguồn được ngăn bằng divider mỏng; tiêu đề `Link phát` chỉ hiện ở landscape. Tab nguồn active tự canh giữa thanh cuộn. Nút ⚙ cạnh tab nguồn mở thẳng **Stremio Addons** trong Settings. Settings được render lại với hệ chữ Inter và cỡ heading/label/body đồng đều.
+Ở màn dọc, genre và nguồn được ngăn bằng divider mỏng; tiêu đề `Link phát` chỉ hiện ở landscape. Tab nguồn active giữ nguyên vị trí cuộn. Nút ⚙ nằm ngay trên từng card addon trong **Settings → Stremio Addons** và mở `/configure` của addon đó. Settings được render lại với hệ chữ Inter và cỡ heading/label/body đồng đều.

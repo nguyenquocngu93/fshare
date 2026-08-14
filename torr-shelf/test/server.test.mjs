@@ -609,7 +609,7 @@ describe("HTTP app", () => {
         ]);
       }
       if (url.hostname === "hybrid.test" && url.pathname === "/abc/manifest.json") {
-        return Response.json({ id: "com.hybrid.test", version: `7.0.${hybridRevision}`, name: "Hybrid Test", description: "Test addon", resources: ["stream"], types: ["movie", "series"], idPrefixes: ["tt"] });
+        return Response.json({ id: "com.hybrid.test", version: `7.0.${hybridRevision}`, name: "Hybrid Test", description: "Test addon", resources: ["stream"], types: ["movie", "series"], idPrefixes: ["tt"], behaviorHints: { configurable: true } });
       }
       if (url.hostname === "hybrid.test" && url.pathname.startsWith("/abc/stream/")) {
         if (url.pathname.includes("tt9999999")) return Response.json({ streams: [
@@ -990,6 +990,9 @@ describe("HTTP app", () => {
     assert.match(js, /streamTabScrollLeft=addonTab\.closest\('\.cw-stream-addon-tabs'\)\?\.scrollLeft/);
     assert.match(js, /data-open-addon-settings/);
     assert.match(js, /function openStremioAddonSettings\(\)/);
+    assert.match(js, /function addonConfigUrl\(addon\)/);
+    assert.match(js, /data-config-addon/);
+    assert.match(js, /function openAddonConfig\(value\)/);
     assert.match(js, /stremioAddonSettings/);
     assert.doesNotMatch(js, /cw-stream-addon-bar|revealActiveStreamAddon|readFontPreference|applyFontPreference|torrshelf:font/);
     assert.match(js, /updateDetailHeaderMotion/);
@@ -1075,6 +1078,8 @@ describe("HTTP app", () => {
     assert.equal(response.status, 200);
     assert.equal(payload.addon.id, "com.hybrid.test");
     assert.equal(payload.addon.baseUrl, "http://hybrid.test/abc");
+    assert.equal(payload.addon.configurable, true);
+    assert.equal(payload.addon.configUrl, "http://hybrid.test/abc/configure");
   });
 
   it("loads and resolves imported Stremio streams", async () => {
