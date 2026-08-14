@@ -723,8 +723,9 @@ describe("HTTP app", () => {
     assert.match(html, /id="torrServerSettingsForm"/);
     assert.match(html, /id="playerPreference"/);
     assert.match(html, /id="posterColumns"/);
-    assert.match(html, /id="fontPreference"/);
-    assert.match(html, /value="inter">Inter · đồng đều/);
+    assert.doesNotMatch(html, /id="fontPreference"/);
+    assert.match(html, /Bố cục poster/);
+    assert.match(html, /cùng hệ chữ Inter/);
     assert.match(html, /id="stremioAddonSettings"/);
     assert.match(html, /value="3">3 cột · giống Stremio/);
     assert.match(html, /value="torrshelf">TorrShelf Player/);
@@ -812,7 +813,8 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-stream-addon-tabs\{/);
     assert.match(css, /\.cw-stream-addon-bar\{display:grid/);
     assert.match(css, /\.cw-stream-settings-button\{display:grid/);
-    assert.match(css, /body\[data-font="outfit"\]/);
+    assert.match(css, /#settingsView \.cw-settings-grid h2[^}]*font-size:20px/);
+    assert.match(css, /\.cw-detail-links-column\{margin-top:26px;padding-top:20px;border-top:1px/);
     assert.match(css, /\.cw-season-tabs\{/);
     assert.match(css, /\.cw-detail-logo\{[^}]*transform:translateY\(0\)/);
     assert.doesNotMatch(css, /\.cw-detail-copy\{[^}]*transform/);
@@ -986,11 +988,11 @@ describe("HTTP app", () => {
     assert.match(js, /data-stream-addon/);
     assert.match(js, /function revealActiveStreamAddon/);
     assert.match(js, /cw-stream-addon-bar/);
+    assert.match(js, /function revealActiveStreamAddon/);
     assert.match(js, /data-open-addon-settings/);
+    assert.match(js, /function openStremioAddonSettings\(\)/);
     assert.match(js, /stremioAddonSettings/);
-    assert.match(js, /function readFontPreference\(\)/);
-    assert.match(js, /function applyFontPreference\(\)/);
-    assert.match(js, /torrshelf:font/);
+    assert.doesNotMatch(js, /readFontPreference|applyFontPreference|torrshelf:font/);
     assert.match(js, /updateDetailHeaderMotion/);
     assert.match(js, /classList\.remove\('cw-detail-context','cw-detail-header-active'\)/);
     assert.match(js, /torrshelf:library/);

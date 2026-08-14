@@ -307,4 +307,4 @@ Landscape detail tách thành hai cột: nội dung bên trái và Link phát/St
 
 ### Links và font
 
-Portrait có divider mỏng trước nguồn, addon tab active tự cuộn vào giữa, nút ⚙ mở thẳng Stremio Addons. Settings lưu lựa chọn font Inter / System / Outfit và áp dụng đồng đều UI.
+Portrait có divider mỏng trước nguồn, addon tab active tự cuộn vào giữa, nút ⚙ mở thẳng Stremio Addons. Settings dùng hệ chữ Inter và type scale đồng đều cho heading, label, input và mô tả.
