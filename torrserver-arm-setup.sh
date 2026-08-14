@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -e
+echo "[1/2] Ghi key SSH ..."
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+cat > ~/.ssh/vmkey <<'SSHKEY'
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDYuwlhz+MmLOIW8G9yPWzs5D/q+gIFvyLFEtDAfbZyIwAAAJgwG0nsMBtJ
+7AAAAAtzc2gtZWQyNTUxOQAAACDYuwlhz+MmLOIW8G9yPWzs5D/q+gIFvyLFEtDAfbZyIw
+AAAEDFsQ+ASpp4LxiPmanXcQgYZQJkdh49Wr2JCgFq4//x0Ni7CWHP4yYs4hbwb3I9bOzk
+P+r6AgW/IsUS0MB9tnIjAAAADnRvcnJzZXJ2ZXItbmV3AQIDBAUGBw==
+-----END OPENSSH PRIVATE KEY-----
+SSHKEY
+chmod 600 ~/.ssh/vmkey
+echo "[2/2] SSH vao may va cai TorrServer ..."
+ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/vmkey opc@161.118.192.95 'sudo bash -s' <<'INSTALL'
+set -e
+echo "==> TorrServer installer (Oracle Linux ARM)"
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64) BIN="TorrServer-linux-amd64" ;;
+  aarch64|arm64) BIN="TorrServer-linux-arm64" ;;
+  *) echo "Kien truc khong ho tro: $ARCH"; exit 1 ;;
+esac
+echo "    Kien truc: $ARCH -> $BIN"
+VERSION="MatriX.142.2"
+URL="https://github.com/YouROK/TorrServer/releases/download/${VERSION}/${BIN}"
+mkdir -p /opt/torrserver && cd /opt/torrserver
+if command -v curl >/dev/null 2>&1; then curl -L --retry 3 -o TorrServer "$URL"; else wget -O TorrServer "$URL"; fi
+chmod +x TorrServer
+cat > /etc/systemd/system/torrserver.service <<'UNIT'
+[Unit]
+Description=TorrServer
+After=network.target
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/torrserver
+ExecStart=/opt/torrserver/TorrServer
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable torrserver 2>/dev/null || true
+systemctl restart torrserver
+if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+  firewall-cmd --permanent --add-port=8090/tcp >/dev/null 2>&1 || true
+  firewall-cmd --reload >/dev/null 2>&1 || true
+fi
+command -v semanage >/dev/null 2>&1 && semanage port -a -t http_port_t -p tcp 8090 2>/dev/null || true
+sleep 2
+systemctl --no-pager --lines=8 status torrserver || true
+echo ""
+echo "===================== XONG ====================="
+echo "  TorrServer da cai. Tu trinh duyet dung PUBLIC IP:8090"
+echo "  (khong dung 10.0.0.x - do la IP noi bo)"
+echo "================================================="
+INSTALL
+rm -f ~/.ssh/vmkey
+echo "DONE."
