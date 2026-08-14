@@ -566,7 +566,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-hero-back{top:24px;left:clamp(18px,3vw,48px)}
   .cw-detail-actions{top:24px;right:clamp(18px,3vw,48px)}
   .cw-detail-body{width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
-  /* The grid keeps a long sticky link card bounded by the complete left narrative. */
+  /* Long stream lists stay inside their own landscape panel instead of extending the page beside an empty column. */
   .cw-detail-primary{min-width:0}
   .cw-detail-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);align-items:start;gap:0 clamp(28px,5vw,72px);min-width:0}
   .cw-detail-narrative{display:block;min-width:0}
@@ -578,7 +578,8 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-information>.cw-overview-info,.cw-detail-information>.cw-detail-body-genres{max-width:720px;margin-left:0}
   .cw-detail-information>.cw-overview-info{margin-top:26px}
   .cw-detail-information>.cw-detail-body-genres{margin-top:22px}
-  .cw-detail-links-column{position:sticky;top:96px;min-width:0;margin:0;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
+  .cw-detail-links-column{position:sticky;top:96px;max-height:calc(100svh - 120px);min-width:0;margin:0;padding:20px;overflow-x:hidden;overflow-y:auto;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2);overscroll-behavior:contain;scrollbar-color:rgba(34,211,238,.38) transparent;scrollbar-gutter:stable;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  .cw-detail-links-column::-webkit-scrollbar{width:6px}.cw-detail-links-column::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(34,211,238,.38)}.cw-detail-links-column::-webkit-scrollbar-track{background:transparent}
   .cw-detail-links-head{display:flex;margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
   .cw-detail-links-column .cw-info-streams{margin:0;max-width:none;min-width:0;scroll-margin-top:112px}
   .cw-detail-links-column .cw-stream-addon-tabs{max-width:none;margin:0 0 14px;padding:0 0 6px}
@@ -593,7 +594,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-content{grid-template-columns:minmax(0,1fr) minmax(230px,.72fr);gap:0 24px}
   .cw-detail-supporting{margin-top:24px}
   .cw-detail-logo{max-height:76px}
-  .cw-detail-links-column{padding:15px;border-radius:16px;top:84px}
+  .cw-detail-links-column{top:84px;max-height:calc(100svh - 100px);padding:15px;border-radius:16px}
   .cw-detail-links-head h2{font-size:19px}
   .cw-detail-links-column .cw-stream-row{padding:12px}
 }
