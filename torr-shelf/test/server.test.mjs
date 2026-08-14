@@ -864,10 +864,9 @@ describe("HTTP app", () => {
     assert.match(css, /@media\(orientation:landscape\)[^{]*\{[^}]*\.cw-detail-hero\{[^}]*aspect-ratio:auto/);
     assert.match(css, /@media \(orientation:landscape\) and \(min-width:640px\)\{[\s\S]*?\.cw-detail-layout\{display:grid/);
     assert.match(css, /\.cw-detail-content\{display:grid[^}]*grid-template-areas:"meta \." "credits links" "information \."/);
-    assert.match(css, /\.cw-detail-links-column\{grid-area:links;position:sticky;top:96px;display:flex;align-self:stretch;contain:size;min-height:0[^}]*overflow:hidden/);
+    assert.match(css, /\.cw-detail-links-column\{grid-area:links;position:sticky;top:96px;display:flex;height:var\(--cw-detail-links-height,auto\);align-self:stretch;contain:size;min-height:0[^}]*overflow:hidden/);
     assert.match(css, /\.cw-detail-links-column \.cw-info-streams\{display:flex;min-height:0[^}]*flex-direction:column/);
     assert.match(css, /\.cw-detail-links-column \.cw-stream-results\{min-height:0;flex:1 1 auto[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/);
-    assert.match(css, /rgba\(var\(--cw-backdrop-rgb\),\.42\)/);
     assert.match(css, /\.cw-detail-logo\{width:100%;height:100%;max-width:none;max-height:none/);
     assert.match(css, /#detailView\.episode-selected \.cw-detail-content\{grid-template-areas:"meta links" "information links"\}/);
     assert.match(css, /\.cw-detail-links-column\{top:84px;padding:15px/);
@@ -1008,9 +1007,8 @@ describe("HTTP app", () => {
     assert.match(js, /stremioAddonSettings/);
     assert.doesNotMatch(js, /cw-stream-addon-bar|revealActiveStreamAddon|readFontPreference|applyFontPreference|torrshelf:font/);
     assert.match(js, /updateDetailHeaderMotion/);
-    assert.match(js, /function applyDetailBackdropTone\(backdrop\)/);
-    assert.match(js, /getImageData\(0,0,width,height\)/);
-    assert.match(js, /--cw-backdrop-rgb/);
+    assert.match(js, /function syncDetailLinksPanelHeight\(\)/);
+    assert.match(js, /--cw-detail-links-height/);
     assert.match(js, /classList\.remove\('cw-detail-context','cw-detail-header-active'\)/);
     assert.match(js, /torrshelf:library/);
     assert.match(js, /torrshelf:player/);

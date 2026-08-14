@@ -98,20 +98,11 @@ function markStremioAddonsChanged(){state.forceFreshStreams=true;clearInfoStream
 async function clearBackendStremioCache(){try{await api('/api/stremio/cache/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch{/* A fresh import also clears backend caches. */}}
 
 function resetScroll(){history.scrollRestoration='manual';window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;requestAnimationFrame(()=>window.scrollTo(0,0));}
-function resetDetailBackdropTone(){els.detail.style.removeProperty('--cw-backdrop-rgb');els.detail.style.removeProperty('--cw-backdrop-glow-rgb');}
-function applyDetailBackdropTone(backdrop){
-  if(!backdrop?.naturalWidth||!backdrop?.naturalHeight)return;
-  try{
-    const canvas=document.createElement('canvas'),width=32,height=18;canvas.width=width;canvas.height=height;
-    const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)return;
-    context.drawImage(backdrop,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;let red=0,green=0,blue=0,weight=0;
-    for(let i=0;i<pixels.length;i+=4){
-      if(pixels[i+3]<128)continue;const r=pixels[i],g=pixels[i+1],b=pixels[i+2],high=Math.max(r,g,b),low=Math.min(r,g,b),luminance=(r*0.2126+g*0.7152+b*0.0722);
-      if(luminance<14||luminance>242)continue;const importance=.28+(high-low)/255*.92+luminance/255*.2;red+=r*importance;green+=g*importance;blue+=b*importance;weight+=importance;
-    }
-    if(!weight)return;const sampled=[red/weight,green/weight,blue/weight],tone=sampled.map(value=>Math.round(Math.max(12,Math.min(150,value*.74)))),glow=sampled.map(value=>Math.round(Math.max(18,Math.min(196,value*1.05+8))));
-    els.detail.style.setProperty('--cw-backdrop-rgb',tone.join(','));els.detail.style.setProperty('--cw-backdrop-glow-rgb',glow.join(','));
-  }catch{/* A non-readable fallback image simply keeps the neutral gradient. */}
+function syncDetailLinksPanelHeight(){
+  const panel=$('#detailLinksColumn'),credits=$('.cw-detail-credits'),landscape=matchMedia('(orientation:landscape) and (min-width:640px)').matches;
+  if(!panel)return;
+  if(!landscape||!credits||els.detail.classList.contains('episode-selected')){panel.style.removeProperty('--cw-detail-links-height');return;}
+  panel.style.setProperty('--cw-detail-links-height',`${Math.ceil(credits.getBoundingClientRect().height)}px`);
 }
 function resetDetailHeaderMotion(){
   els.header.classList.remove('cw-detail-context','cw-detail-header-active');els.detailHeaderIdentity.style.opacity='0';els.detailHeaderIdentity.style.transform='translate(-50%,-35%) scale(.82)';
@@ -258,10 +249,10 @@ async function loadDiscovery(append=false){
 async function searchTmdb(query,page=1,updateRoute=true){const q=String(query||'').trim();if(q.length<2)return;state.browseMode='search';state.browseQuery=q;state.browsePage=page;showView('browse');if(updateRoute)route({view:'browse',q,page});els.browseTitle.textContent=`Search: ${q}`;els.browseSubtitle.textContent='Movies, shows and people';els.browseGrid.innerHTML=Array.from({length:18},()=>'<span class="cw-card-skeleton"></span>').join('');try{const data=await api(`/api/tmdb/search?q=${encodeURIComponent(q)}&page=${page}`);state.browsePages=data.totalPages||1;els.browseGrid.innerHTML=(data.items||[]).map(item=>poster(item,false)).join('');els.peopleResults.classList.toggle('hidden',!data.people?.length);els.peopleGrid.innerHTML=(data.people||[]).map(personCard).join('');els.browsePage.textContent=`${data.page} / ${data.totalPages}`;els.browsePrev.disabled=data.page<=1;els.browseNext.disabled=data.page>=data.totalPages;}catch(error){els.browseGrid.innerHTML=`<div class="cw-notice">${esc(error.message)}</div>`;}}
 
 async function openDetail(item,updateRoute=true){
-  if(!item)return;const requestId=++state.detailRequestId;state.selected=item;state.selectedSeason=null;state.selectedEpisode=null;state.seasonEpisodes.clear();state.seasonCache.clear();state.seasonRequests.clear();els.detail.classList.remove('episode-selected');clearInfoStreamState();resetDetailBackdropTone();resetDetailHeaderMotion();els.detailHeaderLogo.classList.add('hidden');els.detailHeaderLogo.removeAttribute('src');delete els.detailHeaderLogo.dataset.logoFallback;els.detailHeaderTitle.textContent='';els.detailHeaderTitle.classList.add('hidden');showView('detail');
+  if(!item)return;const requestId=++state.detailRequestId;state.selected=item;state.selectedSeason=null;state.selectedEpisode=null;state.seasonEpisodes.clear();state.seasonCache.clear();state.seasonRequests.clear();els.detail.classList.remove('episode-selected');clearInfoStreamState();resetDetailHeaderMotion();els.detailHeaderLogo.classList.add('hidden');els.detailHeaderLogo.removeAttribute('src');delete els.detailHeaderLogo.dataset.logoFallback;els.detailHeaderTitle.textContent='';els.detailHeaderTitle.classList.add('hidden');showView('detail');
   if(updateRoute)route({view:'detail',type:item.mediaType,id:item.id});els.detailContent.innerHTML='<div class="cw-detail-skeleton"></div>';
   try{
-    const {data}=await api(`/api/tmdb/${item.mediaType}/${item.id}`);if(requestId!==state.detailRequestId)return;state.selected=data;state.media.set(mediaKey(data),data);els.detailContent.innerHTML=detailMarkup(data);setDetailHeader(data);loadRelated(data);
+    const {data}=await api(`/api/tmdb/${item.mediaType}/${item.id}`);if(requestId!==state.detailRequestId)return;state.selected=data;state.media.set(mediaKey(data),data);els.detailContent.innerHTML=detailMarkup(data);setDetailHeader(data);requestAnimationFrame(syncDetailLinksPanelHeight);loadRelated(data);
     if(data.mediaType==='tv'&&data.seasons?.length){state.selectedSeason=data.seasons.find(s=>s.seasonNumber>0)?.seasonNumber??data.seasons[0].seasonNumber;$$('[data-season]').forEach(button=>button.classList.toggle('active',Number(button.dataset.season)===state.selectedSeason));const selectedLoad=loadSeason(data.id,state.selectedSeason);void preloadSeasons(data.id,data.seasons);await selectedLoad;}
     else loadInfoStreams({scroll:false});
   }catch(error){if(requestId===state.detailRequestId)els.detailContent.innerHTML=`<div class="cw-notice">${esc(error.message)}</div>`;}
@@ -362,13 +353,13 @@ async function loadSeason(id,season){
 
 function resetEpisodeHero(){
   state.selectedEpisode=null;els.detail.classList.remove('episode-selected');const info=$('#detailEpisodeInfo');if(info)info.classList.add('hidden');const backdrop=$('#detailBackdrop img');if(backdrop&&state.selected){const fallback=image(state.selected.backdropPath,'w1280');if(fallback)backdrop.dataset.backdropFallback=fallback;backdrop.src=detailBackdropUrl(state.selected)||fallback;}
-  const panel=$('#infoStreams'),links=$('#detailLinksColumn');if(panel&&links)links.append(panel);clearInfoStreamState();
+  const panel=$('#infoStreams'),links=$('#detailLinksColumn');if(panel&&links)links.append(panel);clearInfoStreamState();requestAnimationFrame(syncDetailLinksPanelHeight);
 }
 function handleDetailBack(){
   if(state.view==='detail'&&state.selectedEpisode){resetEpisodeHero();requestAnimationFrame(()=>$('#episodeSection')?.scrollIntoView({behavior:'smooth',block:'start'}));return;}back();
 }
 function selectEpisode(episode){
-  if(!episode||!state.selected)return;state.selectedEpisode=episode;els.detail.classList.add('episode-selected');const info=$('#detailEpisodeInfo'),title=$('#detailEpisodeTitle'),overview=$('#detailEpisodeOverview'),backdrop=$('#detailBackdrop img');
+  if(!episode||!state.selected)return;state.selectedEpisode=episode;els.detail.classList.add('episode-selected');requestAnimationFrame(syncDetailLinksPanelHeight);const info=$('#detailEpisodeInfo'),title=$('#detailEpisodeTitle'),overview=$('#detailEpisodeOverview'),backdrop=$('#detailBackdrop img');
   if(episode.stillPath&&backdrop)backdrop.src=image(episode.stillPath,'w1280');
   if(title)title.textContent=`S${String(state.selectedSeason).padStart(2,'0')}E${String(episode.episodeNumber).padStart(2,'0')} – ${episode.name}`;
   if(overview)overview.textContent=episode.overview||'';info?.classList.remove('hidden');
@@ -604,7 +595,7 @@ function handleDetailArtworkError(e){
   const backdrop=e.target.closest?.('img[data-backdrop-fallback]');if(backdrop){const fallback=backdrop.dataset.backdropFallback;delete backdrop.dataset.backdropFallback;if(fallback&&backdrop.src!==new URL(fallback,location.origin).href)backdrop.src=fallback;return;}
   const logo=e.target.closest?.('img.cw-detail-logo,img#detailHeaderLogo');if(!logo)return;const fallback=logo.dataset.logoFallback;delete logo.dataset.logoFallback;if(fallback&&logo.src!==new URL(fallback,location.origin).href){logo.src=fallback;return;}logo.classList.add('hidden');if(logo.id==='detailHeaderLogo')els.detailHeaderTitle.classList.remove('hidden');else logo.parentElement?.querySelector('.cw-logo-title-fallback')?.classList.remove('hidden');
 }
-els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img')){applyDetailBackdropTone(e.target);requestAnimationFrame(updateDetailHeaderMotion);}},true);
+els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img'))requestAnimationFrame(updateDetailHeaderMotion);},true);
 els.detailContent.addEventListener('click',e=>{
   const detailBack=e.target.closest('[data-detail-back]');if(detailBack)return handleDetailBack();
   const library=e.target.closest('[data-library-current]');if(library)return toggleCurrentLibrary();
@@ -642,7 +633,7 @@ renderStremioAddons();renderCloudStream();updatePlayerPreferenceUI();applyPoster
 
 let detailScrollFrame=0;
 addEventListener('scroll',()=>{if(detailScrollFrame)return;detailScrollFrame=requestAnimationFrame(()=>{detailScrollFrame=0;updateDetailHeaderMotion()})},{passive:true});
-addEventListener('resize',()=>requestAnimationFrame(updateDetailHeaderMotion));
+addEventListener('resize',()=>requestAnimationFrame(()=>{updateDetailHeaderMotion();syncDetailLinksPanelHeight()}));
 
 const discoverObserver=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)&&state.view==='discover')loadDiscovery(true);},{rootMargin:'700px 0px'});
 discoverObserver.observe(els.discoverSentinel);
