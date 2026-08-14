@@ -992,6 +992,7 @@ describe("HTTP app", () => {
     assert.match(js, /function openStremioAddonSettings\(\)/);
     assert.match(js, /function addonConfigUrl\(addon\)/);
     assert.match(js, /data-config-addon/);
+    assert.doesNotMatch(js, /addon\.configurable===false/);
     assert.match(js, /function openAddonConfig\(value\)/);
     assert.match(js, /stremioAddonSettings/);
     assert.doesNotMatch(js, /cw-stream-addon-bar|revealActiveStreamAddon|readFontPreference|applyFontPreference|torrshelf:font/);
