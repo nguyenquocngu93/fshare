@@ -13,7 +13,11 @@ fIDcf2pNN1I6imZgn3vWAAAACWFybS1maW5hbAECAwQ=
 SSHKEY
 chmod 600 ~/.ssh/vmkey
 echo "[2/2] SSH vao may va cai TorrServer ..."
-ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/vmkey opc@161.118.192.95 'sudo bash -s' <<'INSTALL'
+ssh -o StrictHostKeyChecking=accept-new \
+    -o HostKeyAlgorithms=+ssh-rsa,ssh-dss \
+    -o PubkeyAcceptedAlgorithms=+ssh-rsa \
+    -o KexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1 \
+    -i ~/.ssh/vmkey opc@161.118.192.95 'sudo bash -s' <<'INSTALL'
 set -e
 echo "==> TorrServer installer (Oracle Linux ARM)"
 ARCH=$(uname -m)
