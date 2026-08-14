@@ -176,7 +176,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-episode-detail-info{max-width:900px;margin:0 0 34px}
 .cw-episode-detail-info h2{margin:0;color:#fff;font-family:Inter,sans-serif;font-size:25px;font-weight:900;line-height:34px}
 .cw-episode-detail-info p{margin:15px 0 0;color:var(--zinc-300);font-size:17px;line-height:28px}
-#detailView.episode-selected .cw-detail-body>.cw-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-related-section{display:none}
+#detailView.episode-selected .cw-detail-body>.cw-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-related-section{display:none}
 .cw-detail-hero-back{position:absolute;z-index:5;top:20px;left:20px;display:grid;width:42px;height:42px;place-items:center;padding:0;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(0,0,0,.48);color:#fff;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .cw-detail-hero-back svg{width:21px;height:21px}
 .cw-detail-actions{position:absolute;z-index:5;top:20px;right:20px;display:flex;width:auto;align-items:center;justify-content:flex-end;margin:0}
@@ -187,7 +187,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-detail-icon svg{width:21px;height:21px}
 .cw-detail-body{position:relative;z-index:4;width:min(1280px,100%);margin:-2px auto 0;padding:104px 20px 80px;background:#05070a}
 .cw-detail-body>.cw-overview-info{margin-top:32px}
-.cw-detail-meta+.cw-episode-detail-info:not(.hidden){margin-top:32px}
+.cw-detail-information>.cw-episode-detail-info:not(.hidden){margin-top:32px}
 .cw-info-streams{--cw-stream-font-size:14px;width:100%;min-width:0;max-width:100%;margin-top:32px;margin-bottom:80px;scroll-margin-top:100px}
 #detailView.episode-selected .cw-info-streams{margin-top:0}
 .cw-stream-loading{display:flex;align-items:center;justify-content:center;gap:12px;padding:34px 0;color:var(--zinc-500)}
@@ -527,16 +527,21 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-liked-recommendations{padding-top:30px;border-top:1px solid var(--line)}
 .cw-library-recommendation-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}.cw-library-recommendation-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-library-recommendation-head h2{margin:4px 0 0;color:#fff;font-size:22px;line-height:1.12;text-transform:none}
 
-/* The mobile order remains content → links → supporting sections. */
-.cw-detail-primary,.cw-detail-content,.cw-detail-supporting{min-width:0}
-.cw-detail-links-column{margin-top:18px}
+/* Portrait keeps content → links → credits; landscape fills the left narrative beside long link lists. */
+.cw-detail-primary,.cw-detail-content,.cw-detail-narrative,.cw-detail-information,.cw-detail-credits,.cw-detail-supporting{min-width:0}
+.cw-detail-content{display:flex;flex-direction:column;min-width:0}
+.cw-detail-narrative{display:contents}
+.cw-detail-meta{order:1}
+.cw-detail-information{order:2;min-width:0}
+.cw-detail-links-column{order:3;margin-top:18px}
+.cw-detail-credits{order:4;min-width:0}
 .cw-detail-links-head{display:none;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
-.cw-detail-content>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
-#detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-supporting{display:none}
+.cw-detail-information>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
+#detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-detail-supporting{display:none}
 @media (orientation:portrait), (max-width:639px){
   .cw-detail-body{padding-top:28px}
-  .cw-detail-content>.cw-overview-info{margin-top:28px}
-  .cw-detail-content>.cw-detail-body-genres{margin-top:18px}
+  .cw-detail-information>.cw-overview-info{margin-top:28px}
+  .cw-detail-information>.cw-detail-body-genres{margin-top:18px}
   .cw-detail-links-column{margin-top:18px}
   .cw-detail-links-head{display:none}
   .cw-detail-links-column .cw-info-streams{margin:0 0 46px}
@@ -561,9 +566,18 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-hero-back{top:24px;left:clamp(18px,3vw,48px)}
   .cw-detail-actions{top:24px;right:clamp(18px,3vw,48px)}
   .cw-detail-body{width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
-  /* Keep the sticky link card inside this primary row, so it ends before cast and related content. */
-  .cw-detail-primary{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);align-items:start;gap:34px clamp(28px,5vw,72px);min-width:0}
-  .cw-detail-content{min-width:0}
+  /* The grid keeps a long sticky link card bounded by the complete left narrative. */
+  .cw-detail-primary{min-width:0}
+  .cw-detail-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);align-items:start;gap:0 clamp(28px,5vw,72px);min-width:0}
+  .cw-detail-narrative{display:block;min-width:0}
+  .cw-detail-meta{max-width:720px;margin-left:0}
+  .cw-detail-credits{min-width:0}
+  .cw-detail-credits>.cw-info:first-child{margin-top:34px}
+  .cw-detail-credits>.cw-info+.cw-info{margin-top:46px}
+  .cw-detail-information{min-width:0}
+  .cw-detail-information>.cw-overview-info,.cw-detail-information>.cw-detail-body-genres{max-width:720px;margin-left:0}
+  .cw-detail-information>.cw-overview-info{margin-top:26px}
+  .cw-detail-information>.cw-detail-body-genres{margin-top:22px}
   .cw-detail-links-column{position:sticky;top:96px;min-width:0;margin:0;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
   .cw-detail-links-head{display:flex;margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
   .cw-detail-links-column .cw-info-streams{margin:0;max-width:none;min-width:0;scroll-margin-top:112px}
@@ -571,17 +585,12 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-links-column .cw-stream-results{gap:9px}
   .cw-detail-links-column .cw-stream-row{padding:14px 15px}
   .cw-detail-supporting{min-width:0;margin-top:34px}
-  .cw-detail-supporting>.cw-info:first-child{margin-top:18px}
-  .cw-detail-meta{max-width:720px;margin-left:0}
-  .cw-detail-content>.cw-overview-info,.cw-detail-content>.cw-detail-body-genres{max-width:720px;margin-left:0}
-  .cw-detail-content>.cw-overview-info{margin-top:24px}
-  .cw-detail-content>.cw-detail-body-genres{margin-top:22px}
   .cw-info>p{max-width:760px;font-size:17px;line-height:28px}
 }
 @media (orientation:landscape) and (min-width:640px) and (max-width:899px){
   .cw-detail-layout{grid-template-columns:clamp(116px,18vw,170px) minmax(0,1fr);gap:24px}
   .cw-detail-body{width:calc(100% - 48px)}
-  .cw-detail-primary{grid-template-columns:minmax(0,1fr) minmax(230px,.72fr);gap:24px}
+  .cw-detail-content{grid-template-columns:minmax(0,1fr) minmax(230px,.72fr);gap:0 24px}
   .cw-detail-supporting{margin-top:24px}
   .cw-detail-logo{max-height:76px}
   .cw-detail-links-column{padding:15px;border-radius:16px;top:84px}

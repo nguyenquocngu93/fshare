@@ -274,6 +274,7 @@ function detailMarkup(item){
   const detailMeta=`<div class="cw-detail-meta"><div class="cw-detail-meta-facts">${metaFacts.map((fact,index)=>`${index?'<i aria-hidden="true">•</i>':''}${fact}`).join('')}</div><div class="cw-detail-meta-actions">${like}${heart}</div></div>`;
   const relatedSkeleton=Array.from({length:12},()=>'<span class="cw-card-skeleton"></span>').join('');
   const episodeSection=item.mediaType==='tv'&&item.seasons?.length?`<section id="episodeSection" class="cw-info cw-episode-section"><h2>Episodes</h2><div class="cw-episode-browser"><div class="cw-episodes-toolbar"><div class="cw-season-tabs">${item.seasons.map(s=>`<button data-season="${s.seasonNumber}" type="button">${esc(s.name||`Season ${s.seasonNumber}`)}</button>`).join('')}</div></div><div id="episodeList" class="cw-episode-list"></div></div></section>`:'';
+  const credits=`<div class="cw-detail-credits"><section class="cw-info"><h2>Top Cast</h2><div class="cw-cast-row">${cast||'<p>No cast information.</p>'}</div></section><section class="cw-info"><h2>Director & Crew</h2><div class="cw-cast-row">${directors||'<p>No crew information.</p>'}</div></section></div>`;
   return `
     <section class="cw-detail-hero">
       <button class="cw-detail-hero-back" data-detail-back type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -283,20 +284,23 @@ function detailMarkup(item){
     <div class="cw-detail-body">
       <div class="cw-detail-primary">
         <main class="cw-detail-content">
-          ${detailMeta}
-          <section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section>
-          <section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section>
-          <div class="cw-detail-body-genres">${genrePills}</div>
-          ${episodeSection}
+          <div class="cw-detail-narrative">
+            ${detailMeta}
+            ${credits}
+            <div class="cw-detail-information">
+              <section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section>
+              <section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section>
+              <div class="cw-detail-body-genres">${genrePills}</div>
+              ${episodeSection}
+            </div>
+          </div>
+          <aside id="detailLinksColumn" class="cw-detail-links-column">
+            <div class="cw-detail-links-head"><small>STREAMS & LINKS</small><h2>Link phát</h2></div>
+            <section id="infoStreams" class="cw-info-streams hidden"></section>
+          </aside>
         </main>
-        <aside id="detailLinksColumn" class="cw-detail-links-column">
-          <div class="cw-detail-links-head"><small>STREAMS & LINKS</small><h2>Link phát</h2></div>
-          <section id="infoStreams" class="cw-info-streams hidden"></section>
-        </aside>
       </div>
       <div class="cw-detail-supporting">
-        <section class="cw-info"><h2>Top Cast</h2><div class="cw-cast-row">${cast||'<p>No cast information.</p>'}</div></section>
-        <section class="cw-info"><h2>Director & Crew</h2><div class="cw-cast-row">${directors||'<p>No crew information.</p>'}</div></section>
         <section class="cw-related-section"><h2>Related Content</h2><div id="relatedRow" class="cw-poster-grid">${relatedSkeleton}</div></section>
       </div>
     </div>`;
