@@ -884,6 +884,8 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-poster-progress-value\{fill:var\(--cyan-light\)\}/);
     assert.doesNotMatch(css, /\.cw-poster-progress-fill\{/);
     assert.match(css, /\.cw-episode-section\{margin-top:32px;scroll-margin-top:90px\}/);
+    assert.match(css, /#detailView:not\(\.episode-selected\) \.cw-detail-information>\.cw-episode-section\{margin-top:28px;padding-top:20px;border-top:1px solid rgba\(255,255,255,\.09\)\}/);
+    assert.match(css, /#detailView\.episode-selected \.cw-detail-information>\.cw-info-streams\{margin-top:26px;padding-top:20px;border-top:1px solid rgba\(255,255,255,\.09\)\}/);
     assert.doesNotMatch(css, /body\[data-poster-columns="3"\] \.cw-poster-row/);
     assert.match(css, /body\[data-poster-columns="3"\] \.cw-poster-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);gap:12px\}/);
     assert.match(css, /\.cw-player-settings,\.cw-display-settings\{/);

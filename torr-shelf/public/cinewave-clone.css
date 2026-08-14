@@ -537,6 +537,9 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-detail-credits{order:4;min-width:0}
 .cw-detail-links-head{display:none;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
 .cw-detail-information>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
+/* Series keeps the same category break as movies; a focused episode gets the break before its sources. */
+#detailView:not(.episode-selected) .cw-detail-information>.cw-episode-section{margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09)}
+#detailView.episode-selected .cw-detail-information>.cw-info-streams{margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09)}
 #detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-episode-section,#detailView.episode-selected .cw-detail-links-column,#detailView.episode-selected .cw-detail-supporting{display:none}
 @media (orientation:portrait), (max-width:639px){
   .cw-detail-body{padding-top:28px}
@@ -584,7 +587,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   #detailView.episode-selected .cw-detail-content{display:block}
   #detailView.episode-selected .cw-detail-narrative{display:block}
   #detailView.episode-selected .cw-detail-information{max-width:720px}
-  #detailView.episode-selected .cw-detail-information>.cw-info-streams{max-width:720px;margin:0 0 48px}
+  #detailView.episode-selected .cw-detail-information>.cw-info-streams{max-width:720px;margin:26px 0 48px}
   #detailView.episode-selected .cw-detail-information>.cw-info-streams .cw-stream-addon-tabs{max-width:100%;margin:0 0 16px;padding:0 0 6px}
   .cw-detail-links-column::-webkit-scrollbar{width:6px}.cw-detail-links-column::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(34,211,238,.38)}.cw-detail-links-column::-webkit-scrollbar-track{background:transparent}
   .cw-detail-links-head{position:sticky;z-index:3;top:0;display:flex;min-height:48px;margin:0;padding:0 0 12px;background:linear-gradient(180deg,rgba(24,24,27,.98) 0%,rgba(24,24,27,.96) 80%,rgba(24,24,27,0) 100%)}.cw-detail-links-head h2{font-size:24px}
