@@ -603,6 +603,27 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-links-column{margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09)}
   .cw-detail-links-column .cw-info-streams{margin:0 0 42px}
 }
+
+/* Home keeps its CineWave character while the landscape stage no longer consumes a whole short viewport. */
+.cw-hero{isolation:isolate}
+@media (orientation:landscape) and (min-width:640px){
+  .cw-hero,.cw-hero-skeleton{height:min(680px,calc(100svh - 80px));min-height:280px}
+  .cw-hero-bg img{object-position:center 30%;transform:scale(1.04)}
+  .cw-hero-bg:after{background:linear-gradient(90deg,#05070a 0%,rgba(5,7,10,.92) 27%,rgba(5,7,10,.46) 52%,transparent 78%),linear-gradient(0deg,#05070a 0%,rgba(5,7,10,.72) 13%,rgba(5,7,10,.16) 52%,transparent 76%)}
+  .cw-hero-copy{width:min(58vw,720px);max-width:none;justify-content:flex-end;padding:44px clamp(24px,5vw,72px) 48px}
+  .cw-hero-copy>*+*{margin-top:18px}
+  .cw-hero h1{font-size:clamp(38px,5vw,68px);line-height:.98}
+  .cw-hero p{max-width:590px;font-size:clamp(14px,1.4vw,18px);line-height:1.5}
+}
+@media (orientation:landscape) and (min-width:640px) and (max-width:899px){
+  .cw-hero,.cw-hero-skeleton{height:calc(100svh - 80px);min-height:280px}
+  .cw-hero-copy{width:min(62vw,520px);padding:28px 24px 30px}
+  .cw-hero-copy>*+*{margin-top:10px}
+  .cw-rank{gap:8px}.cw-rank span{font-size:8px}.cw-rank b{font-size:10px}
+  .cw-hero h1{font-size:clamp(29px,5.8vw,44px);line-height:1}
+  .cw-hero p{font-size:13px;line-height:19px}
+  .cw-hero-actions{gap:12px}.cw-hero-actions>button{padding:10px 18px;font-size:14px}
+}
 /* Source tabs preserve the reader's horizontal position when a provider is selected. */
 /* One selected font is applied consistently to body copy, controls and stream rows. */
 /* Settings content uses the rounded treatment; its page title follows the same shell style as Library. */

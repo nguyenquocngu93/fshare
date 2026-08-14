@@ -786,6 +786,8 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-moods button:nth-child\(12\) i\{color:#fbbf24\}/);
     assert.match(css, /\.cw-categories button svg\{width:16px;height:16px;flex:0 0 16px\}/);
     assert.match(css, /\.cw-detail-hero\{/);
+    assert.match(css, /\.cw-hero\{isolation:isolate\}/);
+    assert.match(css, /\.cw-hero,.cw-hero-skeleton\{height:min\(680px,calc\(100svh - 80px\)\);min-height:280px\}/);
     assert.match(css, /\.ts-torrent-card\{/);
     assert.match(css, /\.ts-stream-badges\{/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
