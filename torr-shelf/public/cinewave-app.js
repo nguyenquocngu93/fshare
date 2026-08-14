@@ -60,7 +60,7 @@ const state = {
   discoverTab: 'hub', discoverSort: 'popular', discoverFilter: { kind: 'genre', id: '28,53', label: 'Adrenaline' }, discoverPage: 0, discoverPages: 1, discoverItems: [], discoverLoading: false, discoverRequestKey: '', discoverRequestId: 0,
   browseMode: 'search', browseQuery: '', browsePage: 1, browsePages: 1,
   selected: null, selectedSeason: null, selectedEpisode: null, seasonEpisodes: new Map(), seasonCache: new Map(), seasonRequests: new Map(), selectedPerson: null, detailRequestId: 0,
-  streamGroups: new Map(), selectedStreamAddon: '', streamPanelMeta: null, streamRequestId: 0, forceFreshStreams: false,
+  streamGroups: new Map(), selectedStreamAddon: '', streamPanelMeta: null, streamTabScrollLeft: 0, streamRequestId: 0, forceFreshStreams: false,
   torrentQuery: '', torrentSource: 'all', torrentPage: 1, torrentPages: 1, torrentContext: null, addedTorrents: new Set(),
   libraryTab: localStorage.getItem('torrshelf:library-tab')==='liked'?'liked':'added', likedRecommendationKey: '', likedRecommendations: null, likedRecommendationRequestId: 0,
 };
@@ -91,7 +91,7 @@ function notify(message, type='ok') {
 function openStremioAddonSettings(){navigate('settings');requestAnimationFrame(()=>requestAnimationFrame(()=>{const section=$('#stremioAddonSettings');section?.scrollIntoView({behavior:'smooth',block:'start'});els.stremioAddonUrl?.focus({preventScroll:true});}));}
 
 function clearInfoStreamState({hidePanel=true}={}){
-  state.streamRequestId+=1;state.infoStreams.clear();state.streamGroups.clear();state.selectedStreamAddon='';state.streamPanelMeta=null;state.infoStreamContext=null;
+  state.streamRequestId+=1;state.infoStreams.clear();state.streamGroups.clear();state.selectedStreamAddon='';state.streamTabScrollLeft=0;state.streamPanelMeta=null;state.infoStreamContext=null;
   const panel=$('#infoStreams');if(panel){panel.innerHTML='';if(hidePanel)panel.classList.add('hidden');}
 }
 function markStremioAddonsChanged(){state.forceFreshStreams=true;clearInfoStreamState();}
@@ -435,13 +435,13 @@ function infoStreamCard(stream){
   state.infoStreams.set(stream.key,stream);
   return `<button class="cw-stream-row" data-info-stream="${esc(stream.key)}" type="button"><span class="cw-stream-row-copy"><span class="cw-stream-tracker">${esc(tracker)}</span><span class="cw-stream-title">${esc(headline)}</span>${badges.length?`<span class="cw-stream-badges">${badges.map(tag=>`<span>${tag}</span>`).join('')}</span>`:''}${lines.length?`<span class="cw-stream-details">${esc(lines.join(' · '))}</span>`:''}</span></button>`;
 }
-function revealActiveStreamAddon(panel=$('#infoStreams')){const strip=panel?.querySelector('.cw-stream-addon-tabs'),active=strip?.querySelector('[data-stream-addon].active');if(!strip||!active)return;requestAnimationFrame(()=>strip.scrollTo({left:Math.max(0,active.offsetLeft-(strip.clientWidth-active.offsetWidth)/2),behavior:'smooth'}));}
+function restoreStreamTabPosition(panel=$('#infoStreams')){const strip=panel?.querySelector('.cw-stream-addon-tabs');if(!strip)return;requestAnimationFrame(()=>{strip.scrollLeft=Math.max(0,Math.min(state.streamTabScrollLeft||0,strip.scrollWidth-strip.clientWidth));});}
 function renderStreamGroups({id='',label='',errors=[]}={}){
   const panel=$('#infoStreams');if(!panel)return;const names=[...state.streamGroups.keys()];
   if(!state.selectedStreamAddon||!state.streamGroups.has(state.selectedStreamAddon))state.selectedStreamAddon=names[0]||'';
   const streams=state.streamGroups.get(state.selectedStreamAddon)||[];
-  panel.innerHTML=`<div class="cw-stream-addon-bar"><div class="cw-stream-addon-tabs">${names.map(name=>`<button class="${name===state.selectedStreamAddon?'active':''}" data-stream-addon="${esc(name)}" type="button">${esc(name)} <b>${state.streamGroups.get(name).length}</b></button>`).join('')}</div><button class="cw-stream-settings-button" data-open-addon-settings type="button" title="Mở Stremio Addons" aria-label="Mở Stremio Addons">⚙</button></div><div class="cw-stream-results">${streams.map(infoStreamCard).join('')||'<div class="cw-notice">Không addon nào trả về stream.</div>'}</div>${errors.length?`<div class="cw-stream-errors">${errors.map(error=>esc(error.message)).join(' · ')}</div>`:''}`;
-  revealActiveStreamAddon(panel);
+  panel.innerHTML=`<div class="cw-stream-addon-tabs">${names.map(name=>`<button class="${name===state.selectedStreamAddon?'active':''}" data-stream-addon="${esc(name)}" type="button">${esc(name)} <b>${state.streamGroups.get(name).length}</b></button>`).join('')}</div><div class="cw-stream-results">${streams.map(infoStreamCard).join('')||'<div class="cw-notice">Không addon nào trả về stream.</div>'}</div>${errors.length?`<div class="cw-stream-errors">${errors.map(error=>esc(error.message)).join(' · ')}</div>`:''}`;
+  restoreStreamTabPosition(panel);
 }
 function activeStreamAddons(){return state.stremioAddons.filter(addon=>CLOUDSTREAM_ENABLED||addon.sourceKind!=='cloudstream-bridge');}
 function queriedStreamAddons(){return activeStreamAddons().filter(addon=>!(state.nativeProviderConfig.enabled&&/hybrid/i.test(`${addon.id} ${addon.name}`)));}
@@ -586,7 +586,7 @@ els.detailContent.addEventListener('click',e=>{
   const detailBack=e.target.closest('[data-detail-back]');if(detailBack)return handleDetailBack();
   const library=e.target.closest('[data-library-current]');if(library)return toggleCurrentLibrary();
   const like=e.target.closest('[data-like-current]');if(like)return toggleCurrentLike();
-  const addonTab=e.target.closest('[data-stream-addon]');if(addonTab){state.selectedStreamAddon=addonTab.dataset.streamAddon;renderStreamGroups(state.streamPanelMeta||{});return;}
+  const addonTab=e.target.closest('[data-stream-addon]');if(addonTab){state.streamTabScrollLeft=addonTab.closest('.cw-stream-addon-tabs')?.scrollLeft||0;state.selectedStreamAddon=addonTab.dataset.streamAddon;renderStreamGroups(state.streamPanelMeta||{});return;}
   const stream=e.target.closest('[data-info-stream]');if(stream)return playInfoStream(stream.dataset.infoStream,stream);
   const openSettings=e.target.closest('[data-open-addon-settings]');if(openSettings)return openStremioAddonSettings();
   const share=e.target.closest('[data-share-current]');if(share)return shareSelected();

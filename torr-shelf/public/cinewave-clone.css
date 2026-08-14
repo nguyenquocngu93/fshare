@@ -583,12 +583,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-links-column{margin-top:26px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09)}
   .cw-detail-links-column .cw-info-streams{margin:0 0 42px}
 }
-/* Source switcher: active provider is centered after every click, and the
-   settings shortcut stays outside the horizontal scroll strip. */
-.cw-stream-addon-bar{display:grid;grid-template-columns:minmax(0,1fr) 38px;align-items:center;gap:8px;margin:0 0 16px}
-.cw-stream-addon-bar .cw-stream-addon-tabs{max-width:100%;margin:0;padding:0 0 6px}
-.cw-stream-settings-button{display:grid;width:38px;height:38px;place-items:center;padding:0;border:1px solid var(--line-strong);border-radius:11px;background:rgba(255,255,255,.04);color:var(--cyan-light);font-size:17px;font-weight:900}
-.cw-stream-settings-button:hover{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.12)}
+/* Source tabs preserve the reader's horizontal position when a provider is selected. */
 /* One selected font is applied consistently to body copy, controls and stream rows. */
 /* Settings uses one deliberate Inter type scale; no card gets an accidental larger heading. */
 #settingsView,#settingsView button,#settingsView input,#settingsView select{font-family:var(--ui-font)}
