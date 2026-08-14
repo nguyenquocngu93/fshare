@@ -3,13 +3,33 @@ set -e
 echo "[1/2] Ghi key SSH ..."
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 cat > ~/.ssh/vmkey <<'SSHKEY'
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACDYuwlhz+MmLOIW8G9yPWzs5D/q+gIFvyLFEtDAfbZyIwAAAJgwG0nsMBtJ
-7AAAAAtzc2gtZWQyNTUxOQAAACDYuwlhz+MmLOIW8G9yPWzs5D/q+gIFvyLFEtDAfbZyIw
-AAAEDFsQ+ASpp4LxiPmanXcQgYZQJkdh49Wr2JCgFq4//x0Ni7CWHP4yYs4hbwb3I9bOzk
-P+r6AgW/IsUS0MB9tnIjAAAADnRvcnJzZXJ2ZXItbmV3AQIDBAUGBw==
------END OPENSSH PRIVATE KEY-----
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEA0rFbHenqffLMORqZOUZ/Faberze6+1QQQi4jH1AVhHbZWQtK
+iLQJYCQUkbS14aXV0/ZO1RnemtdfO574VNt/h9em6RciaPkofbuYHje6SaS7BtVB
+ypmy3Prirfg4cBenNgbEWiMWr3wMSBM1HS2FOyZzyX/Gqmhwz3ihJ/eA98XMM+we
+tiVUdrKzDigYPogDXXVsiJo4EKl6NVkl346wbUCchJEpPHGAjj10ubdEqj/pacPr
+nMqgQP7aFcN8lGIRkDxqJ3hd7uD6CgzJpYiqRp9amQdvzFHwZHPsDRMJ35Vrj185
+Fp0Vd5+ga/5d/0FJjYes4rwsg3qhM08oOpfDMQIDAQABAoIBAAXYxh6JDz4k2WX8
+RvmVQJGT6o9njIN3obvfFo/CjoD5NgQykVmZ0BN1l4czl0MxHENK4oUnYqC0Dqso
+44X3UWKuVANukOs41CwpDd+eIZ1Jj6cbjpKAvBCbJbnjhC1tepu/3v22sOUjHB7O
+lFAVo0zblFBTK2rZ2xzmzBIVMY8D8TqXFTTAN5ClvxSlwxlhXJqR6OA6nYunFhAr
+kDY4vgpvlI41kBscg0oAsps2R5nEQ4QeQq94kT1AQby33xPDdHT9JEz2mXcLQqPN
+8ujdJqTwZVOi3I8167uqxj/HpNAOXgRhOgYN/Z2h1gTLhMWatZtJNsFXqJLjvePx
+TuSDu8ECgYEA/mJUSgjog1JDUZyGI4793rekxw57dqklLBxaT7K3GlKffjJkSmSG
+HjdlJ0qcrL4Duq3QFkdo878VBbkyQJPzCL4BqVTBeceMv53QkMhUaHsjlvuXcw7Z
+bZTT5R2hdQQ8UUSR6WTzk/vjqDxQmQh7FB13dnK1oQFWwHqyEnm+Mf8CgYEA1Af6
+NJs1E9X8joa444ogMrvLqC3N/VTY5Xmcb9L+xnRNLaWVdaVYdzF/cUtRwHSzLk4Y
+aYwaQRWY5I2Dj/KQaTpbOoVbJcyTbZqypMLrgVAfevogYcwi426dgVIWGKcZj8VH
+J6GE9DX+RVQ/kQFbhyyp01s6c4BoFbE4Fm9mqs8CgYAQ72TjJOKt020t4ri/Z0aZ
+bCppIhqwFKSn4h9VDPXJp9R8Z0hr93NCUbfHPN1fVqsS431l7k0bZQ42OlURHYhh
+fZzItB7JR7KkExKOgPe1mPUOmSNFAqkQ9YaBy04zZxvI4ULBgfoBURSf35wSBBGF
+jkyksxBKbrdiywhN2JMD6wKBgEq1lN+8YHNgzuCZb8QdA0NdEGFt4ksE/ne85fYw
+7jyW9irDUWpmnElDU5hj5aZeeFQ0iD2IdCfCqGC/zD+IRIIPYd2452jmMHxKKfAM
+Dlc+GBmI0Kgk+ZYRf8X1WnvNRSB3bp70Npil/bYH/W3mgI2cmyox1uKjuAkMrKqb
+Dh3ZAoGAR7HpRLvKsSUVNf45GX360/xRme0S3j18STl7/nuZXUNoOhjFwdrMLMOi
+xuwfV3vFfGtvdQFA7hwSlHov6uVXkbbtgfYiEm5UfOBKMhefh4+q6RZVaP6yGbKR
+WkSfANkUCs/mWANHio8RP2HdFQqo+phAlv5Y+alklNpqMel1LMc=
+-----END RSA PRIVATE KEY-----
 SSHKEY
 chmod 600 ~/.ssh/vmkey
 echo "[2/2] SSH vao may va cai TorrServer ..."
@@ -54,7 +74,7 @@ sleep 2
 systemctl --no-pager --lines=8 status torrserver || true
 echo ""
 echo "===================== XONG ====================="
-echo "  TorrServer da cai. Tu trinh duyet dung PUBLIC IP:8090"
+echo "  TorrServer da cai. Dung PUBLIC IP:8090 tren trinh duyet"
 echo "  (khong dung 10.0.0.x - do la IP noi bo)"
 echo "================================================="
 INSTALL
