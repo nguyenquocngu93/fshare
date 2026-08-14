@@ -568,7 +568,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-hero-back{top:24px;left:clamp(18px,3vw,48px)}
   .cw-detail-actions{top:24px;right:clamp(18px,3vw,48px)}
   .cw-detail-body{width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
-  /* The links panel shares the credits row, matching Top Cast + Director & Crew while long lists scroll inside. */
+  /* The links panel shares the credits row; its own native scroll keeps source controls sticky above long lists. */
   .cw-detail-primary{min-width:0}
   .cw-detail-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);grid-template-areas:"meta ." "credits links" "information .";align-items:start;gap:0 clamp(28px,5vw,72px);min-width:0}
   .cw-detail-narrative{display:contents}
@@ -580,15 +580,14 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-information>.cw-overview-info,.cw-detail-information>.cw-detail-body-genres{max-width:720px;margin-left:0}
   .cw-detail-information>.cw-overview-info{margin-top:26px}
   .cw-detail-information>.cw-detail-body-genres{margin-top:22px}
-  .cw-detail-links-column{grid-area:links;position:sticky;top:96px;display:grid;height:var(--cw-detail-links-height,auto);align-self:stretch;min-height:0;min-width:0;grid-template-rows:auto minmax(0,1fr);margin:0;padding:20px;overflow:hidden;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
+  .cw-detail-links-column{--cw-links-tabs-top:58px;grid-area:links;position:sticky;top:96px;display:block;height:var(--cw-detail-links-height,auto);align-self:stretch;min-height:0;min-width:0;margin:0;padding:20px;overflow-x:hidden;overflow-y:auto;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2);overscroll-behavior:contain;scrollbar-color:rgba(34,211,238,.38) transparent;scrollbar-gutter:stable;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
   #detailView.episode-selected .cw-detail-content{grid-template-areas:"meta links" "information links"}
   #detailView.episode-selected .cw-detail-links-column{height:calc(100svh - 120px)}
-  .cw-detail-links-head{display:flex;grid-row:1;margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
-  .cw-detail-links-column .cw-info-streams{display:grid;min-height:0;min-width:0;grid-row:2;grid-template-rows:auto minmax(0,1fr) auto;margin:0;max-width:none;scroll-margin-top:112px}
-  .cw-detail-links-column .cw-stream-addon-tabs{grid-row:1;max-width:none;margin:0 0 14px;padding:0 0 6px}
-  .cw-detail-links-column .cw-stream-results{grid-row:2;min-height:0;gap:9px;padding-right:5px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:rgba(34,211,238,.38) transparent;scrollbar-gutter:stable;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-  .cw-detail-links-column .cw-stream-errors{grid-row:3}
-  .cw-detail-links-column .cw-stream-results::-webkit-scrollbar{width:6px}.cw-detail-links-column .cw-stream-results::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(34,211,238,.38)}.cw-detail-links-column .cw-stream-results::-webkit-scrollbar-track{background:transparent}
+  .cw-detail-links-column::-webkit-scrollbar{width:6px}.cw-detail-links-column::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(34,211,238,.38)}.cw-detail-links-column::-webkit-scrollbar-track{background:transparent}
+  .cw-detail-links-head{position:sticky;z-index:3;top:0;display:flex;min-height:48px;margin:0;padding:0 0 12px;background:linear-gradient(180deg,rgba(24,24,27,.98) 0%,rgba(24,24,27,.96) 80%,rgba(24,24,27,0) 100%)}.cw-detail-links-head h2{font-size:24px}
+  .cw-detail-links-column .cw-info-streams{display:block;min-width:0;margin:0;max-width:none;scroll-margin-top:112px}
+  .cw-detail-links-column .cw-stream-addon-tabs{position:sticky;z-index:2;top:var(--cw-links-tabs-top);max-width:none;margin:0 0 14px;padding:0 0 12px;background:linear-gradient(180deg,rgba(24,24,27,.98) 0%,rgba(24,24,27,.96) 78%,rgba(24,24,27,0) 100%);touch-action:pan-x}
+  .cw-detail-links-column .cw-stream-results{gap:9px;padding-right:5px;overflow:visible;touch-action:pan-y}
   .cw-detail-links-column .cw-stream-row{padding:14px 15px}
   .cw-detail-supporting{min-width:0;margin-top:34px}
   .cw-info>p{max-width:760px;font-size:17px;line-height:28px}
@@ -601,7 +600,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-header-identity{width:calc(100% - 32px);grid-template-columns:38px minmax(0,1fr) auto;gap:8px}
   .cw-detail-header-brand img{max-width:155px;max-height:36px}
   .cw-detail-title-visual{width:min(54vw,400px);min-height:88px}
-  .cw-detail-links-column{top:96px;padding:15px;border-radius:16px}
+  .cw-detail-links-column{--cw-links-tabs-top:54px;top:96px;padding:15px;border-radius:16px}
   #detailView.episode-selected .cw-detail-links-column{height:calc(100svh - 112px)}
   .cw-detail-links-head h2{font-size:19px}
   .cw-detail-links-column .cw-stream-row{padding:12px}
