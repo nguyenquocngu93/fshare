@@ -592,9 +592,10 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 }
 /* Source tabs preserve the reader's horizontal position when a provider is selected. */
 /* One selected font is applied consistently to body copy, controls and stream rows. */
-/* Settings gets a contained rounded comic treatment; viewing/detail typography stays unchanged. */
+/* Shell page titles share the rounded display face; viewing/detail typography stays unchanged. */
+#discoverView .cw-page-head h1,#browseView .cw-page-head h1,#libraryView .cw-page-head h1,#settingsView .cw-page-head h1{font-family:BalooSettings,Inter,system-ui,sans-serif}
 #settingsView,#settingsView button,#settingsView input,#settingsView select,#settingsView textarea{font-family:BalooSettings,Inter,system-ui,sans-serif}
-#settingsView .cw-page-head h1{font-family:BalooSettings,Inter,system-ui,sans-serif;font-size:34px;line-height:38px;letter-spacing:-.03em}
+#settingsView .cw-page-head h1{font-size:34px;line-height:38px;letter-spacing:-.03em}
 #settingsView .cw-page-head p{font-size:15px;line-height:22px}
 #settingsView .cw-settings-grid h2,#settingsView .cw-torrserver-config-head h2,#settingsView .cw-player-settings-head h2,#settingsView .cw-native-settings-head h2,#settingsView .cw-addon-settings-head h2{font-family:BalooSettings,Inter,system-ui,sans-serif;font-size:22px;line-height:26px;font-weight:700}
 #settingsView .cw-settings-grid small,#settingsView .cw-torrserver-config-head small,#settingsView .cw-player-settings-head small,#settingsView .cw-native-settings-head small,#settingsView .cw-addon-settings-head small{font-size:11px;line-height:15px}
