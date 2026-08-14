@@ -864,12 +864,13 @@ describe("HTTP app", () => {
     assert.match(css, /@media\(orientation:landscape\)[^{]*\{[^}]*\.cw-detail-hero\{[^}]*aspect-ratio:auto/);
     assert.match(css, /@media \(orientation:landscape\) and \(min-width:640px\)\{[\s\S]*?\.cw-detail-layout\{display:grid/);
     assert.match(css, /\.cw-detail-content\{display:grid[^}]*grid-template-areas:"meta \." "credits links" "information \."/);
-    assert.match(css, /\.cw-detail-links-column\{grid-area:links;position:sticky;top:96px;display:flex;height:var\(--cw-detail-links-height,auto\);align-self:stretch;contain:size;min-height:0[^}]*overflow:hidden/);
-    assert.match(css, /\.cw-detail-links-column \.cw-info-streams\{display:flex;min-height:0[^}]*flex-direction:column/);
-    assert.match(css, /\.cw-detail-links-column \.cw-stream-results\{min-height:0;flex:1 1 auto[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/);
+    assert.match(css, /\.cw-detail-links-column\{grid-area:links;position:sticky;top:96px;display:grid;height:var\(--cw-detail-links-height,auto\);align-self:stretch;min-height:0[^}]*overflow:hidden/);
+    assert.match(css, /\.cw-detail-links-column \.cw-info-streams\{display:grid;min-height:0[^}]*grid-template-rows:auto minmax\(0,1fr\) auto/);
+    assert.match(css, /\.cw-detail-links-column \.cw-stream-addon-tabs\{grid-row:1/);
+    assert.match(css, /\.cw-detail-links-column \.cw-stream-results\{grid-row:2;min-height:0[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/);
     assert.match(css, /\.cw-detail-logo\{width:100%;height:100%;max-width:none;max-height:none/);
     assert.match(css, /#detailView\.episode-selected \.cw-detail-content\{grid-template-areas:"meta links" "information links"\}/);
-    assert.match(css, /\.cw-detail-links-column\{top:84px;padding:15px/);
+    assert.match(css, /\.cw-detail-links-column\{top:96px;padding:15px/);
     assert.match(css, /\.cw-mobile-dock\{display:none\}/);
     assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(90deg,#05070a/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
