@@ -98,6 +98,21 @@ function markStremioAddonsChanged(){state.forceFreshStreams=true;clearInfoStream
 async function clearBackendStremioCache(){try{await api('/api/stremio/cache/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch{/* A fresh import also clears backend caches. */}}
 
 function resetScroll(){history.scrollRestoration='manual';window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;requestAnimationFrame(()=>window.scrollTo(0,0));}
+function resetDetailBackdropTone(){els.detail.style.removeProperty('--cw-backdrop-rgb');els.detail.style.removeProperty('--cw-backdrop-glow-rgb');}
+function applyDetailBackdropTone(backdrop){
+  if(!backdrop?.naturalWidth||!backdrop?.naturalHeight)return;
+  try{
+    const canvas=document.createElement('canvas'),width=32,height=18;canvas.width=width;canvas.height=height;
+    const context=canvas.getContext('2d',{willReadFrequently:true});if(!context)return;
+    context.drawImage(backdrop,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data;let red=0,green=0,blue=0,weight=0;
+    for(let i=0;i<pixels.length;i+=4){
+      if(pixels[i+3]<128)continue;const r=pixels[i],g=pixels[i+1],b=pixels[i+2],high=Math.max(r,g,b),low=Math.min(r,g,b),luminance=(r*0.2126+g*0.7152+b*0.0722);
+      if(luminance<14||luminance>242)continue;const importance=.28+(high-low)/255*.92+luminance/255*.2;red+=r*importance;green+=g*importance;blue+=b*importance;weight+=importance;
+    }
+    if(!weight)return;const sampled=[red/weight,green/weight,blue/weight],tone=sampled.map(value=>Math.round(Math.max(12,Math.min(150,value*.74)))),glow=sampled.map(value=>Math.round(Math.max(18,Math.min(196,value*1.05+8))));
+    els.detail.style.setProperty('--cw-backdrop-rgb',tone.join(','));els.detail.style.setProperty('--cw-backdrop-glow-rgb',glow.join(','));
+  }catch{/* A non-readable fallback image simply keeps the neutral gradient. */}
+}
 function resetDetailHeaderMotion(){
   els.header.classList.remove('cw-detail-context','cw-detail-header-active');els.detailHeaderIdentity.style.opacity='0';els.detailHeaderIdentity.style.transform='translate(-50%,-35%) scale(.82)';
   const hero=$('.cw-detail-hero'),heroLogo=$('.cw-detail-logo,.cw-detail-title-visual h1'),backdrop=$('#detailBackdrop img'),shade=$('.cw-detail-gradient');if(heroLogo){heroLogo.style.transform='';heroLogo.style.opacity='';}if(backdrop){backdrop.style.transform='';backdrop.style.maskImage='';backdrop.style.webkitMaskImage='';}if(shade)shade.style.opacity='';if(hero){hero.style.height='';delete hero.dataset.normalHeight;delete hero.dataset.normalWidth;delete hero.dataset.frameHeight;}
@@ -243,7 +258,7 @@ async function loadDiscovery(append=false){
 async function searchTmdb(query,page=1,updateRoute=true){const q=String(query||'').trim();if(q.length<2)return;state.browseMode='search';state.browseQuery=q;state.browsePage=page;showView('browse');if(updateRoute)route({view:'browse',q,page});els.browseTitle.textContent=`Search: ${q}`;els.browseSubtitle.textContent='Movies, shows and people';els.browseGrid.innerHTML=Array.from({length:18},()=>'<span class="cw-card-skeleton"></span>').join('');try{const data=await api(`/api/tmdb/search?q=${encodeURIComponent(q)}&page=${page}`);state.browsePages=data.totalPages||1;els.browseGrid.innerHTML=(data.items||[]).map(item=>poster(item,false)).join('');els.peopleResults.classList.toggle('hidden',!data.people?.length);els.peopleGrid.innerHTML=(data.people||[]).map(personCard).join('');els.browsePage.textContent=`${data.page} / ${data.totalPages}`;els.browsePrev.disabled=data.page<=1;els.browseNext.disabled=data.page>=data.totalPages;}catch(error){els.browseGrid.innerHTML=`<div class="cw-notice">${esc(error.message)}</div>`;}}
 
 async function openDetail(item,updateRoute=true){
-  if(!item)return;const requestId=++state.detailRequestId;state.selected=item;state.selectedSeason=null;state.selectedEpisode=null;state.seasonEpisodes.clear();state.seasonCache.clear();state.seasonRequests.clear();els.detail.classList.remove('episode-selected');clearInfoStreamState();resetDetailHeaderMotion();els.detailHeaderLogo.classList.add('hidden');els.detailHeaderLogo.removeAttribute('src');delete els.detailHeaderLogo.dataset.logoFallback;els.detailHeaderTitle.textContent='';els.detailHeaderTitle.classList.add('hidden');showView('detail');
+  if(!item)return;const requestId=++state.detailRequestId;state.selected=item;state.selectedSeason=null;state.selectedEpisode=null;state.seasonEpisodes.clear();state.seasonCache.clear();state.seasonRequests.clear();els.detail.classList.remove('episode-selected');clearInfoStreamState();resetDetailBackdropTone();resetDetailHeaderMotion();els.detailHeaderLogo.classList.add('hidden');els.detailHeaderLogo.removeAttribute('src');delete els.detailHeaderLogo.dataset.logoFallback;els.detailHeaderTitle.textContent='';els.detailHeaderTitle.classList.add('hidden');showView('detail');
   if(updateRoute)route({view:'detail',type:item.mediaType,id:item.id});els.detailContent.innerHTML='<div class="cw-detail-skeleton"></div>';
   try{
     const {data}=await api(`/api/tmdb/${item.mediaType}/${item.id}`);if(requestId!==state.detailRequestId)return;state.selected=data;state.media.set(mediaKey(data),data);els.detailContent.innerHTML=detailMarkup(data);setDetailHeader(data);loadRelated(data);
@@ -589,7 +604,7 @@ function handleDetailArtworkError(e){
   const backdrop=e.target.closest?.('img[data-backdrop-fallback]');if(backdrop){const fallback=backdrop.dataset.backdropFallback;delete backdrop.dataset.backdropFallback;if(fallback&&backdrop.src!==new URL(fallback,location.origin).href)backdrop.src=fallback;return;}
   const logo=e.target.closest?.('img.cw-detail-logo,img#detailHeaderLogo');if(!logo)return;const fallback=logo.dataset.logoFallback;delete logo.dataset.logoFallback;if(fallback&&logo.src!==new URL(fallback,location.origin).href){logo.src=fallback;return;}logo.classList.add('hidden');if(logo.id==='detailHeaderLogo')els.detailHeaderTitle.classList.remove('hidden');else logo.parentElement?.querySelector('.cw-logo-title-fallback')?.classList.remove('hidden');
 }
-els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img'))requestAnimationFrame(updateDetailHeaderMotion);},true);
+els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img')){applyDetailBackdropTone(e.target);requestAnimationFrame(updateDetailHeaderMotion);}},true);
 els.detailContent.addEventListener('click',e=>{
   const detailBack=e.target.closest('[data-detail-back]');if(detailBack)return handleDetailBack();
   const library=e.target.closest('[data-library-current]');if(library)return toggleCurrentLibrary();
