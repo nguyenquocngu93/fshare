@@ -176,7 +176,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-episode-detail-info{max-width:900px;margin:0 0 34px}
 .cw-episode-detail-info h2{margin:0;color:#fff;font-family:Inter,sans-serif;font-size:25px;font-weight:900;line-height:34px}
 .cw-episode-detail-info p{margin:15px 0 0;color:var(--zinc-300);font-size:17px;line-height:28px}
-#detailView.episode-selected .cw-detail-body>.cw-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-related-section{display:none}
+#detailView.episode-selected .cw-detail-body>.cw-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-episode-section,#detailView.episode-selected .cw-related-section,#detailView.episode-selected .cw-detail-links-column{display:none}
 .cw-detail-hero-back{position:absolute;z-index:5;top:20px;left:20px;display:grid;width:42px;height:42px;place-items:center;padding:0;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(0,0,0,.48);color:#fff;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .cw-detail-hero-back svg{width:21px;height:21px}
 .cw-detail-actions{position:absolute;z-index:5;top:20px;right:20px;display:flex;width:auto;align-items:center;justify-content:flex-end;margin:0}
@@ -537,7 +537,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-detail-credits{order:4;min-width:0}
 .cw-detail-links-head{display:none;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
 .cw-detail-information>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
-#detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-detail-supporting{display:none}
+#detailView.episode-selected .cw-overview-info,#detailView.episode-selected .cw-detail-body-genres,#detailView.episode-selected .cw-detail-credits,#detailView.episode-selected .cw-episode-section,#detailView.episode-selected .cw-detail-links-column,#detailView.episode-selected .cw-detail-supporting{display:none}
 @media (orientation:portrait), (max-width:639px){
   .cw-detail-body{padding-top:28px}
   .cw-detail-information>.cw-overview-info{margin-top:28px}
@@ -581,8 +581,11 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-information>.cw-overview-info{margin-top:26px}
   .cw-detail-information>.cw-detail-body-genres{margin-top:22px}
   .cw-detail-links-column{--cw-links-tabs-top:58px;grid-area:links;position:sticky;top:96px;display:block;height:var(--cw-detail-links-height,auto);align-self:stretch;min-height:0;min-width:0;margin:0;padding:20px;overflow-x:hidden;overflow-y:auto;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2);overscroll-behavior:contain;scrollbar-color:rgba(34,211,238,.38) transparent;scrollbar-gutter:stable;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-  #detailView.episode-selected .cw-detail-content{grid-template-areas:"meta links" "information links"}
-  #detailView.episode-selected .cw-detail-links-column{height:calc(100svh - 120px)}
+  #detailView.episode-selected .cw-detail-content{display:block}
+  #detailView.episode-selected .cw-detail-narrative{display:block}
+  #detailView.episode-selected .cw-detail-information{max-width:720px}
+  #detailView.episode-selected .cw-detail-information>.cw-info-streams{max-width:720px;margin:0 0 48px}
+  #detailView.episode-selected .cw-detail-information>.cw-info-streams .cw-stream-addon-tabs{max-width:100%;margin:0 0 16px;padding:0 0 6px}
   .cw-detail-links-column::-webkit-scrollbar{width:6px}.cw-detail-links-column::-webkit-scrollbar-thumb{border-radius:999px;background:rgba(34,211,238,.38)}.cw-detail-links-column::-webkit-scrollbar-track{background:transparent}
   .cw-detail-links-head{position:sticky;z-index:3;top:0;display:flex;min-height:48px;margin:0;padding:0 0 12px;background:linear-gradient(180deg,rgba(24,24,27,.98) 0%,rgba(24,24,27,.96) 80%,rgba(24,24,27,0) 100%)}.cw-detail-links-head h2{font-size:24px}
   .cw-detail-links-column .cw-info-streams{display:block;min-width:0;margin:0;max-width:none;scroll-margin-top:112px}
@@ -601,7 +604,6 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-header-brand img{max-width:155px;max-height:36px}
   .cw-detail-title-visual{width:min(54vw,400px);min-height:88px}
   .cw-detail-links-column{--cw-links-tabs-top:54px;top:96px;padding:15px;border-radius:16px}
-  #detailView.episode-selected .cw-detail-links-column{height:calc(100svh - 112px)}
   .cw-detail-links-head h2{font-size:19px}
   .cw-detail-links-column .cw-stream-row{padding:12px}
 }

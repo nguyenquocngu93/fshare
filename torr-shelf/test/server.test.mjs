@@ -869,7 +869,8 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-detail-links-column \.cw-stream-addon-tabs\{position:sticky;z-index:2;top:var\(--cw-links-tabs-top\)/);
     assert.match(css, /\.cw-detail-links-column \.cw-stream-results\{gap:9px[^}]*overflow:visible;touch-action:pan-y/);
     assert.match(css, /\.cw-detail-logo\{width:100%;height:100%;max-width:none;max-height:none/);
-    assert.match(css, /#detailView\.episode-selected \.cw-detail-content\{grid-template-areas:"meta links" "information links"\}/);
+    assert.match(css, /#detailView\.episode-selected \.cw-detail-content\{display:block\}/);
+    assert.match(css, /#detailView\.episode-selected[^\{]+\.cw-episode-section[^\{]+\{display:none\}/);
     assert.match(css, /\.cw-detail-links-column\{--cw-links-tabs-top:54px;top:96px;padding:15px/);
     assert.match(css, /\.cw-mobile-dock\{display:none\}/);
     assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(90deg,#05070a/);
@@ -979,6 +980,7 @@ describe("HTTP app", () => {
     assert.match(js, /id="detailLinksColumn" class="cw-detail-links-column"/);
     assert.match(js, /id="infoStreams" class="cw-info-streams hidden"/);
     assert.match(js, /links=\$\('#detailLinksColumn'\);if\(panel&&links\)links\.append\(panel\)/);
+    assert.match(js, /const panel=\$\('#infoStreams'\);if\(info&&panel\)info\.after\(panel\)/);
     assert.match(js, /data-like-current/);
     assert.match(js, /torrshelf:liked-media/);
     assert.match(js, /function readLikedMedia\(\)/);

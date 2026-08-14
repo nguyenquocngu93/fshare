@@ -363,7 +363,7 @@ function selectEpisode(episode){
   if(episode.stillPath&&backdrop)backdrop.src=image(episode.stillPath,'w1280');
   if(title)title.textContent=`S${String(state.selectedSeason).padStart(2,'0')}E${String(episode.episodeNumber).padStart(2,'0')} – ${episode.name}`;
   if(overview)overview.textContent=episode.overview||'';info?.classList.remove('hidden');
-  const panel=$('#infoStreams'),links=$('#detailLinksColumn');if(panel&&links)links.append(panel);
+  const panel=$('#infoStreams');if(info&&panel)info.after(panel);
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'smooth'}));
   loadInfoStreams({season:state.selectedSeason,episode:Number(episode.episodeNumber),scroll:false});
 }
