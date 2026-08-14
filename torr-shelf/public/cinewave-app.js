@@ -281,17 +281,19 @@ function detailMarkup(item){
       <div class="cw-detail-shell"><div class="cw-detail-layout">${posterImage}<div class="cw-detail-copy"><div id="detailTitleVisual" class="cw-detail-title-visual">${titleVisual}</div><div class="cw-detail-actions"><div class="cw-detail-secondary">${share}${trailer}${library}</div></div></div></div></div>
     </section>
     <div class="cw-detail-body">
-      <main class="cw-detail-content">
-        ${detailMeta}
-        <section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section>
-        <section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section>
-        <div class="cw-detail-body-genres">${genrePills}</div>
-        ${episodeSection}
-      </main>
-      <aside id="detailLinksColumn" class="cw-detail-links-column">
-        <div class="cw-detail-links-head"><small>STREAMS & LINKS</small><h2>Link phát</h2></div>
-        <section id="infoStreams" class="cw-info-streams hidden"></section>
-      </aside>
+      <div class="cw-detail-primary">
+        <main class="cw-detail-content">
+          ${detailMeta}
+          <section id="detailEpisodeInfo" class="cw-episode-detail-info hidden"><h2 id="detailEpisodeTitle"></h2><p id="detailEpisodeOverview"></p></section>
+          <section class="cw-info cw-overview-info"><p>${esc(item.overview||'No overview available.')}</p></section>
+          <div class="cw-detail-body-genres">${genrePills}</div>
+          ${episodeSection}
+        </main>
+        <aside id="detailLinksColumn" class="cw-detail-links-column">
+          <div class="cw-detail-links-head"><small>STREAMS & LINKS</small><h2>Link phát</h2></div>
+          <section id="infoStreams" class="cw-info-streams hidden"></section>
+        </aside>
+      </div>
       <div class="cw-detail-supporting">
         <section class="cw-info"><h2>Top Cast</h2><div class="cw-cast-row">${cast||'<p>No cast information.</p>'}</div></section>
         <section class="cw-info"><h2>Director & Crew</h2><div class="cw-cast-row">${directors||'<p>No crew information.</p>'}</div></section>

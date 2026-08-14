@@ -1009,7 +1009,7 @@ describe("HTTP app", () => {
     assert.match(js, /toggleCurrentLibrary/);
     assert.match(js, /selectEpisode/);
     assert.match(js, /const detailMeta=/);
-    assert.match(js, /<div class="cw-detail-body">\s*<main class="cw-detail-content">\s*\$\{detailMeta\}/);
+    assert.match(js, /<div class="cw-detail-body">\s*<div class="cw-detail-primary">\s*<main class="cw-detail-content">\s*\$\{detailMeta\}/);
     assert.match(js, /<aside id="detailLinksColumn" class="cw-detail-links-column">/);
     assert.match(js, /<div class="cw-detail-supporting">/);
     assert.doesNotMatch(js, /data-show-streams/);

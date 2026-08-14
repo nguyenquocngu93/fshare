@@ -528,7 +528,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-library-recommendation-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}.cw-library-recommendation-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-library-recommendation-head h2{margin:4px 0 0;color:#fff;font-size:22px;line-height:1.12;text-transform:none}
 
 /* The mobile order remains content → links → supporting sections. */
-.cw-detail-content,.cw-detail-supporting{min-width:0}
+.cw-detail-primary,.cw-detail-content,.cw-detail-supporting{min-width:0}
 .cw-detail-links-column{margin-top:18px}
 .cw-detail-links-head{display:none;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}.cw-detail-links-head small{color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.12em}.cw-detail-links-head h2{margin:0;color:#fff;font-size:22px;line-height:1.1}
 .cw-detail-content>.cw-overview-info{margin-top:28px}.cw-detail-links-column .cw-info-streams{margin:0 0 48px;max-width:none;min-width:0}
@@ -560,15 +560,17 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-detail-copy h1{max-width:660px;margin:0;text-align:left;font-size:clamp(42px,5vw,76px);line-height:.96}
   .cw-detail-hero-back{top:24px;left:clamp(18px,3vw,48px)}
   .cw-detail-actions{top:24px;right:clamp(18px,3vw,48px)}
-  .cw-detail-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);grid-template-areas:"content links" "secondary secondary";align-items:start;gap:34px clamp(28px,5vw,72px);width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
-  .cw-detail-content{grid-area:content;min-width:0}
-  .cw-detail-links-column{grid-area:links;position:sticky;top:96px;min-width:0;margin:0;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
+  .cw-detail-body{width:min(1160px,calc(100% - clamp(48px,10vw,144px)));margin:0 auto;padding:38px 0 88px;background:#05070a}
+  /* Keep the sticky link card inside this primary row, so it ends before cast and related content. */
+  .cw-detail-primary{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.78fr);align-items:start;gap:34px clamp(28px,5vw,72px);min-width:0}
+  .cw-detail-content{min-width:0}
+  .cw-detail-links-column{position:sticky;top:96px;min-width:0;margin:0;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.62);box-shadow:0 24px 70px rgba(0,0,0,.2)}
   .cw-detail-links-head{display:flex;margin-bottom:16px}.cw-detail-links-head h2{font-size:24px}
   .cw-detail-links-column .cw-info-streams{margin:0;max-width:none;min-width:0;scroll-margin-top:112px}
   .cw-detail-links-column .cw-stream-addon-tabs{max-width:none;margin:0 0 14px;padding:0 0 6px}
   .cw-detail-links-column .cw-stream-results{gap:9px}
   .cw-detail-links-column .cw-stream-row{padding:14px 15px}
-  .cw-detail-supporting{grid-area:secondary;min-width:0}
+  .cw-detail-supporting{min-width:0;margin-top:34px}
   .cw-detail-supporting>.cw-info:first-child{margin-top:18px}
   .cw-detail-meta{max-width:720px;margin-left:0}
   .cw-detail-content>.cw-overview-info,.cw-detail-content>.cw-detail-body-genres{max-width:720px;margin-left:0}
@@ -578,7 +580,9 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 }
 @media (orientation:landscape) and (min-width:640px) and (max-width:899px){
   .cw-detail-layout{grid-template-columns:clamp(116px,18vw,170px) minmax(0,1fr);gap:24px}
-  .cw-detail-body{grid-template-columns:minmax(0,1fr) minmax(230px,.72fr);gap:24px;width:calc(100% - 48px)}
+  .cw-detail-body{width:calc(100% - 48px)}
+  .cw-detail-primary{grid-template-columns:minmax(0,1fr) minmax(230px,.72fr);gap:24px}
+  .cw-detail-supporting{margin-top:24px}
   .cw-detail-logo{max-height:76px}
   .cw-detail-links-column{padding:15px;border-radius:16px;top:84px}
   .cw-detail-links-head h2{font-size:19px}
