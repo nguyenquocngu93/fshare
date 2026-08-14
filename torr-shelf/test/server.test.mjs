@@ -811,7 +811,8 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-stream-tracker\{[^}]*color:var\(--cyan-light\)[^}]*font:inherit/);
     assert.match(css, /\.cw-stream-badges>span\{[^}]*color:inherit[^}]*font:inherit/);
     assert.match(css, /\.cw-stream-addon-tabs\{/);
-    assert.match(css, /#settingsView \.cw-settings-grid h2[^}]*font-size:20px/);
+    assert.match(css, /font-family:BalooSettings/);
+    assert.match(css, /#settingsView \.cw-settings-grid h2[^}]*font-size:22px/);
     assert.match(css, /\.cw-detail-links-column\{margin-top:26px;padding-top:20px;border-top:1px/);
     assert.doesNotMatch(css, /\.cw-stream-settings-button\{/);
     assert.match(css, /\.cw-season-tabs\{/);
@@ -1029,6 +1030,9 @@ describe("HTTP app", () => {
     const fontResponse = await fetch(`${baseUrl}/fonts/outfit-latin.woff2`);
     assert.equal(fontResponse.status, 200);
     assert.equal(fontResponse.headers.get("content-type"), "font/woff2");
+    const settingsFontResponse = await fetch(`${baseUrl}/fonts/baloo-2-vietnamese-600.woff2`);
+    assert.equal(settingsFontResponse.status, 200);
+    assert.equal(settingsFontResponse.headers.get("content-type"), "font/woff2");
   });
 
   it("reports TorrServer health", async () => {

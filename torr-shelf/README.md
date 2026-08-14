@@ -307,4 +307,4 @@ Landscape detail tách thành hai cột: nội dung bên trái và Link phát/St
 
 ### Links và typography
 
-Portrait có divider mỏng trước nguồn, addon tab active giữ nguyên vị trí cuộn. Nút ⚙ trên từng card Stremio Addon mở `/configure` của chính addon đó. Settings dùng hệ chữ Inter và type scale đồng đều cho heading, label, input và mô tả.
+Portrait có divider mỏng trước nguồn, addon tab active giữ nguyên vị trí cuộn. Nút ⚙ trên từng card Stremio Addon mở `/configure` của chính addon đó. Settings dùng font rounded comic Baloo 2 (hỗ trợ tiếng Việt) với type scale đồng đều cho heading, label, input và mô tả.
