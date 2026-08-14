@@ -863,8 +863,10 @@ describe("HTTP app", () => {
     assert.doesNotMatch(css, /\.cw-episodes-toolbar\{[^}]*border-bottom/);
     assert.match(css, /@media\(orientation:landscape\)[^{]*\{[^}]*\.cw-detail-hero\{[^}]*aspect-ratio:auto/);
     assert.match(css, /@media \(orientation:landscape\) and \(min-width:640px\)\{[\s\S]*?\.cw-detail-layout\{display:grid/);
-    assert.match(css, /\.cw-detail-links-column\{position:sticky;top:96px;max-height:calc\(100svh - 120px\)[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/);
-    assert.match(css, /\.cw-detail-links-column\{top:84px;max-height:calc\(100svh - 100px\);padding:15px/);
+    assert.match(css, /\.cw-detail-content\{display:grid[^}]*grid-template-areas:"meta \." "credits links" "information \."/);
+    assert.match(css, /\.cw-detail-links-column\{grid-area:links;position:sticky;top:96px;align-self:stretch;contain:size;min-height:0[^}]*overflow-y:auto[^}]*overscroll-behavior:contain/);
+    assert.match(css, /#detailView\.episode-selected \.cw-detail-content\{grid-template-areas:"meta links" "information links"\}/);
+    assert.match(css, /\.cw-detail-links-column\{top:84px;padding:15px/);
     assert.match(css, /\.cw-mobile-dock\{display:none\}/);
     assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(90deg,#05070a/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
