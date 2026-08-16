@@ -25,7 +25,7 @@ const PUBLIC_DIR = join(ROOT, "public");
 const GIB = 1024 ** 3;
 const MAGNETZ_API = "https://magnetz.eu";
 const KNABEN_API = "https://api.knaben.org/v1";
-const THE_PIRATE_BAY_API = "https://apibay.org";
+const THE_PIRATE_BAY_BASE_URL = "https://www3.thepiratebay3.to";
 const THE_PIRATE_BAY_TRACKERS = ["udp://tracker.opentrackr.org:1337/announce", "udp://open.stealth.si:80/announce", "udp://tracker.torrent.eu.org:451/announce"];
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_API = "https://image.tmdb.org/t/p";
@@ -299,6 +299,22 @@ export function normalizeKnaben(item) {
   return result.title && result.providerId && result.link ? result : null;
 }
 
+function decodeHtmlEntities(value = "") {
+  const named = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " " };
+  return String(value).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
+    if (entity[0] === "#") {
+      const hex = entity[1]?.toLowerCase() === "x";
+      const code = Number.parseInt(entity.slice(hex ? 2 : 1), hex ? 16 : 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    }
+    return named[entity.toLowerCase()] ?? match;
+  });
+}
+
+function cleanHtmlText(value, maxLength = 500) {
+  return cleanText(decodeHtmlEntities(String(value || "").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ")), maxLength);
+}
+
 function thePirateBayCategory(value) {
   const category = Number(value) || 0;
   if (category >= 200 && category < 300) return "Video";
@@ -312,10 +328,20 @@ function thePirateBayMagnet(infoHash, title) {
   return `magnet:?xt=urn:btih:${infoHash}&dn=${encodeURIComponent(title)}${THE_PIRATE_BAY_TRACKERS.map((tracker) => `&tr=${encodeURIComponent(tracker)}`).join("")}`;
 }
 
+function parseThePirateBaySize(value) {
+  const match = cleanText(value, 80).match(/(\d+(?:[.,]\d+)?)\s*(KiB|MiB|GiB|TiB|KB|MB|GB|TB)\b/i);
+  if (!match) return 0;
+  const amount = Number.parseFloat(match[1].replace(",", "."));
+  const unit = match[2].toUpperCase();
+  const multipliers = { KIB: 1024, KB: 1000, MIB: 1024 ** 2, MB: 1000 ** 2, GIB: 1024 ** 3, GB: 1000 ** 3, TIB: 1024 ** 4, TB: 1000 ** 4 };
+  return Number.isFinite(amount) ? Math.round(amount * (multipliers[unit] || 0)) : 0;
+}
+
 export function normalizeThePirateBay(item) {
   const providerId = cleanText(item?.id, 80);
   const title = cleanText(item?.name, 500);
-  const infoHash = normalizeHash(item?.info_hash);
+  const magnet = String(item?.magnet || "").trim();
+  const infoHash = normalizeHash(item?.info_hash || magnet.match(/btih:([a-f0-9]{40})/i)?.[1]);
   if (!providerId || !title || !infoHash) return null;
   const size = Number(item?.size) || 0;
   const added = Number(item?.added) || 0;
@@ -325,19 +351,51 @@ export function normalizeThePirateBay(item) {
     providerId,
     title,
     size,
-    humanSize: formatBytes(size),
+    humanSize: item?.humanSize || formatBytes(size),
     seeders: Number(item?.seeders) || 0,
     leechers: Number(item?.leechers) || 0,
     infoHash,
-    link: thePirateBayMagnet(infoHash, title),
-    category: thePirateBayCategory(item?.category),
+    link: /^magnet:\?xt=urn:btih:/i.test(magnet) ? magnet : thePirateBayMagnet(infoHash, title),
+    category: cleanText(item?.categoryName || thePirateBayCategory(item?.category), 100),
     origin: "The Pirate Bay",
-    detailsUrl: `https://thepiratebay.org/description.php?id=${encodeURIComponent(providerId)}`,
+    detailsUrl: cleanText(item?.detailsUrl, 2_000) || `${THE_PIRATE_BAY_BASE_URL}/torrent/${encodeURIComponent(providerId)}`,
     verified: /(?:vip|trusted)/i.test(String(item?.status || "")),
     health: 0,
-    date: added ? new Date(added * 1000).toISOString() : "",
+    date: cleanText(item?.date, 60) || (added ? new Date(added * 1000).toISOString() : ""),
     largestFile: "",
   };
+}
+
+export function parseThePirateBaySearch(html) {
+  const results = [];
+  for (const row of String(html || "").matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const content = row[1];
+    const magnet = decodeHtmlEntities(content.match(/\bhref\s*=\s*["']([^"']*magnet:\?[^"']*)["']/i)?.[1] || "");
+    if (!/^magnet:\?xt=urn:btih:/i.test(magnet)) continue;
+    const torrent = content.match(/\bhref\s*=\s*["']([^"']*\/torrent\/(\d+)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/i);
+    const browse = content.match(/\bhref\s*=\s*["'][^"']*\/browse\/(\d+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+    const cells = [...content.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) => cleanHtmlText(cell[1], 300));
+    const numericCells = cells.filter((cell) => /^\d[\d,]*$/.test(cell)).map((cell) => Number(cell.replace(/,/g, "")) || 0);
+    const title = cleanHtmlText(torrent?.[3] || "", 500);
+    const providerId = cleanText(torrent?.[2] || magnet.match(/btih:([a-f0-9]{40})/i)?.[1] || "", 80);
+    const visible = cleanHtmlText(content, 2_000);
+    const result = normalizeThePirateBay({
+      id: providerId,
+      name: title,
+      info_hash: magnet.match(/btih:([a-f0-9]{40})/i)?.[1] || "",
+      magnet,
+      size: parseThePirateBaySize(visible),
+      humanSize: visible.match(/\d+(?:[.,]\d+)?\s*(?:KiB|MiB|GiB|TiB|KB|MB|GB|TB)\b/i)?.[0] || "",
+      seeders: numericCells.at(-2) || 0,
+      leechers: numericCells.at(-1) || 0,
+      category: browse?.[1] || "",
+      categoryName: cleanHtmlText(browse?.[2] || "", 100),
+      detailsUrl: torrent?.[1] ? new URL(decodeHtmlEntities(torrent[1]), THE_PIRATE_BAY_BASE_URL).toString() : "",
+      date: visible.match(/\b\d{2}-\d{2}\s+\d{2}:\d{2}\b/)?.[0] || "",
+    });
+    if (result) results.push(result);
+  }
+  return results.slice(0, 100);
 }
 
 export function normalizeTmdb(item, fallbackMediaType = "movie") {
@@ -718,6 +776,43 @@ async function fetchJson(url, options = {}, timeoutMs = 12_000, fetchImpl = fetc
   }
 }
 
+async function fetchText(url, options = {}, timeoutMs = 12_000, fetchImpl = fetch) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": "TorrShelf/0.2 (+local companion)",
+          ...(options.headers || {}),
+        },
+      });
+    } catch (error) {
+      const host = new URL(url).hostname;
+      const cause = error?.cause;
+      const code = cause?.code || (error?.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR");
+      const detail = cleanText(cause?.message || error?.message || "Network request failed", 260);
+      const wrapped = new Error(`Kết nối ${host} thất bại [${code}]: ${detail}`);
+      wrapped.code = code;
+      wrapped.cause = cause || error;
+      throw wrapped;
+    }
+    const text = await response.text();
+    if (!response.ok) {
+      const error = new Error(`${response.status} ${response.statusText || ""}`.trim());
+      error.status = response.status;
+      throw error;
+    }
+    return text;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function searchMagnetz(query, page, fetchImpl) {
   // Magnetz caps search at 100 results (4 pages). Do not repeat page 4
   // while Knaben continues paginating beyond that point.
@@ -770,14 +865,13 @@ async function searchKnaben(query, page, hideXxx, sort, fetchImpl) {
 }
 
 async function searchThePirateBay(query, page, hideXxx, fetchImpl) {
-  if (page > 1) return { results: [], total: 0, pages: 1 };
-  const url = new URL("/q.php", THE_PIRATE_BAY_API);
+  const url = new URL(`/s/0/1/0/page/${Math.max(1, page)}/`, THE_PIRATE_BAY_BASE_URL);
   url.searchParams.set("q", query);
-  url.searchParams.set("cat", "0");
-  const payload = await fetchJson(url, {}, 12_000, fetchImpl);
-  let results = (Array.isArray(payload) ? payload : []).map(normalizeThePirateBay).filter(Boolean);
-  if (hideXxx) results = results.filter((item) => item.category !== "XXX" && !/\b(?:xxx|porn|adult)\b/i.test(item.title));
-  return { results, total: results.length, pages: 1 };
+  url.searchParams.set("category", "0");
+  const html = await fetchText(url, {}, 18_000, fetchImpl);
+  let results = parseThePirateBaySearch(html);
+  if (hideXxx) results = results.filter((item) => item.category !== "XXX" && !/\b(?:xxx|porn|adult)\b/i.test(`${item.category} ${item.title}`));
+  return { results, total: results.length, pages: results.length ? 20 : 1 };
 }
 
 function sortResults(results, sort) {

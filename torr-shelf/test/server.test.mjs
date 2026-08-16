@@ -11,6 +11,7 @@ import {
   normalizeKnaben,
   normalizeMagnetz,
   normalizeThePirateBay,
+  parseThePirateBaySearch,
   normalizeTmdb,
   normalizeReleaseTitle,
   scoreStreamTitleMatch,
@@ -156,7 +157,17 @@ describe("normalizers", () => {
     assert.equal(result.origin, "The Pirate Bay");
     assert.equal(result.seeders, 73);
     assert.match(result.link, /^magnet:\?xt=urn:btih:/);
-    assert.match(result.detailsUrl, /description\.php\?id=98765/);
+    assert.match(result.detailsUrl, /www3\.thepiratebay3\.to\/torrent\/98765/);
+  });
+
+  it("parses The Pirate Bay mirror HTML and preserves the source magnet", () => {
+    const results = parseThePirateBaySearch(`<table><tr><td><a href="/browse/207">Video &gt; HD - Movies</a></td><td><a href="/torrent/82736575/Ubuntu_ISO">Ubuntu ISO</a><font>Uploaded 06-24 06:01, Size 1.86 GiB</font></td><td><a href="magnet:?xt=urn:btih:${HASH}&amp;dn=Ubuntu+ISO">Magnet</a></td><td>73</td><td>6</td></tr></table>`);
+    assert.equal(results.length, 1);
+    assert.equal(results[0].origin, "The Pirate Bay");
+    assert.equal(results[0].seeders, 73);
+    assert.equal(results[0].humanSize, "1.86 GiB");
+    assert.match(results[0].detailsUrl, /www3\.thepiratebay3\.to\/torrent\/82736575/);
+    assert.match(results[0].link, /^magnet:\?xt=urn:btih:/);
   });
 
   it("normalizes TMDB movies into a torrent search query", () => {
@@ -446,14 +457,11 @@ describe("HTTP app", () => {
           meta: { total: 2, last_page: 1 },
         });
       }
-      if (url.hostname === "apibay.org" && url.pathname === "/q.php") {
-        if (/original movie/i.test(url.searchParams.get("q") || "")) return Response.json([
-          { id: "tpb-movie", name: "Original Movie 2026 1080p", info_hash: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", size: "3000000000", seeders: "73", leechers: "6", category: "201", added: "1760000000", status: "vip" },
-        ]);
-        return Response.json([
-          { id: "tpb-1", name: "Ubuntu ISO", info_hash: HASH, size: "2000000000", seeders: "73", leechers: "6", category: "201", added: "1760000000", status: "vip" },
-          { id: "tpb-xxx", name: "Example XXX", info_hash: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", size: "1000000000", seeders: "30", leechers: "1", category: "500", added: "1760000000" },
-        ]);
+      if (url.hostname === "www3.thepiratebay3.to" && /\/s\/0\/1\/0\/page\/\d+\//.test(url.pathname)) {
+        const originalMovie = /original movie/i.test(url.searchParams.get("q") || "");
+        const title = originalMovie ? "Original Movie 2026 1080p" : "Ubuntu ISO";
+        const hash = originalMovie ? "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" : HASH;
+        return new Response(`<table id="searchResult"><tr><td><a href="/browse/207">Video &gt; HD - Movies</a></td><td><a href="/torrent/82736575/${title.replaceAll(" ", "_")}">${title}</a><font>Uploaded 06-24 06:01, Size 1.86 GiB, ULed by Test</font></td><td><a href="magnet:?xt=urn:btih:${hash}&amp;dn=${encodeURIComponent(title)}">Magnet</a></td><td>73</td><td>6</td></tr><tr><td><a href="/browse/500">Porn</a></td><td><a href="/torrent/1/Example_XXX">Example XXX</a><font>Size 1.00 GiB</font></td><td><a href="magnet:?xt=urn:btih:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB">Magnet</a></td><td>30</td><td>1</td></tr></table>`, { headers: { "Content-Type": "text/html" } });
       }
       if (url.hostname === "api.knaben.org") {
         knabenRequest = JSON.parse(options.body);
@@ -728,8 +736,8 @@ describe("HTTP app", () => {
   it("cache-busts frontend assets and forces JS/CSS revalidation", async () => {
     const htmlResponse = await fetch(`${baseUrl}/`);
     const html = await htmlResponse.text();
-    assert.match(html, /cinewave-clone\.css\?v=1\.6\.7/);
-    assert.match(html, /cinewave-app\.js\?v=1\.6\.7/);
+    assert.match(html, /cinewave-clone\.css\?v=1\.6\.8/);
+    assert.match(html, /cinewave-app\.js\?v=1\.6\.8/);
     assert.doesNotMatch(html, /legacy\.css|restored-013\.css/);
     assert.match(html, /class="cw-header"/);
     assert.match(html, /id="detailHeaderIdentity"/);
@@ -808,7 +816,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
-    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.7`);
+    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.8`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
     const css = await cssResponse.text();
@@ -925,7 +933,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-infinite-sentinel\{/);
     assert.match(css, /font-family:Inter/);
     assert.match(css, /font-family:Outfit/);
-    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.7`);
+    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.8`);
     const js = await jsResponse.text();
     assert.match(js, /history\.scrollRestoration='manual'/);
     assert.match(js, /function setHero/);

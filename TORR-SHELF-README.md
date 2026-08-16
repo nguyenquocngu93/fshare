@@ -1,6 +1,6 @@
-# TorrShelf 1.6.7 — The Pirate Bay / torrent search
+# TorrShelf 1.6.8 — TPB mirror / torrent tabs
 
-Bản này giữ nền detail v1.6.6 và bổ sung The Pirate Bay cho nguồn phát native lẫn tab Torrent Search.
+Bản này thay API TPB lỗi bằng mirror `www3.thepiratebay3.to`, giữ The Pirate Bay cho nguồn phát native lẫn tab Torrent Search.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -26,18 +26,18 @@ Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **�
 
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.7-pirate-bay-torrent-search.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.7-pirate-bay-torrent-search.sh
+bash install-torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf-v1.6.7-pirate-bay-torrent-search.zip` (alias hiện hành: `torr-shelf.zip`):
+Hoặc giải nén `torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf-v1.6.7-pirate-bay-torrent-search.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start
