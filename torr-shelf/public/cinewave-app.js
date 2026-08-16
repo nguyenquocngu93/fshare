@@ -12,7 +12,7 @@ const els = {
   detail: $('#detailView'), detailContent: $('#detailContent'),
   person: $('#personView'), personContent: $('#personContent'),
   torrent: $('#torrentView'), torrentForm: $('#torrentSearchForm'), torrentQuery: $('#torrentQuery'), maxSize: $('#maxSize'), minSeeds: $('#minSeeds'), torrentSort: $('#torrentSort'), hideAdult: $('#hideAdult'), torrentResults: $('#torrentResults'), torrentCount: $('#torrentCount'), torrentTitle: $('#torrentResultTitle'), torrentMeta: $('#torrentMeta'), torrentNotice: $('#torrentNotice'), torrentPrev: $('#torrentPrev'), torrentNext: $('#torrentNext'), torrentPage: $('#torrentPage'),
-  settings: $('#settingsView'), settingsServerDot: $('#settingsServerDot'), settingsServerVersion: $('#settingsServerVersion'), settingsServerUrl: $('#settingsServerUrl'), settingsTmdb: $('#settingsTmdb'), tmdbSettingsForm: $('#tmdbSettingsForm'), tmdbCredentialInput: $('#tmdbCredentialInput'), tmdbConfigStatus: $('#tmdbConfigStatus'), tmdbConfigBadge: $('#tmdbConfigBadge'), openTorrServer: $('#openTorrServer'), checkConnection: $('#checkConnection'), torrServerSettingsForm: $('#torrServerSettingsForm'), torrServerUrlInput: $('#torrServerUrlInput'), torrServerConfigStatus: $('#torrServerConfigStatus'), torrServerConfigBadge: $('#torrServerConfigBadge'), useLocalTorrServer: $('#useLocalTorrServer'), playerPreference: $('#playerPreference'), playerPreferenceNote: $('#playerPreferenceNote'), posterColumns: $('#posterColumns'), nativeProviderForm: $('#nativeProviderForm'), stremioAddonForm: $('#stremioAddonForm'), stremioAddonUrl: $('#stremioAddonUrl'), stremioAddonList: $('#stremioAddonList'), stremioAddonCount: $('#stremioAddonCount'), cloudStreamRepoForm: $('#cloudStreamRepoForm'), cloudStreamRepoUrl: $('#cloudStreamRepoUrl'), cloudStreamPluginList: $('#cloudStreamPluginList'), cloudStreamStatusBadge: $('#cloudStreamStatusBadge'), cloudStreamBridgeForm: $('#cloudStreamBridgeForm'), cloudStreamBridgeUrl: $('#cloudStreamBridgeUrl'), cloudStreamBridgeStatus: $('#cloudStreamBridgeStatus'),
+  settings: $('#settingsView'), settingsServerDot: $('#settingsServerDot'), settingsServerVersion: $('#settingsServerVersion'), settingsServerUrl: $('#settingsServerUrl'), settingsTmdb: $('#settingsTmdb'), tmdbSettingsForm: $('#tmdbSettingsForm'), tmdbCredentialInput: $('#tmdbCredentialInput'), tmdbConfigStatus: $('#tmdbConfigStatus'), tmdbConfigBadge: $('#tmdbConfigBadge'), jackettSettingsForm: $('#jackettSettingsForm'), jackettUrlInput: $('#jackettUrlInput'), jackettApiKeyInput: $('#jackettApiKeyInput'), jackettConfigStatus: $('#jackettConfigStatus'), jackettConfigBadge: $('#jackettConfigBadge'), openTorrServer: $('#openTorrServer'), checkConnection: $('#checkConnection'), torrServerSettingsForm: $('#torrServerSettingsForm'), torrServerUrlInput: $('#torrServerUrlInput'), torrServerConfigStatus: $('#torrServerConfigStatus'), torrServerConfigBadge: $('#torrServerConfigBadge'), useLocalTorrServer: $('#useLocalTorrServer'), playerPreference: $('#playerPreference'), playerPreferenceNote: $('#playerPreferenceNote'), posterColumns: $('#posterColumns'), nativeProviderForm: $('#nativeProviderForm'), stremioAddonForm: $('#stremioAddonForm'), stremioAddonUrl: $('#stremioAddonUrl'), stremioAddonList: $('#stremioAddonList'), stremioAddonCount: $('#stremioAddonCount'), cloudStreamRepoForm: $('#cloudStreamRepoForm'), cloudStreamRepoUrl: $('#cloudStreamRepoUrl'), cloudStreamPluginList: $('#cloudStreamPluginList'), cloudStreamStatusBadge: $('#cloudStreamStatusBadge'), cloudStreamBridgeForm: $('#cloudStreamBridgeForm'), cloudStreamBridgeUrl: $('#cloudStreamBridgeUrl'), cloudStreamBridgeStatus: $('#cloudStreamBridgeStatus'),
   globalSearchForm: $('#globalSearchForm'), globalSearchInput: $('#globalSearchInput'),
   toast: $('#toast'),
 };
@@ -35,8 +35,9 @@ function readLikedMedia(){
 }
 function readPlayerPreference(){const value=localStorage.getItem('torrshelf:player')||'torrshelf';return['torrshelf','mpv','mx','external'].includes(value)?value:'torrshelf';}
 function readPosterColumns(){return localStorage.getItem('torrshelf:poster-columns')==='2'?2:3;}
-const NATIVE_PROVIDER_DEFAULT={enabled:true,torrentioEnabled:true,jacredEnabled:true,knabenEnabled:true,magnetzEnabled:true,thePirateBayEnabled:true,fourKhdHubEnabled:false,moviesDriveEnabled:false,hdHub4uEnabled:false,vadapavEnabled:false,uhdMoviesEnabled:false,hubCloudSearchEnabled:false,jacredDomain:'jac.red',torrentioManifestUrl:'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json',commonSortBy:'size',commonQualityFilter:[],maxResults:30,sizeMinGB:0,sizeMaxGB:1000,preferPack:true,animeMode:false};
-function readNativeProviderConfig(){try{const saved=JSON.parse(localStorage.getItem('torrshelf:native-provider')||'{}');return{...NATIVE_PROVIDER_DEFAULT,...(saved&&typeof saved==='object'?saved:{})};}catch{return{...NATIVE_PROVIDER_DEFAULT};}}
+const NATIVE_PROVIDER_DEFAULT={enabled:true,torrentioEnabled:true,jacredEnabled:true,knabenEnabled:true,magnetzEnabled:true,fourKhdHubEnabled:false,moviesDriveEnabled:false,hdHub4uEnabled:false,vadapavEnabled:false,uhdMoviesEnabled:false,hubCloudSearchEnabled:false,jacredDomain:'jac.red',torrentioManifestUrl:'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json',commonSortBy:'size',commonQualityFilter:[],maxResults:30,sizeMinGB:0,sizeMaxGB:1000,preferPack:true,animeMode:false};
+function stripTorrentioPirateBay(value){return String(value||'').replace(/providers=([^|/]+)/i,(_match,list)=>`providers=${list.split(',').filter(item=>item.toLowerCase()!=='thepiratebay').join(',')}`)}
+function readNativeProviderConfig(){try{const saved=JSON.parse(localStorage.getItem('torrshelf:native-provider')||'{}'),config={...NATIVE_PROVIDER_DEFAULT,...(saved&&typeof saved==='object'?saved:{})};config.torrentioManifestUrl=stripTorrentioPirateBay(config.torrentioManifestUrl);return config;}catch{return{...NATIVE_PROVIDER_DEFAULT};}}
 
 localStorage.removeItem('torrshelf:external-playback');
 
@@ -398,7 +399,7 @@ function torrentCard(item){
   const addIcon=added?'<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>':'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   return `<article class="ts-torrent-card"><header><span class="ts-source-tag">${source}</span><small>${esc(item.origin)}</small></header><h3>${esc(item.title)}</h3>${badges.length?`<div class="ts-stream-badges">${badges.map(tag=>`<span>${tag}</span>`).join('')}</div>`:''}<div class="ts-torrent-stats"><span>▣ &nbsp;${esc(item.humanSize||formatBytes(item.size))}</span><span class="seed">♧ &nbsp;${Number(item.seeders).toLocaleString()} seed</span><span>${Number(item.leechers).toLocaleString()} leech</span><span>${esc(item.category)}</span></div><footer><small>${formatAge(item.date)}</small><div class="ts-card-actions"><button data-copy="${item.ref}" type="button" aria-label="Sao chép magnet">${copyIcon}</button>${item.detailsUrl?`<a href="${esc(item.detailsUrl)}" target="_blank" rel="noreferrer" aria-label="Mở trang nguồn">${openIcon}</a>`:''}<button class="ts-add${added?' added':''}" data-add="${item.ref}" type="button"${added?' disabled':''}>${addIcon}<span>${added?'Đã thêm':'Gửi TorrServer'}</span></button></div></footer></article>`;
 }
-function torrentSourceLabel(source=state.torrentSource){return source==='magnetz'?'Magnetz':source==='knaben'?'Knaben':source==='thepiratebay'?'The Pirate Bay':'Magnetz + Knaben + The Pirate Bay';}
+function torrentSourceLabel(source=state.torrentSource){return source==='magnetz'?'Magnetz':source==='knaben'?'Knaben':source==='jackett'?'Jackett':'Magnetz + Knaben + Jackett';}
 async function searchTorrents(updateRoute=true){
   const q=els.torrentQuery.value.trim();if(q.length<2)return;
   state.torrentQuery=q;state.torrentItems=new Map();
@@ -547,13 +548,13 @@ function updatePlayerPreferenceUI(){
 }
 function renderNativeProviderSettings(){
   const form=els.nativeProviderForm;if(!form)return;const c=state.nativeProviderConfig;
-  ['enabled','torrentioEnabled','jacredEnabled','knabenEnabled','magnetzEnabled','thePirateBayEnabled','fourKhdHubEnabled','moviesDriveEnabled','hdHub4uEnabled','vadapavEnabled','uhdMoviesEnabled','hubCloudSearchEnabled','preferPack','animeMode'].forEach(name=>{form.elements[name].checked=Boolean(c[name])});
+  ['enabled','torrentioEnabled','jacredEnabled','knabenEnabled','magnetzEnabled','fourKhdHubEnabled','moviesDriveEnabled','hdHub4uEnabled','vadapavEnabled','uhdMoviesEnabled','hubCloudSearchEnabled','preferPack','animeMode'].forEach(name=>{form.elements[name].checked=Boolean(c[name])});
   ['jacredDomain','torrentioManifestUrl','commonSortBy','maxResults','sizeMinGB','sizeMaxGB'].forEach(name=>{form.elements[name].value=c[name]??''});
   form.querySelectorAll('input[name="quality"]').forEach(input=>{input.checked=(c.commonQualityFilter||[]).includes(input.value)});
 }
 function readNativeProviderForm(){
   const form=els.nativeProviderForm,number=(name,fallback)=>{const value=Number(form.elements[name].value);return Number.isFinite(value)?value:fallback};
-  return{enabled:form.elements.enabled.checked,torrentioEnabled:form.elements.torrentioEnabled.checked,jacredEnabled:form.elements.jacredEnabled.checked,knabenEnabled:form.elements.knabenEnabled.checked,magnetzEnabled:form.elements.magnetzEnabled.checked,thePirateBayEnabled:form.elements.thePirateBayEnabled.checked,fourKhdHubEnabled:form.elements.fourKhdHubEnabled.checked,moviesDriveEnabled:form.elements.moviesDriveEnabled.checked,hdHub4uEnabled:form.elements.hdHub4uEnabled.checked,vadapavEnabled:form.elements.vadapavEnabled.checked,uhdMoviesEnabled:form.elements.uhdMoviesEnabled.checked,hubCloudSearchEnabled:form.elements.hubCloudSearchEnabled.checked,jacredDomain:form.elements.jacredDomain.value,torrentioManifestUrl:form.elements.torrentioManifestUrl.value.trim(),commonSortBy:form.elements.commonSortBy.value,commonQualityFilter:[...form.querySelectorAll('input[name="quality"]:checked')].map(input=>input.value),maxResults:Math.max(5,Math.min(200,Math.round(number('maxResults',30)))),sizeMinGB:Math.max(0,number('sizeMinGB',0)),sizeMaxGB:Math.max(0,number('sizeMaxGB',1000)),preferPack:form.elements.preferPack.checked,animeMode:form.elements.animeMode.checked};
+  return{enabled:form.elements.enabled.checked,torrentioEnabled:form.elements.torrentioEnabled.checked,jacredEnabled:form.elements.jacredEnabled.checked,knabenEnabled:form.elements.knabenEnabled.checked,magnetzEnabled:form.elements.magnetzEnabled.checked,fourKhdHubEnabled:form.elements.fourKhdHubEnabled.checked,moviesDriveEnabled:form.elements.moviesDriveEnabled.checked,hdHub4uEnabled:form.elements.hdHub4uEnabled.checked,vadapavEnabled:form.elements.vadapavEnabled.checked,uhdMoviesEnabled:form.elements.uhdMoviesEnabled.checked,hubCloudSearchEnabled:form.elements.hubCloudSearchEnabled.checked,jacredDomain:form.elements.jacredDomain.value,torrentioManifestUrl:stripTorrentioPirateBay(form.elements.torrentioManifestUrl.value.trim()),commonSortBy:form.elements.commonSortBy.value,commonQualityFilter:[...form.querySelectorAll('input[name="quality"]:checked')].map(input=>input.value),maxResults:Math.max(5,Math.min(200,Math.round(number('maxResults',30)))),sizeMinGB:Math.max(0,number('sizeMinGB',0)),sizeMaxGB:Math.max(0,number('sizeMaxGB',1000)),preferPack:form.elements.preferPack.checked,animeMode:form.elements.animeMode.checked};
 }
 function updateTmdbSettings(tmdb){
   if(!tmdb){els.tmdbConfigBadge.textContent='TMDB';els.tmdbConfigBadge.classList.remove('public');els.tmdbConfigStatus.textContent='Nhập credential TMDB để Home, Discover và metadata hoạt động.';return;}
@@ -561,13 +562,19 @@ function updateTmdbSettings(tmdb){
   const mode=tmdb.credentialMode==='api_key_v3'?'API KEY':'TOKEN';els.tmdbConfigBadge.textContent=tmdb.validated?'READY':mode;els.tmdbConfigBadge.classList.toggle('public',Boolean(tmdb.validated));
   els.tmdbConfigStatus.textContent=tmdb.validated?`TMDB đã xác thực · ${tmdb.language} · ${tmdb.region}`:tmdb.lastError?`Đã lưu nhưng chưa xác thực: ${tmdb.lastError}`:`TMDB đã lưu · ${tmdb.language} · ${tmdb.region}`;
 }
+function updateJackettSettings(jackett){
+  if(!jackett?.configured){els.jackettConfigBadge.textContent='OFF';els.jackettConfigBadge.classList.remove('public');els.jackettConfigStatus.textContent='Jackett chỉ dùng trong tab Torrents. Nhập URL và API Key để bật.';return;}
+  if(document.activeElement!==els.jackettUrlInput)els.jackettUrlInput.value=jackett.url||'';
+  els.jackettConfigBadge.textContent='READY';els.jackettConfigBadge.classList.add('public');els.jackettConfigStatus.textContent='Jackett đã sẵn sàng cho tab Torrents.';
+}
 function updateSettings(){
-  updatePlayerPreferenceUI();applyPosterLayout();renderNativeProviderSettings();const h=state.health;if(!h){updateTmdbSettings(null);return;}const active=activeTorrServerUrl(),custom=Boolean(state.customTorrServerUrl),server=h.torrServer||{online:false,version:null};
+  updatePlayerPreferenceUI();applyPosterLayout();renderNativeProviderSettings();const h=state.health;if(!h){updateTmdbSettings(null);updateJackettSettings(null);return;}const active=activeTorrServerUrl(),custom=Boolean(state.customTorrServerUrl),server=h.torrServer||{online:false,version:null};
   if(document.activeElement!==els.torrServerUrlInput)els.torrServerUrlInput.value=active;
   if(custom)showTorrServerTarget({url:active,online:false,version:null,custom:true,message:'Đã lưu máy chủ public. Bấm Check connection để kiểm tra lại.'});
   else showTorrServerTarget({url:active,online:!!server.online,version:server.version,custom:false});
   els.settingsTmdb.textContent=h.tmdb.configured?`TMDB ${h.tmdb.validated?'validated':'configured'} · ${h.tmdb.language} · ${h.tmdb.region}`:'TMDB not configured';
   updateTmdbSettings(h.tmdb);
+  updateJackettSettings(h.jackett);
 }
 async function saveTmdbCredential(value){
   const credential=String(value||'').trim(),submit=els.tmdbSettingsForm.querySelector('button[type="submit"]');if(!credential){els.tmdbConfigStatus.textContent='Nhập TMDB Read Access Token hoặc API Key v3.';return;}
@@ -578,6 +585,18 @@ async function saveTmdbCredential(value){
     if(result.validationError){els.tmdbConfigStatus.textContent=`Đã lưu nhưng TMDB chưa xác thực: ${result.validationError}`;notify('Đã lưu credential nhưng TMDB chưa xác thực','error');}
     else notify('Đã lưu và xác thực TMDB');
   }catch(error){els.tmdbConfigStatus.textContent=error.message;notify(error.message,'error');}
+  finally{submit.disabled=false;submit.textContent=original;}
+}
+async function saveJackettSettings(urlValue,apiKeyValue){
+  const url=String(urlValue||'').trim(),apiKey=String(apiKeyValue||'').trim(),submit=els.jackettSettingsForm.querySelector('button[type="submit"]');
+  if(!url||!apiKey){els.jackettConfigStatus.textContent='Nhập đủ Jackett URL và API Key.';return;}
+  const original=submit.textContent;submit.disabled=true;submit.textContent='Đang lưu…';els.jackettConfigStatus.textContent='Đang lưu và kiểm tra Jackett…';
+  try{
+    const result=await api('/api/settings/jackett',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,apiKey})});
+    els.jackettApiKeyInput.value='';state.health={...(state.health||{}),jackett:result.jackett};updateSettings();
+    if(result.validationError){els.jackettConfigStatus.textContent=`Đã lưu nhưng Jackett chưa xác thực: ${result.validationError}`;notify('Đã lưu Jackett nhưng chưa xác thực','error');}
+    else notify('Đã lưu và xác thực Jackett');
+  }catch(error){els.jackettConfigStatus.textContent=error.message;notify(error.message,'error');}
   finally{submit.disabled=false;submit.textContent=original;}
 }
 async function checkTorrServerTarget(value,{save=false,notifyUser=false}={}){
@@ -641,6 +660,7 @@ $$('[data-source]').forEach(b=>b.addEventListener('click',()=>{state.torrentSour
 els.torrentResults.addEventListener('click',e=>{const add=e.target.closest('[data-add]');if(add)return addTorrent(add.dataset.add,add);const copy=e.target.closest('[data-copy]');if(copy){const item=state.torrentItems?.get(copy.dataset.copy);if(item)navigator.clipboard.writeText(item.link).then(()=>notify('Magnet copied'))}});
 els.torrentPrev.addEventListener('click',()=>{if(state.torrentPage>1){state.torrentPage--;searchTorrents()}});els.torrentNext.addEventListener('click',()=>{if(state.torrentPage<state.torrentPages){state.torrentPage++;searchTorrents()}});
 els.tmdbSettingsForm.addEventListener('submit',e=>{e.preventDefault();saveTmdbCredential(els.tmdbCredentialInput.value)});
+els.jackettSettingsForm.addEventListener('submit',e=>{e.preventDefault();saveJackettSettings(els.jackettUrlInput.value,els.jackettApiKeyInput.value)});
 els.torrServerSettingsForm.addEventListener('submit',e=>{e.preventDefault();checkTorrServerTarget(els.torrServerUrlInput.value,{save:true,notifyUser:true})});
 els.useLocalTorrServer.addEventListener('click',()=>{state.customTorrServerUrl='';state.addedTorrents.clear();localStorage.removeItem('torrshelf:torrserver-url');updateSettings();notify('Đã dùng TorrServer local')});
 els.playerPreference.addEventListener('change',()=>{state.playerPreference=['torrshelf','mpv','mx','external'].includes(els.playerPreference.value)?els.playerPreference.value:'torrshelf';localStorage.setItem('torrshelf:player',state.playerPreference);updatePlayerPreferenceUI();notify(state.playerPreference==='external'?'Đã chọn trình phát ngoài':state.playerPreference==='mpv'?'Đã chọn mpv-android':state.playerPreference==='mx'?'Đã chọn MX Player sync':'Đã chọn TorrShelf Player')});

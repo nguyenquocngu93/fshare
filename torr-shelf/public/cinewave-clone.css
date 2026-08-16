@@ -291,7 +291,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .ts-source-tabs button.active{background:var(--cyan);box-shadow:0 10px 22px rgba(6,182,212,.13);color:#000}
 .ts-source-icon{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:7px;background:rgba(6,182,212,.11);color:var(--cyan-light);font-size:11px;font-weight:900}
 .ts-source-tabs [data-source="knaben"] .ts-source-icon{background:rgba(245,158,11,.12);color:#f59e0b}
-.ts-source-tabs [data-source="thepiratebay"] .ts-source-icon{background:rgba(239,68,68,.12);color:#fb7185}
+.ts-source-tabs [data-source="jackett"] .ts-source-icon{background:rgba(168,85,247,.14);color:#c084fc}
 .ts-source-tabs button.active .ts-source-icon{background:rgba(0,0,0,.12);color:#000}
 .ts-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
 .ts-field{display:flex;min-height:56px;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border:1px solid var(--line);border-radius:14px;background:rgba(9,9,11,.3);color:var(--zinc-500);font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
@@ -356,6 +356,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .cw-torrserver-input-row input:focus{border-color:rgba(6,182,212,.5)}
 .cw-torrserver-input-row button{min-height:48px;padding:0 18px;border:0;border-radius:14px;background:var(--cyan);color:#000;font-size:12px;font-weight:900}
 .cw-torrserver-config>p{margin:14px 0 0;color:var(--zinc-500);font-size:12px;line-height:19px}
+.cw-jackett-input-grid{display:grid;gap:10px}.cw-jackett-input-grid input{width:100%;min-width:0;min-height:50px;padding:0 15px;border:1px solid var(--line-strong);border-radius:14px;outline:0;background:rgba(0,0,0,.22);color:#fff;font-size:14px;font-weight:700}.cw-jackett-input-grid input:focus{border-color:rgba(6,182,212,.5)}.cw-jackett-config>button{width:100%;min-height:50px;margin-top:10px;border:0;border-radius:14px;background:var(--cyan);color:#000;font-size:13px;font-weight:900}
 .cw-use-local{margin-top:14px;padding:0;border:0;background:none;color:var(--zinc-400);font-size:11px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
 .cw-player-settings,.cw-display-settings{margin-top:20px;padding:20px;border:1px solid var(--line);border-radius:20px;background:rgba(24,24,27,.4)}
 .cw-player-settings-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.cw-player-settings-head small{color:var(--zinc-500);font-size:10px;font-weight:900;letter-spacing:.12em}.cw-player-settings-head h2{margin:4px 0 0;font-size:24px}.cw-player-settings-head>span{padding:6px 9px;border-radius:8px;background:rgba(6,182,212,.1);color:var(--cyan-light);font-size:9px;font-weight:900;letter-spacing:.08em}
@@ -509,7 +510,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.11: normal view is the requested 16:9 Cinemeta crop at scale 1.
+/* v1.6.12: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
 .cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}

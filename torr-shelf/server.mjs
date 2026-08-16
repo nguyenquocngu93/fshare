@@ -25,8 +25,7 @@ const PUBLIC_DIR = join(ROOT, "public");
 const GIB = 1024 ** 3;
 const MAGNETZ_API = "https://magnetz.eu";
 const KNABEN_API = "https://api.knaben.org/v1";
-const THE_PIRATE_BAY_BASE_URL = "https://www3.thepiratebay3.to";
-const THE_PIRATE_BAY_TRACKERS = ["udp://tracker.opentrackr.org:1337/announce", "udp://open.stealth.si:80/announce", "udp://tracker.torrent.eu.org:451/announce"];
+const JACKETT_DEFAULT_URL = "http://127.0.0.1:9117";
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_API = "https://image.tmdb.org/t/p";
 const OPEN_SUBTITLES_ADDON = "https://opensubtitles-v3.strem.io/manifest.json";
@@ -101,6 +100,22 @@ export function normalizeTorrServerTarget(value) {
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("TorrServer chỉ hỗ trợ HTTP hoặc HTTPS.");
   if (!url.hostname || url.username || url.password) throw new Error("Địa chỉ TorrServer không hợp lệ.");
   return new URL(`${url.origin}/`);
+}
+
+export function normalizeJackettUrl(value) {
+  let raw = String(value || "").trim();
+  if (!raw) throw new Error("Nhập địa chỉ Jackett.");
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) raw = `http://${raw}`;
+  let url;
+  try { url = new URL(raw); }
+  catch { throw new Error("Địa chỉ Jackett không hợp lệ."); }
+  if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) {
+    throw new Error("Jackett chỉ hỗ trợ HTTP hoặc HTTPS hợp lệ.");
+  }
+  url.search = "";
+  url.hash = "";
+  url.pathname = url.pathname.replace(/\/$/, "");
+  return url;
 }
 
 export function normalizeCloudStreamRepoUrl(value) {
@@ -299,105 +314,34 @@ export function normalizeKnaben(item) {
   return result.title && result.providerId && result.link ? result : null;
 }
 
-function decodeHtmlEntities(value = "") {
-  const named = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " " };
-  return String(value).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
-    if (entity[0] === "#") {
-      const hex = entity[1]?.toLowerCase() === "x";
-      const code = Number.parseInt(entity.slice(hex ? 2 : 1), hex ? 16 : 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
-    }
-    return named[entity.toLowerCase()] ?? match;
-  });
-}
-
-function cleanHtmlText(value, maxLength = 500) {
-  return cleanText(decodeHtmlEntities(String(value || "").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ")), maxLength);
-}
-
-function thePirateBayCategory(value) {
-  const category = Number(value) || 0;
-  if (category >= 200 && category < 300) return "Video";
-  if (category >= 500 && category < 600) return "XXX";
-  if (category >= 100 && category < 200) return "Audio";
-  if (category >= 300 && category < 400) return "Applications";
-  return "Torrent";
-}
-
-function thePirateBayMagnet(infoHash, title) {
-  return `magnet:?xt=urn:btih:${infoHash}&dn=${encodeURIComponent(title)}${THE_PIRATE_BAY_TRACKERS.map((tracker) => `&tr=${encodeURIComponent(tracker)}`).join("")}`;
-}
-
-function parseThePirateBaySize(value) {
-  const match = cleanText(value, 80).match(/(\d+(?:[.,]\d+)?)\s*(KiB|MiB|GiB|TiB|KB|MB|GB|TB)\b/i);
-  if (!match) return 0;
-  const amount = Number.parseFloat(match[1].replace(",", "."));
-  const unit = match[2].toUpperCase();
-  const multipliers = { KIB: 1024, KB: 1000, MIB: 1024 ** 2, MB: 1000 ** 2, GIB: 1024 ** 3, GB: 1000 ** 3, TIB: 1024 ** 4, TB: 1000 ** 4 };
-  return Number.isFinite(amount) ? Math.round(amount * (multipliers[unit] || 0)) : 0;
-}
-
-export function normalizeThePirateBay(item) {
-  const providerId = cleanText(item?.id, 80);
-  const title = cleanText(item?.name, 500);
-  const magnet = String(item?.magnet || "").trim();
-  const infoHash = normalizeHash(item?.info_hash || magnet.match(/btih:([a-f0-9]{40})/i)?.[1]);
-  if (!providerId || !title || !infoHash) return null;
-  const size = Number(item?.size) || parseThePirateBaySize(item?.humanSize || "");
-  const added = Number(item?.added) || 0;
+export function normalizeJackett(item) {
+  const title = cleanText(item?.Title || item?.title, 500);
+  const magnet = String(item?.MagnetUri || item?.magnetUri || item?.Link || item?.link || "").trim();
+  const infoHash = normalizeHash(item?.InfoHash || item?.infoHash || magnet.match(/btih:([a-f0-9]{40})/i)?.[1]);
+  const providerId = cleanText(item?.Guid || item?.guid || infoHash || magnet, 240);
+  const size = Number(item?.Size || item?.size) || 0;
+  if (!title || !providerId || !infoHash || !/^magnet:\?xt=urn:btih:/i.test(magnet)) return null;
+  const seeders = Math.max(0, Number(item?.Seeders || item?.seeders) || 0);
+  const peers = Math.max(0, Number(item?.Peers || item?.peers || item?.Leechers || item?.leechers) || 0);
   return {
-    source: "thepiratebay",
-    sources: ["thepiratebay"],
+    source: "jackett",
+    sources: ["jackett"],
     providerId,
     title,
     size,
-    humanSize: item?.humanSize || formatBytes(size),
-    seeders: Number(item?.seeders) || 0,
-    seedersKnown: item?.seedersKnown !== false,
-    leechers: Number(item?.leechers) || 0,
+    humanSize: formatBytes(size),
+    seeders,
+    leechers: Math.max(0, peers - seeders),
     infoHash,
-    link: /^magnet:\?xt=urn:btih:/i.test(magnet) ? magnet : thePirateBayMagnet(infoHash, title),
-    category: cleanText(item?.categoryName || thePirateBayCategory(item?.category), 100),
-    origin: "The Pirate Bay",
-    detailsUrl: cleanText(item?.detailsUrl, 2_000) || `${THE_PIRATE_BAY_BASE_URL}/torrent/${encodeURIComponent(providerId)}`,
-    verified: /(?:vip|trusted)/i.test(String(item?.status || "")),
+    link: magnet,
+    category: cleanText(item?.CategoryDesc || item?.Category || item?.category || "Torrent", 100),
+    origin: cleanText(item?.Tracker || item?.TrackerId || item?.tracker || "Jackett", 100),
+    detailsUrl: cleanText(item?.Details || item?.details || "", 2_000),
+    verified: false,
     health: 0,
-    date: cleanText(item?.date, 60) || (added ? new Date(added * 1000).toISOString() : ""),
+    date: cleanText(item?.PublishDate || item?.FirstSeen || item?.publishDate || item?.firstSeen || "", 80),
     largestFile: "",
   };
-}
-
-export function parseThePirateBaySearch(html) {
-  const results = [];
-  for (const row of String(html || "").matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
-    const content = row[1];
-    const magnet = decodeHtmlEntities(content.match(/\bhref\s*=\s*["']([^"']*magnet:\?[^"']*)["']/i)?.[1] || "");
-    if (!/^magnet:\?xt=urn:btih:/i.test(magnet)) continue;
-    const torrent = content.match(/\bhref\s*=\s*["']([^"']*\/torrent\/(\d+)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/i);
-    const browse = content.match(/\bhref\s*=\s*["'][^"']*\/browse\/(\d+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-    const cells = [...content.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) => cleanHtmlText(cell[1], 300));
-    const numericCells = cells.filter((cell) => /^\d[\d,]*$/.test(cell)).map((cell) => Number(cell.replace(/,/g, "")) || 0);
-    const title = cleanHtmlText(torrent?.[3] || "", 500);
-    const providerId = cleanText(torrent?.[2] || magnet.match(/btih:([a-f0-9]{40})/i)?.[1] || "", 80);
-    const visible = cleanHtmlText(content, 2_000);
-    const result = normalizeThePirateBay({
-      id: providerId,
-      name: title,
-      info_hash: magnet.match(/btih:([a-f0-9]{40})/i)?.[1] || "",
-      magnet,
-      size: parseThePirateBaySize(visible),
-      humanSize: visible.match(/\d+(?:[.,]\d+)?\s*(?:KiB|MiB|GiB|TiB|KB|MB|GB|TB)\b/i)?.[0] || "",
-      seeders: numericCells.at(-2) || 0,
-      seedersKnown: numericCells.length >= 2,
-      leechers: numericCells.at(-1) || 0,
-      category: browse?.[1] || "",
-      categoryName: cleanHtmlText(browse?.[2] || "", 100),
-      detailsUrl: torrent?.[1] ? new URL(decodeHtmlEntities(torrent[1]), THE_PIRATE_BAY_BASE_URL).toString() : "",
-      date: visible.match(/\b\d{2}-\d{2}\s+\d{2}:\d{2}\b/)?.[0] || "",
-    });
-    if (result) results.push(result);
-  }
-  return results.slice(0, 100);
 }
 
 export function normalizeTmdb(item, fallbackMediaType = "movie") {
@@ -778,43 +722,6 @@ async function fetchJson(url, options = {}, timeoutMs = 12_000, fetchImpl = fetc
   }
 }
 
-async function fetchText(url, options = {}, timeoutMs = 12_000, fetchImpl = fetch) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    let response;
-    try {
-      response = await fetchImpl(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          Accept: "text/html,application/xhtml+xml",
-          "User-Agent": "TorrShelf/0.2 (+local companion)",
-          ...(options.headers || {}),
-        },
-      });
-    } catch (error) {
-      const host = new URL(url).hostname;
-      const cause = error?.cause;
-      const code = cause?.code || (error?.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR");
-      const detail = cleanText(cause?.message || error?.message || "Network request failed", 260);
-      const wrapped = new Error(`Kết nối ${host} thất bại [${code}]: ${detail}`);
-      wrapped.code = code;
-      wrapped.cause = cause || error;
-      throw wrapped;
-    }
-    const text = await response.text();
-    if (!response.ok) {
-      const error = new Error(`${response.status} ${response.statusText || ""}`.trim());
-      error.status = response.status;
-      throw error;
-    }
-    return text;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 async function searchMagnetz(query, page, fetchImpl) {
   // Magnetz caps search at 100 results (4 pages). Do not repeat page 4
   // while Knaben continues paginating beyond that point.
@@ -866,14 +773,17 @@ async function searchKnaben(query, page, hideXxx, sort, fetchImpl) {
   };
 }
 
-async function searchThePirateBay(query, page, hideXxx, fetchImpl) {
-  const url = new URL(`/s/0/1/0/page/${Math.max(1, page)}/`, THE_PIRATE_BAY_BASE_URL);
-  url.searchParams.set("q", query);
-  url.searchParams.set("category", "0");
-  const html = await fetchText(url, { headers: { Referer: `${THE_PIRATE_BAY_BASE_URL}/`, "User-Agent": "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/126.0 Safari/537.36" } }, 18_000, fetchImpl);
-  let results = parseThePirateBaySearch(html);
-  if (hideXxx) results = results.filter((item) => item.category !== "XXX" && !/\b(?:xxx|porn|adult)\b/i.test(`${item.category} ${item.title}`));
-  return { results, total: results.length, pages: results.length ? 20 : 1 };
+async function searchJackett(query, page, hideXxx, jackett, fetchImpl) {
+  if (!jackett?.configured || !jackett.url) throw new Error("Jackett chưa được cấu hình trong Settings.");
+  const url = new URL(jackett.url);
+  url.pathname = `${url.pathname.replace(/\/$/, "")}/api/v2.0/indexers/all/results`;
+  url.searchParams.set("apikey", jackett.apiKey);
+  url.searchParams.set("Query", query);
+  url.searchParams.set("Page", String(page));
+  const payload = await fetchJson(url, {}, 18_000, fetchImpl);
+  let results = (Array.isArray(payload?.Results) ? payload.Results : Array.isArray(payload?.results) ? payload.results : []).map(normalizeJackett).filter(Boolean);
+  if (hideXxx) results = results.filter((item) => !/\b(?:xxx|porn|adult)\b/i.test(`${item.category} ${item.title}`));
+  return { results, total: Number(payload?.TotalResults || payload?.total || results.length) || results.length, pages: 1 };
 }
 
 function sortResults(results, sort) {
@@ -998,6 +908,8 @@ export function createTorrShelf(options = {}) {
     tmdbLanguage: options.tmdbLanguage ?? process.env.TMDB_LANGUAGE ?? "vi-VN",
     tmdbRegion: options.tmdbRegion ?? process.env.TMDB_REGION ?? "VN",
     tmdbEnvFile: options.tmdbEnvFile || join(ROOT, ".env"),
+    jackettUrl: options.jackettUrl ?? process.env.JACKETT_URL ?? JACKETT_DEFAULT_URL,
+    jackettApiKey: options.jackettApiKey ?? process.env.JACKETT_API_KEY ?? "",
     syncFile: options.syncFile || join(ROOT, "data", "sync.json"),
     fetchImpl: options.fetchImpl || fetch,
   };
@@ -1152,6 +1064,26 @@ export function createTorrShelf(options = {}) {
     const previous = existsSync(config.tmdbEnvFile) ? readFileSync(config.tmdbEnvFile, "utf8") : "";
     const withToken = upsertEnvValue(previous, "TMDB_API_TOKEN", token);
     const next = upsertEnvValue(withToken, "TMDB_API_KEY", apiKey);
+    mkdirSync(dirname(config.tmdbEnvFile), { recursive: true });
+    const temp = `${config.tmdbEnvFile}.tmp`;
+    writeFileSync(temp, next, "utf8");
+    renameSync(temp, config.tmdbEnvFile);
+  }
+
+  function getJackettSettings() {
+    const apiKey = String(config.jackettApiKey || "").trim();
+    try {
+      const url = normalizeJackettUrl(config.jackettUrl);
+      return { url, apiKey, configured: Boolean(apiKey) };
+    } catch {
+      return { url: null, apiKey, configured: false };
+    }
+  }
+
+  function persistJackettSettings({ url, apiKey }) {
+    const previous = existsSync(config.tmdbEnvFile) ? readFileSync(config.tmdbEnvFile, "utf8") : "";
+    const withUrl = upsertEnvValue(previous, "JACKETT_URL", url);
+    const next = upsertEnvValue(withUrl, "JACKETT_API_KEY", apiKey);
     mkdirSync(dirname(config.tmdbEnvFile), { recursive: true });
     const temp = `${config.tmdbEnvFile}.tmp`;
     writeFileSync(temp, next, "utf8");
@@ -1812,9 +1744,11 @@ export function createTorrShelf(options = {}) {
     if (query.length < 2) return safeJson(res, 422, { error: "Nhập ít nhất 2 ký tự để tìm kiếm." });
 
     const page = integer(url.searchParams.get("page"), 1, 1, 20);
-    const source = ["all", "magnetz", "knaben", "thepiratebay"].includes(url.searchParams.get("source"))
+    const source = ["all", "magnetz", "knaben", "jackett"].includes(url.searchParams.get("source"))
       ? url.searchParams.get("source")
       : "all";
+    const jackett = getJackettSettings();
+    if (source === "jackett" && !jackett.configured) return safeJson(res, 422, { error: "Jackett chưa được cấu hình. Mở Settings để nhập URL và API Key." });
     const hideXxx = bool(url.searchParams.get("hideXxx"), true);
     const minSeeds = integer(url.searchParams.get("minSeeds"), 1, 0, 1_000_000);
     const rawMaxGb = String(url.searchParams.get("maxGb") || "").trim();
@@ -1840,8 +1774,8 @@ export function createTorrShelf(options = {}) {
     if (source === "all" || source === "knaben") {
       jobs.push(["knaben", searchKnaben(query, page, hideXxx, sort, config.fetchImpl)]);
     }
-    if (source === "all" || source === "thepiratebay") {
-      jobs.push(["thepiratebay", searchThePirateBay(query, page, hideXxx, config.fetchImpl)]);
+    if ((source === "all" && jackett.configured) || source === "jackett") {
+      jobs.push(["jackett", searchJackett(query, page, hideXxx, jackett, config.fetchImpl)]);
     }
 
     const settled = await Promise.allSettled(jobs.map(([, promise]) => promise));
@@ -1865,9 +1799,7 @@ export function createTorrShelf(options = {}) {
     }
 
     combined = deduplicateResults(combined).filter((item) => {
-      const validSize = item.size > 0 || (item.source === "thepiratebay" && /^magnet:\?xt=urn:btih:/i.test(item.link));
-      const validSeeds = item.seeders >= minSeeds || (item.source === "thepiratebay" && item.seedersKnown === false);
-      return validSize && (!maxBytes || !item.size || item.size <= maxBytes) && validSeeds;
+      return item.size > 0 && (!maxBytes || item.size <= maxBytes) && item.seeders >= minSeeds;
     });
     combined = sortResults(combined, sort);
     const data = rememberResults(combined);
@@ -2335,15 +2267,6 @@ export function createTorrShelf(options = {}) {
         .map((item) => ({ ...item, sizeGB: (Number(item.size) || 0) / GIB, seeds: item.seeders, tracker: "Magnetz", magnet: item.link }));
       results = sortAndLimitNativeResults(results, nativeConfig);
       return { provider: "Magnetz", streams: results.map((item) => { const single = /\bS\d{1,3}\s*E\d{1,4}\b/i.test(item.title);return nativeTorrentStream(item, "Magnetz", { type, season, episode, pack: type !== "movie" && !single, animeMode: nativeConfig.animeMode }); }).filter(Boolean) };
-    })());
-
-    if (nativeConfig.thePirateBayEnabled) providerTasks.push((async () => {
-      const query = type === "movie" ? `${originalTitle}${matchContext.year ? ` ${matchContext.year}` : ""}` : `${originalTitle}${season ? ` S${String(season).padStart(2, "0")}` : ""}`;
-      let results = (await searchThePirateBay(query, 1, true, config.fetchImpl)).results
-        .filter((item) => scoreStreamTitleMatch(`${item.title}\n${item.humanSize}`, matchContext).match)
-        .map((item) => ({ ...item, sizeGB: (Number(item.size) || 0) / GIB, seeds: item.seeders, tracker: "The Pirate Bay", magnet: item.link }));
-      results = sortAndLimitNativeResults(results, nativeConfig);
-      return { provider: "The Pirate Bay", streams: results.map((item) => { const single = /\bS\d{1,3}\s*E\d{1,4}\b/i.test(item.title);return nativeTorrentStream(item, "The Pirate Bay", { type, season, episode, pack: type !== "movie" && !single, animeMode: nativeConfig.animeMode }); }).filter(Boolean) };
     })());
 
     const settled = await Promise.allSettled(providerTasks), streams = [], errors = [];
@@ -3029,7 +2952,40 @@ export function createTorrShelf(options = {}) {
     });
   }
 
+  async function handleJackettSettings(req, res) {
+    if (!sameOrigin(req)) return safeJson(res, 403, { error: "Yêu cầu khác nguồn đã bị chặn." });
+    const body = await readJsonBody(req);
+    let url;
+    try {
+      url = normalizeJackettUrl(body?.url);
+    } catch (error) {
+      return safeJson(res, 422, { error: cleanText(error.message, 300) });
+    }
+    const apiKey = cleanText(body?.apiKey, 512);
+    if (!/^[A-Za-z0-9._~-]{8,512}$/.test(apiKey)) return safeJson(res, 422, { error: "Jackett API Key không đúng định dạng." });
+    try {
+      persistJackettSettings({ url: url.toString(), apiKey });
+    } catch (error) {
+      return safeJson(res, 500, { error: `Không lưu được Jackett: ${cleanText(error.message, 300)}` });
+    }
+    config.jackettUrl = url.toString();
+    config.jackettApiKey = apiKey;
+    searchCache.clear();
+    let validationError = "";
+    try {
+      await searchJackett("Ubuntu", 1, true, getJackettSettings(), config.fetchImpl);
+    } catch (error) {
+      validationError = cleanText(error.message || "Jackett request failed", 300);
+    }
+    return safeJson(res, 200, {
+      ok: true,
+      jackett: { configured: true, url: url.toString() },
+      validationError,
+    });
+  }
+
   async function handleHealth(_req, res) {
+    const jackett = getJackettSettings();
     let torrServer = { online: false, version: null };
     try {
       const controller = new AbortController();
@@ -3058,8 +3014,9 @@ export function createTorrShelf(options = {}) {
         language: config.tmdbLanguage,
         region: config.tmdbRegion,
       },
+      jackett: { configured: jackett.configured, url: jackett.url?.toString() || "" },
       network: { dnsResultOrder: DNS_RESULT_ORDER },
-      sources: ["magnetz", "knaben", "thepiratebay"],
+      sources: ["magnetz", "knaben", "jackett"],
     });
   }
 
@@ -3067,6 +3024,7 @@ export function createTorrShelf(options = {}) {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
       if (req.method === "POST" && url.pathname === "/api/settings/tmdb") return await handleTmdbSettings(req, res);
+      if (req.method === "POST" && url.pathname === "/api/settings/jackett") return await handleJackettSettings(req, res);
       if (req.method === "GET" && url.pathname === "/api/health") return await handleHealth(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/home") return await handleTmdbHome(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/list") return await handleTmdbList(req, res, url);

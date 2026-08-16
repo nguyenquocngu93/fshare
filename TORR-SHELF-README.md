@@ -1,6 +1,6 @@
-# TorrShelf 1.6.11 — Torrent source chips / TPB filters
+# TorrShelf 1.6.12 — Jackett torrent search
 
-Bản này giữ kết quả TPB có magnet ngay cả khi mirror thiếu metadata seed/size, đồng thời đưa tab nguồn Torrent thành các chip tách riêng trên điện thoại và giữ form TMDB trong Settings.
+Bản này bỏ TPB khỏi app hiện hành, thêm Jackett riêng cho tab Torrent Search và giữ form TMDB trong Settings. Jackett không được đưa vào nguồn phát của trang phim.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -18,10 +18,11 @@ Các thay đổi ở trang movie detail:
 
 Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **Đã thích** (lưu cục bộ). Tab Đã thích có thêm hàng gợi ý **“Vì bạn đã thích …”** từ TMDB.
 
-## The Pirate Bay / Torrent Search
+## Jackett / Torrent Search
 
-- Bật/tắt **The Pirate Bay** trong **Settings → Hybrid tích hợp**.
-- Tab **Torrents** có nguồn **TPB** riêng, bên cạnh Magnetz và Knaben.
+- Mở **Settings → Kết nối Jackett**, dán URL Jackett và API Key.
+- Tab **Torrents** có nguồn **Jackett** riêng, bên cạnh Magnetz và Knaben.
+- Jackett chỉ phục vụ Torrent Search, không được gọi trong nguồn phát phim.
 - Trang phim có nút kính lúp để mở Torrent tab và tìm đúng tên gốc/năm của phim.
 
 ## TMDB trong Settings
@@ -30,18 +31,18 @@ Mở **Settings → Kết nối TMDB**, dán **Read Access Token** hoặc **API 
 
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.11-torrent-source-chips-tpb-filters.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.12-jackett-torrent-search.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.11-torrent-source-chips-tpb-filters.sh
+bash install-torr-shelf-v1.6.12-jackett-torrent-search.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf-v1.6.11-torrent-source-chips-tpb-filters.zip` (alias hiện hành: `torr-shelf.zip`):
+Hoặc giải nén `torr-shelf-v1.6.12-jackett-torrent-search.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf-v1.6.11-torrent-source-chips-tpb-filters.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.12-jackett-torrent-search.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start

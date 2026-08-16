@@ -9,7 +9,7 @@ export const JACRED_DOMAINS = Object.freeze({
   "jacred.stream": "https://jacred.stream/api/v1.0/torrents",
 });
 
-const DEFAULT_TORRENTIO = "https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json";
+const DEFAULT_TORRENTIO = "https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json";
 
 export const DEFAULT_NATIVE_PROVIDER_CONFIG = Object.freeze({
   enabled: true,
@@ -17,7 +17,6 @@ export const DEFAULT_NATIVE_PROVIDER_CONFIG = Object.freeze({
   jacredEnabled: true,
   knabenEnabled: true,
   magnetzEnabled: true,
-  thePirateBayEnabled: true,
   fourKhdHubEnabled: false,
   moviesDriveEnabled: false,
   hdHub4uEnabled: false,
@@ -41,6 +40,19 @@ const number = (value, fallback, min, max) => {
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 };
 
+function removeTorrentioProvider(manifestUrl, provider) {
+  try {
+    const parsed = new URL(manifestUrl);
+    parsed.pathname = parsed.pathname.replace(/providers=([^|/]+)/i, (_match, list) => {
+      const providers = list.split(",").filter((item) => item.toLowerCase() !== provider.toLowerCase());
+      return `providers=${providers.join(",")}`;
+    });
+    return parsed.toString();
+  } catch {
+    return manifestUrl;
+  }
+}
+
 export function sanitizeNativeProviderConfig(value = {}) {
   const input = value && typeof value === "object" ? value : {};
   const sort = ["size", "seeds", "date"].includes(input.commonSortBy) ? input.commonSortBy : "size";
@@ -51,7 +63,7 @@ export function sanitizeNativeProviderConfig(value = {}) {
   try {
     const parsed = new URL(torrentioManifestUrl.replace(/^stremio:\/\//i, "https://"));
     if (!["http:", "https:"].includes(parsed.protocol) || !/\/manifest\.json$/i.test(parsed.pathname)) throw new Error();
-    torrentioManifestUrl = parsed.toString();
+    torrentioManifestUrl = removeTorrentioProvider(parsed.toString(), "thepiratebay");
   } catch {
     torrentioManifestUrl = DEFAULT_TORRENTIO;
   }
@@ -61,7 +73,6 @@ export function sanitizeNativeProviderConfig(value = {}) {
     jacredEnabled: bool(input.jacredEnabled, true),
     knabenEnabled: bool(input.knabenEnabled, true),
     magnetzEnabled: bool(input.magnetzEnabled, true),
-    thePirateBayEnabled: bool(input.thePirateBayEnabled, true),
     fourKhdHubEnabled: bool(input.fourKhdHubEnabled, false),
     moviesDriveEnabled: bool(input.moviesDriveEnabled, false),
     hdHub4uEnabled: bool(input.hdHub4uEnabled, false),
