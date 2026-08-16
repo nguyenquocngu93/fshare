@@ -868,7 +868,7 @@ async function searchThePirateBay(query, page, hideXxx, fetchImpl) {
   const url = new URL(`/s/0/1/0/page/${Math.max(1, page)}/`, THE_PIRATE_BAY_BASE_URL);
   url.searchParams.set("q", query);
   url.searchParams.set("category", "0");
-  const html = await fetchText(url, {}, 18_000, fetchImpl);
+  const html = await fetchText(url, { headers: { Referer: `${THE_PIRATE_BAY_BASE_URL}/`, "User-Agent": "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/126.0 Safari/537.36" } }, 18_000, fetchImpl);
   let results = parseThePirateBaySearch(html);
   if (hideXxx) results = results.filter((item) => item.category !== "XXX" && !/\b(?:xxx|porn|adult)\b/i.test(`${item.category} ${item.title}`));
   return { results, total: results.length, pages: results.length ? 20 : 1 };
@@ -995,6 +995,7 @@ export function createTorrShelf(options = {}) {
     tmdbApiKey: options.tmdbApiKey ?? process.env.TMDB_API_KEY ?? "",
     tmdbLanguage: options.tmdbLanguage ?? process.env.TMDB_LANGUAGE ?? "vi-VN",
     tmdbRegion: options.tmdbRegion ?? process.env.TMDB_REGION ?? "VN",
+    tmdbEnvFile: options.tmdbEnvFile || join(ROOT, ".env"),
     syncFile: options.syncFile || join(ROOT, "data", "sync.json"),
     fetchImpl: options.fetchImpl || fetch,
   };
@@ -1109,6 +1110,50 @@ export function createTorrShelf(options = {}) {
 
   function isTmdbConfigured() {
     return getTmdbCredentials().configured;
+  }
+
+  function clearTmdbCaches() {
+    tmdbActiveMode = null;
+    tmdbLastError = null;
+    tmdbHomeCache = null;
+    tmdbListCache.clear();
+    tmdbDetailCache.clear();
+    tmdbSearchCache.clear();
+    tmdbPersonCache.clear();
+    tmdbSeasonCache.clear();
+    nativeTitleCache.clear();
+    nativeStreamCache.clear();
+  }
+
+  function normalizeTmdbCredential(value) {
+    const credential = String(value || "").trim().replace(/^Bearer\s+/i, "");
+    if (!credential) throw new Error("Nhập TMDB Read Access Token hoặc API Key v3.");
+    if (/^[a-f0-9]{32}$/i.test(credential)) return { token: "", apiKey: credential };
+    if (!/^[A-Za-z0-9._~+/=-]{16,2048}$/.test(credential)) throw new Error("TMDB token không đúng định dạng.");
+    return { token: credential, apiKey: "" };
+  }
+
+  function upsertEnvValue(text, key, value) {
+    const lines = String(text || "").split(/\r?\n/);
+    const matcher = new RegExp(`^\\s*${key}=`);
+    let found = false;
+    const updated = lines.map((line) => {
+      if (!matcher.test(line)) return line;
+      found = true;
+      return `${key}=${value}`;
+    });
+    if (!found) updated.push(`${key}=${value}`);
+    return `${updated.filter((line, index) => line || index < updated.length - 1).join("\n").replace(/\n*$/, "")}\n`;
+  }
+
+  function persistTmdbCredentials({ token, apiKey }) {
+    const previous = existsSync(config.tmdbEnvFile) ? readFileSync(config.tmdbEnvFile, "utf8") : "";
+    const withToken = upsertEnvValue(previous, "TMDB_API_TOKEN", token);
+    const next = upsertEnvValue(withToken, "TMDB_API_KEY", apiKey);
+    mkdirSync(dirname(config.tmdbEnvFile), { recursive: true });
+    const temp = `${config.tmdbEnvFile}.tmp`;
+    writeFileSync(temp, next, "utf8");
+    renameSync(temp, config.tmdbEnvFile);
   }
 
   async function tmdbFetch(pathname, params = {}) {
@@ -1240,7 +1285,7 @@ export function createTorrShelf(options = {}) {
       return safeJson(res, 503, {
         error: "TMDB chưa được cấu hình.",
         code: "tmdb_not_configured",
-        setup: "Thêm TMDB_API_TOKEN vào file .env rồi khởi động lại TorrShelf.",
+        setup: "Mở Settings để nhập TMDB Read Access Token hoặc API Key v3.",
       });
     }
     if (tmdbHomeCache?.expiresAt > Date.now()) {
@@ -2942,6 +2987,44 @@ export function createTorrShelf(options = {}) {
     }
   }
 
+  async function handleTmdbSettings(req, res) {
+    if (!sameOrigin(req)) return safeJson(res, 403, { error: "Yêu cầu khác nguồn đã bị chặn." });
+    const body = await readJsonBody(req);
+    let credentials;
+    try {
+      credentials = normalizeTmdbCredential(body?.credential);
+    } catch (error) {
+      return safeJson(res, 422, { error: cleanText(error.message, 300) });
+    }
+    try {
+      persistTmdbCredentials(credentials);
+    } catch (error) {
+      return safeJson(res, 500, { error: `Không lưu được TMDB credential: ${cleanText(error.message, 300)}` });
+    }
+    config.tmdbToken = credentials.token;
+    config.tmdbApiKey = credentials.apiKey;
+    clearTmdbCaches();
+    let validationError = "";
+    try {
+      await tmdbFetch("/configuration");
+    } catch (error) {
+      validationError = cleanText(error.message || "TMDB request failed", 300);
+    }
+    const current = getTmdbCredentials();
+    return safeJson(res, 200, {
+      ok: true,
+      tmdb: {
+        configured: current.configured,
+        validated: Boolean(tmdbActiveMode),
+        credentialMode: tmdbActiveMode || current.mode,
+        lastError: tmdbLastError,
+        language: config.tmdbLanguage,
+        region: config.tmdbRegion,
+      },
+      validationError,
+    });
+  }
+
   async function handleHealth(_req, res) {
     let torrServer = { online: false, version: null };
     try {
@@ -2979,6 +3062,7 @@ export function createTorrShelf(options = {}) {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+      if (req.method === "POST" && url.pathname === "/api/settings/tmdb") return await handleTmdbSettings(req, res);
       if (req.method === "GET" && url.pathname === "/api/health") return await handleHealth(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/home") return await handleTmdbHome(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/list") return await handleTmdbList(req, res, url);

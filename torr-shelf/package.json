@@ -1,6 +1,6 @@
 {
   "name": "torr-shelf",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "private": true,
   "type": "module",
   "description": "Local Magnetz and Knaben search companion for TorrServer",

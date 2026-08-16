@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -720,6 +720,7 @@ describe("HTTP app", () => {
       torrServerPublicUrl: "http://127.0.0.1:8090",
       tmdbToken: "test-token-that-must-not-leak",
       tmdbApiKey: "1234567890abcdef1234567890abcdef",
+      tmdbEnvFile: join(syncDir, "tmdb.env"),
       syncFile: join(syncDir, "sync.json"),
       fetchImpl: fakeFetch,
     });
@@ -736,8 +737,8 @@ describe("HTTP app", () => {
   it("cache-busts frontend assets and forces JS/CSS revalidation", async () => {
     const htmlResponse = await fetch(`${baseUrl}/`);
     const html = await htmlResponse.text();
-    assert.match(html, /cinewave-clone\.css\?v=1\.6\.8/);
-    assert.match(html, /cinewave-app\.js\?v=1\.6\.8/);
+    assert.match(html, /cinewave-clone\.css\?v=1\.6\.9/);
+    assert.match(html, /cinewave-app\.js\?v=1\.6\.9/);
     assert.doesNotMatch(html, /legacy\.css|restored-013\.css/);
     assert.match(html, /class="cw-header"/);
     assert.match(html, /id="detailHeaderIdentity"/);
@@ -759,6 +760,8 @@ describe("HTTP app", () => {
     assert.match(html, /data-go="library"/);
     assert.match(html, /id="settingsView"/);
     assert.match(html, /id="torrServerSettingsForm"/);
+    assert.match(html, /id="tmdbSettingsForm"/);
+    assert.match(html, /id="tmdbCredentialInput"/);
     assert.match(html, /id="playerPreference"/);
     assert.match(html, /id="posterColumns"/);
     assert.doesNotMatch(html, /id="fontPreference"/);
@@ -816,7 +819,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
-    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.8`);
+    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.9`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
     const css = await cssResponse.text();
@@ -933,7 +936,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-infinite-sentinel\{/);
     assert.match(css, /font-family:Inter/);
     assert.match(css, /font-family:Outfit/);
-    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.8`);
+    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.9`);
     const js = await jsResponse.text();
     assert.match(js, /history\.scrollRestoration='manual'/);
     assert.match(js, /function setHero/);
@@ -942,6 +945,8 @@ describe("HTTP app", () => {
     assert.match(js, /function handleDetailBack/);
     assert.match(js, /function searchTorrents/);
     assert.match(js, /function torrentSourceLabel/);
+    assert.match(js, /function saveTmdbCredential/);
+    assert.match(js, /\/api\/settings\/tmdb/);
     assert.match(js, /thePirateBayEnabled/);
     assert.match(js, /data-find="\$\{mediaKey\(item\)\}"/);
     assert.match(js, /new IntersectionObserver/);
@@ -1105,6 +1110,21 @@ describe("HTTP app", () => {
     assert.equal(payload.tmdb.configured, true);
     assert.doesNotMatch(JSON.stringify(payload), /test-token-that-must-not-leak/);
     assert.doesNotMatch(JSON.stringify(payload), /1234567890abcdef1234567890abcdef/);
+  });
+
+  it("saves a TMDB credential from Settings without returning the secret", async () => {
+    const response = await fetch(`${baseUrl}/api/settings/tmdb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: "1234567890abcdef1234567890abcdef" }),
+    });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.tmdb.configured, true);
+    assert.equal(payload.tmdb.validated, true);
+    assert.equal(payload.tmdb.credentialMode, "api_key_v3");
+    assert.doesNotMatch(JSON.stringify(payload), /1234567890abcdef1234567890abcdef/);
+    assert.match(readFileSync(join(syncDir, "tmdb.env"), "utf8"), /TMDB_API_KEY=1234567890abcdef1234567890abcdef/);
   });
 
   it("checks a user-selected public TorrServer through the local backend", async () => {

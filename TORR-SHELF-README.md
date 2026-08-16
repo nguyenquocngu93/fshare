@@ -1,6 +1,6 @@
-# TorrShelf 1.6.8 — TPB mirror / torrent tabs
+# TorrShelf 1.6.9 — TPB mirror / TMDB settings
 
-Bản này thay API TPB lỗi bằng mirror `www3.thepiratebay3.to`, giữ The Pirate Bay cho nguồn phát native lẫn tab Torrent Search.
+Bản này thay API TPB lỗi bằng mirror `www3.thepiratebay3.to`, giữ The Pirate Bay cho nguồn phát native lẫn tab Torrent Search, đồng thời cho nhập TMDB credential trong Settings.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -24,20 +24,24 @@ Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **�
 - Tab **Torrents** có nguồn **TPB** riêng, bên cạnh Magnetz và Knaben.
 - Trang phim có nút kính lúp để mở Torrent tab và tìm đúng tên gốc/năm của phim.
 
+## TMDB trong Settings
+
+Mở **Settings → Kết nối TMDB**, dán **Read Access Token** hoặc **API Key v3**, rồi bấm **Lưu & kiểm tra**. Credential được lưu vào `.env` cục bộ để dùng lại sau khi khởi động app.
+
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.sh
+bash install-torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.zip` (alias hiện hành: `torr-shelf.zip`):
+Hoặc giải nén `torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf-v1.6.8-tpb-mirror-torrent-tabs.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start
