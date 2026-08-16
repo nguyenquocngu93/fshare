@@ -25,6 +25,8 @@ const PUBLIC_DIR = join(ROOT, "public");
 const GIB = 1024 ** 3;
 const MAGNETZ_API = "https://magnetz.eu";
 const KNABEN_API = "https://api.knaben.org/v1";
+const THE_PIRATE_BAY_API = "https://apibay.org";
+const THE_PIRATE_BAY_TRACKERS = ["udp://tracker.opentrackr.org:1337/announce", "udp://open.stealth.si:80/announce", "udp://tracker.torrent.eu.org:451/announce"];
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_API = "https://image.tmdb.org/t/p";
 const OPEN_SUBTITLES_ADDON = "https://opensubtitles-v3.strem.io/manifest.json";
@@ -295,6 +297,47 @@ export function normalizeKnaben(item) {
     virusScore: Number(item?.virusDetection) || 0,
   };
   return result.title && result.providerId && result.link ? result : null;
+}
+
+function thePirateBayCategory(value) {
+  const category = Number(value) || 0;
+  if (category >= 200 && category < 300) return "Video";
+  if (category >= 500 && category < 600) return "XXX";
+  if (category >= 100 && category < 200) return "Audio";
+  if (category >= 300 && category < 400) return "Applications";
+  return "Torrent";
+}
+
+function thePirateBayMagnet(infoHash, title) {
+  return `magnet:?xt=urn:btih:${infoHash}&dn=${encodeURIComponent(title)}${THE_PIRATE_BAY_TRACKERS.map((tracker) => `&tr=${encodeURIComponent(tracker)}`).join("")}`;
+}
+
+export function normalizeThePirateBay(item) {
+  const providerId = cleanText(item?.id, 80);
+  const title = cleanText(item?.name, 500);
+  const infoHash = normalizeHash(item?.info_hash);
+  if (!providerId || !title || !infoHash) return null;
+  const size = Number(item?.size) || 0;
+  const added = Number(item?.added) || 0;
+  return {
+    source: "thepiratebay",
+    sources: ["thepiratebay"],
+    providerId,
+    title,
+    size,
+    humanSize: formatBytes(size),
+    seeders: Number(item?.seeders) || 0,
+    leechers: Number(item?.leechers) || 0,
+    infoHash,
+    link: thePirateBayMagnet(infoHash, title),
+    category: thePirateBayCategory(item?.category),
+    origin: "The Pirate Bay",
+    detailsUrl: `https://thepiratebay.org/description.php?id=${encodeURIComponent(providerId)}`,
+    verified: /(?:vip|trusted)/i.test(String(item?.status || "")),
+    health: 0,
+    date: added ? new Date(added * 1000).toISOString() : "",
+    largestFile: "",
+  };
 }
 
 export function normalizeTmdb(item, fallbackMediaType = "movie") {
@@ -724,6 +767,17 @@ async function searchKnaben(query, page, hideXxx, sort, fetchImpl) {
     total,
     pages: Math.max(1, Math.ceil(total / pageSize)),
   };
+}
+
+async function searchThePirateBay(query, page, hideXxx, fetchImpl) {
+  if (page > 1) return { results: [], total: 0, pages: 1 };
+  const url = new URL("/q.php", THE_PIRATE_BAY_API);
+  url.searchParams.set("q", query);
+  url.searchParams.set("cat", "0");
+  const payload = await fetchJson(url, {}, 12_000, fetchImpl);
+  let results = (Array.isArray(payload) ? payload : []).map(normalizeThePirateBay).filter(Boolean);
+  if (hideXxx) results = results.filter((item) => item.category !== "XXX" && !/\b(?:xxx|porn|adult)\b/i.test(item.title));
+  return { results, total: results.length, pages: 1 };
 }
 
 function sortResults(results, sort) {
@@ -1617,7 +1671,7 @@ export function createTorrShelf(options = {}) {
     if (query.length < 2) return safeJson(res, 422, { error: "Nhập ít nhất 2 ký tự để tìm kiếm." });
 
     const page = integer(url.searchParams.get("page"), 1, 1, 20);
-    const source = ["all", "magnetz", "knaben"].includes(url.searchParams.get("source"))
+    const source = ["all", "magnetz", "knaben", "thepiratebay"].includes(url.searchParams.get("source"))
       ? url.searchParams.get("source")
       : "all";
     const hideXxx = bool(url.searchParams.get("hideXxx"), true);
@@ -1645,6 +1699,9 @@ export function createTorrShelf(options = {}) {
     if (source === "all" || source === "knaben") {
       jobs.push(["knaben", searchKnaben(query, page, hideXxx, sort, config.fetchImpl)]);
     }
+    if (source === "all" || source === "thepiratebay") {
+      jobs.push(["thepiratebay", searchThePirateBay(query, page, hideXxx, config.fetchImpl)]);
+    }
 
     const settled = await Promise.allSettled(jobs.map(([, promise]) => promise));
     const errors = [];
@@ -1663,7 +1720,7 @@ export function createTorrShelf(options = {}) {
     });
 
     if (!combined.length && errors.length === jobs.length) {
-      return safeJson(res, 502, { error: "Cả hai nguồn tìm kiếm đều đang lỗi.", sources: errors });
+      return safeJson(res, 502, { error: "Tất cả nguồn tìm kiếm đều đang lỗi.", sources: errors });
     }
 
     combined = deduplicateResults(combined).filter(
@@ -2135,6 +2192,15 @@ export function createTorrShelf(options = {}) {
         .map((item) => ({ ...item, sizeGB: (Number(item.size) || 0) / GIB, seeds: item.seeders, tracker: "Magnetz", magnet: item.link }));
       results = sortAndLimitNativeResults(results, nativeConfig);
       return { provider: "Magnetz", streams: results.map((item) => { const single = /\bS\d{1,3}\s*E\d{1,4}\b/i.test(item.title);return nativeTorrentStream(item, "Magnetz", { type, season, episode, pack: type !== "movie" && !single, animeMode: nativeConfig.animeMode }); }).filter(Boolean) };
+    })());
+
+    if (nativeConfig.thePirateBayEnabled) providerTasks.push((async () => {
+      const query = type === "movie" ? `${originalTitle}${matchContext.year ? ` ${matchContext.year}` : ""}` : `${originalTitle}${season ? ` S${String(season).padStart(2, "0")}` : ""}`;
+      let results = (await searchThePirateBay(query, 1, true, config.fetchImpl)).results
+        .filter((item) => scoreStreamTitleMatch(`${item.title}\n${item.humanSize}`, matchContext).match)
+        .map((item) => ({ ...item, sizeGB: (Number(item.size) || 0) / GIB, seeds: item.seeders, tracker: "The Pirate Bay", magnet: item.link }));
+      results = sortAndLimitNativeResults(results, nativeConfig);
+      return { provider: "The Pirate Bay", streams: results.map((item) => { const single = /\bS\d{1,3}\s*E\d{1,4}\b/i.test(item.title);return nativeTorrentStream(item, "The Pirate Bay", { type, season, episode, pack: type !== "movie" && !single, animeMode: nativeConfig.animeMode }); }).filter(Boolean) };
     })());
 
     const settled = await Promise.allSettled(providerTasks), streams = [], errors = [];
@@ -2812,7 +2878,7 @@ export function createTorrShelf(options = {}) {
         region: config.tmdbRegion,
       },
       network: { dnsResultOrder: DNS_RESULT_ORDER },
-      sources: ["magnetz", "knaben"],
+      sources: ["magnetz", "knaben", "thepiratebay"],
     });
   }
 

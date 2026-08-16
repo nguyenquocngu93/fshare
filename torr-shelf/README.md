@@ -286,14 +286,15 @@ TMDB cho phép API miễn phí cho mục đích phi thương mại khi có attri
 Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787`, vì vậy máy khác trong mạng không truy cập được. Nếu đổi `HOST=0.0.0.0` hoặc publish ra LAN/Internet, nên thêm reverse proxy có xác thực. Không commit `.env` chứa TMDB token hoặc mật khẩu TorrServer.
 
 
-## Ghi chú giao diện 1.6.6
+## Ghi chú giao diện 1.6.7
 
 Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng thời:
 
 - backdrop dùng mask/fade nhiều tầng muộn hơn để giữ chi tiết ảnh theo video Stremio tham chiếu;
 - khung bình thường dùng crop giữa `16:11`; khi zoom-out hoàn tất, hero thu về aspect ratio tự nhiên của Cinemeta (ảnh full, thường là `16:9`) để ảnh fill đủ 100%, không crop, viền hoặc crop hoặc viền; overlay tối vẫn giữ để gần độ sáng Stremio; logo vẫn merge sang header khi chạm vùng header;
 - làm lại dòng metadata: thời lượng · năm · điểm · IMDb;
-- tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích.
+- tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích;
+- thêm **The Pirate Bay** vào Hybrid tích hợp và tab Torrent Search, với tab **TPB** riêng và nút tìm torrent từ trang phim.
 
 ### Guide chọn crop Cinemeta
 

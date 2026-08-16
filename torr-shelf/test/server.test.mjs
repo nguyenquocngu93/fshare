@@ -10,6 +10,7 @@ import {
   deduplicateResults,
   normalizeKnaben,
   normalizeMagnetz,
+  normalizeThePirateBay,
   normalizeTmdb,
   normalizeReleaseTitle,
   scoreStreamTitleMatch,
@@ -139,6 +140,25 @@ describe("normalizers", () => {
     assert.match(result.link, /^magnet:/);
   });
 
+  it("normalizes The Pirate Bay API results into magnets", () => {
+    const result = normalizeThePirateBay({
+      id: "98765",
+      name: "Ubuntu ISO",
+      info_hash: HASH,
+      size: 2_000_000_000,
+      seeders: 73,
+      leechers: 6,
+      category: "201",
+      added: "1760000000",
+      status: "vip",
+    });
+    assert.equal(result.source, "thepiratebay");
+    assert.equal(result.origin, "The Pirate Bay");
+    assert.equal(result.seeders, 73);
+    assert.match(result.link, /^magnet:\?xt=urn:btih:/);
+    assert.match(result.detailsUrl, /description\.php\?id=98765/);
+  });
+
   it("normalizes TMDB movies into a torrent search query", () => {
     const result = normalizeTmdb({
       id: 123,
@@ -178,6 +198,7 @@ describe("normalizers", () => {
     assert.equal(config.jacredDomain, "jac.red");
     assert.equal(config.maxResults, 200);
     assert.equal(config.fourKhdHubEnabled, false);
+    assert.equal(config.thePirateBayEnabled, true);
     assert.equal(config.moviesDriveEnabled, false);
     assert.equal(config.hdHub4uEnabled, false);
     assert.equal(config.vadapavEnabled, false);
@@ -424,6 +445,15 @@ describe("HTTP app", () => {
           ],
           meta: { total: 2, last_page: 1 },
         });
+      }
+      if (url.hostname === "apibay.org" && url.pathname === "/q.php") {
+        if (/original movie/i.test(url.searchParams.get("q") || "")) return Response.json([
+          { id: "tpb-movie", name: "Original Movie 2026 1080p", info_hash: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", size: "3000000000", seeders: "73", leechers: "6", category: "201", added: "1760000000", status: "vip" },
+        ]);
+        return Response.json([
+          { id: "tpb-1", name: "Ubuntu ISO", info_hash: HASH, size: "2000000000", seeders: "73", leechers: "6", category: "201", added: "1760000000", status: "vip" },
+          { id: "tpb-xxx", name: "Example XXX", info_hash: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", size: "1000000000", seeders: "30", leechers: "1", category: "500", added: "1760000000" },
+        ]);
       }
       if (url.hostname === "api.knaben.org") {
         knabenRequest = JSON.parse(options.body);
@@ -698,8 +728,8 @@ describe("HTTP app", () => {
   it("cache-busts frontend assets and forces JS/CSS revalidation", async () => {
     const htmlResponse = await fetch(`${baseUrl}/`);
     const html = await htmlResponse.text();
-    assert.match(html, /cinewave-clone\.css\?v=1\.6\.6/);
-    assert.match(html, /cinewave-app\.js\?v=1\.6\.6/);
+    assert.match(html, /cinewave-clone\.css\?v=1\.6\.7/);
+    assert.match(html, /cinewave-app\.js\?v=1\.6\.7/);
     assert.doesNotMatch(html, /legacy\.css|restored-013\.css/);
     assert.match(html, /class="cw-header"/);
     assert.match(html, /id="detailHeaderIdentity"/);
@@ -746,7 +776,9 @@ describe("HTTP app", () => {
     assert.match(html, /Vadapav · Open directory/);
     assert.match(html, /UHDMovies · HTTP/);
     assert.match(html, /HubCloud Search · Directory/);
-    assert.match(html, /MoviesDrive\/HDHub4u hỗ trợ cả trang multi-season/);
+    assert.match(html, /Magnetz, Knaben và The Pirate Bay là nguồn torrent tích hợp/);
+    assert.match(html, /data-source="thepiratebay"/);
+    assert.match(html, /name="thePirateBayEnabled"/);
     assert.match(html, /id="stremioAddonForm"/);
     assert.match(html, /https:\/\/subsense\.nepiraw\.com\//);
     assert.match(html, /id="cloudStreamRepoForm"/);
@@ -776,7 +808,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
-    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.6`);
+    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.7`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
     const css = await cssResponse.text();
@@ -893,7 +925,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-infinite-sentinel\{/);
     assert.match(css, /font-family:Inter/);
     assert.match(css, /font-family:Outfit/);
-    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.6`);
+    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.7`);
     const js = await jsResponse.text();
     assert.match(js, /history\.scrollRestoration='manual'/);
     assert.match(js, /function setHero/);
@@ -901,6 +933,9 @@ describe("HTTP app", () => {
     assert.match(js, /state\.homeLoaded\?showView\('home'\):loadHome\(\)/);
     assert.match(js, /function handleDetailBack/);
     assert.match(js, /function searchTorrents/);
+    assert.match(js, /function torrentSourceLabel/);
+    assert.match(js, /thePirateBayEnabled/);
+    assert.match(js, /data-find="\$\{mediaKey\(item\)\}"/);
     assert.match(js, /new IntersectionObserver/);
     assert.match(js, /data-share-current/);
     assert.match(js, /data-share-person/);
@@ -1154,7 +1189,7 @@ describe("HTTP app", () => {
         type: "movie",
         id: "tt1234567",
         media: { tmdbId: 123, title: "Tên phim", originalTitle: "Original Movie", year: 2026 },
-        config: { enabled: true, fourKhdHubEnabled: true, jacredEnabled: false, torrentioEnabled: false, knabenEnabled: false, magnetzEnabled: false },
+        config: { enabled: true, fourKhdHubEnabled: true, thePirateBayEnabled: false, jacredEnabled: false, torrentioEnabled: false, knabenEnabled: false, magnetzEnabled: false },
       }),
     });
     const payload = await response.json();
@@ -1167,6 +1202,25 @@ describe("HTTP app", () => {
     const resolved = await resolvedResponse.json();
     assert.equal(resolved.direct, true);
     assert.equal(resolved.streamUrl, payload.streams[0].url);
+  });
+
+  it("uses The Pirate Bay as a native movie stream source when enabled", async () => {
+    const response = await fetch(`${baseUrl}/api/native/streams`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "movie",
+        id: "tt1234567",
+        media: { tmdbId: 123, title: "Original Movie", originalTitle: "Original Movie", year: 2026 },
+        config: { enabled: true, thePirateBayEnabled: true, jacredEnabled: false, torrentioEnabled: false, knabenEnabled: false, magnetzEnabled: false },
+      }),
+    });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.streams.length, 1);
+    assert.equal(payload.streams[0].addonName, "The Pirate Bay");
+    assert.equal(payload.streams[0].tracker, "The Pirate Bay");
+    assert.match(payload.streams[0].infoHash, /^[a-f0-9]{40}$/i);
   });
 
   it("wraps seekable HTTP sources in a real local 206 Range proxy", async () => {
@@ -1189,7 +1243,7 @@ describe("HTTP app", () => {
         type: "series",
         id: "tt7654321:1:3",
         media: { tmdbId: 456, title: "Tên series", originalTitle: "Original Series", year: 2025, season: 1, episode: 3 },
-        config: { enabled: true, jacredEnabled: true, torrentioEnabled: false, knabenEnabled: false, magnetzEnabled: false, jacredDomain: "jac.red" },
+        config: { enabled: true, jacredEnabled: true, thePirateBayEnabled: false, torrentioEnabled: false, knabenEnabled: false, magnetzEnabled: false, jacredDomain: "jac.red" },
       }),
     });
     const payload = await response.json();
@@ -1528,8 +1582,17 @@ describe("HTTP app", () => {
     const payload = await response.json();
     assert.equal(response.status, 200);
     assert.equal(payload.data.length, 1);
-    assert.deepEqual(payload.data[0].sources.sort(), ["knaben", "magnetz"]);
+    assert.deepEqual(payload.data[0].sources.sort(), ["knaben", "magnetz", "thepiratebay"]);
     assert.ok(payload.data[0].ref);
+  });
+
+  it("searches The Pirate Bay through its dedicated source", async () => {
+    const response = await fetch(`${baseUrl}/api/search?q=ubuntu&source=thepiratebay&maxGb=&minSeeds=0`);
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.data.length, 1);
+    assert.equal(payload.data[0].source, "thepiratebay");
+    assert.match(payload.data[0].link, /^magnet:\?xt=urn:btih:/);
   });
 
   it("passes the selected size sorting to Knaben instead of sorting only a seeders page", async () => {

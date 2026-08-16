@@ -8,8 +8,8 @@
   <title>TorrShelf</title>
   <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/cinewave-clone.css?v=1.6.6" />
-  <script type="module" src="/cinewave-app.js?v=1.6.6"></script>
+  <link rel="stylesheet" href="/cinewave-clone.css?v=1.6.7" />
+  <script type="module" src="/cinewave-app.js?v=1.6.7"></script>
 </head>
 <body>
   <header class="cw-header">
@@ -147,7 +147,7 @@
       <header class="ts-torrent-intro">
         <span class="ts-torrent-kicker">MAGNET SEARCH, GỌN TRONG MỘT TAB</span>
         <h1>Tìm đúng bản.<br><em>Đẩy một chạm.</em></h1>
-        <p>Gộp kết quả từ Magnetz và Knaben, lọc dung lượng <strong>không giới hạn</strong> và thêm thủ công vào TorrServer để kiểm tra nguồn.</p>
+        <p>Gộp kết quả từ Magnetz, Knaben và The Pirate Bay, lọc dung lượng <strong>không giới hạn</strong> và thêm thủ công vào TorrServer để kiểm tra nguồn.</p>
       </header>
 
       <form id="torrentSearchForm" class="ts-torrent-search" autocomplete="off">
@@ -163,12 +163,13 @@
           <button class="active" data-source="all" type="button"><span class="ts-source-icon">⌘</span>Tất cả</button>
           <button data-source="magnetz" type="button"><span class="ts-source-icon">M</span>Magnetz</button>
           <button data-source="knaben" type="button"><span class="ts-source-icon">K</span>Knaben</button>
+          <button data-source="thepiratebay" type="button" title="The Pirate Bay"><span class="ts-source-icon">P</span>TPB</button>
         </div>
         <div class="ts-filters">
           <label class="ts-field"><span>Tối đa</span><input id="maxSize" type="number" min="1" placeholder="∞ GB" /></label>
           <label class="ts-field"><span>Seed ≥</span><input id="minSeeds" type="number" min="0" value="1" /></label>
           <label class="ts-field ts-field-wide"><span>Sắp xếp</span><select id="torrentSort"><option value="seeders">Nhiều seed</option><option value="newest">Mới nhất</option><option value="size-desc">Nặng trước</option><option value="size-asc">Nhẹ trước</option></select></label>
-          <label class="ts-toggle"><input id="hideAdult" type="checkbox" checked /><span class="ts-toggle-mark"></span><span>Ẩn XXX trên Knaben</span></label>
+          <label class="ts-toggle"><input id="hideAdult" type="checkbox" checked /><span class="ts-toggle-mark"></span><span>Ẩn XXX trên Knaben / TPB</span></label>
         </div>
       </section>
 
@@ -200,9 +201,9 @@
     <section id="settingsView" class="view hidden">
       <header class="cw-page-head"><div><h1>Settings</h1><p>Local service information</p></div></header>
       <div class="cw-settings-grid">
-        <article><span>TS</span><div><small>Application</small><h2>TorrShelf</h2><p>Version 1.6.6</p></div></article>
+        <article><span>TS</span><div><small>Application</small><h2>TorrShelf</h2><p>Version 1.6.7</p></div></article>
         <article><span id="settingsServerDot">●</span><div><small>TorrServer</small><h2 id="settingsServerVersion">Checking…</h2><p id="settingsServerUrl">http://127.0.0.1:8090</p></div></article>
-        <article><span>DB</span><div><small>Data sources</small><h2>TMDB · Magnetz · Knaben</h2><p id="settingsTmdb">Checking…</p></div></article>
+        <article><span>DB</span><div><small>Data sources</small><h2>TMDB · Magnetz · Knaben · TPB</h2><p id="settingsTmdb">Checking…</p></div></article>
       </div>
       <form id="torrServerSettingsForm" class="cw-torrserver-config" autocomplete="off">
         <div class="cw-torrserver-config-head"><div><small>ACTIVE TORRSERVER</small><h2>Địa chỉ máy chủ</h2></div><span id="torrServerConfigBadge">LOCAL</span></div>
@@ -238,6 +239,7 @@
             <label><input name="jacredEnabled" type="checkbox"><span>Jacred</span></label>
             <label><input name="knabenEnabled" type="checkbox"><span>Knaben</span></label>
             <label><input name="magnetzEnabled" type="checkbox"><span>Magnetz</span></label>
+            <label><input name="thePirateBayEnabled" type="checkbox"><span>The Pirate Bay</span></label>
           </div>
           <div class="cw-native-quality"><span>Web scrapers / directories · thử nghiệm · mặc định tắt</span><label><input name="fourKhdHubEnabled" type="checkbox"><span>4KHDHub · HTTP</span></label><label><input name="moviesDriveEnabled" type="checkbox"><span>MoviesDrive · HTTP</span></label><label><input name="hdHub4uEnabled" type="checkbox"><span>HDHub4u · HTTP</span></label><label><input name="vadapavEnabled" type="checkbox"><span>Vadapav · Open directory</span></label><label><input name="uhdMoviesEnabled" type="checkbox"><span>UHDMovies · HTTP</span></label><label><input name="hubCloudSearchEnabled" type="checkbox"><span>HubCloud Search · Directory</span></label></div>
           <div class="cw-native-fields">
@@ -250,7 +252,7 @@
           <label class="cw-native-wide"><span>Torrentio manifest</span><input name="torrentioManifestUrl" type="text" inputmode="url" spellcheck="false"></label>
           <div class="cw-native-quality"><span>Ẩn chất lượng</span><label><input name="quality" value="480p" type="checkbox">480p</label><label><input name="quality" value="720p" type="checkbox">720p</label><label><input name="quality" value="1080p" type="checkbox">1080p</label><label><input name="quality" value="4K" type="checkbox">4K</label></div>
           <div class="cw-native-options"><label><input name="preferPack" type="checkbox"><span>Ưu tiên pack</span></label><label><input name="animeMode" type="checkbox"><span>Anime mode</span></label></div>
-          <p>4KHDHub, MoviesDrive, HDHub4u, Vadapav, UHDMovies và HubCloud Search bật/tắt độc lập; lỗi một nguồn không làm gián đoạn nguồn khác. MoviesDrive/HDHub4u hỗ trợ cả trang multi-season và chọn đúng file SxxEyy.</p>
+          <p>Magnetz, Knaben và The Pirate Bay là nguồn torrent tích hợp; 4KHDHub, MoviesDrive, HDHub4u, Vadapav, UHDMovies và HubCloud Search bật/tắt độc lập. Lỗi một nguồn không làm gián đoạn nguồn khác.</p>
           <button type="submit">Lưu cấu hình native</button>
         </form>
       </section>

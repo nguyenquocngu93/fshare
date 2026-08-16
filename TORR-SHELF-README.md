@@ -1,4 +1,6 @@
-# TorrShelf 1.6.6 — Stremio meta / hero tune
+# TorrShelf 1.6.7 — The Pirate Bay / torrent search
+
+Bản này giữ nền detail v1.6.6 và bổ sung The Pirate Bay cho nguồn phát native lẫn tab Torrent Search.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -16,20 +18,26 @@ Các thay đổi ở trang movie detail:
 
 Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **Đã thích** (lưu cục bộ). Tab Đã thích có thêm hàng gợi ý **“Vì bạn đã thích …”** từ TMDB.
 
+## The Pirate Bay / Torrent Search
+
+- Bật/tắt **The Pirate Bay** trong **Settings → Hybrid tích hợp**.
+- Tab **Torrents** có nguồn **TPB** riêng, bên cạnh Magnetz và Knaben.
+- Trang phim có nút kính lúp để mở Torrent tab và tìm đúng tên gốc/năm của phim.
+
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.6-stremio-info-proportions.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.7-pirate-bay-torrent-search.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.6-stremio-info-proportions.sh
+bash install-torr-shelf-v1.6.7-pirate-bay-torrent-search.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf.zip`:
+Hoặc giải nén `torr-shelf-v1.6.7-pirate-bay-torrent-search.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.7-pirate-bay-torrent-search.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start

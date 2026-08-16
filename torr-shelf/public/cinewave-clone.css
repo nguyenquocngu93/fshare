@@ -286,6 +286,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 .ts-source-tabs button.active{background:var(--cyan);box-shadow:0 10px 22px rgba(6,182,212,.13);color:#000}
 .ts-source-icon{display:grid;width:22px;height:22px;flex:0 0 22px;place-items:center;border-radius:7px;background:rgba(6,182,212,.11);color:var(--cyan-light);font-size:11px;font-weight:900}
 .ts-source-tabs [data-source="knaben"] .ts-source-icon{background:rgba(245,158,11,.12);color:#f59e0b}
+.ts-source-tabs [data-source="thepiratebay"] .ts-source-icon{background:rgba(239,68,68,.12);color:#fb7185}
 .ts-source-tabs button.active .ts-source-icon{background:rgba(0,0,0,.12);color:#000}
 .ts-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
 .ts-field{display:flex;min-height:56px;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border:1px solid var(--line);border-radius:14px;background:rgba(9,9,11,.3);color:var(--zinc-500);font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
@@ -503,7 +504,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.6: normal view is the requested 16:9 Cinemeta crop at scale 1.
+/* v1.6.7: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
 .cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}

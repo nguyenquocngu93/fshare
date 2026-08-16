@@ -35,7 +35,7 @@ function readLikedMedia(){
 }
 function readPlayerPreference(){const value=localStorage.getItem('torrshelf:player')||'torrshelf';return['torrshelf','mpv','mx','external'].includes(value)?value:'torrshelf';}
 function readPosterColumns(){return localStorage.getItem('torrshelf:poster-columns')==='2'?2:3;}
-const NATIVE_PROVIDER_DEFAULT={enabled:true,torrentioEnabled:true,jacredEnabled:true,knabenEnabled:true,magnetzEnabled:true,fourKhdHubEnabled:false,moviesDriveEnabled:false,hdHub4uEnabled:false,vadapavEnabled:false,uhdMoviesEnabled:false,hubCloudSearchEnabled:false,jacredDomain:'jac.red',torrentioManifestUrl:'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json',commonSortBy:'size',commonQualityFilter:[],maxResults:30,sizeMinGB:0,sizeMaxGB:1000,preferPack:true,animeMode:false};
+const NATIVE_PROVIDER_DEFAULT={enabled:true,torrentioEnabled:true,jacredEnabled:true,knabenEnabled:true,magnetzEnabled:true,thePirateBayEnabled:true,fourKhdHubEnabled:false,moviesDriveEnabled:false,hdHub4uEnabled:false,vadapavEnabled:false,uhdMoviesEnabled:false,hubCloudSearchEnabled:false,jacredDomain:'jac.red',torrentioManifestUrl:'https://torrentio.strem.fun/providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,nekobt,rutor,rutracker,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=size|language=russian,ukrainian|qualityfilter=480p/manifest.json',commonSortBy:'size',commonQualityFilter:[],maxResults:30,sizeMinGB:0,sizeMaxGB:1000,preferPack:true,animeMode:false};
 function readNativeProviderConfig(){try{const saved=JSON.parse(localStorage.getItem('torrshelf:native-provider')||'{}');return{...NATIVE_PROVIDER_DEFAULT,...(saved&&typeof saved==='object'?saved:{})};}catch{return{...NATIVE_PROVIDER_DEFAULT};}}
 
 localStorage.removeItem('torrshelf:external-playback');
@@ -270,6 +270,7 @@ function detailMarkup(item){
   const trailer=item.trailerUrl?`<a class="cw-detail-icon" href="${esc(item.trailerUrl)}" target="_blank" rel="noreferrer" aria-label="Trailer" title="Trailer"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></a>`:'';
   const share='<button class="cw-detail-icon" data-share-current type="button" aria-label="Share" title="Share"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.5-4.4M8.2 13.2l7.5 4.4"/></svg></button>';
   const library='<button class="cw-detail-icon" data-library-current type="button" aria-label="Add to library" title="Library"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 2v6M16 2v6M8 13h8M12 9v8"/></svg></button>';
+  const findTorrent=`<button class="cw-detail-icon" data-find="${mediaKey(item)}" type="button" aria-label="Tìm phim này ở Torrents" title="Tìm phim này ở Torrents"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5M9 10h3M10.5 8.5v3"/></svg></button>`;
   const like='<button class="cw-detail-meta-icon" data-like-current type="button" aria-label="Thích" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M7.2 10.2v9.2H4.4a1.4 1.4 0 0 1-1.4-1.4v-6.4a1.4 1.4 0 0 1 1.4-1.4z"/><path d="M7.2 19.4h8.4a2 2 0 0 0 1.9-1.4l1.7-5.7A1.6 1.6 0 0 0 17.7 10h-4.1l.5-2.7a3.4 3.4 0 0 0-1-3l-.4-.4-3.2 6.3z"/></svg></button>';
   const heart='<button class="cw-detail-meta-icon" data-library-current type="button" aria-label="Add to library" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20.8 4.9a5.5 5.5 0 0 0-7.8 0L12 6l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.9-8.3a5.5 5.5 0 0 0-.1-7.8z"/></svg></button>';
   const metaFacts=[
@@ -285,7 +286,7 @@ function detailMarkup(item){
     <section class="cw-detail-hero">
       <button class="cw-detail-hero-back" data-detail-back type="button" aria-label="Back"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
       <div id="detailBackdrop" class="cw-detail-bg">${backdropSource?`<img src="${esc(backdropSource)}"${backdropFallback?` data-backdrop-fallback="${esc(backdropFallback)}"`:''} alt="">`:''}<div class="cw-detail-gradient"></div></div>
-      <div class="cw-detail-shell"><div class="cw-detail-layout">${posterImage}<div class="cw-detail-copy"><div id="detailTitleVisual" class="cw-detail-title-visual">${titleVisual}</div><div class="cw-detail-actions"><div class="cw-detail-secondary">${share}${trailer}${library}</div></div></div></div></div>
+      <div class="cw-detail-shell"><div class="cw-detail-layout">${posterImage}<div class="cw-detail-copy"><div id="detailTitleVisual" class="cw-detail-title-visual">${titleVisual}</div><div class="cw-detail-actions"><div class="cw-detail-secondary">${share}${trailer}${findTorrent}${library}</div></div></div></div></div>
     </section>
     <div class="cw-detail-body">
       <div class="cw-detail-primary">
@@ -397,12 +398,13 @@ function torrentCard(item){
   const addIcon=added?'<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>':'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   return `<article class="ts-torrent-card"><header><span class="ts-source-tag">${source}</span><small>${esc(item.origin)}</small></header><h3>${esc(item.title)}</h3>${badges.length?`<div class="ts-stream-badges">${badges.map(tag=>`<span>${tag}</span>`).join('')}</div>`:''}<div class="ts-torrent-stats"><span>▣ &nbsp;${esc(item.humanSize||formatBytes(item.size))}</span><span class="seed">♧ &nbsp;${Number(item.seeders).toLocaleString()} seed</span><span>${Number(item.leechers).toLocaleString()} leech</span><span>${esc(item.category)}</span></div><footer><small>${formatAge(item.date)}</small><div class="ts-card-actions"><button data-copy="${item.ref}" type="button" aria-label="Sao chép magnet">${copyIcon}</button>${item.detailsUrl?`<a href="${esc(item.detailsUrl)}" target="_blank" rel="noreferrer" aria-label="Mở trang nguồn">${openIcon}</a>`:''}<button class="ts-add${added?' added':''}" data-add="${item.ref}" type="button"${added?' disabled':''}>${addIcon}<span>${added?'Đã thêm':'Gửi TorrServer'}</span></button></div></footer></article>`;
 }
+function torrentSourceLabel(source=state.torrentSource){return source==='magnetz'?'Magnetz':source==='knaben'?'Knaben':source==='thepiratebay'?'The Pirate Bay':'Magnetz + Knaben + The Pirate Bay';}
 async function searchTorrents(updateRoute=true){
   const q=els.torrentQuery.value.trim();if(q.length<2)return;
   state.torrentQuery=q;state.torrentItems=new Map();
   els.torrentCount.textContent='ĐANG TÌM KIẾM';
   els.torrentTitle.textContent=`“${q}”`;
-  els.torrentMeta.textContent='Magnetz + Knaben';
+  els.torrentMeta.textContent=torrentSourceLabel();
   els.torrentResults.innerHTML='<div class="cw-loading">Đang tìm torrent…</div>';
   if(updateRoute)route({view:'torrent',q,source:state.torrentSource,page:state.torrentPage});
   const p=new URLSearchParams({q,source:state.torrentSource,page:state.torrentPage,maxGb:els.maxSize.value,minSeeds:els.minSeeds.value||'0',sort:els.torrentSort.value,hideXxx:String(els.hideAdult.checked)});
@@ -545,13 +547,13 @@ function updatePlayerPreferenceUI(){
 }
 function renderNativeProviderSettings(){
   const form=els.nativeProviderForm;if(!form)return;const c=state.nativeProviderConfig;
-  ['enabled','torrentioEnabled','jacredEnabled','knabenEnabled','magnetzEnabled','fourKhdHubEnabled','moviesDriveEnabled','hdHub4uEnabled','vadapavEnabled','uhdMoviesEnabled','hubCloudSearchEnabled','preferPack','animeMode'].forEach(name=>{form.elements[name].checked=Boolean(c[name])});
+  ['enabled','torrentioEnabled','jacredEnabled','knabenEnabled','magnetzEnabled','thePirateBayEnabled','fourKhdHubEnabled','moviesDriveEnabled','hdHub4uEnabled','vadapavEnabled','uhdMoviesEnabled','hubCloudSearchEnabled','preferPack','animeMode'].forEach(name=>{form.elements[name].checked=Boolean(c[name])});
   ['jacredDomain','torrentioManifestUrl','commonSortBy','maxResults','sizeMinGB','sizeMaxGB'].forEach(name=>{form.elements[name].value=c[name]??''});
   form.querySelectorAll('input[name="quality"]').forEach(input=>{input.checked=(c.commonQualityFilter||[]).includes(input.value)});
 }
 function readNativeProviderForm(){
   const form=els.nativeProviderForm,number=(name,fallback)=>{const value=Number(form.elements[name].value);return Number.isFinite(value)?value:fallback};
-  return{enabled:form.elements.enabled.checked,torrentioEnabled:form.elements.torrentioEnabled.checked,jacredEnabled:form.elements.jacredEnabled.checked,knabenEnabled:form.elements.knabenEnabled.checked,magnetzEnabled:form.elements.magnetzEnabled.checked,fourKhdHubEnabled:form.elements.fourKhdHubEnabled.checked,moviesDriveEnabled:form.elements.moviesDriveEnabled.checked,hdHub4uEnabled:form.elements.hdHub4uEnabled.checked,vadapavEnabled:form.elements.vadapavEnabled.checked,uhdMoviesEnabled:form.elements.uhdMoviesEnabled.checked,hubCloudSearchEnabled:form.elements.hubCloudSearchEnabled.checked,jacredDomain:form.elements.jacredDomain.value,torrentioManifestUrl:form.elements.torrentioManifestUrl.value.trim(),commonSortBy:form.elements.commonSortBy.value,commonQualityFilter:[...form.querySelectorAll('input[name="quality"]:checked')].map(input=>input.value),maxResults:Math.max(5,Math.min(200,Math.round(number('maxResults',30)))),sizeMinGB:Math.max(0,number('sizeMinGB',0)),sizeMaxGB:Math.max(0,number('sizeMaxGB',1000)),preferPack:form.elements.preferPack.checked,animeMode:form.elements.animeMode.checked};
+  return{enabled:form.elements.enabled.checked,torrentioEnabled:form.elements.torrentioEnabled.checked,jacredEnabled:form.elements.jacredEnabled.checked,knabenEnabled:form.elements.knabenEnabled.checked,magnetzEnabled:form.elements.magnetzEnabled.checked,thePirateBayEnabled:form.elements.thePirateBayEnabled.checked,fourKhdHubEnabled:form.elements.fourKhdHubEnabled.checked,moviesDriveEnabled:form.elements.moviesDriveEnabled.checked,hdHub4uEnabled:form.elements.hdHub4uEnabled.checked,vadapavEnabled:form.elements.vadapavEnabled.checked,uhdMoviesEnabled:form.elements.uhdMoviesEnabled.checked,hubCloudSearchEnabled:form.elements.hubCloudSearchEnabled.checked,jacredDomain:form.elements.jacredDomain.value,torrentioManifestUrl:form.elements.torrentioManifestUrl.value.trim(),commonSortBy:form.elements.commonSortBy.value,commonQualityFilter:[...form.querySelectorAll('input[name="quality"]:checked')].map(input=>input.value),maxResults:Math.max(5,Math.min(200,Math.round(number('maxResults',30)))),sizeMinGB:Math.max(0,number('sizeMinGB',0)),sizeMaxGB:Math.max(0,number('sizeMaxGB',1000)),preferPack:form.elements.preferPack.checked,animeMode:form.elements.animeMode.checked};
 }
 function updateSettings(){
   updatePlayerPreferenceUI();applyPosterLayout();renderNativeProviderSettings();const h=state.health;if(!h)return;const active=activeTorrServerUrl(),custom=Boolean(state.customTorrServerUrl);
@@ -574,7 +576,7 @@ async function checkHealth(){
   try{state.health=await api('/api/health');updateSettings();if(state.customTorrServerUrl)await checkTorrServerTarget(state.customTorrServerUrl);}catch{state.health=null;}
 }
 function rememberContext(item,extra={}){state.torrentContext={id:item.id,mediaType:item.mediaType,title:item.title,originalTitle:item.originalTitle,year:item.year,posterPath:item.posterPath,backdropPath:item.backdropPath,season:Number(extra.season)||0,episode:Number(extra.episode)||0};}
-function findTorrentFor(item,query,extra={}){rememberContext(item,extra);els.torrentQuery.value=query||`${item.originalTitle||item.title} ${item.year||''}`.trim();state.torrentPage=1;navigate('torrent',{q:els.torrentQuery.value});searchTorrents(false);}
+function findTorrentFor(item,query,extra={}){rememberContext(item,extra);els.torrentQuery.value=query||`${item.originalTitle||item.title} ${item.year||''}`.trim();state.torrentSource='all';state.torrentPage=1;$$('[data-source]').forEach(button=>button.classList.toggle('active',button.dataset.source==='all'));navigate('torrent',{q:els.torrentQuery.value,source:'all'});searchTorrents(false);}
 
 function handleMediaClick(button){const item=state.media.get(button.dataset.media||button.dataset.detail||button.dataset.find);if(!item)return;if(button.dataset.find!==undefined)findTorrentFor(item);else openDetail(item);}
 
@@ -598,6 +600,7 @@ function handleDetailArtworkError(e){
 els.detailContent.addEventListener('error',handleDetailArtworkError,true);els.detailHeaderLogo.addEventListener('error',handleDetailArtworkError);els.detailContent.addEventListener('load',e=>{if(e.target.matches?.('#detailBackdrop img'))requestAnimationFrame(updateDetailHeaderMotion);},true);
 els.detailContent.addEventListener('click',e=>{
   const detailBack=e.target.closest('[data-detail-back]');if(detailBack)return handleDetailBack();
+  const find=e.target.closest('[data-find]');if(find)return handleMediaClick(find);
   const library=e.target.closest('[data-library-current]');if(library)return toggleCurrentLibrary();
   const like=e.target.closest('[data-like-current]');if(like)return toggleCurrentLike();
   const addonTab=e.target.closest('[data-stream-addon]');if(addonTab){state.streamTabScrollLeft=addonTab.closest('.cw-stream-addon-tabs')?.scrollLeft||0;state.selectedStreamAddon=addonTab.dataset.streamAddon;renderStreamGroups(state.streamPanelMeta||{});return;}
