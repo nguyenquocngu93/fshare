@@ -509,7 +509,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.10: normal view is the requested 16:9 Cinemeta crop at scale 1.
+/* v1.6.11: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
 .cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}
@@ -642,6 +642,13 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .cw-hero h1{font-size:clamp(29px,5.8vw,44px);line-height:1}
   .cw-hero p{font-size:13px;line-height:19px}
   .cw-hero-actions{gap:12px}.cw-hero-actions>button{padding:10px 18px;font-size:14px}
+}
+/* Torrent source pills intentionally override the earlier desktop segmented control on phones/tablets. */
+@media(max-width:899px){
+  #torrentView .ts-source-tabs{gap:10px;padding:0 0 5px;border:0;border-radius:0;background:transparent;overflow-x:auto;scrollbar-width:none}
+  #torrentView .ts-source-tabs::-webkit-scrollbar{display:none}
+  #torrentView .ts-source-tabs button{min-width:max-content;min-height:48px;flex:0 0 auto;padding:0 14px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(24,24,27,.88)}
+  #torrentView .ts-source-tabs button.active{border-color:transparent;background:var(--cyan)}
 }
 /* Source tabs preserve the reader's horizontal position when a provider is selected. */
 /* One selected font is applied consistently to body copy, controls and stream rows. */

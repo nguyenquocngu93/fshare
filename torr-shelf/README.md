@@ -286,7 +286,7 @@ TMDB cho phép API miễn phí cho mục đích phi thương mại khi có attri
 Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787`, vì vậy máy khác trong mạng không truy cập được. Nếu đổi `HOST=0.0.0.0` hoặc publish ra LAN/Internet, nên thêm reverse proxy có xác thực. Không commit `.env` chứa TMDB token hoặc mật khẩu TorrServer.
 
 
-## Ghi chú giao diện 1.6.10
+## Ghi chú giao diện 1.6.11
 
 Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng thời:
 
