@@ -1,6 +1,6 @@
-# TorrShelf 1.6.9 — TPB mirror / TMDB settings
+# TorrShelf 1.6.10 — TPB results / TMDB settings
 
-Bản này thay API TPB lỗi bằng mirror `www3.thepiratebay3.to`, giữ The Pirate Bay cho nguồn phát native lẫn tab Torrent Search, đồng thời cho nhập TMDB credential trong Settings.
+Bản này dùng mirror `www3.thepiratebay3.to` cho TPB, giữ kết quả có magnet ngay cả khi mirror thiếu metadata seed/size, sửa tab Torrent trên màn nhỏ và cho nhập TMDB credential trong Settings.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -30,18 +30,18 @@ Mở **Settings → Kết nối TMDB**, dán **Read Access Token** hoặc **API 
 
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.10-tpb-results-tmdb-settings.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.sh
+bash install-torr-shelf-v1.6.10-tpb-results-tmdb-settings.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.zip` (alias hiện hành: `torr-shelf.zip`):
+Hoặc giải nén `torr-shelf-v1.6.10-tpb-results-tmdb-settings.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf-v1.6.9-tpb-mirror-tmdb-settings.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.10-tpb-results-tmdb-settings.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start

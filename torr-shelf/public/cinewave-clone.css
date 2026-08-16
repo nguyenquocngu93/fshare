@@ -113,6 +113,8 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
 @media(max-width:639px){
   body[data-poster-columns="3"] .cw-poster-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   body[data-poster-columns="2"] .cw-poster-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+}
+@media(max-width:899px){
   .ts-source-tabs{gap:8px;overflow-x:auto;scrollbar-width:none}.ts-source-tabs::-webkit-scrollbar{display:none}
   .ts-source-tabs button{min-width:82px;flex:0 0 auto;padding-right:12px;padding-left:12px;border:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.16)}
   .ts-source-tabs button.active{border-color:transparent}
@@ -507,7 +509,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.9: normal view is the requested 16:9 Cinemeta crop at scale 1.
+/* v1.6.10: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
 .cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}

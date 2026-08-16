@@ -737,8 +737,8 @@ describe("HTTP app", () => {
   it("cache-busts frontend assets and forces JS/CSS revalidation", async () => {
     const htmlResponse = await fetch(`${baseUrl}/`);
     const html = await htmlResponse.text();
-    assert.match(html, /cinewave-clone\.css\?v=1\.6\.9/);
-    assert.match(html, /cinewave-app\.js\?v=1\.6\.9/);
+    assert.match(html, /cinewave-clone\.css\?v=1\.6\.10/);
+    assert.match(html, /cinewave-app\.js\?v=1\.6\.10/);
     assert.doesNotMatch(html, /legacy\.css|restored-013\.css/);
     assert.match(html, /class="cw-header"/);
     assert.match(html, /id="detailHeaderIdentity"/);
@@ -819,7 +819,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
-    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.9`);
+    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.10`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
     const css = await cssResponse.text();
@@ -918,6 +918,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-mobile-dock\{display:none\}/);
     assert.match(css, /\.cw-detail-gradient\{display:block;background:linear-gradient\(90deg,#05070a/);
     assert.match(css, /\.ts-card-actions \.ts-add\{/);
+    assert.match(css, /@media\(max-width:899px\)\{\s*\.ts-source-tabs\{gap:8px;overflow-x:auto/);
     assert.match(css, /\.cw-poster-row\{[^}]*grid-auto-columns:128px[^}]*gap:16px[^}]*padding:24px 20px[^}]*scrollbar-color:#1a1d23 #05070a/);
     assert.match(css, /\.cw-poster-row \.cw-poster\{aspect-ratio:2\/3\}/);
     assert.match(css, /\.cw-poster-row::-webkit-scrollbar\{display:block;width:8px;height:8px\}/);
@@ -936,7 +937,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-infinite-sentinel\{/);
     assert.match(css, /font-family:Inter/);
     assert.match(css, /font-family:Outfit/);
-    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.9`);
+    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.10`);
     const js = await jsResponse.text();
     assert.match(js, /history\.scrollRestoration='manual'/);
     assert.match(js, /function setHero/);

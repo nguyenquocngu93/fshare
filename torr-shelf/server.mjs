@@ -343,7 +343,7 @@ export function normalizeThePirateBay(item) {
   const magnet = String(item?.magnet || "").trim();
   const infoHash = normalizeHash(item?.info_hash || magnet.match(/btih:([a-f0-9]{40})/i)?.[1]);
   if (!providerId || !title || !infoHash) return null;
-  const size = Number(item?.size) || 0;
+  const size = Number(item?.size) || parseThePirateBaySize(item?.humanSize || "");
   const added = Number(item?.added) || 0;
   return {
     source: "thepiratebay",
@@ -353,6 +353,7 @@ export function normalizeThePirateBay(item) {
     size,
     humanSize: item?.humanSize || formatBytes(size),
     seeders: Number(item?.seeders) || 0,
+    seedersKnown: item?.seedersKnown !== false,
     leechers: Number(item?.leechers) || 0,
     infoHash,
     link: /^magnet:\?xt=urn:btih:/i.test(magnet) ? magnet : thePirateBayMagnet(infoHash, title),
@@ -387,6 +388,7 @@ export function parseThePirateBaySearch(html) {
       size: parseThePirateBaySize(visible),
       humanSize: visible.match(/\d+(?:[.,]\d+)?\s*(?:KiB|MiB|GiB|TiB|KB|MB|GB|TB)\b/i)?.[0] || "",
       seeders: numericCells.at(-2) || 0,
+      seedersKnown: numericCells.length >= 2,
       leechers: numericCells.at(-1) || 0,
       category: browse?.[1] || "",
       categoryName: cleanHtmlText(browse?.[2] || "", 100),
@@ -1862,9 +1864,11 @@ export function createTorrShelf(options = {}) {
       return safeJson(res, 502, { error: "Tất cả nguồn tìm kiếm đều đang lỗi.", sources: errors });
     }
 
-    combined = deduplicateResults(combined).filter(
-      (item) => item.size > 0 && (!maxBytes || item.size <= maxBytes) && item.seeders >= minSeeds,
-    );
+    combined = deduplicateResults(combined).filter((item) => {
+      const validSize = item.size > 0 || (item.source === "thepiratebay" && /^magnet:\?xt=urn:btih:/i.test(item.link));
+      const validSeeds = item.seeders >= minSeeds || (item.source === "thepiratebay" && item.seedersKnown === false);
+      return validSize && (!maxBytes || !item.size || item.size <= maxBytes) && validSeeds;
+    });
     combined = sortResults(combined, sort);
     const data = rememberResults(combined);
     const maxPages = Math.min(20, Math.max(1, ...Object.values(sourcePages)));
