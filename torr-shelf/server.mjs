@@ -2279,6 +2279,54 @@ export function createTorrShelf(options = {}) {
     return safeJson(res, 200, data);
   }
 
+  async function handleLampaStreams(req, res, url) {
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+    const ip = req.socket.remoteAddress || "unknown";
+    if (!allowRequest(`lampa-streams:${ip}`, 20, 60_000)) return safeJson(res, 429, { error: "Bạn tải nguồn TorrShelf quá nhanh." }, cors);
+    const title = cleanText(url.searchParams.get("title"), 300);
+    if (title.length < 2) return safeJson(res, 422, { error: "Thiếu tên phim để tìm nguồn." }, cors);
+    const year = integer(url.searchParams.get("year"), 0, 0, 2100);
+    const mediaType = url.searchParams.get("type") === "tv" || url.searchParams.get("type") === "series" ? "series" : "movie";
+    const season = integer(url.searchParams.get("season"), 0, 0, 999);
+    const episode = integer(url.searchParams.get("episode"), 0, 0, 9999);
+    const imdbId = cleanText(url.searchParams.get("imdb"), 24);
+    const maxResults = integer(url.searchParams.get("max"), 8, 1, 20);
+    const request = { title, year, type: mediaType, season, episode, maxResults, hiddenQualities: [] };
+    const tasks = [
+      ["UHDMovies", () => getUHDMoviesStreams(request, config.fetchImpl)],
+      ["4KHDHub", () => get4KHDHubStreams(request, config.fetchImpl)],
+      ["MoviesDrive", () => getMoviesDriveStreams(request, config.fetchImpl)],
+      ["HDHub4u", () => getHDHub4uStreams({ ...request, imdbId }, config.fetchImpl)],
+    ];
+    const settled = await Promise.allSettled(tasks.map(([, task]) => task()));
+    const streams = [];
+    const errors = [];
+    settled.forEach((result, index) => {
+      const provider = tasks[index][0];
+      if (result.status !== "fulfilled") {
+        errors.push({ provider, message: cleanText(result.reason?.message || "Không tải được nguồn", 240) });
+        return;
+      }
+      const addon = { id: `lampa.${provider.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name: provider, baseUrl: "", resources: ["stream"], types: ["movie", "series"] };
+      (result.value || []).map((stream, streamIndex) => normalizeStremioStream(stream, addon, streamIndex)).filter((stream) => stream?.url).forEach((stream) => {
+        streams.push({
+          name: stream.name || provider,
+          provider,
+          title: stream.title,
+          url: stream.url,
+          headers: stream.headers,
+          rangeProxy: stream.rangeProxy,
+        });
+      });
+    });
+    const unique = [...new Map(streams.map((stream) => [stream.url, stream])).values()].slice(0, maxResults);
+    return safeJson(res, 200, { streams: unique, errors, directOnly: true }, cors);
+  }
+
   function subtitleLanguage(value) {
     const raw = cleanText(value, 12).toLowerCase();
     const map = { vie: "vi", eng: "en", vietnamese: "vi", english: "en", fre: "fr", fra: "fr", spa: "es", por: "pt", pob: "pt-BR", jpn: "ja", kor: "ko", zho: "zh", chi: "zh", tha: "th", ind: "id" };
@@ -3025,6 +3073,11 @@ export function createTorrShelf(options = {}) {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
       if (req.method === "POST" && url.pathname === "/api/settings/tmdb") return await handleTmdbSettings(req, res);
       if (req.method === "POST" && url.pathname === "/api/settings/jackett") return await handleJackettSettings(req, res);
+      if (req.method === "OPTIONS" && url.pathname === "/api/lampa/streams") {
+        res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" });
+        return res.end();
+      }
+      if (req.method === "GET" && url.pathname === "/api/lampa/streams") return await handleLampaStreams(req, res, url);
       if (req.method === "GET" && url.pathname === "/api/health") return await handleHealth(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/home") return await handleTmdbHome(req, res);
       if (req.method === "GET" && url.pathname === "/api/tmdb/list") return await handleTmdbList(req, res, url);

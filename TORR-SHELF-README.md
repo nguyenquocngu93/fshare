@@ -1,6 +1,6 @@
-# TorrShelf 1.6.12 — Jackett torrent search
+# TorrShelf 1.6.13 — Lampa HTTP bridge
 
-Bản này bỏ TPB khỏi app hiện hành, thêm Jackett riêng cho tab Torrent Search và giữ form TMDB trong Settings. Jackett không được đưa vào nguồn phát của trang phim.
+Bản này thêm bridge HTTP trực tiếp để Lampa Online gọi parser TorrShelf; bridge chỉ trả nguồn HTTP, không gọi Stremio addon, magnet hay TorrServer.
 
 Bản này **giữ nguyên layout v1.6.5 của bạn**:
 
@@ -29,20 +29,24 @@ Trong **Library** có hai tab: **Đã thêm** (thư viện đồng bộ) và **�
 
 Mở **Settings → Kết nối TMDB**, dán **Read Access Token** hoặc **API Key v3**, rồi bấm **Lưu & kiểm tra**. Credential được lưu vào `.env` cục bộ để dùng lại sau khi khởi động app.
 
+## Lampa HTTP bridge
+
+Endpoint `GET /api/lampa/streams` trả link HTTP trực tiếp từ parser TorrShelf cho Lampa. Cài plugin Lampa bằng script `install-lampac-torrshelf-http-bridge-v1.0.sh` sau khi TorrShelf đang chạy.
+
 ## Cài trên Termux
 
-Dùng file `install-torr-shelf-v1.6.12-jackett-torrent-search.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
+Dùng file `install-torr-shelf-v1.6.13-lampa-http-bridge.sh`. Script chỉ ghi đè mã TorrShelf, giữ `.env` và `data/sync.json` hiện có.
 
 ```bash
-bash install-torr-shelf-v1.6.12-jackett-torrent-search.sh
+bash install-torr-shelf-v1.6.13-lampa-http-bridge.sh
 cd ~/torr-shelf
 npm start
 ```
 
-Hoặc giải nén `torr-shelf-v1.6.12-jackett-torrent-search.zip` (alias hiện hành: `torr-shelf.zip`):
+Hoặc giải nén `torr-shelf-v1.6.13-lampa-http-bridge.zip` (alias hiện hành: `torr-shelf.zip`):
 
 ```bash
-unzip -o torr-shelf-v1.6.12-jackett-torrent-search.zip -d ~/torr-shelf
+unzip -o torr-shelf-v1.6.13-lampa-http-bridge.zip -d ~/torr-shelf
 cd ~/torr-shelf
 npm test
 npm start

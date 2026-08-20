@@ -743,8 +743,8 @@ describe("HTTP app", () => {
   it("cache-busts frontend assets and forces JS/CSS revalidation", async () => {
     const htmlResponse = await fetch(`${baseUrl}/`);
     const html = await htmlResponse.text();
-    assert.match(html, /cinewave-clone\.css\?v=1\.6\.12/);
-    assert.match(html, /cinewave-app\.js\?v=1\.6\.12/);
+    assert.match(html, /cinewave-clone\.css\?v=1\.6\.13/);
+    assert.match(html, /cinewave-app\.js\?v=1\.6\.13/);
     assert.doesNotMatch(html, /legacy\.css|restored-013\.css/);
     assert.match(html, /class="cw-header"/);
     assert.match(html, /id="detailHeaderIdentity"/);
@@ -826,7 +826,7 @@ describe("HTTP app", () => {
     assert.match(cropGuide, /1\.00 · không thu/);
     assert.match(cropGuide, /No filter, opacity, mask or dark overlay/);
 
-    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.12`);
+    const cssResponse = await fetch(`${baseUrl}/cinewave-clone.css?v=1.6.13`);
     assert.equal(cssResponse.status, 200);
     assert.match(cssResponse.headers.get("cache-control"), /no-store/);
     const css = await cssResponse.text();
@@ -946,7 +946,7 @@ describe("HTTP app", () => {
     assert.match(css, /\.cw-infinite-sentinel\{/);
     assert.match(css, /font-family:Inter/);
     assert.match(css, /font-family:Outfit/);
-    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.12`);
+    const jsResponse = await fetch(`${baseUrl}/cinewave-app.js?v=1.6.13`);
     const js = await jsResponse.text();
     assert.match(js, /history\.scrollRestoration='manual'/);
     assert.match(js, /function setHero/);
@@ -1256,6 +1256,15 @@ describe("HTTP app", () => {
     const resolved = await resolvedResponse.json();
     assert.equal(resolved.direct, true);
     assert.equal(resolved.streamUrl, payload.streams[0].url);
+  });
+
+  it("exposes direct TorrShelf parser streams for the Lampa Online bridge", async () => {
+    const response = await fetch(`${baseUrl}/api/lampa/streams?title=Original%20Movie&year=2026&type=movie&max=4`);
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+    assert.ok(payload.streams.some((stream) => stream.provider === "4KHDHub"));
+    assert.ok(payload.streams.every((stream) => /^https?:\/\//.test(stream.url)));
   });
 
   it("wraps seekable HTTP sources in a real local 206 Range proxy", async () => {

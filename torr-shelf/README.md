@@ -286,7 +286,7 @@ TMDB cho phép API miễn phí cho mục đích phi thương mại khi có attri
 Mặc định app chạy trên loopback và Docker chỉ publish `127.0.0.1:8787`, vì vậy máy khác trong mạng không truy cập được. Nếu đổi `HOST=0.0.0.0` hoặc publish ra LAN/Internet, nên thêm reverse proxy có xác thực. Không commit `.env` chứa TMDB token hoặc mật khẩu TorrServer.
 
 
-## Ghi chú giao diện 1.6.12
+## Ghi chú giao diện 1.6.13
 
 Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng thời:
 
@@ -295,6 +295,7 @@ Bản này giữ nguyên header và tỉ lệ backdrop của v1.6.5, đồng th�
 - làm lại dòng metadata: thời lượng · năm · điểm · IMDb;
 - tách Library thành **Đã thêm** và **Đã thích**, kèm hàng TMDB **Vì bạn đã thích …** cho video đã thích;
 - thêm **Jackett** cho tab Torrent Search, với form URL/API Key riêng trong Settings; Jackett không được đưa vào nguồn phát phim;
+- thêm endpoint **`/api/lampa/streams`** để Lampa Online lấy nguồn HTTP trực tiếp từ parser TorrShelf, không dùng Stremio addon, magnet hoặc TorrServer;
 - thêm form **Kết nối TMDB** trong Settings để lưu Read Access Token hoặc API Key v3 vào `.env` cục bộ.
 
 ### Guide chọn crop Cinemeta

@@ -510,7 +510,7 @@ svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-l
   .ts-results-head h2{font-size:25px}
 }
 
-/* v1.6.12: normal view is the requested 16:9 Cinemeta crop at scale 1.
+/* v1.6.13: normal view is the requested 16:9 Cinemeta crop at scale 1.
    The scroll code expands this frame to the natural source ratio at zoom-out. */
 .cw-detail-hero{aspect-ratio:16/11;transition:height .18s cubic-bezier(.22,.61,.36,1);will-change:height}
 .cw-detail-bg{background:#05070a}
